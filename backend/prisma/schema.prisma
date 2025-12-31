@@ -1,0 +1,873 @@
+// =====================================================
+// K-12 SCHOOL MANAGEMENT SYSTEM - PRISMA SCHEMA
+// MySQL 8.0+ | Prisma 5.x
+// =====================================================
+// 
+// This schema supports:
+// - Single-school initially, expandable to multi-school
+// - Full RBAC (Roles, Permissions, RolePermissions, UserRoles)
+// - All K-12 academic management features
+// - JWT authentication with refresh tokens
+//
+// =====================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// =====================================================
+// ENUMS
+// =====================================================
+
+enum UserStatus {
+  active
+  inactive
+  suspended
+}
+
+enum Gender {
+  male
+  female
+  other
+}
+
+enum StudentClassStatus {
+  active
+  transferred
+  graduated
+  dropped
+}
+
+enum AttendanceStatus {
+  present
+  absent
+  late
+  excused
+}
+
+enum ExamType {
+  unit_test
+  midterm
+  final
+  board
+}
+
+enum SubmissionStatus {
+  submitted
+  late
+  graded
+  returned
+}
+
+enum PromotionStatus {
+  promoted
+  detained
+  graduated
+}
+
+enum Relationship {
+  father
+  mother
+  guardian
+}
+
+enum TargetAudience {
+  all
+  students
+  parents
+  teachers
+}
+
+enum NoticePriority {
+  low
+  normal
+  high
+  urgent
+}
+
+// =====================================================
+// CORE: SCHOOLS (Multi-school Ready)
+// =====================================================
+
+/// Schools table - core entity for multi-school support
+model School {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(255)
+  code      String   @unique @db.VarChar(50)
+  address   String?  @db.Text
+  phone     String?  @db.VarChar(20)
+  email     String?  @db.VarChar(255)
+  logoUrl   String?  @map("logo_url") @db.VarChar(500)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  users         User[]
+  academicYears AcademicYear[]
+  classes       Class[]
+  sections      Section[]
+  subjects      Subject[]
+  exams         Exam[]
+  notices       Notice[]
+
+  @@index([code])
+  @@index([isActive])
+  @@map("schools")
+}
+
+// =====================================================
+// RBAC: ROLES
+// =====================================================
+
+/// Roles for RBAC (SUPER_ADMIN, ADMIN, TEACHER, STUDENT, PARENT)
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(50)
+  description String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  userRoles       UserRole[]
+  rolePermissions RolePermission[]
+
+  @@index([name])
+  @@map("roles")
+}
+
+// =====================================================
+// RBAC: PERMISSIONS
+// =====================================================
+
+/// Permissions define granular access controls
+model Permission {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(100)
+  module      String   @db.VarChar(50)
+  description String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  rolePermissions RolePermission[]
+
+  @@index([name])
+  @@index([module])
+  @@map("permissions")
+}
+
+// =====================================================
+// RBAC: ROLE_PERMISSIONS (Many-to-Many)
+// =====================================================
+
+/// Maps roles to permissions
+model RolePermission {
+  id           Int      @id @default(autoincrement())
+  roleId       Int      @map("role_id")
+  permissionId Int      @map("permission_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+// =====================================================
+// USERS
+// =====================================================
+
+/// Main user table - all system users (admins, teachers, students, parents)
+model User {
+  id           Int        @id @default(autoincrement())
+  schoolId     Int        @map("school_id")
+  email        String     @db.VarChar(255)
+  passwordHash String     @map("password_hash") @db.VarChar(255)
+  firstName    String     @map("first_name") @db.VarChar(100)
+  lastName     String     @map("last_name") @db.VarChar(100)
+  phone        String?    @db.VarChar(20)
+  avatarUrl    String?    @map("avatar_url") @db.VarChar(500)
+  status       UserStatus @default(active)
+  lastLogin    DateTime?  @map("last_login")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  school          School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  userRoles       UserRole[]
+  student         Student?
+  parent          Parent?
+  teacherSubjects TeacherSubject[]
+  refreshTokens   RefreshToken[]
+
+  // Attendance marked by this user (teacher)
+  attendanceMarked Attendance[] @relation("MarkedBy")
+
+  // Exam results entered by this user (teacher)
+  examResultsEntered ExamResult[] @relation("EnteredBy")
+
+  // Submissions graded by this user (teacher)
+  submissionsGraded Submission[] @relation("GradedBy")
+
+  // Notices created by this user
+  noticesCreated Notice[] @relation("CreatedBy")
+
+  // Promotions processed by this user (admin)
+  promotionsProcessed Promotion[] @relation("ProcessedBy")
+
+  @@unique([email, schoolId])
+  @@index([schoolId])
+  @@index([email])
+  @@index([status])
+  @@index([firstName, lastName])
+  @@map("users")
+}
+
+// =====================================================
+// USER_ROLES (Many-to-Many)
+// =====================================================
+
+/// Maps users to roles
+model UserRole {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  roleId    Int      @map("role_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+// =====================================================
+// ACADEMIC_YEARS
+// =====================================================
+
+/// Academic years (e.g., 2024-2025)
+model AcademicYear {
+  id        Int      @id @default(autoincrement())
+  schoolId  Int      @map("school_id")
+  name      String   @db.VarChar(50)
+  startDate DateTime @map("start_date") @db.Date
+  endDate   DateTime @map("end_date") @db.Date
+  isCurrent Boolean  @default(false) @map("is_current")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  school          School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classSubjects   ClassSubject[]
+  studentClasses  StudentClass[]
+  teacherSubjects TeacherSubject[]
+  exams           Exam[]
+  promotionsFrom  Promotion[]      @relation("FromYear")
+  promotionsTo    Promotion[]      @relation("ToYear")
+
+  @@unique([schoolId, name])
+  @@index([schoolId])
+  @@index([isCurrent])
+  @@index([startDate, endDate])
+  @@map("academic_years")
+}
+
+// =====================================================
+// CLASSES
+// =====================================================
+
+/// Grade/Class levels (e.g., Grade 1, Grade 2, etc.)
+model Class {
+  id           Int      @id @default(autoincrement())
+  schoolId     Int      @map("school_id")
+  name         String   @db.VarChar(50)
+  gradeLevel   Int      @map("grade_level")
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  school         School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classSubjects  ClassSubject[]
+  studentClasses StudentClass[]
+  promotionsFrom Promotion[]    @relation("FromClass")
+  promotionsTo   Promotion[]    @relation("ToClass")
+
+  @@unique([schoolId, name])
+  @@index([schoolId])
+  @@index([gradeLevel])
+  @@map("classes")
+}
+
+// =====================================================
+// SECTIONS
+// =====================================================
+
+/// Sections within classes (e.g., Section A, B, C)
+model Section {
+  id        Int      @id @default(autoincrement())
+  schoolId  Int      @map("school_id")
+  name      String   @db.VarChar(10)
+  capacity  Int      @default(40)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  school          School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacherSubjects TeacherSubject[]
+  studentClasses  StudentClass[]
+
+  @@unique([schoolId, name])
+  @@index([schoolId])
+  @@map("sections")
+}
+
+// =====================================================
+// SUBJECTS (Master List)
+// =====================================================
+
+/// Master list of subjects per school
+model Subject {
+  id          Int      @id @default(autoincrement())
+  schoolId    Int      @map("school_id")
+  name        String   @db.VarChar(100)
+  code        String   @db.VarChar(20)
+  description String?  @db.Text
+  isOptional  Boolean  @default(false) @map("is_optional")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  school        School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classSubjects ClassSubject[]
+
+  @@unique([schoolId, code])
+  @@index([schoolId])
+  @@index([code])
+  @@map("subjects")
+}
+
+// =====================================================
+// CLASS_SUBJECTS (Dynamic Subjects per Class per Year)
+// =====================================================
+
+/// Links subjects to classes for specific academic years
+model ClassSubject {
+  id             Int      @id @default(autoincrement())
+  classId        Int      @map("class_id")
+  academicYearId Int      @map("academic_year_id")
+  subjectId      Int      @map("subject_id")
+  fullMarks      Int      @default(100) @map("full_marks")
+  passMarks      Int      @default(40) @map("pass_marks")
+  creditHours    Decimal  @default(3.0) @map("credit_hours") @db.Decimal(3, 1)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // Relations
+  class           Class            @relation(fields: [classId], references: [id], onDelete: Cascade)
+  academicYear    AcademicYear     @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  subject         Subject          @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacherSubjects TeacherSubject[]
+  examSubjects    ExamSubject[]
+
+  @@unique([classId, academicYearId, subjectId])
+  @@index([classId])
+  @@index([academicYearId])
+  @@index([subjectId])
+  @@index([classId, academicYearId])
+  @@map("class_subjects")
+}
+
+// =====================================================
+// TEACHER_SUBJECTS (Teacher Assignments)
+// =====================================================
+
+/// Assigns teachers to class+section+subject combinations
+/// Note: academicYearId is denormalized for easier querying
+model TeacherSubject {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @map("user_id")
+  classSubjectId Int      @map("class_subject_id")
+  sectionId      Int      @map("section_id")
+  academicYearId Int      @map("academic_year_id")
+  isClassTeacher Boolean  @default(false) @map("is_class_teacher")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classSubject ClassSubject @relation(fields: [classSubjectId], references: [id], onDelete: Cascade)
+  section      Section      @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  assignments  Assignment[]
+
+  @@unique([userId, classSubjectId, sectionId])
+  @@index([userId])
+  @@index([classSubjectId])
+  @@index([sectionId])
+  @@index([academicYearId])
+  @@map("teacher_subjects")
+}
+
+// =====================================================
+// STUDENTS (Extended Profile)
+// =====================================================
+
+/// Student profile linked to User
+model Student {
+  id               Int      @id @default(autoincrement())
+  userId           Int      @unique @map("user_id")
+  admissionNumber  String   @map("admission_number") @db.VarChar(50)
+  dateOfBirth      DateTime @map("date_of_birth") @db.Date
+  gender           Gender
+  bloodGroup       String?  @map("blood_group") @db.VarChar(5)
+  address          String?  @db.Text
+  emergencyContact String?  @map("emergency_contact") @db.VarChar(20)
+  admissionDate    DateTime @map("admission_date") @db.Date
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentClasses StudentClass[]
+  studentParents StudentParent[]
+  attendances    Attendance[]
+  examResults    ExamResult[]
+  submissions    Submission[]
+  reportCards    ReportCard[]
+  promotions     Promotion[]
+
+  @@index([userId])
+  @@index([admissionNumber])
+  @@index([dateOfBirth])
+  @@map("students")
+}
+
+// =====================================================
+// STUDENT_CLASSES (Enrollment per Academic Year)
+// =====================================================
+
+/// Enrollment records - links students to class/section per academic year
+model StudentClass {
+  id             Int                @id @default(autoincrement())
+  studentId      Int                @map("student_id")
+  classId        Int                @map("class_id")
+  sectionId      Int                @map("section_id")
+  academicYearId Int                @map("academic_year_id")
+  rollNumber     Int?               @map("roll_number")
+  status         StudentClassStatus @default(active)
+  createdAt      DateTime           @default(now()) @map("created_at")
+
+  // Relations
+  student      Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class        Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  section      Section      @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  attendances  Attendance[]
+  reportCards  ReportCard[]
+
+  @@unique([studentId, academicYearId])
+  @@index([studentId])
+  @@index([classId])
+  @@index([sectionId])
+  @@index([academicYearId])
+  @@index([status])
+  @@index([classId, sectionId, academicYearId])
+  @@map("student_classes")
+}
+
+// =====================================================
+// PARENTS (Extended Profile)
+// =====================================================
+
+/// Parent/Guardian profile linked to User
+model Parent {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @unique @map("user_id")
+  occupation String?  @db.VarChar(100)
+  workplace  String?  @db.VarChar(255)
+  address    String?  @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentParents StudentParent[]
+
+  @@index([userId])
+  @@map("parents")
+}
+
+// =====================================================
+// STUDENT_PARENTS (Many-to-Many)
+// =====================================================
+
+/// Links students to parents with relationship type
+model StudentParent {
+  id           Int          @id @default(autoincrement())
+  studentId    Int          @map("student_id")
+  parentId     Int          @map("parent_id")
+  relationship Relationship
+  isPrimary    Boolean      @default(false) @map("is_primary")
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  // Relations
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  parent  Parent  @relation(fields: [parentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, parentId])
+  @@index([studentId])
+  @@index([parentId])
+  @@map("student_parents")
+}
+
+// =====================================================
+// ATTENDANCE
+// =====================================================
+
+/// Daily attendance records per student
+/// Unique constraint includes studentClassId to handle re-enrollments
+model Attendance {
+  id             Int              @id @default(autoincrement())
+  studentClassId Int              @map("student_class_id")
+  studentId      Int              @map("student_id")
+  attendanceDate DateTime         @map("attendance_date") @db.Date
+  status         AttendanceStatus
+  remarks        String?          @db.Text
+  markedBy       Int              @map("marked_by")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  studentClass StudentClass @relation(fields: [studentClassId], references: [id], onDelete: Cascade)
+  student      Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  markedByUser User         @relation("MarkedBy", fields: [markedBy], references: [id], onDelete: Restrict)
+
+  // FIXED: Unique constraint now includes studentClassId
+  @@unique([studentId, studentClassId, attendanceDate])
+  @@index([studentClassId])
+  @@index([studentId])
+  @@index([attendanceDate])
+  @@index([status])
+  @@index([markedBy])
+  @@index([studentId, attendanceDate])
+  @@map("attendance")
+}
+
+// =====================================================
+// EXAMS
+// =====================================================
+
+/// Exam definitions (Unit Test, Midterm, Final, Board)
+model Exam {
+  id             Int       @id @default(autoincrement())
+  schoolId       Int       @map("school_id")
+  academicYearId Int       @map("academic_year_id")
+  name           String    @db.VarChar(100)
+  examType       ExamType  @map("exam_type")
+  startDate      DateTime? @map("start_date") @db.Date
+  endDate        DateTime? @map("end_date") @db.Date
+  isPublished    Boolean   @default(false) @map("is_published")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  school       School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear  @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  examSubjects ExamSubject[]
+  reportCards  ReportCard[]
+
+  @@index([schoolId])
+  @@index([academicYearId])
+  @@index([examType])
+  @@index([isPublished])
+  @@index([startDate, endDate])
+  @@map("exams")
+}
+
+// =====================================================
+// EXAM_SUBJECTS
+// =====================================================
+
+/// Links exams to class subjects with schedule
+model ExamSubject {
+  id             Int       @id @default(autoincrement())
+  examId         Int       @map("exam_id")
+  classSubjectId Int       @map("class_subject_id")
+  examDate       DateTime? @map("exam_date") @db.Date
+  startTime      DateTime? @map("start_time") @db.Time()
+  endTime        DateTime? @map("end_time") @db.Time()
+  fullMarks      Int       @map("full_marks")
+  passMarks      Int       @map("pass_marks")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  exam         Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+  classSubject ClassSubject @relation(fields: [classSubjectId], references: [id], onDelete: Cascade)
+  examResults  ExamResult[]
+
+  @@unique([examId, classSubjectId])
+  @@index([examId])
+  @@index([classSubjectId])
+  @@index([examDate])
+  @@map("exam_subjects")
+}
+
+// =====================================================
+// EXAM_RESULTS
+// =====================================================
+
+/// Stores student marks per exam subject
+model ExamResult {
+  id             Int      @id @default(autoincrement())
+  examSubjectId  Int      @map("exam_subject_id")
+  studentId      Int      @map("student_id")
+  marksObtained  Decimal? @map("marks_obtained") @db.Decimal(5, 2)
+  practicalMarks Decimal? @default(0) @map("practical_marks") @db.Decimal(5, 2)
+  grade          String?  @db.VarChar(5)
+  remarks        String?  @db.Text
+  enteredBy      Int      @map("entered_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  examSubject   ExamSubject @relation(fields: [examSubjectId], references: [id], onDelete: Cascade)
+  student       Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  enteredByUser User        @relation("EnteredBy", fields: [enteredBy], references: [id], onDelete: Restrict)
+
+  @@unique([examSubjectId, studentId])
+  @@index([examSubjectId])
+  @@index([studentId])
+  @@index([enteredBy])
+  @@index([grade])
+  @@map("exam_results")
+}
+
+// =====================================================
+// REPORT_CARDS
+// =====================================================
+
+/// Generated report cards per student per exam
+/// Note: "rank" renamed to "classRank" to avoid MySQL reserved keyword
+model ReportCard {
+  id               Int       @id @default(autoincrement())
+  studentId        Int       @map("student_id")
+  examId           Int       @map("exam_id")
+  studentClassId   Int       @map("student_class_id")
+  totalMarks       Decimal?  @map("total_marks") @db.Decimal(7, 2)
+  percentage       Decimal?  @db.Decimal(5, 2)
+  overallGrade     String?   @map("overall_grade") @db.VarChar(5)
+  classRank        Int?      @map("class_rank")
+  teacherRemarks   String?   @map("teacher_remarks") @db.Text
+  principalRemarks String?   @map("principal_remarks") @db.Text
+  isPublished      Boolean   @default(false) @map("is_published")
+  generatedAt      DateTime? @map("generated_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  student      Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  exam         Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+  studentClass StudentClass @relation(fields: [studentClassId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, examId])
+  @@index([studentId])
+  @@index([examId])
+  @@index([studentClassId])
+  @@index([isPublished])
+  @@index([classRank])
+  @@map("report_cards")
+}
+
+// =====================================================
+// ASSIGNMENTS
+// =====================================================
+
+/// Homework/assignments created by teachers
+model Assignment {
+  id               Int      @id @default(autoincrement())
+  teacherSubjectId Int      @map("teacher_subject_id")
+  title            String   @db.VarChar(255)
+  description      String?  @db.Text
+  dueDate          DateTime @map("due_date") @db.Date
+  totalMarks       Int      @default(100) @map("total_marks")
+  isPublished      Boolean  @default(false) @map("is_published")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  teacherSubject  TeacherSubject   @relation(fields: [teacherSubjectId], references: [id], onDelete: Cascade)
+  assignmentFiles AssignmentFile[]
+  submissions     Submission[]
+
+  @@index([teacherSubjectId])
+  @@index([dueDate])
+  @@index([isPublished])
+  @@map("assignments")
+}
+
+// =====================================================
+// ASSIGNMENT_FILES
+// =====================================================
+
+/// Files attached to assignments by teachers
+model AssignmentFile {
+  id           Int      @id @default(autoincrement())
+  assignmentId Int      @map("assignment_id")
+  fileName     String   @map("file_name") @db.VarChar(255)
+  fileUrl      String   @map("file_url") @db.VarChar(500)
+  fileType     String?  @map("file_type") @db.VarChar(50)
+  fileSize     Int?     @map("file_size")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  @@index([assignmentId])
+  @@map("assignment_files")
+}
+
+// =====================================================
+// SUBMISSIONS
+// =====================================================
+
+/// Student submissions for assignments
+model Submission {
+  id            Int              @id @default(autoincrement())
+  assignmentId  Int              @map("assignment_id")
+  studentId     Int              @map("student_id")
+  content       String?          @db.Text
+  status        SubmissionStatus @default(submitted)
+  marksObtained Decimal?         @map("marks_obtained") @db.Decimal(5, 2)
+  feedback      String?          @db.Text
+  gradedBy      Int?             @map("graded_by")
+  submittedAt   DateTime         @default(now()) @map("submitted_at")
+  gradedAt      DateTime?        @map("graded_at")
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  assignment      Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student         Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  gradedByUser    User?            @relation("GradedBy", fields: [gradedBy], references: [id], onDelete: SetNull)
+  submissionFiles SubmissionFile[]
+
+  @@unique([assignmentId, studentId])
+  @@index([assignmentId])
+  @@index([studentId])
+  @@index([status])
+  @@index([gradedBy])
+  @@map("submissions")
+}
+
+// =====================================================
+// SUBMISSION_FILES
+// =====================================================
+
+/// Files attached to student submissions
+model SubmissionFile {
+  id           Int      @id @default(autoincrement())
+  submissionId Int      @map("submission_id")
+  fileName     String   @map("file_name") @db.VarChar(255)
+  fileUrl      String   @map("file_url") @db.VarChar(500)
+  fileType     String?  @map("file_type") @db.VarChar(50)
+  fileSize     Int?     @map("file_size")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@map("submission_files")
+}
+
+// =====================================================
+// NOTICES
+// =====================================================
+
+/// School notices/announcements
+model Notice {
+  id             Int            @id @default(autoincrement())
+  schoolId       Int            @map("school_id")
+  createdBy      Int            @map("created_by")
+  title          String         @db.VarChar(255)
+  content        String         @db.Text
+  targetAudience TargetAudience @default(all) @map("target_audience")
+  priority       NoticePriority @default(normal)
+  isPublished    Boolean        @default(false) @map("is_published")
+  publishDate    DateTime?      @map("publish_date") @db.Date
+  expiryDate     DateTime?      @map("expiry_date") @db.Date
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  school        School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  createdByUser User   @relation("CreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
+
+  @@index([schoolId])
+  @@index([createdBy])
+  @@index([targetAudience])
+  @@index([priority])
+  @@index([isPublished])
+  @@index([publishDate, expiryDate])
+  @@map("notices")
+}
+
+// =====================================================
+// PROMOTIONS
+// =====================================================
+
+/// Student promotion/detention/graduation records
+model Promotion {
+  id                 Int             @id @default(autoincrement())
+  studentId          Int             @map("student_id")
+  fromClassId        Int             @map("from_class_id")
+  fromAcademicYearId Int             @map("from_academic_year_id")
+  toClassId          Int?            @map("to_class_id")
+  toAcademicYearId   Int             @map("to_academic_year_id")
+  status             PromotionStatus
+  remarks            String?         @db.Text
+  processedBy        Int             @map("processed_by")
+  processedAt        DateTime        @default(now()) @map("processed_at")
+  createdAt          DateTime        @default(now()) @map("created_at")
+
+  // Relations
+  student          Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  fromClass        Class        @relation("FromClass", fields: [fromClassId], references: [id], onDelete: Restrict)
+  fromAcademicYear AcademicYear @relation("FromYear", fields: [fromAcademicYearId], references: [id], onDelete: Restrict)
+  toClass          Class?       @relation("ToClass", fields: [toClassId], references: [id], onDelete: Restrict)
+  toAcademicYear   AcademicYear @relation("ToYear", fields: [toAcademicYearId], references: [id], onDelete: Restrict)
+  processedByUser  User         @relation("ProcessedBy", fields: [processedBy], references: [id], onDelete: Restrict)
+
+  @@index([studentId])
+  @@index([fromAcademicYearId])
+  @@index([toAcademicYearId])
+  @@index([status])
+  @@index([processedBy])
+  @@map("promotions")
+}
+
+// =====================================================
+// REFRESH_TOKENS (For JWT Auth)
+// =====================================================
+
+/// JWT refresh tokens for authentication
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  token     String   @db.VarChar(500)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token(255)])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
