@@ -146,8 +146,8 @@ const Assignments = () => {
                       <span className="text-success">
                         Submitted on {new Date(assignment.submissions[0].submittedAt).toLocaleDateString()}
                       </span>
-                      {assignment.submissions[0].grade && (
-                        <span className="grade">Grade: {assignment.submissions[0].grade}</span>
+                      {assignment.submissions[0].marksObtained && (
+                        <span className="grade">Score: {assignment.submissions[0].marksObtained}</span>
                       )}
                     </div>
                   )}

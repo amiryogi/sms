@@ -51,6 +51,17 @@ const getAssignments = asyncHandler(async (req, res) => {
       },
       assignmentFiles: true,
       _count: { select: { submissions: true } },
+      // Include own submission for students to track status
+      submissions: req.user.roles.includes('STUDENT') ? {
+        where: { student: { userId: req.user.id } },
+        select: { 
+          id: true, 
+          status: true, 
+          submittedAt: true, 
+          marksObtained: true,
+          feedback: true 
+        } 
+      } : undefined,
     },
     orderBy: { createdAt: "desc" },
   });

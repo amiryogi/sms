@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '../../context/AuthContext';
-import { Plus, Edit2, Trash2, Upload, FileText } from 'lucide-react';
+import { Plus, Edit2, Trash2, Upload, FileText, Eye, CheckCircle, XCircle } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import { Input, Select, Textarea, Button, FormRow } from '../../components/common/FormElements';
@@ -14,11 +14,18 @@ const Assignments = () => {
   const [teacherAssignments, setTeacherAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [submissionModalOpen, setSubmissionModalOpen] = useState(false);
+  const [submissions, setSubmissions] = useState([]);
+  const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [editingAssignment, setEditingAssignment] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [files, setFiles] = useState([]);
+  const [grading, setGrading] = useState(null); // { id: submissionId, marks: '', feedback: '' }
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
+  
+  // Grading form
+  const gradingForm = useForm();
 
   useEffect(() => {
     fetchData();
@@ -63,6 +70,45 @@ const Assignments = () => {
     setEditingAssignment(null);
     setFiles([]);
     reset();
+  };
+
+  const openSubmissionModal = async (assignment) => {
+    setSelectedAssignment(assignment);
+    setSubmitting(true);
+    try {
+      const res = await assignmentService.getSubmissionsByAssignment(assignment.id);
+      setSubmissions(res.data || []);
+      setSubmissionModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching submissions:', error);
+      alert('Failed to load submissions');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const closeSubmissionModal = () => {
+    setSubmissionModalOpen(false);
+    setSelectedAssignment(null);
+    setSubmissions([]);
+    setGrading(null);
+  };
+
+  const onGradeSubmit = async (data, submissionId) => {
+    try {
+      await assignmentService.gradeSubmission(submissionId, {
+        marksObtained: data.marksObtained,
+        feedback: data.feedback
+      });
+      // Refresh submissions
+      const res = await assignmentService.getSubmissionsByAssignment(selectedAssignment.id);
+      setSubmissions(res.data || []);
+      setGrading(null);
+      gradingForm.reset();
+    } catch (error) {
+      console.error('Error grading:', error);
+      alert('Failed to save grade');
+    }
   };
 
   const onSubmit = async (data) => {
@@ -134,13 +180,16 @@ const Assignments = () => {
     { header: 'Max Marks', render: (row) => row.totalMarks || '-' },
     {
       header: 'Actions',
-      width: '120px',
+      width: '180px',
       render: (row) => (
         <div className="action-buttons">
-          <button className="btn-icon" onClick={() => openModal(row)}>
+          <button className="btn-icon btn-info" onClick={() => openSubmissionModal(row)} title="View Submissions">
+            <Eye size={16} />
+          </button>
+          <button className="btn-icon" onClick={() => openModal(row)} title="Edit">
             <Edit2 size={16} />
           </button>
-          <button className="btn-icon btn-danger" onClick={() => handleDelete(row.id)}>
+          <button className="btn-icon btn-danger" onClick={() => handleDelete(row.id)} title="Delete">
             <Trash2 size={16} />
           </button>
         </div>
@@ -257,6 +306,90 @@ const Assignments = () => {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* View Submissions Modal */}
+      <Modal isOpen={submissionModalOpen} onClose={closeSubmissionModal} title={`Submissions - ${selectedAssignment?.title}`} size="xl">
+        <div className="submissions-list">
+          {!submissions.length ? (
+            <p className="text-muted text-center py-5">No submissions yet.</p>
+          ) : (
+            <div className="table-responsive">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Submitted At</th>
+                    <th>Status</th>
+                    <th>Files</th>
+                    <th>Grade</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {submissions.map(sub => (
+                    <tr key={sub.id}>
+                      <td>
+                        <div className="user-cell">
+                           {sub.student.user.avatarUrl ? (
+                             <img src={sub.student.user.avatarUrl} alt="" className="user-avatar-sm" />
+                           ) : (
+                             <div className="user-avatar-placeholder-sm">{sub.student.user.firstName[0]}</div>
+                           )}
+                           <span>{sub.student.user.firstName} {sub.student.user.lastName}</span>
+                        </div>
+                      </td>
+                      <td>{new Date(sub.submittedAt).toLocaleString()}</td>
+                      <td>
+                        <span className={`badge badge-${sub.status === 'late' ? 'danger' : sub.status === 'graded' ? 'success' : 'info'}`}>
+                          {sub.status.toUpperCase()}
+                        </span>
+                      </td>
+                      <td>
+                        {sub.submissionFiles?.map((f, i) => (
+                          <a key={i} href={f.fileUrl} target="_blank" rel="noopener noreferrer" className="d-block text-sm">
+                            <FileText size={12} className="inline-icon" /> {f.fileName}
+                          </a>
+                        ))}
+                      </td>
+                      <td>
+                        {grading === sub.id ? (
+                           <div className="d-flex gap-2">
+                             <input 
+                               type="number" 
+                               className="form-control form-control-sm" 
+                               placeholder="Marks"
+                               style={{width: '80px'}}
+                               {...gradingForm.register('marksObtained', { required: true })}
+                             />
+                           </div>
+                        ) : (
+                          sub.marksObtained !== null ? `${sub.marksObtained} / ${selectedAssignment?.totalMarks}` : '-'
+                        )}
+                      </td>
+                      <td>
+                        {grading === sub.id ? (
+                          <div className="d-flex gap-2">
+                             <Button size="sm" onClick={gradingForm.handleSubmit(data => onGradeSubmit(data, sub.id))}>Save</Button>
+                             <Button size="sm" variant="secondary" onClick={() => setGrading(null)}>Cancel</Button>
+                          </div>
+                        ) : (
+                          <Button size="sm" variant="outline" onClick={() => {
+                            setGrading(sub.id);
+                            gradingForm.setValue('marksObtained', sub.marksObtained);
+                            gradingForm.setValue('feedback', sub.feedback);
+                          }}>
+                            {sub.marksObtained ? 'Edit Grade' : 'Grade'}
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </Modal>
     </div>
   );

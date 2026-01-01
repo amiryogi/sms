@@ -16,10 +16,16 @@ router.post('/',
   submissionController.submitAssignment
 );
 
+const { param } = require('express-validator');
+
 // Get submissions for an assignment (Teacher/Admin only)
 router.get('/assignment/:assignmentId', 
   isTeacher, 
-  [idParamRule.replace('id', 'assignmentId')], 
+  [
+    param('assignmentId')
+      .isInt({ min: 1 })
+      .withMessage('Assignment ID must be a valid positive integer')
+  ], 
   validate, 
   submissionController.getSubmissionsByAssignment
 );
