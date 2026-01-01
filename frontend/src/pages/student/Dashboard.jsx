@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { Link } from 'react-router-dom';
 import StatCard from '../../components/common/StatCard';
 import { BookOpen, ClipboardList, Award, Calendar } from 'lucide-react';
 import { assignmentService } from '../../api/assignmentService';
@@ -92,24 +93,24 @@ const StudentDashboard = () => {
               ))}
             </div>
           )}
-          <a href="/student/assignments" className="view-all-link">View All Assignments →</a>
+          <Link to="/student/assignments" className="view-all-link">View All Assignments →</Link>
         </div>
 
         <div className="card">
           <h3>Quick Links</h3>
           <div className="quick-actions">
-            <a href="/student/assignments" className="action-btn">
+            <Link to="/student/assignments" className="action-btn">
               <ClipboardList size={20} />
               <span>My Assignments</span>
-            </a>
-            <a href="/student/results" className="action-btn">
+            </Link>
+            <Link to="/student/results" className="action-btn">
               <Award size={20} />
               <span>View Results</span>
-            </a>
-            <a href="/student/report-card" className="action-btn">
+            </Link>
+            <Link to="/student/report-card" className="action-btn">
               <BookOpen size={20} />
               <span>Report Card</span>
-            </a>
+            </Link>
           </div>
         </div>
       </div>

@@ -55,7 +55,15 @@ const login = asyncHandler(async (req, res) => {
       school: true,
       userRoles: {
         include: {
-          role: true,
+          role: {
+            include: {
+              rolePermissions: {
+                include: {
+                  permission: true,
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -97,8 +105,18 @@ const login = asyncHandler(async (req, res) => {
     data: { lastLogin: new Date() },
   });
 
-  // Prepare response
+  // Prepare response - extract roles and permissions
   const roles = user.userRoles.map((ur) => ur.role.name);
+  
+  // Extract unique permissions from all roles
+  const permissions = [];
+  user.userRoles.forEach((ur) => {
+    ur.role.rolePermissions.forEach((rp) => {
+      if (!permissions.includes(rp.permission.name)) {
+        permissions.push(rp.permission.name);
+      }
+    });
+  });
 
   ApiResponse.success(res, {
     user: {
@@ -109,6 +127,7 @@ const login = asyncHandler(async (req, res) => {
       phone: user.phone,
       avatarUrl: user.avatarUrl,
       roles,
+      permissions,
       school: {
         id: user.school.id,
         name: user.school.name,

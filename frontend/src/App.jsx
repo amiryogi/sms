@@ -108,15 +108,9 @@ function App() {
               <Route path="/parent/results" element={<ParentResults />} />
             </Route>
 
-            {/* Legacy shared routes - redirect based on role */}
+            {/* Dashboard Redirect Logic */}
             <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
               <Route path="/dashboard" element={<RoleBasedDashboard />} />
-              <Route path="/students" element={<AdminStudents />} />
-              <Route path="/teachers" element={<AdminTeachers />} />
-              <Route path="/academic" element={<AcademicYears />} />
-              <Route path="/attendance" element={<TeacherAttendance />} />
-              <Route path="/exams" element={<StudentResults />} />
-              <Route path="/assignments" element={<StudentAssignments />} />
             </Route>
 
             {/* Root redirect */}
@@ -136,20 +130,26 @@ function App() {
 function RoleBasedDashboard() {
   const { user } = useAuth();
   
-  if (user?.roles?.includes('ADMIN')) {
+  // Safety check - redirect to unauthorized if no user or no roles
+  if (!user || !user.roles || user.roles.length === 0) {
+    return <Navigate to="/unauthorized" replace />;
+  }
+  
+  if (user.roles.includes('ADMIN')) {
     return <Navigate to="/admin/dashboard" replace />;
   }
-  if (user?.roles?.includes('TEACHER')) {
+  if (user.roles.includes('TEACHER')) {
     return <Navigate to="/teacher/dashboard" replace />;
   }
-  if (user?.roles?.includes('STUDENT')) {
+  if (user.roles.includes('STUDENT')) {
     return <Navigate to="/student/dashboard" replace />;
   }
-  if (user?.roles?.includes('PARENT')) {
+  if (user.roles.includes('PARENT')) {
     return <Navigate to="/parent/dashboard" replace />;
   }
   
-  return <AdminDashboard />;
+  // Fallback for unknown roles - redirect to unauthorized
+  return <Navigate to="/unauthorized" replace />;
 }
 
 export default App;

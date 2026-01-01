@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   LayoutDashboard, Users, BookOpen, Calendar, 
@@ -13,6 +13,7 @@ const DashboardLayout = () => {
   const { user, logout, hasRole } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = async () => {
     await logout();
@@ -117,7 +118,7 @@ const DashboardLayout = () => {
       <main className="main-content">
         <header className="content-top-bar">
           <div className="breadcrumb">
-            Dashboard / {window.location.pathname.split('/').pop() || 'Overview'}
+            Dashboard / {location.pathname.split('/').pop() || 'Overview'}
           </div>
           <div className="top-bar-actions">
             <div className="school-pill">
@@ -129,7 +130,7 @@ const DashboardLayout = () => {
         <div className="page-content">
           <AnimatePresence mode="wait">
             <motion.div
-              key={window.location.pathname}
+              key={location.pathname}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}

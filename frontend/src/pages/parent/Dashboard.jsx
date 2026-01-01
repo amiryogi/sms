@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { Link } from 'react-router-dom';
 import StatCard from '../../components/common/StatCard';
 import { Users, ClipboardList, Award, BookOpen } from 'lucide-react';
 
@@ -78,14 +79,14 @@ const ParentDashboard = () => {
             <div className="card">
               <h3>Quick Actions</h3>
               <div className="quick-actions">
-                <a href="/parent/attendance" className="action-btn">
+                <Link to="/parent/attendance" className="action-btn">
                   <ClipboardList size={20} />
                   <span>View Attendance</span>
-                </a>
-                <a href="/parent/results" className="action-btn">
+                </Link>
+                <Link to="/parent/results" className="action-btn">
                   <Award size={20} />
                   <span>View Results</span>
-                </a>
+                </Link>
               </div>
             </div>
 
