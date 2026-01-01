@@ -1,5 +1,5 @@
-const prisma = require('../config/database');
-const { ApiError, ApiResponse, asyncHandler } = require('../utils');
+const prisma = require("../config/database");
+const { ApiError, ApiResponse, asyncHandler } = require("../utils");
 
 /**
  * @desc    Get results for an exam subject (for teachers to enter marks)
@@ -10,16 +10,52 @@ const getResultsBySubject = asyncHandler(async (req, res) => {
   const examSubjectId = parseInt(req.params.examSubjectId);
   const { sectionId } = req.query;
 
-  if (!sectionId) throw ApiError.badRequest('Section ID is required');
+  if (!sectionId) throw ApiError.badRequest("Section ID is required");
 
-  const examSubject = await prisma.examSubject.findUnique({
-    where: { id: examSubjectId },
+  const examSubject = await prisma.examSubject.findFirst({
+    where: {
+      id: examSubjectId,
+      exam: {
+        schoolId: req.user.schoolId, // School-level isolation
+      },
+      classSubject: {
+        class: {
+          schoolId: req.user.schoolId, // Additional school check
+        },
+      },
+    },
     include: {
-      classSubject: { include: { class: true, subject: true } }
-    }
+      exam: true,
+      classSubject: {
+        include: {
+          class: true,
+          subject: true,
+          academicYear: true,
+        },
+      },
+    },
   });
 
-  if (!examSubject) throw ApiError.notFound('Exam subject not found');
+  if (!examSubject) {
+    throw ApiError.notFound(
+      "Exam subject not found or does not belong to your school"
+    );
+  }
+
+  // Validate academic year belongs to school
+  if (examSubject.classSubject.academicYear.schoolId !== req.user.schoolId) {
+    throw ApiError.forbidden("Academic year does not belong to your school");
+  }
+
+  // Validate section belongs to school
+  const section = await prisma.section.findFirst({
+    where: { id: parseInt(sectionId), schoolId: req.user.schoolId },
+  });
+  if (!section) {
+    throw ApiError.notFound(
+      "Section not found or does not belong to your school"
+    );
+  }
 
   // Get all students enrolled in this section for this academic year
   const students = await prisma.studentClass.findMany({
@@ -27,22 +63,27 @@ const getResultsBySubject = asyncHandler(async (req, res) => {
       classId: examSubject.classSubject.classId,
       sectionId: parseInt(sectionId),
       academicYearId: examSubject.classSubject.academicYearId,
-      status: 'active'
+      status: "active",
+      student: {
+        user: {
+          schoolId: req.user.schoolId, // School-level isolation
+        },
+      },
     },
     include: {
       student: {
         include: {
           user: { select: { firstName: true, lastName: true } },
           examResults: {
-            where: { examSubjectId }
-          }
-        }
-      }
+            where: { examSubjectId },
+          },
+        },
+      },
     },
-    orderBy: { rollNumber: 'asc' }
+    orderBy: { rollNumber: "asc" },
   });
 
-  const formattedResults = students.map(enrollment => ({
+  const formattedResults = students.map((enrollment) => ({
     studentId: enrollment.student.id,
     rollNumber: enrollment.rollNumber,
     firstName: enrollment.student.user.firstName,
@@ -50,13 +91,13 @@ const getResultsBySubject = asyncHandler(async (req, res) => {
     marksObtained: enrollment.student.examResults[0]?.marksObtained || null,
     practicalMarks: enrollment.student.examResults[0]?.practicalMarks || 0,
     grade: enrollment.student.examResults[0]?.grade || null,
-    remarks: enrollment.student.examResults[0]?.remarks || '',
-    resultId: enrollment.student.examResults[0]?.id || null
+    remarks: enrollment.student.examResults[0]?.remarks || "",
+    resultId: enrollment.student.examResults[0]?.id || null,
   }));
 
   ApiResponse.success(res, {
     examSubject,
-    results: formattedResults
+    results: formattedResults,
   });
 });
 
@@ -69,45 +110,89 @@ const saveResults = asyncHandler(async (req, res) => {
   const { examSubjectId, results } = req.body; // results: Array of { studentId, marksObtained, practicalMarks, remarks }
 
   if (!examSubjectId || !Array.isArray(results)) {
-    throw ApiError.badRequest('Exam Subject ID and results array are required');
+    throw ApiError.badRequest("Exam Subject ID and results array are required");
   }
 
-  const examSubject = await prisma.examSubject.findUnique({
-    where: { id: parseInt(examSubjectId) }
+  const examSubject = await prisma.examSubject.findFirst({
+    where: {
+      id: parseInt(examSubjectId),
+      exam: {
+        schoolId: req.user.schoolId, // School-level isolation
+      },
+      classSubject: {
+        class: {
+          schoolId: req.user.schoolId, // Additional school check
+        },
+      },
+    },
+    include: {
+      exam: true,
+      classSubject: {
+        include: {
+          academicYear: true,
+        },
+      },
+    },
   });
 
-  if (!examSubject) throw ApiError.notFound('Exam subject not found');
+  if (!examSubject) {
+    throw ApiError.notFound(
+      "Exam subject not found or does not belong to your school"
+    );
+  }
+
+  // Validate academic year belongs to school
+  if (examSubject.classSubject.academicYear.schoolId !== req.user.schoolId) {
+    throw ApiError.forbidden("Academic year does not belong to your school");
+  }
 
   const savedResults = await prisma.$transaction(async (tx) => {
     const updated = [];
     for (const res of results) {
+      // Validate student belongs to school
+      const student = await tx.student.findFirst({
+        where: {
+          id: parseInt(res.studentId),
+          user: {
+            schoolId: req.user.schoolId,
+          },
+        },
+      });
+
+      if (!student) {
+        throw ApiError.badRequest(
+          `Student ${res.studentId} not found or does not belong to your school`
+        );
+      }
       // Logic for grading can be added here
-      const totalMarks = (parseFloat(res.marksObtained) || 0) + (parseFloat(res.practicalMarks) || 0);
+      const totalMarks =
+        (parseFloat(res.marksObtained) || 0) +
+        (parseFloat(res.practicalMarks) || 0);
       let grade = null;
-      
+
       // Simple grading logic example (can be customized per school)
       const percentage = (totalMarks / examSubject.fullMarks) * 100;
-      if (percentage >= 90) grade = 'A+';
-      else if (percentage >= 80) grade = 'A';
-      else if (percentage >= 70) grade = 'B+';
-      else if (percentage >= 60) grade = 'B';
-      else if (percentage >= 50) grade = 'C+';
-      else if (percentage >= 40) grade = 'C';
-      else grade = 'F';
+      if (percentage >= 90) grade = "A+";
+      else if (percentage >= 80) grade = "A";
+      else if (percentage >= 70) grade = "B+";
+      else if (percentage >= 60) grade = "B";
+      else if (percentage >= 50) grade = "C+";
+      else if (percentage >= 40) grade = "C";
+      else grade = "F";
 
       const result = await tx.examResult.upsert({
         where: {
           examSubjectId_studentId: {
             examSubjectId: parseInt(examSubjectId),
-            studentId: parseInt(res.studentId)
-          }
+            studentId: parseInt(res.studentId),
+          },
         },
         update: {
           marksObtained: res.marksObtained,
           practicalMarks: res.practicalMarks || 0,
           grade,
           remarks: res.remarks || null,
-          enteredBy: req.user.id
+          enteredBy: req.user.id,
         },
         create: {
           examSubjectId: parseInt(examSubjectId),
@@ -116,15 +201,15 @@ const saveResults = asyncHandler(async (req, res) => {
           practicalMarks: res.practicalMarks || 0,
           grade,
           remarks: res.remarks || null,
-          enteredBy: req.user.id
-        }
+          enteredBy: req.user.id,
+        },
       });
       updated.push(result);
     }
     return updated;
   });
 
-  ApiResponse.success(res, savedResults, 'Results saved successfully');
+  ApiResponse.success(res, savedResults, "Results saved successfully");
 });
 
 /**
@@ -137,29 +222,53 @@ const getStudentExamResults = asyncHandler(async (req, res) => {
   const examId = parseInt(req.params.examId);
 
   const exam = await prisma.exam.findFirst({
-    where: { id: examId, schoolId: req.user.schoolId }
+    where: { id: examId, schoolId: req.user.schoolId },
   });
 
-  if (!exam) throw ApiError.notFound('Exam not found');
+  if (!exam) throw ApiError.notFound("Exam not found");
+
+  // Validate student belongs to school
+  const student = await prisma.student.findFirst({
+    where: {
+      id: studentId,
+      user: {
+        schoolId: req.user.schoolId, // School-level isolation
+      },
+    },
+  });
+
+  if (!student) {
+    throw ApiError.notFound(
+      "Student not found or does not belong to your school"
+    );
+  }
 
   const results = await prisma.examResult.findMany({
     where: {
       studentId,
-      examSubject: { examId }
+      examSubject: {
+        examId,
+        exam: {
+          schoolId: req.user.schoolId, // Additional school filter
+        },
+      },
     },
     include: {
       examSubject: {
         include: {
-          classSubject: { include: { subject: true } }
-        }
-      }
-    }
+          classSubject: { include: { subject: true } },
+        },
+      },
+    },
   });
 
   // Only show results if published, or if user is Admin/Teacher
-  const canSeeAll = req.user.roles.includes('ADMIN') || req.user.roles.includes('TEACHER');
+  const canSeeAll =
+    req.user.roles.includes("ADMIN") || req.user.roles.includes("TEACHER");
   if (!exam.isPublished && !canSeeAll) {
-    throw ApiError.forbidden('Results for this exam have not been published yet');
+    throw ApiError.forbidden(
+      "Results for this exam have not been published yet"
+    );
   }
 
   ApiResponse.success(res, results);
@@ -168,5 +277,5 @@ const getStudentExamResults = asyncHandler(async (req, res) => {
 module.exports = {
   getResultsBySubject,
   saveResults,
-  getStudentExamResults
+  getStudentExamResults,
 };
