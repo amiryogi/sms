@@ -327,7 +327,20 @@ const getMe = asyncHandler(async (req, res) => {
           },
         },
       },
-      student: true,
+      student: {
+        include: {
+          studentClasses: {
+            where: { status: 'active' },
+            orderBy: { academicYear: { startDate: 'desc' } },
+            take: 1,
+            include: {
+              class: true,
+              section: true,
+              academicYear: true,
+            },
+          },
+        },
+      },
       parent: true,
     },
   });
@@ -362,7 +375,11 @@ const getMe = asyncHandler(async (req, res) => {
       name: user.school.name,
       code: user.school.code,
     },
-    studentId: user.student?.id,
+    student: user.student ? {
+      ...user.student,
+      rollNumber: user.student.studentClasses?.[0]?.rollNumber, // Flatten for dashboard
+      enrollments: user.student.studentClasses, // Match frontend "enrollments" expectation
+    } : undefined,
     parentId: user.parent?.id,
     lastLogin: user.lastLogin,
   });

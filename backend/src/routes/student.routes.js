@@ -2,13 +2,13 @@ const express = require('express');
 const router = express.Router();
 
 const studentController = require('../controllers/student.controller');
-const { authenticate, isAdmin, isOwnStudent, validate } = require('../middleware');
+const { authenticate, isAdmin, isOwnStudent, validate, requireRole } = require('../middleware');
 const { studentRules, updateStudentRules, enrollmentRules, idParamRule, paginationRules } = require('../validators');
 
 router.use(authenticate);
 
 // List students (Admin/Teacher only)
-router.get('/', isAdmin, paginationRules, validate, studentController.getStudents);
+router.get('/', requireRole('ADMIN', 'TEACHER'), paginationRules, validate, studentController.getStudents);
 
 // Get single student (Admin/Teacher or Owner/Parent)
 router.get('/:id', [idParamRule], validate, isOwnStudent, studentController.getStudent);

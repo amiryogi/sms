@@ -259,7 +259,9 @@ const canAccessAttendance = asyncHandler(async (req, res, next) => {
     return next();
   }
 
-  const { classId, sectionId, studentId } = req.params;
+  const classId = req.params.classId || req.query.classId || req.body.classId;
+  const sectionId = req.params.sectionId || req.query.sectionId || req.body.sectionId;
+  const studentId = req.params.studentId || req.query.studentId || req.body.studentId;
 
   // Teachers accessing class attendance
   if (req.user.roles.includes('TEACHER') && classId && sectionId) {

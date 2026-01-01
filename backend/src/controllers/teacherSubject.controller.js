@@ -19,6 +19,15 @@ const getTeacherAssignments = asyncHandler(async (req, res) => {
   if (classSubjectId) where.classSubjectId = parseInt(classSubjectId);
   if (sectionId) where.sectionId = parseInt(sectionId);
 
+  // Security: Non-admins can only see their own assignments
+  if (!req.user.roles.includes('ADMIN') && !req.user.roles.includes('SUPER_ADMIN')) {
+    if (userId && parseInt(userId) !== req.user.id) {
+       throw ApiError.forbidden('You can only view your own assignments');
+    }
+    // Force filtering by own ID if not specifically requested (or if requested correctly)
+    where.userId = req.user.id;
+  }
+
   const assignments = await prisma.teacherSubject.findMany({
     where,
     include: {
