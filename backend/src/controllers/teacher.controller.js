@@ -21,7 +21,7 @@ const getTeachers = asyncHandler(async (req, res) => {
   };
 
   if (status) where.status = status;
-  
+
   if (search) {
     const searchQuery = buildSearchQuery(search, ['firstName', 'lastName', 'email']);
     if (searchQuery) where.OR = searchQuery.OR;
@@ -110,53 +110,15 @@ const getTeacher = asyncHandler(async (req, res) => {
   ApiResponse.success(res, teacher);
 });
 
-/**
- * @desc    Create teacher
- * @route   POST /api/v1/teachers
- * @access  Private/Admin
- */
-const createTeacher = asyncHandler(async (req, res) => {
-  const { email, password, firstName, lastName, phone, status = 'active' } = req.body;
-
-  // Check if user exists
-  const existingUser = await prisma.user.findFirst({
-    where: { email, schoolId: req.user.schoolId },
-  });
-
-  if (existingUser) {
-    throw ApiError.conflict('User with this email already exists in this school');
-  }
-
-  // Get teacher role
-  const teacherRole = await prisma.role.findUnique({ where: { name: 'TEACHER' } });
-  if (!teacherRole) throw ApiError.internal('Teacher role not configured');
-
-  const passwordHash = await bcrypt.hash(password || 'Teacher@123', 10);
-
-  const teacher = await prisma.user.create({
-    data: {
-      schoolId: req.user.schoolId,
-      email,
-      passwordHash,
-      firstName,
-      lastName,
-      phone,
-      status,
-      userRoles: {
-        create: { roleId: teacherRole.id },
-      },
-    },
-    select: {
-      id: true,
-      email: true,
-      firstName: true,
-      lastName: true,
-      status: true,
-    },
-  });
-
-  ApiResponse.created(res, teacher, 'Teacher created successfully');
-});
+// /**
+//  * @desc    Create teacher
+//  * @route   POST /api/v1/teachers
+//  * @access  Private/Admin
+//  */
+// const createTeacher = asyncHandler(async (req, res) => {
+//   // DEPRECATED: Use POST /api/v1/users with role="TEACHER"
+//   throw ApiError.gone('Use POST /api/v1/users to create teachers');
+// });
 
 /**
  * @desc    Update teacher profile
@@ -196,6 +158,6 @@ const updateTeacher = asyncHandler(async (req, res) => {
 module.exports = {
   getTeachers,
   getTeacher,
-  createTeacher,
+  // createTeacher, // Removed
   updateTeacher,
 };

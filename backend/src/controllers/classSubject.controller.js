@@ -9,15 +9,20 @@ const { ApiError, ApiResponse, asyncHandler } = require('../utils');
 const getClassSubjects = asyncHandler(async (req, res) => {
   const { classId, academicYearId } = req.query;
 
-  if (!classId || !academicYearId) {
-    throw ApiError.badRequest('Class ID and Academic Year ID are required');
+  if (!academicYearId) {
+    throw ApiError.badRequest('Academic Year ID is required');
+  }
+
+  const where = {
+    academicYearId: parseInt(academicYearId),
+  };
+
+  if (classId) {
+    where.classId = parseInt(classId);
   }
 
   const classSubjects = await prisma.classSubject.findMany({
-    where: {
-      classId: parseInt(classId),
-      academicYearId: parseInt(academicYearId),
-    },
+    where,
     include: {
       subject: true,
       teacherSubjects: {

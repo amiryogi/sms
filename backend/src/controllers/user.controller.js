@@ -113,7 +113,7 @@ const getUser = asyncHandler(async (req, res) => {
 
   const roles = user.userRoles.map((ur) => ur.role.name);
   const permissions = [];
-  
+
   user.userRoles.forEach((ur) => {
     ur.role.rolePermissions.forEach((rp) => {
       if (!permissions.includes(rp.permission.name)) {
@@ -146,7 +146,12 @@ const getUser = asyncHandler(async (req, res) => {
  * @access  Private/Admin
  */
 const createUser = asyncHandler(async (req, res) => {
-  const { email, password, firstName, lastName, phone, roleIds, status = 'active' } = req.body;
+  const { email, password, firstName, lastName, phone, roleIds = [], role, status = 'active' } = req.body;
+
+  // Check if neither roleIds nor role is provided
+  if (!role && (!roleIds || roleIds.length === 0)) {
+    throw ApiError.badRequest('At least one role is required');
+  }
 
   // Check if email already exists for this school
   const existingUser = await prisma.user.findFirst({
@@ -160,14 +165,28 @@ const createUser = asyncHandler(async (req, res) => {
     throw ApiError.conflict('Email already registered for this school');
   }
 
+  // Handle role string payload (e.g., "TEACHER")
+  let finalRoleIds = [...roleIds];
+  if (role) {
+    const roleRecord = await prisma.role.findUnique({
+      where: { name: role }
+    });
+    if (!roleRecord) {
+      throw ApiError.badRequest(`Role '${role}' not found`);
+    }
+    if (!finalRoleIds.includes(roleRecord.id)) {
+      finalRoleIds.push(roleRecord.id);
+    }
+  }
+
   // Verify all role IDs are valid
   const roles = await prisma.role.findMany({
     where: {
-      id: { in: roleIds },
+      id: { in: finalRoleIds },
     },
   });
 
-  if (roles.length !== roleIds.length) {
+  if (roles.length !== finalRoleIds.length) {
     throw ApiError.badRequest('One or more role IDs are invalid');
   }
 
@@ -191,7 +210,7 @@ const createUser = asyncHandler(async (req, res) => {
       phone,
       status,
       userRoles: {
-        create: roleIds.map((roleId) => ({
+        create: finalRoleIds.map((roleId) => ({
           roleId,
         })),
       },
@@ -240,7 +259,7 @@ const updateUser = asyncHandler(async (req, res) => {
 
   // Non-admins can only update their own profile (basic fields)
   const isAdmin = req.user.roles.includes('ADMIN') || req.user.roles.includes('SUPER_ADMIN');
-  
+
   if (!isAdmin && userId !== req.user.id) {
     throw ApiError.forbidden('You can only update your own profile');
   }

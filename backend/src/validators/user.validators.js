@@ -12,9 +12,7 @@ const createUserRules = [
     .normalizeEmail(),
   body('password')
     .isLength({ min: 8 })
-    .withMessage('Password must be at least 8 characters')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('Password must contain uppercase, lowercase, and number'),
+    .withMessage('Password must be at least 8 characters'),
   body('firstName')
     .trim()
     .notEmpty()
@@ -28,15 +26,22 @@ const createUserRules = [
     .isLength({ max: 100 })
     .withMessage('Last name must be less than 100 characters'),
   body('phone')
-    .optional()
+    .optional({ checkFalsy: true })
     .isMobilePhone()
     .withMessage('Please provide a valid phone number'),
   body('roleIds')
+    .optional()
     .isArray({ min: 1 })
-    .withMessage('At least one role is required'),
+    .withMessage('Roles must be an array'),
   body('roleIds.*')
+    .optional()
     .isInt({ min: 1 })
     .withMessage('Role ID must be a valid positive integer'),
+  body('role')
+    .optional()
+    .isString()
+    .isIn(['SUPER_ADMIN', 'ADMIN', 'TEACHER', 'STUDENT', 'PARENT'])
+    .withMessage('Invalid role'),
   body('status')
     .optional()
     .isIn(['active', 'inactive', 'suspended'])
@@ -65,7 +70,7 @@ const updateUserRules = [
     .isLength({ max: 100 })
     .withMessage('Last name must be less than 100 characters'),
   body('phone')
-    .optional()
+    .optional({ checkFalsy: true })
     .isMobilePhone()
     .withMessage('Please provide a valid phone number'),
   body('status')
