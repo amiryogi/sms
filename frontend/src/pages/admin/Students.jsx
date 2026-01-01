@@ -317,9 +317,11 @@ const Students = () => {
       {/* Enroll Student Modal */}
       <Modal isOpen={enrollModalOpen} onClose={closeEnrollModal} title="Enroll Student" size="md">
         <form onSubmit={enrollForm.handleSubmit(onEnrollSubmit)}>
-          <p className="form-info">
-            Enrolling: <strong>{selectedStudent?.firstName} {selectedStudent?.lastName}</strong>
-          </p>
+          <div className="form-info mb-4 p-3 bg-gray-50 rounded">
+            <p><strong>Student:</strong> {selectedStudent?.firstName} {selectedStudent?.lastName}</p>
+            <p><strong>Admission No:</strong> {selectedStudent?.admissionNumber}</p>
+            <p><strong>Current Enrollment:</strong> {selectedStudent?.class ? `${selectedStudent.class} - ${selectedStudent.section}` : <span className="text-muted">Not enrolled</span>}</p>
+          </div>
           <Select
             label="Academic Year"
             name="academicYearId"

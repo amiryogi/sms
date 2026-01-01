@@ -47,10 +47,10 @@ const Assignments = () => {
       reset({
         title: assignment.title,
         description: assignment.description,
-        classSubjectId: assignment.classSubjectId?.toString(),
-        sectionId: assignment.sectionId?.toString(),
+        classSubjectId: assignment.teacherSubject?.classSubjectId?.toString(),
+        sectionId: assignment.teacherSubject?.sectionId?.toString(),
         dueDate: assignment.dueDate?.split('T')[0],
-        maxMarks: assignment.maxMarks,
+        maxMarks: assignment.totalMarks,
       });
     } else {
       reset({});
@@ -69,12 +69,26 @@ const Assignments = () => {
     setSubmitting(true);
     try {
       const formData = new FormData();
+      // Find the teacherSubjectId (primary key) based on selection
+      const selectedAssignment = teacherAssignments.find(ta => 
+        ta.classSubjectId?.toString() === data.classSubjectId && 
+        ta.sectionId?.toString() === data.sectionId
+      );
+
+      if (!selectedAssignment) {
+        alert('Invalid Class/Section selection. You are not assigned to this class.');
+        setSubmitting(false);
+        return;
+      }
+
+      formData.append('teacherSubjectId', selectedAssignment.id);
       formData.append('title', data.title);
       formData.append('description', data.description || '');
-      formData.append('classSubjectId', data.classSubjectId);
-      formData.append('sectionId', data.sectionId);
+      // formData.append('classSubjectId', data.classSubjectId); // Backend needs teacherSubjectId, these are implicitly linked
+      // formData.append('sectionId', data.sectionId);
       formData.append('dueDate', data.dueDate);
-      if (data.maxMarks) formData.append('maxMarks', data.maxMarks);
+      if (data.maxMarks) formData.append('totalMarks', data.maxMarks); // Mapper: maxMarks -> totalMarks (backend expects totalMarks)
+      formData.append('isPublished', 'true'); // Default to published as there is no UI for draft mode
       
       Array.from(files).forEach(file => {
         formData.append('files', file);
@@ -110,14 +124,14 @@ const Assignments = () => {
     { header: 'Title', accessor: 'title' },
     { 
       header: 'Class/Subject', 
-      render: (row) => `${row.classSubject?.class?.name || ''} - ${row.classSubject?.subject?.name || ''}` 
+      render: (row) => `${row.teacherSubject?.classSubject?.class?.name || ''} - ${row.teacherSubject?.classSubject?.subject?.name || ''}` 
     },
-    { header: 'Section', render: (row) => row.section?.name || '-' },
+    { header: 'Section', render: (row) => row.teacherSubject?.section?.name || '-' },
     { 
       header: 'Due Date', 
       render: (row) => new Date(row.dueDate).toLocaleDateString() 
     },
-    { header: 'Max Marks', render: (row) => row.maxMarks || '-' },
+    { header: 'Max Marks', render: (row) => row.totalMarks || '-' },
     {
       header: 'Actions',
       width: '120px',
