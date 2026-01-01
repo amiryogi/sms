@@ -25,6 +25,40 @@ const getStudents = asyncHandler(async (req, res) => {
   if (classId) enrollmentWhere.classId = parseInt(classId);
   if (sectionId) enrollmentWhere.sectionId = parseInt(sectionId);
 
+  // Security: Teachers can only see students in their assigned classes
+  if (req.user.roles.includes('TEACHER') && !req.user.roles.includes('ADMIN') && !req.user.roles.includes('SUPER_ADMIN')) {
+    const assignments = await prisma.teacherSubject.findMany({
+      where: { userId: req.user.id },
+      select: {
+        classSubject: { select: { classId: true } },
+        sectionId: true,
+      },
+    });
+
+    if (assignments.length === 0) {
+      return ApiResponse.paginated(res, [], { page, limit, total: 0 });
+    }
+
+    const authorizedScopes = assignments.map(a => ({
+      classId: a.classSubject.classId,
+      sectionId: a.sectionId,
+    }));
+
+    // If limits specified in query, validate them
+    if (classId && sectionId) {
+      const isAuthorized = authorizedScopes.some(
+        scope => scope.classId === parseInt(classId) && scope.sectionId === parseInt(sectionId)
+      );
+      if (!isAuthorized) {
+        // Return empty instead of error to avoid leaking existence
+        return ApiResponse.paginated(res, [], { page, limit, total: 0 });
+      }
+    } else {
+      // Apply strict filter to only assigned scopes
+      enrollmentWhere.OR = authorizedScopes;
+    }
+  }
+
   // Build where clause for user search
   const userWhere = {
     schoolId: req.user.schoolId,
@@ -78,6 +112,15 @@ const getStudents = asyncHandler(async (req, res) => {
       section: enrollment?.section.name,
       status: user.status,
       avatarUrl: user.avatarUrl,
+      // Nested user object for frontend components expecting it (e.g., Attendance, MarksEntry)
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        avatarUrl: user.avatarUrl,
+      },
     };
   });
 
@@ -140,7 +183,17 @@ const getStudent = asyncHandler(async (req, res) => {
     throw ApiError.notFound('Student not found');
   }
 
-  ApiResponse.success(res, student);
+  // Flatten current enrollment for consistency
+  const enrollment = student.studentClasses[0];
+  const formattedStudent = {
+    ...student,
+    class: enrollment?.class,
+    section: enrollment?.section,
+    rollNumber: enrollment?.rollNumber,
+    academicYear: enrollment?.academicYear,
+  };
+
+  ApiResponse.success(res, formattedStudent);
 });
 
 /**
@@ -294,7 +347,16 @@ const enrollStudent = asyncHandler(async (req, res) => {
   });
 
   if (existingEnrollment) {
-    throw ApiError.conflict('Student is already enrolled in this academic year');
+    // Idempotency check: If trying to enroll in same class/section/year, return success
+    if (
+      existingEnrollment.classId === parseInt(classId) &&
+      existingEnrollment.sectionId === parseInt(sectionId)
+    ) {
+       return ApiResponse.success(res, existingEnrollment, 'Student is already enrolled in this class and section');
+    }
+    
+    // If trying to enroll in DIFFERENT section/class for SAME year, it's a conflict (should use transfer/update)
+    throw ApiError.conflict('Student is already enrolled in this academic year in a different class/section');
   }
 
   const enrollment = await prisma.studentClass.create({

@@ -80,15 +80,19 @@ const Students = () => {
         firstName: student.firstName,
         lastName: student.lastName,
         email: student.email,
+        phone: student.phone || '',
         admissionNumber: student.admissionNumber,
-        rollNumber: student.rollNumber,
         dateOfBirth: student.dateOfBirth?.split('T')[0],
         gender: student.gender,
+        bloodGroup: student.bloodGroup || '',
+        address: student.address || '',
+        emergencyContact: student.emergencyContact || '',
       });
     } else {
       reset({
-        firstName: '', lastName: '', email: '', password: '',
+        firstName: '', lastName: '', email: '', password: '', phone: '',
         admissionNumber: '', rollNumber: '', dateOfBirth: '', gender: '',
+        bloodGroup: '', address: '', emergencyContact: '',
         admissionDate: new Date().toISOString().split('T')[0],
         academicYearId: academicYears.find(y => y.isCurrent)?.id?.toString() || '',
         classId: '', sectionId: ''
@@ -237,16 +241,23 @@ const Students = () => {
             <Input label="First Name" name="firstName" register={register} required />
             <Input label="Last Name" name="lastName" register={register} required />
           </FormRow>
-          <Input label="Email" name="email" type="email" register={register} required />
+          <FormRow>
+            <Input label="Email" name="email" type="email" register={register} required />
+            <Input label="Phone" name="phone" register={register} />
+          </FormRow>
           {!editingStudent && (
             <Input label="Password" name="password" type="password" register={register} required />
           )}
           <FormRow>
             <Input label="Admission Number" name="admissionNumber" register={register} required />
-            <Input label="Roll Number" name="rollNumber" register={register} />
+            {!editingStudent && (
+              <Input label="Roll Number" name="rollNumber" register={register} />
+            )}
           </FormRow>
+          
+          {/* Extended Profile Info */}
           <FormRow>
-            <Input label="Date of Birth" name="dateOfBirth" type="date" register={register} />
+            <Input label="Date of Birth" name="dateOfBirth" type="date" register={register} required />
             <Select
               label="Gender"
               name="gender"
@@ -256,8 +267,14 @@ const Students = () => {
                 { value: 'other', label: 'Other' },
               ]}
               register={register}
+              required
             />
           </FormRow>
+          <FormRow>
+             <Input label="Blood Group" name="bloodGroup" register={register} placeholder="e.g. A+" />
+             <Input label="Emergency Contact" name="emergencyContact" register={register} />
+          </FormRow>
+          <Input label="Address" name="address" register={register} />
 
           {!editingStudent && (
             <>
