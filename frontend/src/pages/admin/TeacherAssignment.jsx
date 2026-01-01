@@ -307,7 +307,7 @@ const TeacherAssignment = () => {
           loading={loading}
           emptyMessage="No teacher assignments found."
           actions={
-            <Button icon={Plus} onClick={openModal}>
+            <Button icon={Plus} onClick={() => openModal(null)}>
               Assign Teacher
             </Button>
           }
