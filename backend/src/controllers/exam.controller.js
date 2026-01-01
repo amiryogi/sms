@@ -1,5 +1,5 @@
-const prisma = require('../config/database');
-const { ApiError, ApiResponse, asyncHandler } = require('../utils');
+const prisma = require("../config/database");
+const { ApiError, ApiResponse, asyncHandler } = require("../utils");
 
 /**
  * @desc    Get all exams for an academic year
@@ -18,13 +18,13 @@ const getExams = asyncHandler(async (req, res) => {
 
   const exams = await prisma.exam.findMany({
     where,
-    orderBy: { startDate: 'desc' },
+    orderBy: { startDate: "desc" },
     include: {
       academicYear: true,
       _count: {
-        select: { examSubjects: true }
-      }
-    }
+        select: { examSubjects: true },
+      },
+    },
   });
 
   ApiResponse.success(res, exams);
@@ -47,16 +47,16 @@ const getExam = asyncHandler(async (req, res) => {
           classSubject: {
             include: {
               class: true,
-              subject: true
-            }
-          }
-        }
-      }
-    }
+              subject: true,
+            },
+          },
+        },
+      },
+    },
   });
 
   if (!exam) {
-    throw ApiError.notFound('Exam not found');
+    throw ApiError.notFound("Exam not found");
   }
 
   ApiResponse.success(res, exam);
@@ -68,7 +68,8 @@ const getExam = asyncHandler(async (req, res) => {
  * @access  Private/Admin
  */
 const createExam = asyncHandler(async (req, res) => {
-  const { name, examType, startDate, endDate, academicYearId, classIds } = req.body;
+  const { name, examType, startDate, endDate, academicYearId, classIds } =
+    req.body;
 
   // 1. Create Exam
   const exam = await prisma.exam.create({
@@ -79,7 +80,7 @@ const createExam = asyncHandler(async (req, res) => {
       examType,
       startDate: startDate ? new Date(startDate) : null,
       endDate: endDate ? new Date(endDate) : null,
-    }
+    },
   });
 
   // 2. Auto-link subjects for the selected classes (if provided)
@@ -87,23 +88,27 @@ const createExam = asyncHandler(async (req, res) => {
     const classSubjects = await prisma.classSubject.findMany({
       where: {
         academicYearId: parseInt(academicYearId),
-        classId: { in: classIds.map(id => parseInt(id)) }
-      }
+        classId: { in: classIds.map((id) => parseInt(id)) },
+      },
     });
 
     if (classSubjects.length > 0) {
       await prisma.examSubject.createMany({
-        data: classSubjects.map(cs => ({
+        data: classSubjects.map((cs) => ({
           examId: exam.id,
           classSubjectId: cs.id,
           fullMarks: cs.fullMarks,
-          passMarks: cs.passMarks
-        }))
+          passMarks: cs.passMarks,
+        })),
       });
     }
   }
 
-  ApiResponse.created(res, exam, 'Exam created and subjects linked successfully');
+  ApiResponse.created(
+    res,
+    exam,
+    "Exam created and subjects linked successfully"
+  );
 });
 
 /**
@@ -116,10 +121,10 @@ const updateExamSubjects = asyncHandler(async (req, res) => {
   const { subjects } = req.body; // Array of { classSubjectId, examDate, startTime, endTime, fullMarks, passMarks }
 
   const exam = await prisma.exam.findFirst({
-    where: { id: examId, schoolId: req.user.schoolId }
+    where: { id: examId, schoolId: req.user.schoolId },
   });
 
-  if (!exam) throw ApiError.notFound('Exam not found');
+  if (!exam) throw ApiError.notFound("Exam not found");
 
   const results = await prisma.$transaction(async (tx) => {
     const updatedSubjects = [];
@@ -128,15 +133,15 @@ const updateExamSubjects = asyncHandler(async (req, res) => {
         where: {
           examId_classSubjectId: {
             examId,
-            classSubjectId: parseInt(sub.classSubjectId)
-          }
+            classSubjectId: parseInt(sub.classSubjectId),
+          },
         },
         update: {
           examDate: sub.examDate ? new Date(sub.examDate) : undefined,
           startTime: sub.startTime ? new Date(sub.startTime) : undefined,
           endTime: sub.endTime ? new Date(sub.endTime) : undefined,
           fullMarks: sub.fullMarks || undefined,
-          passMarks: sub.passMarks || undefined
+          passMarks: sub.passMarks || undefined,
         },
         create: {
           examId,
@@ -145,15 +150,15 @@ const updateExamSubjects = asyncHandler(async (req, res) => {
           startTime: sub.startTime ? new Date(sub.startTime) : null,
           endTime: sub.endTime ? new Date(sub.endTime) : null,
           fullMarks: sub.fullMarks || 100,
-          passMarks: sub.passMarks || 40
-        }
+          passMarks: sub.passMarks || 40,
+        },
       });
       updatedSubjects.push(examSub);
     }
     return updatedSubjects;
   });
 
-  ApiResponse.success(res, results, 'Exam subjects updated successfully');
+  ApiResponse.success(res, results, "Exam subjects updated successfully");
 });
 
 /**
@@ -164,12 +169,21 @@ const updateExamSubjects = asyncHandler(async (req, res) => {
 const publishExam = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const exam = await prisma.exam.update({
-    where: { id: parseInt(id) },
-    data: { isPublished: true }
+  // Validate exam belongs to school before updating
+  const exam = await prisma.exam.findFirst({
+    where: { id: parseInt(id), schoolId: req.user.schoolId },
   });
 
-  ApiResponse.success(res, exam, 'Exam results published successfully');
+  if (!exam) {
+    throw ApiError.notFound("Exam not found or does not belong to your school");
+  }
+
+  const updatedExam = await prisma.exam.update({
+    where: { id: parseInt(id) },
+    data: { isPublished: true },
+  });
+
+  ApiResponse.success(res, updatedExam, "Exam results published successfully");
 });
 
 /**
@@ -181,25 +195,27 @@ const deleteExam = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const exam = await prisma.exam.findFirst({
-    where: { id: parseInt(id), schoolId: req.user.schoolId }
+    where: { id: parseInt(id), schoolId: req.user.schoolId },
   });
 
-  if (!exam) throw ApiError.notFound('Exam not found');
+  if (!exam) throw ApiError.notFound("Exam not found");
 
   // Check if results exist
   const resultCount = await prisma.examResult.count({
-    where: { examSubject: { examId: parseInt(id) } }
+    where: { examSubject: { examId: parseInt(id) } },
   });
 
   if (resultCount > 0) {
-    throw ApiError.badRequest('Cannot delete exam - marks have already been entered');
+    throw ApiError.badRequest(
+      "Cannot delete exam - marks have already been entered"
+    );
   }
 
   await prisma.exam.delete({
-    where: { id: parseInt(id) }
+    where: { id: parseInt(id) },
   });
 
-  ApiResponse.success(res, null, 'Exam deleted successfully');
+  ApiResponse.success(res, null, "Exam deleted successfully");
 });
 
 module.exports = {
@@ -208,5 +224,5 @@ module.exports = {
   createExam,
   updateExamSubjects,
   publishExam,
-  deleteExam
+  deleteExam,
 };
