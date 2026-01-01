@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Plus, Trash2, UserCheck } from 'lucide-react';
+import { Plus, Trash2, UserCheck, Edit2 } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import { Select, Button } from '../../components/common/FormElements';
@@ -17,6 +17,7 @@ const TeacherAssignment = () => {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [editingAssignment, setEditingAssignment] = useState(null);
   const [filters, setFilters] = useState({ academicYearId: '' });
 
   const { register, handleSubmit, reset, watch, formState: { errors } } = useForm();
@@ -64,8 +65,8 @@ const TeacherAssignment = () => {
   const fetchAssignments = async () => {
     setLoading(true);
     try {
-      const response = await teacherService.getTeacherAssignments({ 
-        academicYearId: filters.academicYearId 
+      const response = await teacherService.getTeacherAssignments({
+        academicYearId: filters.academicYearId
       });
       setAssignments(response.data || []);
     } catch (error) {
@@ -77,8 +78,8 @@ const TeacherAssignment = () => {
 
   const fetchClassSubjectsForYear = async () => {
     try {
-      const response = await academicService.getClassSubjects({ 
-        academicYearId: filters.academicYearId 
+      const response = await academicService.getClassSubjects({
+        academicYearId: filters.academicYearId
       });
       setClassSubjects(response.data || []);
     } catch (error) {
@@ -95,30 +96,49 @@ const TeacherAssignment = () => {
     }
   };
 
-  const openModal = () => {
-    reset({ userId: '', classId: '', sectionId: '', classSubjectId: '', isClassTeacher: false });
+  const openModal = (assignment = null) => {
+    setEditingAssignment(assignment);
+    if (assignment) {
+      reset({
+        userId: assignment.userId.toString(),
+        classId: assignment.classSubject?.class?.id.toString(), // Derived from relation
+        sectionId: assignment.sectionId.toString(),
+        classSubjectId: assignment.classSubjectId.toString(),
+        isClassTeacher: assignment.isClassTeacher,
+      });
+    } else {
+      reset({ userId: '', classId: '', sectionId: '', classSubjectId: '', isClassTeacher: false });
+    }
     setModalOpen(true);
   };
 
   const closeModal = () => {
     setModalOpen(false);
+    setEditingAssignment(null);
     reset();
   };
 
   const onSubmit = async (data) => {
     setSubmitting(true);
     try {
-      await teacherService.assignTeacher({
+      const payload = {
         userId: parseInt(data.userId),
         classSubjectId: parseInt(data.classSubjectId),
         sectionId: parseInt(data.sectionId),
         isClassTeacher: data.isClassTeacher === true || data.isClassTeacher === 'true',
-      });
+      };
+
+      if (editingAssignment) {
+        await teacherService.updateAssignment(editingAssignment.id, payload);
+      } else {
+        await teacherService.assignTeacher(payload);
+      }
+
       fetchAssignments();
       closeModal();
     } catch (error) {
-      console.error('Error assigning teacher:', error);
-      alert(error.response?.data?.message || 'Error assigning teacher');
+      console.error('Error saving assignment:', error);
+      alert(error.response?.data?.message || 'Error saving assignment');
     } finally {
       setSubmitting(false);
     }
@@ -136,15 +156,15 @@ const TeacherAssignment = () => {
   };
 
   const columns = [
-    { 
-      header: 'Teacher', 
-      render: (row) => `${row.user?.firstName || ''} ${row.user?.lastName || ''}` 
+    {
+      header: 'Teacher',
+      render: (row) => `${row.user?.firstName || ''} ${row.user?.lastName || ''}`
     },
     { header: 'Class', render: (row) => row.classSubject?.class?.name || 'N/A' },
     { header: 'Section', render: (row) => row.section?.name || 'N/A' },
     { header: 'Subject', render: (row) => row.classSubject?.subject?.name || 'N/A' },
-    { 
-      header: 'Class Teacher', 
+    {
+      header: 'Class Teacher',
       render: (row) => (
         <span className={`badge ${row.isClassTeacher ? 'badge-success' : 'badge-secondary'}`}>
           {row.isClassTeacher ? 'Yes' : 'No'}
@@ -153,24 +173,29 @@ const TeacherAssignment = () => {
     },
     {
       header: 'Actions',
-      width: '80px',
+      width: '100px', // Increased width
       render: (row) => (
-        <button className="btn-icon btn-danger" onClick={() => handleDelete(row.id)}>
-          <Trash2 size={16} />
-        </button>
+        <div className="action-buttons">
+          <button className="btn-icon" onClick={() => openModal(row)} title="Edit">
+            <Edit2 size={16} />
+          </button>
+          <button className="btn-icon btn-danger" onClick={() => handleDelete(row.id)} title="Remove">
+            <Trash2 size={16} />
+          </button>
+        </div>
       ),
     },
   ];
 
   const yearOptions = academicYears.map(y => ({ value: y.id.toString(), label: y.name }));
-  const teacherOptions = teachers.map(t => ({ 
-    value: t.userId?.toString() || t.id?.toString(), 
-    label: `${t.user?.firstName || t.firstName} ${t.user?.lastName || t.lastName}` 
+  const teacherOptions = teachers.map(t => ({
+    value: t.userId?.toString() || t.id?.toString(),
+    label: `${t.user?.firstName || t.firstName} ${t.user?.lastName || t.lastName}`
   }));
   const classOptions = classes.map(c => ({ value: c.id.toString(), label: c.name }));
   const sectionOptions = sections.map(s => ({ value: s.id.toString(), label: s.name }));
-  
-  const filteredClassSubjects = classSubjects.filter(cs => 
+
+  const filteredClassSubjects = classSubjects.filter(cs =>
     !watchedClassId || cs.classId?.toString() === watchedClassId
   );
   const classSubjectOptions = filteredClassSubjects.map(cs => ({
@@ -213,7 +238,7 @@ const TeacherAssignment = () => {
         />
       </div>
 
-      <Modal isOpen={modalOpen} onClose={closeModal} title="Assign Teacher" size="lg">
+      <Modal isOpen={modalOpen} onClose={closeModal} title={editingAssignment ? "Edit Assignment" : "Assign Teacher"} size="lg">
         <form onSubmit={handleSubmit(onSubmit)}>
           <Select
             label="Teacher"
@@ -254,7 +279,9 @@ const TeacherAssignment = () => {
           </div>
           <div className="modal-actions">
             <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>
-            <Button type="submit" loading={submitting} icon={UserCheck}>Assign</Button>
+            <Button type="submit" loading={submitting} icon={UserCheck}>
+              {editingAssignment ? "Update" : "Assign"}
+            </Button>
           </div>
         </form>
       </Modal>

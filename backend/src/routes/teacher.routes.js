@@ -14,7 +14,8 @@ router.get('/', isAdmin, paginationRules, validate, teacherController.getTeacher
 router.get('/:id', [idParamRule], validate, isOwner, teacherController.getTeacher);
 
 // Create teacher (Admin only)
-router.post('/', isAdmin, teacherRules, validate, teacherController.createTeacher);
+// Create teacher (REMOVED - Use POST /api/v1/users with role='TEACHER')
+// router.post('/', isAdmin, teacherRules, validate, teacherController.createTeacher);
 
 // Update teacher (Admin or Owner)
 router.put('/:id', [idParamRule], validate, isOwner, updateTeacherRules, validate, teacherController.updateTeacher);

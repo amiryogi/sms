@@ -77,16 +77,22 @@ const Students = () => {
     setEditingStudent(student);
     if (student) {
       reset({
-        firstName: student.user?.firstName,
-        lastName: student.user?.lastName,
-        email: student.user?.email,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        email: student.email,
         admissionNumber: student.admissionNumber,
         rollNumber: student.rollNumber,
         dateOfBirth: student.dateOfBirth?.split('T')[0],
         gender: student.gender,
       });
     } else {
-      reset({});
+      reset({
+        firstName: '', lastName: '', email: '', password: '',
+        admissionNumber: '', rollNumber: '', dateOfBirth: '', gender: '',
+        admissionDate: new Date().toISOString().split('T')[0],
+        academicYearId: academicYears.find(y => y.isCurrent)?.id?.toString() || '',
+        classId: '', sectionId: ''
+      });
     }
     setModalOpen(true);
   };
@@ -115,7 +121,14 @@ const Students = () => {
       if (editingStudent) {
         await studentService.updateStudent(editingStudent.id, data);
       } else {
-        await studentService.createStudent(data);
+        const payload = {
+          ...data,
+          academicYearId: parseInt(data.academicYearId),
+          classId: parseInt(data.classId),
+          sectionId: parseInt(data.sectionId),
+          rollNumber: data.rollNumber ? parseInt(data.rollNumber) : undefined,
+        };
+        await studentService.createStudent(payload);
       }
       fetchStudents();
       closeModal();
@@ -147,27 +160,26 @@ const Students = () => {
   };
 
   const columns = [
-    { 
-      header: 'Student', 
+    {
+      header: 'Student',
       render: (row) => (
         <div className="user-cell">
-          <span className="user-name">{row.user?.firstName} {row.user?.lastName}</span>
-          <span className="user-email">{row.user?.email}</span>
+          <span className="user-name">{row.firstName} {row.lastName}</span>
+          <span className="user-email">{row.email}</span>
         </div>
       )
     },
     { header: 'Admission No.', accessor: 'admissionNumber' },
     { header: 'Roll No.', accessor: 'rollNumber', render: (row) => row.rollNumber || '-' },
-    { 
-      header: 'Gender', 
-      render: (row) => row.gender ? row.gender.charAt(0).toUpperCase() + row.gender.slice(1) : '-' 
+    {
+      header: 'Gender',
+      render: (row) => row.gender ? row.gender.charAt(0).toUpperCase() + row.gender.slice(1) : '-'
     },
-    { 
-      header: 'Enrollment', 
+    {
+      header: 'Enrollment',
       render: (row) => {
-        const enrollment = row.enrollments?.[0];
-        return enrollment 
-          ? `${enrollment.class?.name || ''} - ${enrollment.section?.name || ''}`
+        return row.class && row.section
+          ? `${row.class} - ${row.section}`
           : <span className="text-muted">Not enrolled</span>;
       }
     },
@@ -246,6 +258,38 @@ const Students = () => {
               register={register}
             />
           </FormRow>
+
+          {!editingStudent && (
+            <>
+              <FormRow>
+                <Input label="Admission Date" name="admissionDate" type="date" register={register} required />
+                <Select
+                  label="Academic Year"
+                  name="academicYearId"
+                  options={yearOptions}
+                  register={register}
+                  required
+                />
+              </FormRow>
+              <FormRow>
+                <Select
+                  label="Class"
+                  name="classId"
+                  options={classOptions}
+                  register={register}
+                  required
+                  onChange={(e) => fetchSectionsForClass(e.target.value)}
+                />
+                <Select
+                  label="Section"
+                  name="sectionId"
+                  options={sectionOptions}
+                  register={register}
+                  required
+                />
+              </FormRow>
+            </>
+          )}
           <div className="modal-actions">
             <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>
             <Button type="submit" loading={submitting}>{editingStudent ? 'Update' : 'Create'}</Button>
@@ -257,7 +301,7 @@ const Students = () => {
       <Modal isOpen={enrollModalOpen} onClose={closeEnrollModal} title="Enroll Student" size="md">
         <form onSubmit={enrollForm.handleSubmit(onEnrollSubmit)}>
           <p className="form-info">
-            Enrolling: <strong>{selectedStudent?.user?.firstName} {selectedStudent?.user?.lastName}</strong>
+            Enrolling: <strong>{selectedStudent?.firstName} {selectedStudent?.lastName}</strong>
           </p>
           <Select
             label="Academic Year"

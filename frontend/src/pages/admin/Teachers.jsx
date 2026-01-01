@@ -44,14 +44,10 @@ const Teachers = () => {
     setEditingTeacher(teacher);
     if (teacher) {
       reset({
-        firstName: teacher.user?.firstName,
-        lastName: teacher.user?.lastName,
-        email: teacher.user?.email,
-        phone: teacher.user?.phone,
-        employeeId: teacher.employeeId,
-        qualification: teacher.qualification,
-        specialization: teacher.specialization,
-        joiningDate: teacher.joiningDate?.split('T')[0],
+        firstName: teacher.firstName,
+        lastName: teacher.lastName,
+        email: teacher.email,
+        phone: teacher.phone,
       });
     } else {
       reset({});
@@ -84,19 +80,16 @@ const Teachers = () => {
   };
 
   const columns = [
-    { 
-      header: 'Teacher', 
+    {
+      header: 'Teacher',
       render: (row) => (
         <div className="user-cell">
-          <span className="user-name">{row.user?.firstName} {row.user?.lastName}</span>
-          <span className="user-email">{row.user?.email}</span>
+          <span className="user-name">{row.firstName} {row.lastName}</span>
+          <span className="user-email">{row.email}</span>
         </div>
       )
     },
-    { header: 'Employee ID', accessor: 'employeeId' },
-    { header: 'Qualification', render: (row) => row.qualification || '-' },
-    { header: 'Specialization', render: (row) => row.specialization || '-' },
-    { header: 'Phone', render: (row) => row.user?.phone || '-' },
+    { header: 'Phone', render: (row) => row.phone || '-' },
     {
       header: 'Actions',
       width: '120px',
@@ -148,14 +141,8 @@ const Teachers = () => {
             <Input label="Phone" name="phone" type="tel" register={register} />
           </FormRow>
           {!editingTeacher && (
-            <Input label="Password" name="password" type="password" register={register} required />
+            <Input label="Password" name="password" type="password" register={register} required minLength={8} />
           )}
-          <Input label="Employee ID" name="employeeId" register={register} required />
-          <FormRow>
-            <Input label="Qualification" name="qualification" register={register} />
-            <Input label="Specialization" name="specialization" register={register} />
-          </FormRow>
-          <Input label="Joining Date" name="joiningDate" type="date" register={register} />
           <div className="modal-actions">
             <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>
             <Button type="submit" loading={submitting}>{editingTeacher ? 'Update' : 'Create'}</Button>

@@ -35,7 +35,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          onClick={handleBackdropClick}
+        // onClick={handleBackdropClick}
         >
           <motion.div
             className={`modal-content ${sizeClasses[size]}`}

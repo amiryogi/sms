@@ -99,11 +99,21 @@ const assignTeacher = asyncHandler(async (req, res) => {
     }
   }
 
+  // Get ClassSubject to find Academic Year
+  const classSubject = await prisma.classSubject.findUnique({
+    where: { id: parseInt(classSubjectId) },
+  });
+
+  if (!classSubject) {
+    throw ApiError.badRequest('Invalid Subject selected');
+  }
+
   const assignment = await prisma.teacherSubject.create({
     data: {
-      userId: parseInt(userId),
-      classSubjectId: parseInt(classSubjectId),
-      sectionId: parseInt(sectionId),
+      user: { connect: { id: parseInt(userId) } },
+      classSubject: { connect: { id: parseInt(classSubjectId) } },
+      section: { connect: { id: parseInt(sectionId) } },
+      academicYear: { connect: { id: classSubject.academicYearId } },
       isClassTeacher: !!isClassTeacher,
     },
     include: {
@@ -123,22 +133,49 @@ const assignTeacher = asyncHandler(async (req, res) => {
  */
 const updateAssignment = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { isClassTeacher } = req.body;
+  const { userId, classSubjectId, sectionId, isClassTeacher } = req.body;
 
-  const assignment = await prisma.teacherSubject.findUnique({
+  const currentAssignment = await prisma.teacherSubject.findUnique({
     where: { id: parseInt(id) },
   });
 
-  if (!assignment) {
+  if (!currentAssignment) {
     throw ApiError.notFound('Assignment not found');
   }
 
+  // Determine target values (new or existing)
+  const targetUserId = userId ? parseInt(userId) : currentAssignment.userId;
+  const targetClassSubjectId = classSubjectId ? parseInt(classSubjectId) : currentAssignment.classSubjectId;
+  const targetSectionId = sectionId ? parseInt(sectionId) : currentAssignment.sectionId;
+  const targetIsClassTeacher = isClassTeacher !== undefined ? isClassTeacher : currentAssignment.isClassTeacher;
+
+  // Check unique constraint conflict only if FKs changed
+  if (
+    targetUserId !== currentAssignment.userId ||
+    targetClassSubjectId !== currentAssignment.classSubjectId ||
+    targetSectionId !== currentAssignment.sectionId
+  ) {
+    const existing = await prisma.teacherSubject.findUnique({
+      where: {
+        userId_classSubjectId_sectionId: {
+          userId: targetUserId,
+          classSubjectId: targetClassSubjectId,
+          sectionId: targetSectionId,
+        },
+      },
+    });
+
+    if (existing && existing.id !== parseInt(id)) {
+      throw ApiError.conflict('Teacher is already assigned to this class-subject-section');
+    }
+  }
+
   // If setting as class teacher, check if another exists (excluding self)
-  if (isClassTeacher && !assignment.isClassTeacher) {
+  if (targetIsClassTeacher) {
     const existingClassTeacher = await prisma.teacherSubject.findFirst({
       where: {
-        sectionId: assignment.sectionId,
-        classSubjectId: assignment.classSubjectId,
+        sectionId: targetSectionId,
+        classSubject: { id: targetClassSubjectId }, // Ensure same academic year scoping via classSubject
         isClassTeacher: true,
         NOT: { id: parseInt(id) },
       },
@@ -149,10 +186,27 @@ const updateAssignment = asyncHandler(async (req, res) => {
     }
   }
 
+  // If classSubjectId changed, we need to ensure academicYearId is updated too
+  let academicYearUpdate = {};
+  if (targetClassSubjectId !== currentAssignment.classSubjectId) {
+    const cs = await prisma.classSubject.findUnique({ where: { id: targetClassSubjectId } });
+    if (!cs) throw ApiError.badRequest('Invalid Subject');
+    academicYearUpdate = { academicYear: { connect: { id: cs.academicYearId } } };
+  }
+
   const updated = await prisma.teacherSubject.update({
     where: { id: parseInt(id) },
     data: {
-      isClassTeacher: isClassTeacher !== undefined ? isClassTeacher : assignment.isClassTeacher,
+      user: { connect: { id: targetUserId } },
+      classSubject: { connect: { id: targetClassSubjectId } },
+      section: { connect: { id: targetSectionId } },
+      isClassTeacher: targetIsClassTeacher,
+      ...academicYearUpdate
+    },
+    include: {
+      user: { select: { firstName: true, lastName: true } },
+      classSubject: { include: { subject: true, class: true } },
+      section: true,
     },
   });
 
