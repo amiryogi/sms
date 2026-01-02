@@ -42,6 +42,12 @@ const getResultsBySubject = asyncHandler(async (req, res) => {
     );
   }
 
+  if (examSubject.exam.status !== "PUBLISHED") {
+    throw ApiError.badRequest(
+      `Cannot enter marks. Exam status is ${examSubject.exam.status}.`
+    );
+  }
+
   // Validate academic year belongs to school
   if (examSubject.classSubject.academicYear.schoolId !== req.user.schoolId) {
     throw ApiError.forbidden("Academic year does not belong to your school");
@@ -130,6 +136,7 @@ const saveResults = asyncHandler(async (req, res) => {
       classSubject: {
         include: {
           academicYear: true,
+          class: true,
         },
       },
     },
@@ -164,10 +171,51 @@ const saveResults = asyncHandler(async (req, res) => {
           `Student ${res.studentId} not found or does not belong to your school`
         );
       }
+      const enrollment = await tx.studentClass.findFirst({
+        where: {
+          studentId: student.id,
+          classId: examSubject.classSubject.classId,
+          academicYearId: examSubject.classSubject.academicYearId,
+          status: "active",
+          schoolId: req.user.schoolId,
+        },
+      });
+
+      if (!enrollment) {
+        throw ApiError.badRequest(
+          `Student ${res.studentId} is not enrolled for this class/year`
+        );
+      }
+      const theoryObtained = res.marksObtained
+        ? parseFloat(res.marksObtained)
+        : 0;
+      const practicalObtained = res.practicalMarks
+        ? parseFloat(res.practicalMarks)
+        : 0;
+      if (theoryObtained < 0 || practicalObtained < 0) {
+        throw ApiError.badRequest(
+          `Marks cannot be negative for student ${res.studentId}`
+        );
+      }
+      if (
+        theoryObtained >
+        (examSubject.theoryFullMarks || examSubject.fullMarks || 100)
+      ) {
+        throw ApiError.badRequest(
+          `Theory marks for student ${res.studentId} cannot exceed ${
+            examSubject.theoryFullMarks || examSubject.fullMarks || 100
+          }`
+        );
+      }
+      if (practicalObtained > (examSubject.practicalFullMarks || 0)) {
+        throw ApiError.badRequest(
+          `Practical marks for student ${res.studentId} cannot exceed ${
+            examSubject.practicalFullMarks || 0
+          }`
+        );
+      }
       // Logic for grading can be added here
-      const totalMarks =
-        (parseFloat(res.marksObtained) || 0) +
-        (parseFloat(res.practicalMarks) || 0);
+      const totalMarks = theoryObtained + practicalObtained;
       let grade = null;
 
       // Simple grading logic example (can be customized per school)
@@ -193,6 +241,8 @@ const saveResults = asyncHandler(async (req, res) => {
           grade,
           remarks: res.remarks || null,
           enteredBy: req.user.id,
+          studentClassId: enrollment.id,
+          schoolId: req.user.schoolId,
         },
         create: {
           examSubjectId: parseInt(examSubjectId),
@@ -202,6 +252,8 @@ const saveResults = asyncHandler(async (req, res) => {
           grade,
           remarks: res.remarks || null,
           enteredBy: req.user.id,
+          studentClassId: enrollment.id,
+          schoolId: req.user.schoolId,
         },
       });
       updated.push(result);

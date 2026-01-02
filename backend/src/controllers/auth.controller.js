@@ -1,19 +1,28 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const { v4: uuidv4 } = require('uuid');
-const config = require('../config');
-const prisma = require('../config/database');
-const { ApiError, ApiResponse, asyncHandler } = require('../utils');
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
+const { v4: uuidv4 } = require("uuid");
+const config = require("../config");
+const prisma = require("../config/database");
+const { ApiError, ApiResponse, asyncHandler } = require("../utils");
+
+const hashRefreshToken = (token) =>
+  crypto.createHash("sha256").update(token).digest("hex");
+
+const extractTokenMetadata = (req) => ({
+  userAgent: req.headers["user-agent"]
+    ? req.headers["user-agent"].slice(0, 255)
+    : null,
+  ipAddress: req.ip || req.connection?.remoteAddress || null,
+});
 
 /**
  * Generate access and refresh tokens
  */
 const generateTokens = (userId) => {
-  const accessToken = jwt.sign(
-    { userId },
-    config.jwt.secret,
-    { expiresIn: config.jwt.expiresIn }
-  );
+  const accessToken = jwt.sign({ userId }, config.jwt.secret, {
+    expiresIn: config.jwt.expiresIn,
+  });
 
   const refreshToken = jwt.sign(
     { userId, tokenId: uuidv4() },
@@ -32,11 +41,16 @@ const parseExpiresIn = (expiresIn) => {
   const value = parseInt(expiresIn.slice(0, -1), 10);
 
   switch (unit) {
-    case 's': return value * 1000;
-    case 'm': return value * 60 * 1000;
-    case 'h': return value * 60 * 60 * 1000;
-    case 'd': return value * 24 * 60 * 60 * 1000;
-    default: return 24 * 60 * 60 * 1000; // Default 1 day
+    case "s":
+      return value * 1000;
+    case "m":
+      return value * 60 * 1000;
+    case "h":
+      return value * 60 * 60 * 1000;
+    case "d":
+      return value * 24 * 60 * 60 * 1000;
+    default:
+      return 24 * 60 * 60 * 1000; // Default 1 day
   }
 };
 
@@ -69,8 +83,8 @@ const login = asyncHandler(async (req, res) => {
       student: {
         include: {
           studentClasses: {
-            where: { status: 'active' },
-            orderBy: { academicYear: { startDate: 'desc' } },
+            where: { status: "active" },
+            orderBy: { academicYear: { startDate: "desc" } },
             take: 1,
             include: {
               class: true,
@@ -85,32 +99,40 @@ const login = asyncHandler(async (req, res) => {
   });
 
   if (!user) {
-    throw ApiError.unauthorized('Invalid email or password');
+    throw ApiError.unauthorized("Invalid email or password");
   }
 
   // Check password
   const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
 
   if (!isPasswordValid) {
-    throw ApiError.unauthorized('Invalid email or password');
+    throw ApiError.unauthorized("Invalid email or password");
   }
 
   // Check if user is active
-  if (user.status !== 'active') {
-    throw ApiError.unauthorized('Account is not active. Please contact administrator.');
+  if (user.status !== "active") {
+    throw ApiError.unauthorized(
+      "Account is not active. Please contact administrator."
+    );
   }
 
   // Generate tokens
   const { accessToken, refreshToken } = generateTokens(user.id);
 
-  // Store refresh token in database
-  const expiresAt = new Date(Date.now() + parseExpiresIn(config.jwt.refreshExpiresIn));
+  // Store refresh token in database (hashed, with metadata)
+  const expiresAt = new Date(
+    Date.now() + parseExpiresIn(config.jwt.refreshExpiresIn)
+  );
+  const hashedToken = hashRefreshToken(refreshToken);
+  const { userAgent, ipAddress } = extractTokenMetadata(req);
 
   await prisma.refreshToken.create({
     data: {
       userId: user.id,
-      token: refreshToken,
+      token: hashedToken,
       expiresAt,
+      userAgent,
+      ipAddress,
     },
   });
 
@@ -133,29 +155,35 @@ const login = asyncHandler(async (req, res) => {
     });
   });
 
-  ApiResponse.success(res, {
-    user: {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phone: user.phone,
-      avatarUrl: user.avatarUrl,
-      roles,
-      permissions,
-      school: {
-        code: user.school.code,
+  ApiResponse.success(
+    res,
+    {
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
+        avatarUrl: user.avatarUrl,
+        roles,
+        permissions,
+        school: {
+          code: user.school.code,
+        },
+        student: user.student
+          ? {
+              ...user.student,
+              rollNumber: user.student.studentClasses?.[0]?.rollNumber,
+              enrollments: user.student.studentClasses,
+            }
+          : undefined,
+        parentId: user.parent?.id,
       },
-      student: user.student ? {
-        ...user.student,
-        rollNumber: user.student.studentClasses?.[0]?.rollNumber,
-        enrollments: user.student.studentClasses,
-      } : undefined,
-      parentId: user.parent?.id,
+      accessToken,
+      refreshToken,
     },
-    accessToken,
-    refreshToken,
-  }, 'Login successful');
+    "Login successful"
+  );
 });
 
 /**
@@ -172,7 +200,7 @@ const register = asyncHandler(async (req, res) => {
   });
 
   if (!school) {
-    throw ApiError.badRequest('Invalid school code');
+    throw ApiError.badRequest("Invalid school code");
   }
 
   // Check if email already exists for this school
@@ -184,7 +212,7 @@ const register = asyncHandler(async (req, res) => {
   });
 
   if (existingUser) {
-    throw ApiError.conflict('Email already registered for this school');
+    throw ApiError.conflict("Email already registered for this school");
   }
 
   // Hash password
@@ -199,7 +227,7 @@ const register = asyncHandler(async (req, res) => {
       firstName,
       lastName,
       phone,
-      status: 'active',
+      status: "active",
     },
   });
 
@@ -211,7 +239,7 @@ const register = asyncHandler(async (req, res) => {
   if (userCount === 1) {
     // First user becomes admin
     const adminRole = await prisma.role.findUnique({
-      where: { name: 'ADMIN' },
+      where: { name: "ADMIN" },
     });
 
     if (adminRole) {
@@ -227,32 +255,42 @@ const register = asyncHandler(async (req, res) => {
   // Generate tokens
   const { accessToken, refreshToken } = generateTokens(user.id);
 
-  // Store refresh token
-  const expiresAt = new Date(Date.now() + parseExpiresIn(config.jwt.refreshExpiresIn));
+  // Store refresh token (hashed) with metadata
+  const expiresAt = new Date(
+    Date.now() + parseExpiresIn(config.jwt.refreshExpiresIn)
+  );
+  const hashedToken = hashRefreshToken(refreshToken);
+  const { userAgent, ipAddress } = extractTokenMetadata(req);
 
   await prisma.refreshToken.create({
     data: {
       userId: user.id,
-      token: refreshToken,
+      token: hashedToken,
       expiresAt,
+      userAgent,
+      ipAddress,
     },
   });
 
-  ApiResponse.created(res, {
-    user: {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      school: {
-        id: school.id,
-        name: school.name,
-        code: school.code,
+  ApiResponse.created(
+    res,
+    {
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        school: {
+          id: school.id,
+          name: school.name,
+          code: school.code,
+        },
       },
+      accessToken,
+      refreshToken,
     },
-    accessToken,
-    refreshToken,
-  }, 'Registration successful');
+    "Registration successful"
+  );
 });
 
 /**
@@ -268,45 +306,65 @@ const refreshToken = asyncHandler(async (req, res) => {
   try {
     decoded = jwt.verify(token, config.jwt.refreshSecret);
   } catch (error) {
-    throw ApiError.unauthorized('Invalid refresh token');
+    throw ApiError.unauthorized("Invalid refresh token");
   }
 
-  // Check if token exists in database
+  const hashedToken = hashRefreshToken(token);
+  const now = new Date();
+
+  // Check if token exists in database and is not revoked
   const storedToken = await prisma.refreshToken.findFirst({
     where: {
-      token,
+      token: hashedToken,
       userId: decoded.userId,
-      expiresAt: { gt: new Date() },
+      expiresAt: { gt: now },
+      revokedAt: null,
     },
   });
 
   if (!storedToken) {
-    throw ApiError.unauthorized('Invalid or expired refresh token');
+    throw ApiError.unauthorized("Invalid or expired refresh token");
   }
 
   // Generate new tokens
-  const { accessToken, refreshToken: newRefreshToken } = generateTokens(decoded.userId);
+  const { accessToken, refreshToken: newRefreshToken } = generateTokens(
+    decoded.userId
+  );
+  const hashedNewToken = hashRefreshToken(newRefreshToken);
+  const expiresAt = new Date(
+    Date.now() + parseExpiresIn(config.jwt.refreshExpiresIn)
+  );
+  const { userAgent, ipAddress } = extractTokenMetadata(req);
 
-  // Delete old refresh token
-  await prisma.refreshToken.delete({
-    where: { id: storedToken.id },
+  // Rotate tokens atomically: create new, revoke old
+  await prisma.$transaction(async (tx) => {
+    const created = await tx.refreshToken.create({
+      data: {
+        userId: decoded.userId,
+        token: hashedNewToken,
+        expiresAt,
+        userAgent,
+        ipAddress,
+      },
+    });
+
+    await tx.refreshToken.update({
+      where: { id: storedToken.id },
+      data: {
+        revokedAt: now,
+        replacedByTokenId: created.id,
+      },
+    });
   });
 
-  // Store new refresh token
-  const expiresAt = new Date(Date.now() + parseExpiresIn(config.jwt.refreshExpiresIn));
-
-  await prisma.refreshToken.create({
-    data: {
-      userId: decoded.userId,
-      token: newRefreshToken,
-      expiresAt,
+  ApiResponse.success(
+    res,
+    {
+      accessToken,
+      refreshToken: newRefreshToken,
     },
-  });
-
-  ApiResponse.success(res, {
-    accessToken,
-    refreshToken: newRefreshToken,
-  }, 'Token refreshed successfully');
+    "Token refreshed successfully"
+  );
 });
 
 /**
@@ -320,7 +378,7 @@ const logout = asyncHandler(async (req, res) => {
     where: { userId: req.user.id },
   });
 
-  ApiResponse.success(res, null, 'Logout successful');
+  ApiResponse.success(res, null, "Logout successful");
 });
 
 /**
@@ -349,8 +407,8 @@ const getMe = asyncHandler(async (req, res) => {
       student: {
         include: {
           studentClasses: {
-            where: { status: 'active' },
-            orderBy: { academicYear: { startDate: 'desc' } },
+            where: { status: "active" },
+            orderBy: { academicYear: { startDate: "desc" } },
             take: 1,
             include: {
               class: true,
@@ -365,7 +423,7 @@ const getMe = asyncHandler(async (req, res) => {
   });
 
   if (!user) {
-    throw ApiError.notFound('User not found');
+    throw ApiError.notFound("User not found");
   }
 
   const roles = user.userRoles.map((ur) => ur.role.name);
@@ -394,11 +452,13 @@ const getMe = asyncHandler(async (req, res) => {
       name: user.school.name,
       code: user.school.code,
     },
-    student: user.student ? {
-      ...user.student,
-      rollNumber: user.student.studentClasses?.[0]?.rollNumber, // Flatten for dashboard
-      enrollments: user.student.studentClasses, // Match frontend "enrollments" expectation
-    } : undefined,
+    student: user.student
+      ? {
+          ...user.student,
+          rollNumber: user.student.studentClasses?.[0]?.rollNumber, // Flatten for dashboard
+          enrollments: user.student.studentClasses, // Match frontend "enrollments" expectation
+        }
+      : undefined,
     parentId: user.parent?.id,
     lastLogin: user.lastLogin,
   });
@@ -418,10 +478,13 @@ const changePassword = asyncHandler(async (req, res) => {
   });
 
   // Verify current password
-  const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+  const isPasswordValid = await bcrypt.compare(
+    currentPassword,
+    user.passwordHash
+  );
 
   if (!isPasswordValid) {
-    throw ApiError.badRequest('Current password is incorrect');
+    throw ApiError.badRequest("Current password is incorrect");
   }
 
   // Hash new password
@@ -438,7 +501,11 @@ const changePassword = asyncHandler(async (req, res) => {
     where: { userId: req.user.id },
   });
 
-  ApiResponse.success(res, null, 'Password changed successfully. Please login again.');
+  ApiResponse.success(
+    res,
+    null,
+    "Password changed successfully. Please login again."
+  );
 });
 
 module.exports = {
