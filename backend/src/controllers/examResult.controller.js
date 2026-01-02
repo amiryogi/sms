@@ -165,7 +165,11 @@ const saveResults = asyncHandler(async (req, res) => {
     where: { id: parseInt(examSubjectId) },
     include: {
       exam: true,
-      classSubject: true,
+      classSubject: {
+        include: {
+          subject: true,
+        },
+      },
     },
   });
 
@@ -243,6 +247,19 @@ const saveResults = asyncHandler(async (req, res) => {
         ? parseFloat(result.practicalMarks)
         : 0;
 
+      // Practical limit: prefer exam subject, then class subject, otherwise allow entered value when subject is practical
+      const hasPracticalFlag =
+        (examSubject.practicalFullMarks ?? 0) > 0 ||
+        (examSubject.classSubject?.practicalMarks ?? 0) > 0 ||
+        !!examSubject.classSubject?.subject?.hasPractical;
+
+      const practicalLimit = Math.max(
+        examSubject.practicalFullMarks ?? 0,
+        examSubject.classSubject?.practicalMarks ?? 0,
+        hasPracticalFlag ? practicalObtained : 0,
+        0
+      );
+
       if (theoryObtained < 0 || practicalObtained < 0) {
         throw ApiError.badRequest(
           `Marks cannot be negative for student ${result.studentId}`
@@ -255,11 +272,9 @@ const saveResults = asyncHandler(async (req, res) => {
           }`
         );
       }
-      if (practicalObtained > (examSubject.practicalFullMarks || 0)) {
+      if (practicalObtained > practicalLimit) {
         throw ApiError.badRequest(
-          `Practical marks for student ${result.studentId} cannot exceed ${
-            examSubject.practicalFullMarks || 0
-          }`
+          `Practical marks for student ${result.studentId} cannot exceed ${practicalLimit}`
         );
       }
 

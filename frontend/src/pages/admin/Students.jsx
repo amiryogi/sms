@@ -1,11 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { Plus, Edit2, Eye, UserPlus } from 'lucide-react';
-import DataTable from '../../components/common/DataTable';
-import Modal from '../../components/common/Modal';
-import { Input, Select, Button, FormRow } from '../../components/common/FormElements';
-import { studentService } from '../../api/studentService';
-import { academicService } from '../../api/academicService';
+import React, { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { Plus, Edit2, Eye, UserPlus } from "lucide-react";
+import DataTable from "../../components/common/DataTable";
+import Modal from "../../components/common/Modal";
+import {
+  Input,
+  Select,
+  Button,
+  FormRow,
+  FileUpload,
+} from "../../components/common/FormElements";
+import { studentService } from "../../api/studentService";
+import { academicService } from "../../api/academicService";
+import { uploadService } from "../../api/uploadService";
+
+const resolveAssetUrl = (url) => {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  const base = import.meta.env.VITE_API_URL
+    ? import.meta.env.VITE_API_URL.replace(/\/api\/v1$/, "")
+    : window.location.origin;
+  return `${base}/${url
+    .replace(/^\\?/, "")
+    .replace(/^\//, "")
+    .replace(/\\/g, "/")}`;
+};
 
 const Students = () => {
   const [students, setStudents] = useState([]);
@@ -18,10 +37,22 @@ const Students = () => {
   const [editingStudent, setEditingStudent] = useState(null);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
-  const [search, setSearch] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 1,
+  });
+  const [search, setSearch] = useState("");
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm();
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm();
   const enrollForm = useForm();
 
   useEffect(() => {
@@ -41,7 +72,7 @@ const Students = () => {
       setClasses(classesRes.data || []);
       setAcademicYears(yearsRes.data || []);
     } catch (error) {
-      console.error('Error fetching initial data:', error);
+      console.error("Error fetching initial data:", error);
     }
   };
 
@@ -55,10 +86,10 @@ const Students = () => {
       });
       setStudents(response.data?.students || response.data || []);
       if (response.data?.pagination) {
-        setPagination(prev => ({ ...prev, ...response.data.pagination }));
+        setPagination((prev) => ({ ...prev, ...response.data.pagination }));
       }
     } catch (error) {
-      console.error('Error fetching students:', error);
+      console.error("Error fetching students:", error);
     } finally {
       setLoading(false);
     }
@@ -69,7 +100,7 @@ const Students = () => {
       const response = await academicService.getSections(classId);
       setSections(response.data || []);
     } catch (error) {
-      console.error('Error fetching sections:', error);
+      console.error("Error fetching sections:", error);
     }
   };
 
@@ -80,23 +111,36 @@ const Students = () => {
         firstName: student.firstName,
         lastName: student.lastName,
         email: student.email,
-        phone: student.phone || '',
+        phone: student.phone || "",
         admissionNumber: student.admissionNumber,
-        dateOfBirth: student.dateOfBirth?.split('T')[0],
+        dateOfBirth: student.dateOfBirth?.split("T")[0],
         gender: student.gender,
-        bloodGroup: student.bloodGroup || '',
-        address: student.address || '',
-        emergencyContact: student.emergencyContact || '',
+        bloodGroup: student.bloodGroup || "",
+        address: student.address || "",
+        emergencyContact: student.emergencyContact || "",
       });
+      setAvatarUrl(student.avatarUrl || "");
     } else {
       reset({
-        firstName: '', lastName: '', email: '', password: '', phone: '',
-        admissionNumber: '', rollNumber: '', dateOfBirth: '', gender: '',
-        bloodGroup: '', address: '', emergencyContact: '',
-        admissionDate: new Date().toISOString().split('T')[0],
-        academicYearId: academicYears.find(y => y.isCurrent)?.id?.toString() || '',
-        classId: '', sectionId: ''
+        firstName: "",
+        lastName: "",
+        email: "",
+        password: "",
+        phone: "",
+        admissionNumber: "",
+        rollNumber: "",
+        dateOfBirth: "",
+        gender: "",
+        bloodGroup: "",
+        address: "",
+        emergencyContact: "",
+        admissionDate: new Date().toISOString().split("T")[0],
+        academicYearId:
+          academicYears.find((y) => y.isCurrent)?.id?.toString() || "",
+        classId: "",
+        sectionId: "",
       });
+      setAvatarUrl("");
     }
     setModalOpen(true);
   };
@@ -104,6 +148,7 @@ const Students = () => {
   const closeModal = () => {
     setModalOpen(false);
     setEditingStudent(null);
+    setAvatarUrl("");
     reset();
   };
 
@@ -122,11 +167,12 @@ const Students = () => {
   const onSubmit = async (data) => {
     setSubmitting(true);
     try {
+      const payloadBase = { ...data, avatarUrl: avatarUrl || undefined };
       if (editingStudent) {
-        await studentService.updateStudent(editingStudent.id, data);
+        await studentService.updateStudent(editingStudent.id, payloadBase);
       } else {
         const payload = {
-          ...data,
+          ...payloadBase,
           academicYearId: parseInt(data.academicYearId),
           classId: parseInt(data.classId),
           sectionId: parseInt(data.sectionId),
@@ -137,10 +183,26 @@ const Students = () => {
       fetchStudents();
       closeModal();
     } catch (error) {
-      console.error('Error saving student:', error);
-      alert(error.response?.data?.message || 'Error saving student');
+      console.error("Error saving student:", error);
+      alert(error.response?.data?.message || "Error saving student");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleAvatarUpload = async (files) => {
+    const file = files && files[0];
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      const res = await uploadService.uploadAvatar(file);
+      const url = res?.data?.url || res?.url || res?.data?.data?.url;
+      if (url) setAvatarUrl(url);
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      alert(error.response?.data?.message || "Error uploading avatar");
+    } finally {
+      setUploadingAvatar(false);
     }
   };
 
@@ -156,8 +218,8 @@ const Students = () => {
       fetchStudents();
       closeEnrollModal();
     } catch (error) {
-      console.error('Error enrolling student:', error);
-      alert(error.response?.data?.message || 'Error enrolling student');
+      console.error("Error enrolling student:", error);
+      alert(error.response?.data?.message || "Error enrolling student");
     } finally {
       setSubmitting(false);
     }
@@ -165,37 +227,56 @@ const Students = () => {
 
   const columns = [
     {
-      header: 'Student',
+      header: "Student",
       render: (row) => (
         <div className="user-cell">
-          <span className="user-name">{row.firstName} {row.lastName}</span>
+          <span className="user-name">
+            {row.firstName} {row.lastName}
+          </span>
           <span className="user-email">{row.email}</span>
         </div>
-      )
+      ),
     },
-    { header: 'Admission No.', accessor: 'admissionNumber' },
-    { header: 'Roll No.', accessor: 'rollNumber', render: (row) => row.rollNumber || '-' },
+    { header: "Admission No.", accessor: "admissionNumber" },
     {
-      header: 'Gender',
-      render: (row) => row.gender ? row.gender.charAt(0).toUpperCase() + row.gender.slice(1) : '-'
+      header: "Roll No.",
+      accessor: "rollNumber",
+      render: (row) => row.rollNumber || "-",
     },
     {
-      header: 'Enrollment',
+      header: "Gender",
+      render: (row) =>
+        row.gender
+          ? row.gender.charAt(0).toUpperCase() + row.gender.slice(1)
+          : "-",
+    },
+    {
+      header: "Enrollment",
       render: (row) => {
-        return row.class && row.section
-          ? `${row.class} - ${row.section}`
-          : <span className="text-muted">Not enrolled</span>;
-      }
+        return row.class && row.section ? (
+          `${row.class} - ${row.section}`
+        ) : (
+          <span className="text-muted">Not enrolled</span>
+        );
+      },
     },
     {
-      header: 'Actions',
-      width: '150px',
+      header: "Actions",
+      width: "150px",
       render: (row) => (
         <div className="action-buttons">
-          <button className="btn-icon" onClick={() => openModal(row)} title="Edit">
+          <button
+            className="btn-icon"
+            onClick={() => openModal(row)}
+            title="Edit"
+          >
             <Edit2 size={16} />
           </button>
-          <button className="btn-icon btn-primary" onClick={() => openEnrollModal(row)} title="Enroll">
+          <button
+            className="btn-icon btn-primary"
+            onClick={() => openEnrollModal(row)}
+            title="Enroll"
+          >
             <UserPlus size={16} />
           </button>
         </div>
@@ -203,9 +284,18 @@ const Students = () => {
     },
   ];
 
-  const yearOptions = academicYears.map(y => ({ value: y.id.toString(), label: y.name }));
-  const classOptions = classes.map(c => ({ value: c.id.toString(), label: c.name }));
-  const sectionOptions = sections.map(s => ({ value: s.id.toString(), label: s.name }));
+  const yearOptions = academicYears.map((y) => ({
+    value: y.id.toString(),
+    label: y.name,
+  }));
+  const classOptions = classes.map((c) => ({
+    value: c.id.toString(),
+    label: c.name,
+  }));
+  const sectionOptions = sections.map((s) => ({
+    value: s.id.toString(),
+    label: s.name,
+  }));
 
   return (
     <div className="page-container">
@@ -222,7 +312,7 @@ const Students = () => {
           data={students}
           loading={loading}
           pagination={pagination}
-          onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
+          onPageChange={(page) => setPagination((prev) => ({ ...prev, page }))}
           searchValue={search}
           onSearchChange={setSearch}
           emptyMessage="No students found"
@@ -235,51 +325,133 @@ const Students = () => {
       </div>
 
       {/* Create/Edit Student Modal */}
-      <Modal isOpen={modalOpen} onClose={closeModal} title={editingStudent ? 'Edit Student' : 'Add Student'} size="lg">
+      <Modal
+        isOpen={modalOpen}
+        onClose={closeModal}
+        title={editingStudent ? "Edit Student" : "Add Student"}
+        size="lg"
+      >
         <form onSubmit={handleSubmit(onSubmit)}>
           <FormRow>
-            <Input label="First Name" name="firstName" register={register} required />
-            <Input label="Last Name" name="lastName" register={register} required />
-          </FormRow>
-          <FormRow>
-            <Input label="Email" name="email" type="email" register={register} required />
-            <Input label="Phone" name="phone" register={register} />
-          </FormRow>
-          {!editingStudent && (
-            <Input label="Password" name="password" type="password" register={register} required />
-          )}
-          <FormRow>
-            <Input label="Admission Number" name="admissionNumber" register={register} required />
-            {!editingStudent && (
-              <Input label="Roll Number" name="rollNumber" register={register} />
-            )}
-          </FormRow>
-          
-          {/* Extended Profile Info */}
-          <FormRow>
-            <Input label="Date of Birth" name="dateOfBirth" type="date" register={register} required />
-            <Select
-              label="Gender"
-              name="gender"
-              options={[
-                { value: 'male', label: 'Male' },
-                { value: 'female', label: 'Female' },
-                { value: 'other', label: 'Other' },
-              ]}
+            <Input
+              label="First Name"
+              name="firstName"
+              register={register}
+              required
+            />
+            <Input
+              label="Last Name"
+              name="lastName"
               register={register}
               required
             />
           </FormRow>
           <FormRow>
-             <Input label="Blood Group" name="bloodGroup" register={register} placeholder="e.g. A+" />
-             <Input label="Emergency Contact" name="emergencyContact" register={register} />
+            <Input
+              label="Email"
+              name="email"
+              type="email"
+              register={register}
+              required
+            />
+            <Input label="Phone" name="phone" register={register} />
+          </FormRow>
+          {!editingStudent && (
+            <Input
+              label="Password"
+              name="password"
+              type="password"
+              register={register}
+              required
+            />
+          )}
+          <FormRow>
+            <Input
+              label="Admission Number"
+              name="admissionNumber"
+              register={register}
+              required
+            />
+            {!editingStudent && (
+              <Input
+                label="Roll Number"
+                name="rollNumber"
+                register={register}
+              />
+            )}
+          </FormRow>
+
+          {/* Extended Profile Info */}
+          <FormRow>
+            <Input
+              label="Date of Birth"
+              name="dateOfBirth"
+              type="date"
+              register={register}
+              required
+            />
+            <Select
+              label="Gender"
+              name="gender"
+              options={[
+                { value: "male", label: "Male" },
+                { value: "female", label: "Female" },
+                { value: "other", label: "Other" },
+              ]}
+              register={register}
+              required
+            />
+          </FormRow>
+          <div className="form-group">
+            <label>Profile Photo</label>
+            <div className="flex items-center gap-3">
+              {avatarUrl ? (
+                <img
+                  src={resolveAssetUrl(avatarUrl)}
+                  alt="Avatar"
+                  className="user-avatar-sm"
+                />
+              ) : (
+                <div className="user-avatar-placeholder-sm">
+                  {(editingStudent?.firstName || "N")[0]}
+                </div>
+              )}
+              <FileUpload
+                label="Upload Avatar"
+                accept="image/*"
+                multiple={false}
+                onChange={handleAvatarUpload}
+              />
+            </div>
+            {uploadingAvatar && (
+              <p className="text-sm text-muted">Uploading...</p>
+            )}
+          </div>
+          <FormRow>
+            <Input
+              label="Blood Group"
+              name="bloodGroup"
+              register={register}
+              placeholder="e.g. A+"
+            />
+            <Input
+              label="Emergency Contact"
+              name="emergencyContact"
+              register={register}
+            />
           </FormRow>
           <Input label="Address" name="address" register={register} />
 
           {!editingStudent && (
             <>
               <FormRow>
-                <Input label="Admission Date" name="admissionDate" type="date" register={register} required />
+                <Input
+                  label="Admission Date"
+                  name="admissionDate"
+                  type="date"
+                  register={register}
+                  required
+                />
                 <Select
                   label="Academic Year"
                   name="academicYearId"
@@ -308,19 +480,40 @@ const Students = () => {
             </>
           )}
           <div className="modal-actions">
-            <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>
-            <Button type="submit" loading={submitting}>{editingStudent ? 'Update' : 'Create'}</Button>
+            <Button type="button" variant="secondary" onClick={closeModal}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={submitting}>
+              {editingStudent ? "Update" : "Create"}
+            </Button>
           </div>
         </form>
       </Modal>
 
       {/* Enroll Student Modal */}
-      <Modal isOpen={enrollModalOpen} onClose={closeEnrollModal} title="Enroll Student" size="md">
+      <Modal
+        isOpen={enrollModalOpen}
+        onClose={closeEnrollModal}
+        title="Enroll Student"
+        size="md"
+      >
         <form onSubmit={enrollForm.handleSubmit(onEnrollSubmit)}>
           <div className="form-info mb-4 p-3 bg-gray-50 rounded">
-            <p><strong>Student:</strong> {selectedStudent?.firstName} {selectedStudent?.lastName}</p>
-            <p><strong>Admission No:</strong> {selectedStudent?.admissionNumber}</p>
-            <p><strong>Current Enrollment:</strong> {selectedStudent?.class ? `${selectedStudent.class} - ${selectedStudent.section}` : <span className="text-muted">Not enrolled</span>}</p>
+            <p>
+              <strong>Student:</strong> {selectedStudent?.firstName}{" "}
+              {selectedStudent?.lastName}
+            </p>
+            <p>
+              <strong>Admission No:</strong> {selectedStudent?.admissionNumber}
+            </p>
+            <p>
+              <strong>Current Enrollment:</strong>{" "}
+              {selectedStudent?.class ? (
+                `${selectedStudent.class} - ${selectedStudent.section}`
+              ) : (
+                <span className="text-muted">Not enrolled</span>
+              )}
+            </p>
           </div>
           <Select
             label="Academic Year"
@@ -344,10 +537,22 @@ const Students = () => {
             register={enrollForm.register}
             required
           />
-          <Input label="Roll Number" name="rollNumber" register={enrollForm.register} />
+          <Input
+            label="Roll Number"
+            name="rollNumber"
+            register={enrollForm.register}
+          />
           <div className="modal-actions">
-            <Button type="button" variant="secondary" onClick={closeEnrollModal}>Cancel</Button>
-            <Button type="submit" loading={submitting} icon={UserPlus}>Enroll</Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={closeEnrollModal}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" loading={submitting} icon={UserPlus}>
+              Enroll
+            </Button>
           </div>
         </form>
       </Modal>

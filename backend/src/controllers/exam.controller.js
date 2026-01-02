@@ -330,6 +330,40 @@ const lockExam = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @desc    Unlock exam - move LOCKED exam back to PUBLISHED so marks can be edited
+ * @route   PUT /api/v1/exams/:id/unlock
+ * @access  Private/Admin
+ */
+const unlockExam = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const exam = await prisma.exam.findFirst({
+    where: { id: parseInt(id), schoolId: req.user.schoolId },
+  });
+
+  if (!exam) {
+    throw ApiError.notFound("Exam not found or does not belong to your school");
+  }
+
+  if (exam.status !== "LOCKED") {
+    throw ApiError.badRequest(
+      `Cannot unlock exam. Exam must be LOCKED. Current status is ${exam.status}.`
+    );
+  }
+
+  const updatedExam = await prisma.exam.update({
+    where: { id: parseInt(id) },
+    data: { status: "PUBLISHED" },
+  });
+
+  ApiResponse.success(
+    res,
+    updatedExam,
+    "Exam unlocked. Marks entry is enabled again."
+  );
+});
+
+/**
  * @desc    Delete exam
  * @route   DELETE /api/v1/exams/:id
  * @access  Private/Admin
@@ -372,5 +406,6 @@ module.exports = {
   updateExamSubjects,
   publishExam,
   lockExam,
+  unlockExam,
   deleteExam,
 };
