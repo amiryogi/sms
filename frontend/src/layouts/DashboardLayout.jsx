@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { 
-  LayoutDashboard, Users, BookOpen, Calendar, 
-  Settings, LogOut, Menu, X, UserCircle, 
+import {
+  LayoutDashboard, Users, BookOpen, Calendar,
+  Settings, LogOut, Menu, X, UserCircle,
   GraduationCap, ClipboardList, BookOpenCheck,
   Award, FolderOpen, FileText
 } from 'lucide-react';
@@ -32,12 +32,13 @@ const DashboardLayout = () => {
         { title: 'Sections', icon: FolderOpen, path: '/admin/sections' },
         { title: 'Subjects', icon: FileText, path: '/admin/subjects' },
         { title: 'Class Subjects', icon: BookOpenCheck, path: '/admin/class-subjects' },
+        { title: 'Exams', icon: ClipboardList, path: '/admin/exams' },
         { title: 'Teacher Assignment', icon: Award, path: '/admin/teacher-assignment' },
         { title: 'Students', icon: GraduationCap, path: '/admin/students' },
         { title: 'Teachers', icon: Users, path: '/admin/teachers' },
       );
     }
-    
+
     if (hasRole('TEACHER')) {
       items.push(
         { title: 'Dashboard', icon: LayoutDashboard, path: '/teacher/dashboard' },
@@ -46,7 +47,7 @@ const DashboardLayout = () => {
         { title: 'Marks Entry', icon: BookOpenCheck, path: '/teacher/marks' },
       );
     }
-    
+
     if (hasRole('STUDENT')) {
       items.push(
         { title: 'Dashboard', icon: LayoutDashboard, path: '/student/dashboard' },
@@ -55,7 +56,7 @@ const DashboardLayout = () => {
         { title: 'Report Card', icon: FileText, path: '/student/report-card' },
       );
     }
-    
+
     if (hasRole('PARENT')) {
       items.push(
         { title: 'Dashboard', icon: LayoutDashboard, path: '/parent/dashboard' },
@@ -72,7 +73,7 @@ const DashboardLayout = () => {
   return (
     <div className="dashboard-container">
       {/* Sidebar */}
-      <motion.aside 
+      <motion.aside
         className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}
         initial={false}
         animate={{ width: sidebarOpen ? 260 : 80 }}
@@ -86,9 +87,9 @@ const DashboardLayout = () => {
 
         <nav className="sidebar-nav">
           {navItems.map((item) => (
-            <NavLink 
-              key={item.path} 
-              to={item.path} 
+            <NavLink
+              key={item.path}
+              to={item.path}
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
             >
               <item.icon className="nav-icon" size={20} />
@@ -126,7 +127,7 @@ const DashboardLayout = () => {
             </div>
           </div>
         </header>
-        
+
         <div className="page-content">
           <AnimatePresence mode="wait">
             <motion.div

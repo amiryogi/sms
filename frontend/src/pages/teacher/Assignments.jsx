@@ -23,7 +23,7 @@ const Assignments = () => {
   const [grading, setGrading] = useState(null); // { id: submissionId, marks: '', feedback: '' }
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
-  
+
   // Grading form
   const gradingForm = useForm();
 
@@ -116,8 +116,8 @@ const Assignments = () => {
     try {
       const formData = new FormData();
       // Find the teacherSubjectId (primary key) based on selection
-      const selectedAssignment = teacherAssignments.find(ta => 
-        ta.classSubjectId?.toString() === data.classSubjectId && 
+      const selectedAssignment = teacherAssignments.find(ta =>
+        ta.classSubjectId?.toString() === data.classSubjectId &&
         ta.sectionId?.toString() === data.sectionId
       );
 
@@ -135,7 +135,7 @@ const Assignments = () => {
       formData.append('dueDate', data.dueDate);
       if (data.maxMarks) formData.append('totalMarks', data.maxMarks); // Mapper: maxMarks -> totalMarks (backend expects totalMarks)
       formData.append('isPublished', 'true'); // Default to published as there is no UI for draft mode
-      
+
       Array.from(files).forEach(file => {
         formData.append('files', file);
       });
@@ -168,14 +168,14 @@ const Assignments = () => {
 
   const columns = [
     { header: 'Title', accessor: 'title' },
-    { 
-      header: 'Class/Subject', 
-      render: (row) => `${row.teacherSubject?.classSubject?.class?.name || ''} - ${row.teacherSubject?.classSubject?.subject?.name || ''}` 
+    {
+      header: 'Class/Subject',
+      render: (row) => `${row.teacherSubject?.classSubject?.class?.name || ''} - ${row.teacherSubject?.classSubject?.subject?.name || ''}`
     },
     { header: 'Section', render: (row) => row.teacherSubject?.section?.name || '-' },
-    { 
-      header: 'Due Date', 
-      render: (row) => new Date(row.dueDate).toLocaleDateString() 
+    {
+      header: 'Due Date',
+      render: (row) => new Date(row.dueDate).toLocaleDateString()
     },
     { header: 'Max Marks', render: (row) => row.totalMarks || '-' },
     {
@@ -276,29 +276,41 @@ const Assignments = () => {
               register={register}
             />
           </FormRow>
-          {!editingAssignment && (
-            <div className="form-group">
-              <label>Attachments</label>
-              <div className="file-upload-wrapper">
-                <input
-                  type="file"
-                  multiple
-                  onChange={(e) => setFiles(e.target.files)}
-                  className="file-input"
-                  accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.png"
-                />
-                {files.length > 0 && (
+          <div className="form-group">
+            <label>Attachments</label>
+            <div className="file-upload-wrapper">
+              <input
+                type="file"
+                multiple
+                onChange={(e) => setFiles(e.target.files)}
+                className="file-input"
+                accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.png"
+              />
+              {files.length > 0 && (
+                <div className="file-list">
+                  {Array.from(files).map((f, i) => (
+                    <span key={i} className="file-item">
+                      <FileText size={14} /> {f.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Show existing files if editing */}
+              {editingAssignment && editingAssignment.assignmentFiles?.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-sm text-muted mb-1">Current Files:</p>
                   <div className="file-list">
-                    {Array.from(files).map((f, i) => (
-                      <span key={i} className="file-item">
-                        <FileText size={14} /> {f.name}
-                      </span>
+                    {editingAssignment.assignmentFiles.map((f, i) => (
+                      <a key={i} href={f.fileUrl} target="_blank" className="file-item text-primary" onClick={e => e.stopPropagation()}>
+                        <FileText size={14} /> {f.fileName}
+                      </a>
                     ))}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
           <div className="modal-actions">
             <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>
             <Button type="submit" loading={submitting} icon={editingAssignment ? null : Upload}>
@@ -331,12 +343,12 @@ const Assignments = () => {
                     <tr key={sub.id}>
                       <td>
                         <div className="user-cell">
-                           {sub.student.user.avatarUrl ? (
-                             <img src={sub.student.user.avatarUrl} alt="" className="user-avatar-sm" />
-                           ) : (
-                             <div className="user-avatar-placeholder-sm">{sub.student.user.firstName[0]}</div>
-                           )}
-                           <span>{sub.student.user.firstName} {sub.student.user.lastName}</span>
+                          {sub.student.user.avatarUrl ? (
+                            <img src={sub.student.user.avatarUrl} alt="" className="user-avatar-sm" />
+                          ) : (
+                            <div className="user-avatar-placeholder-sm">{sub.student.user.firstName[0]}</div>
+                          )}
+                          <span>{sub.student.user.firstName} {sub.student.user.lastName}</span>
                         </div>
                       </td>
                       <td>{new Date(sub.submittedAt).toLocaleString()}</td>
@@ -346,23 +358,34 @@ const Assignments = () => {
                         </span>
                       </td>
                       <td>
-                        {sub.submissionFiles?.map((f, i) => (
-                          <a key={i} href={f.fileUrl} target="_blank" rel="noopener noreferrer" className="d-block text-sm">
-                            <FileText size={12} className="inline-icon" /> {f.fileName}
-                          </a>
-                        ))}
+                        {sub.submissionFiles?.map((f, i) => {
+                          // Clean up URL and Prepend Base URL if relative
+                          const baseUrl = import.meta.env.VITE_API_URL
+                            ? import.meta.env.VITE_API_URL.replace('/api/v1', '')
+                            : 'http://localhost:5000';
+
+                          const fileUrl = f.fileUrl.startsWith('http')
+                            ? f.fileUrl
+                            : `${baseUrl}/${f.fileUrl.replace(/\\/g, '/')}`;
+
+                          return (
+                            <a key={i} href={fileUrl} target="_blank" rel="noopener noreferrer" className="d-block text-sm">
+                              <FileText size={12} className="inline-icon" /> {f.fileName}
+                            </a>
+                          );
+                        })}
                       </td>
                       <td>
                         {grading === sub.id ? (
-                           <div className="d-flex gap-2">
-                             <input 
-                               type="number" 
-                               className="form-control form-control-sm" 
-                               placeholder="Marks"
-                               style={{width: '80px'}}
-                               {...gradingForm.register('marksObtained', { required: true })}
-                             />
-                           </div>
+                          <div className="d-flex gap-2">
+                            <input
+                              type="number"
+                              className="form-control form-control-sm"
+                              placeholder="Marks"
+                              style={{ width: '80px' }}
+                              {...gradingForm.register('marksObtained', { required: true })}
+                            />
+                          </div>
                         ) : (
                           sub.marksObtained !== null ? `${sub.marksObtained} / ${selectedAssignment?.totalMarks}` : '-'
                         )}
@@ -370,8 +393,8 @@ const Assignments = () => {
                       <td>
                         {grading === sub.id ? (
                           <div className="d-flex gap-2">
-                             <Button size="sm" onClick={gradingForm.handleSubmit(data => onGradeSubmit(data, sub.id))}>Save</Button>
-                             <Button size="sm" variant="secondary" onClick={() => setGrading(null)}>Cancel</Button>
+                            <Button size="sm" onClick={gradingForm.handleSubmit(data => onGradeSubmit(data, sub.id))}>Save</Button>
+                            <Button size="sm" variant="secondary" onClick={() => setGrading(null)}>Cancel</Button>
                           </div>
                         ) : (
                           <Button size="sm" variant="outline" onClick={() => {

@@ -3,12 +3,11 @@ import { useForm } from 'react-hook-form';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
-import { Input, Select, Button } from '../../components/common/FormElements';
+import { Input, Button } from '../../components/common/FormElements';
 import { academicService } from '../../api/academicService';
 
 const Sections = () => {
   const [sections, setSections] = useState([]);
-  const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingSection, setEditingSection] = useState(null);
@@ -23,14 +22,10 @@ const Sections = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [sectionsRes, classesRes] = await Promise.all([
-        academicService.getSections(),
-        academicService.getClasses(),
-      ]);
-      setSections(sectionsRes.data || []);
-      setClasses(classesRes.data || []);
+      const response = await academicService.getSections();
+      setSections(response.data || []);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching sections:', error);
     } finally {
       setLoading(false);
     }
@@ -39,9 +34,9 @@ const Sections = () => {
   const openModal = (section = null) => {
     setEditingSection(section);
     if (section) {
-      reset({ name: section.name, classId: section.classId?.toString() });
+      reset({ name: section.name, capacity: section.capacity });
     } else {
-      reset({ name: '', classId: '' });
+      reset({ name: '', capacity: 40 });
     }
     setModalOpen(true);
   };
@@ -55,7 +50,7 @@ const Sections = () => {
   const onSubmit = async (data) => {
     setSubmitting(true);
     try {
-      const payload = { ...data, classId: parseInt(data.classId) };
+      const payload = { ...data, capacity: parseInt(data.capacity) || 40 };
       if (editingSection) {
         await academicService.updateSection(editingSection.id, payload);
       } else {
@@ -82,14 +77,9 @@ const Sections = () => {
     }
   };
 
-  const getClassName = (classId) => {
-    const cls = classes.find(c => c.id === classId);
-    return cls?.name || 'Unknown';
-  };
-
   const columns = [
     { header: 'Section Name', accessor: 'name' },
-    { header: 'Class', render: (row) => getClassName(row.classId) },
+    { header: 'Capacity', accessor: 'capacity', render: (row) => row.capacity || 40 },
     {
       header: 'Actions',
       width: '120px',
@@ -106,14 +96,12 @@ const Sections = () => {
     },
   ];
 
-  const classOptions = classes.map(c => ({ value: c.id.toString(), label: c.name }));
-
   return (
     <div className="page-container">
       <div className="page-header">
         <div>
           <h1>Sections</h1>
-          <p className="text-muted">Manage sections for each class</p>
+          <p className="text-muted">Manage global section labels (e.g. A, B, C)</p>
         </div>
       </div>
 
@@ -138,21 +126,23 @@ const Sections = () => {
         size="md"
       >
         <form onSubmit={handleSubmit(onSubmit)}>
-          <Select
-            label="Class"
-            name="classId"
-            options={classOptions}
-            register={register}
-            error={errors.classId?.message}
-            required
-          />
           <Input
             label="Section Name"
             name="name"
-            placeholder="e.g., A, B, C"
+            placeholder="e.g., A, B, Rose, Lotus"
             register={register}
             error={errors.name?.message}
             required
+            helperText="Create reusable section labels here. You will assign them to classes later."
+          />
+          <Input
+            label="Capacity"
+            name="capacity"
+            type="number"
+            placeholder="Default 40"
+            register={register}
+            error={errors.capacity?.message}
+            min={1}
           />
           <div className="modal-actions">
             <Button type="button" variant="secondary" onClick={closeModal}>

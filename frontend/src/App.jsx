@@ -14,6 +14,7 @@ const Classes = React.lazy(() => import('./pages/admin/Classes'));
 const Sections = React.lazy(() => import('./pages/admin/Sections'));
 const Subjects = React.lazy(() => import('./pages/admin/Subjects'));
 const ClassSubjects = React.lazy(() => import('./pages/admin/ClassSubjects'));
+const Exams = React.lazy(() => import('./pages/admin/Exams'));
 const TeacherAssignment = React.lazy(() => import('./pages/admin/TeacherAssignment'));
 const AdminStudents = React.lazy(() => import('./pages/admin/Students'));
 const AdminTeachers = React.lazy(() => import('./pages/admin/Teachers'));
@@ -55,7 +56,7 @@ function App() {
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
-            
+
             {/* Admin Routes */}
             <Route element={
               <ProtectedRoute roles={['ADMIN']}>
@@ -68,6 +69,7 @@ function App() {
               <Route path="/admin/sections" element={<Sections />} />
               <Route path="/admin/subjects" element={<Subjects />} />
               <Route path="/admin/class-subjects" element={<ClassSubjects />} />
+              <Route path="/admin/exams" element={<Exams />} />
               <Route path="/admin/teacher-assignment" element={<TeacherAssignment />} />
               <Route path="/admin/students" element={<AdminStudents />} />
               <Route path="/admin/teachers" element={<AdminTeachers />} />
@@ -129,12 +131,12 @@ function App() {
 // Role-based dashboard redirect
 function RoleBasedDashboard() {
   const { user } = useAuth();
-  
+
   // Safety check - redirect to unauthorized if no user or no roles
   if (!user || !user.roles || user.roles.length === 0) {
     return <Navigate to="/unauthorized" replace />;
   }
-  
+
   if (user.roles.includes('ADMIN')) {
     return <Navigate to="/admin/dashboard" replace />;
   }
@@ -147,7 +149,7 @@ function RoleBasedDashboard() {
   if (user.roles.includes('PARENT')) {
     return <Navigate to="/parent/dashboard" replace />;
   }
-  
+
   // Fallback for unknown roles - redirect to unauthorized
   return <Navigate to="/unauthorized" replace />;
 }

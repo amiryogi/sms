@@ -50,7 +50,7 @@ const getClass = asyncHandler(async (req, res) => {
  * @access  Private/Admin
  */
 const createClass = asyncHandler(async (req, res) => {
-  const { name, gradeLevel, displayOrder } = req.body;
+  const { name, gradeLevel, description, displayOrder } = req.body;
 
   const existingClass = await prisma.class.findFirst({
     where: { schoolId: req.user.schoolId, name },
@@ -65,6 +65,7 @@ const createClass = asyncHandler(async (req, res) => {
       schoolId: req.user.schoolId,
       name,
       gradeLevel,
+      description,
       displayOrder: displayOrder || 0,
     },
   });
@@ -79,7 +80,9 @@ const createClass = asyncHandler(async (req, res) => {
  */
 const updateClass = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { name, gradeLevel, displayOrder } = req.body;
+  const { name, gradeLevel, description, displayOrder } = req.body;
+
+  console.log('[DEBUG] Update Class Payload:', JSON.stringify(req.body, null, 2)); // Debug log
 
   const classObj = await prisma.class.findFirst({
     where: { id: parseInt(id), schoolId: req.user.schoolId },
@@ -94,6 +97,7 @@ const updateClass = asyncHandler(async (req, res) => {
     data: {
       name: name || classObj.name,
       gradeLevel: gradeLevel !== undefined ? gradeLevel : classObj.gradeLevel,
+      description: description !== undefined ? description : classObj.description,
       displayOrder: displayOrder !== undefined ? displayOrder : classObj.displayOrder,
     },
   });

@@ -90,6 +90,12 @@ enum NoticePriority {
   urgent
 }
 
+enum ExamStatus {
+  DRAFT
+  PUBLISHED
+  LOCKED
+}
+
 // =====================================================
 // CORE: SCHOOLS (Multi-school Ready)
 // =====================================================
@@ -214,6 +220,9 @@ model User {
   // Exam results entered by this user (teacher)
   examResultsEntered ExamResult[] @relation("EnteredBy")
 
+  // Exams created by this user (admin)
+  examsCreated Exam[] @relation("ExamsCreated")
+
   // Submissions graded by this user (teacher)
   submissionsGraded Submission[] @relation("GradedBy")
 
@@ -293,6 +302,7 @@ model Class {
   schoolId     Int      @map("school_id")
   name         String   @db.VarChar(50)
   gradeLevel   Int      @map("grade_level")
+  description  String?  @db.Text
   displayOrder Int      @default(0) @map("display_order")
   createdAt    DateTime @default(now()) @map("created_at")
 
@@ -566,27 +576,31 @@ model Attendance {
 
 /// Exam definitions (Unit Test, Midterm, Final, Board)
 model Exam {
-  id             Int       @id @default(autoincrement())
-  schoolId       Int       @map("school_id")
-  academicYearId Int       @map("academic_year_id")
-  name           String    @db.VarChar(100)
-  examType       ExamType  @map("exam_type")
-  startDate      DateTime? @map("start_date") @db.Date
-  endDate        DateTime? @map("end_date") @db.Date
-  isPublished    Boolean   @default(false) @map("is_published")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+  id             Int         @id @default(autoincrement())
+  schoolId       Int         @map("school_id")
+  academicYearId Int         @map("academic_year_id")
+  name           String      @db.VarChar(100)
+  examType       ExamType    @map("exam_type")
+  status         ExamStatus  @default(DRAFT)
+  createdBy      Int         @map("created_by")
+  startDate      DateTime?   @map("start_date") @db.Date
+  endDate        DateTime?   @map("end_date") @db.Date
+  publishedAt    DateTime?   @map("published_at")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
 
   // Relations
-  school       School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  academicYear AcademicYear  @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
-  examSubjects ExamSubject[]
-  reportCards  ReportCard[]
+  school        School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  academicYear  AcademicYear  @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  createdByUser User          @relation("ExamsCreated", fields: [createdBy], references: [id], onDelete: Restrict)
+  examSubjects  ExamSubject[]
+  reportCards   ReportCard[]
 
   @@index([schoolId])
   @@index([academicYearId])
   @@index([examType])
-  @@index([isPublished])
+  @@index([status])
+  @@index([createdBy])
   @@index([startDate, endDate])
   @@map("exams")
 }
@@ -630,6 +644,7 @@ model ExamResult {
   studentId      Int      @map("student_id")
   marksObtained  Decimal? @map("marks_obtained") @db.Decimal(5, 2)
   practicalMarks Decimal? @default(0) @map("practical_marks") @db.Decimal(5, 2)
+  isAbsent       Boolean  @default(false) @map("is_absent")
   grade          String?  @db.VarChar(5)
   remarks        String?  @db.Text
   enteredBy      Int      @map("entered_by")
