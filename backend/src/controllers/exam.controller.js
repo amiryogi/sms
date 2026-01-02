@@ -22,7 +22,7 @@ const getExams = asyncHandler(async (req, res) => {
     include: {
       academicYear: true,
       createdByUser: {
-        select: { id: true, firstName: true, lastName: true }
+        select: { id: true, firstName: true, lastName: true },
       },
       _count: {
         select: { examSubjects: true },
@@ -46,7 +46,7 @@ const getExam = asyncHandler(async (req, res) => {
     include: {
       academicYear: true,
       createdByUser: {
-        select: { id: true, firstName: true, lastName: true }
+        select: { id: true, firstName: true, lastName: true },
       },
       examSubjects: {
         include: {
@@ -138,12 +138,41 @@ const updateExamSubjects = asyncHandler(async (req, res) => {
 
   // Only allow subject updates when exam is DRAFT
   if (exam.status !== "DRAFT") {
-    throw ApiError.badRequest("Cannot modify exam subjects after publishing. Exam must be in DRAFT status.");
+    throw ApiError.badRequest(
+      "Cannot modify exam subjects after publishing. Exam must be in DRAFT status."
+    );
   }
 
   const results = await prisma.$transaction(async (tx) => {
     const updatedSubjects = [];
     for (const sub of subjects) {
+      const full =
+        sub.fullMarks !== undefined ? parseInt(sub.fullMarks, 10) : undefined;
+      const pass =
+        sub.passMarks !== undefined ? parseInt(sub.passMarks, 10) : undefined;
+      const theoryFull =
+        sub.theoryFullMarks !== undefined
+          ? parseInt(sub.theoryFullMarks, 10)
+          : undefined;
+      const practicalFull =
+        sub.practicalFullMarks !== undefined
+          ? parseInt(sub.practicalFullMarks, 10)
+          : undefined;
+
+      const resolvedTheory = theoryFull ?? 100;
+      const resolvedPractical = practicalFull ?? 0;
+      const resolvedFull = full ?? resolvedTheory + resolvedPractical;
+      const resolvedPass = pass ?? 40;
+
+      if (resolvedTheory < 0 || resolvedPractical < 0 || resolvedFull <= 0) {
+        throw ApiError.badRequest("Marks must be positive numbers");
+      }
+      if (resolvedPass < 0 || resolvedPass > resolvedFull) {
+        throw ApiError.badRequest(
+          "Pass marks cannot exceed full marks or be negative"
+        );
+      }
+
       const examSub = await tx.examSubject.upsert({
         where: {
           examId_classSubjectId: {
@@ -155,10 +184,10 @@ const updateExamSubjects = asyncHandler(async (req, res) => {
           examDate: sub.examDate ? new Date(sub.examDate) : undefined,
           startTime: sub.startTime ? new Date(sub.startTime) : undefined,
           endTime: sub.endTime ? new Date(sub.endTime) : undefined,
-          fullMarks: sub.fullMarks || undefined,
-          passMarks: sub.passMarks || undefined,
-          theoryFullMarks: sub.theoryFullMarks || undefined,
-          practicalFullMarks: sub.practicalFullMarks || undefined,
+          fullMarks: resolvedFull,
+          passMarks: resolvedPass,
+          theoryFullMarks: resolvedTheory,
+          practicalFullMarks: resolvedPractical,
         },
         create: {
           examId,
@@ -166,10 +195,10 @@ const updateExamSubjects = asyncHandler(async (req, res) => {
           examDate: sub.examDate ? new Date(sub.examDate) : null,
           startTime: sub.startTime ? new Date(sub.startTime) : null,
           endTime: sub.endTime ? new Date(sub.endTime) : null,
-          fullMarks: sub.fullMarks || 100,
-          passMarks: sub.passMarks || 40,
-          theoryFullMarks: sub.theoryFullMarks || 100,
-          practicalFullMarks: sub.practicalFullMarks || 0,
+          fullMarks: resolvedFull,
+          passMarks: resolvedPass,
+          theoryFullMarks: resolvedTheory,
+          practicalFullMarks: resolvedPractical,
         },
       });
       updatedSubjects.push(examSub);
@@ -197,7 +226,9 @@ const updateExam = asyncHandler(async (req, res) => {
 
   // Only allow edits when exam is DRAFT
   if (exam.status !== "DRAFT") {
-    throw ApiError.badRequest("Cannot edit exam after publishing. Exam must be in DRAFT status.");
+    throw ApiError.badRequest(
+      "Cannot edit exam after publishing. Exam must be in DRAFT status."
+    );
   }
 
   const updatedExam = await prisma.exam.update({
@@ -207,7 +238,9 @@ const updateExam = asyncHandler(async (req, res) => {
       examType: examType || exam.examType,
       startDate: startDate ? new Date(startDate) : exam.startDate,
       endDate: endDate ? new Date(endDate) : exam.endDate,
-      academicYearId: academicYearId ? parseInt(academicYearId) : exam.academicYearId,
+      academicYearId: academicYearId
+        ? parseInt(academicYearId)
+        : exam.academicYearId,
     },
   });
 
@@ -231,27 +264,35 @@ const publishExam = asyncHandler(async (req, res) => {
   }
 
   if (exam.status !== "DRAFT") {
-    throw ApiError.badRequest(`Cannot publish exam. Current status is ${exam.status}.`);
+    throw ApiError.badRequest(
+      `Cannot publish exam. Current status is ${exam.status}.`
+    );
   }
 
   // Check if exam has subjects linked
   const subjectCount = await prisma.examSubject.count({
-    where: { examId: parseInt(id) }
+    where: { examId: parseInt(id) },
   });
 
   if (subjectCount === 0) {
-    throw ApiError.badRequest("Cannot publish exam without any subjects. Please link classes/subjects first.");
+    throw ApiError.badRequest(
+      "Cannot publish exam without any subjects. Please link classes/subjects first."
+    );
   }
 
   const updatedExam = await prisma.exam.update({
     where: { id: parseInt(id) },
     data: {
       status: "PUBLISHED",
-      publishedAt: new Date()
+      publishedAt: new Date(),
     },
   });
 
-  ApiResponse.success(res, updatedExam, "Exam published successfully. Teachers can now enter marks.");
+  ApiResponse.success(
+    res,
+    updatedExam,
+    "Exam published successfully. Teachers can now enter marks."
+  );
 });
 
 /**
@@ -271,7 +312,9 @@ const lockExam = asyncHandler(async (req, res) => {
   }
 
   if (exam.status !== "PUBLISHED") {
-    throw ApiError.badRequest(`Cannot lock exam. Exam must be PUBLISHED first. Current status is ${exam.status}.`);
+    throw ApiError.badRequest(
+      `Cannot lock exam. Exam must be PUBLISHED first. Current status is ${exam.status}.`
+    );
   }
 
   const updatedExam = await prisma.exam.update({
@@ -279,7 +322,11 @@ const lockExam = asyncHandler(async (req, res) => {
     data: { status: "LOCKED" },
   });
 
-  ApiResponse.success(res, updatedExam, "Exam locked successfully. Marks are now frozen.");
+  ApiResponse.success(
+    res,
+    updatedExam,
+    "Exam locked successfully. Marks are now frozen."
+  );
 });
 
 /**

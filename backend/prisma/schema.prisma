@@ -121,6 +121,13 @@ model School {
   subjects      Subject[]
   exams         Exam[]
   notices       Notice[]
+  students      Student[]
+  parents       Parent[]
+  studentClasses StudentClass[]
+  studentParents StudentParent[]
+  attendances    Attendance[]
+  submissions    Submission[]
+  examResults    ExamResult[]
 
   @@index([code])
   @@index([isActive])
@@ -421,11 +428,14 @@ model TeacherSubject {
   academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
   assignments  Assignment[]
 
-  @@unique([userId, classSubjectId, sectionId])
+  // Ensure the same teacher can be reassigned across academic years without clashes,
+  // while still scoping uniqueness per year to avoid duplicate rows in the same cycle.
+  @@unique([userId, classSubjectId, sectionId, academicYearId])
   @@index([userId])
   @@index([classSubjectId])
   @@index([sectionId])
   @@index([academicYearId])
+  @@index([classSubjectId, academicYearId])
   @@map("teacher_subjects")
 }
 
@@ -437,6 +447,7 @@ model TeacherSubject {
 model Student {
   id               Int      @id @default(autoincrement())
   userId           Int      @unique @map("user_id")
+  schoolId         Int      @default(1) @map("school_id")
   admissionNumber  String   @map("admission_number") @db.VarChar(50)
   dateOfBirth      DateTime @map("date_of_birth") @db.Date
   gender           Gender
@@ -448,6 +459,7 @@ model Student {
   updatedAt        DateTime @updatedAt @map("updated_at")
 
   // Relations
+  school         School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   studentClasses StudentClass[]
   studentParents StudentParent[]
@@ -460,6 +472,7 @@ model Student {
   @@index([userId])
   @@index([admissionNumber])
   @@index([dateOfBirth])
+  @@index([schoolId])
   @@map("students")
 }
 
@@ -474,6 +487,7 @@ model StudentClass {
   classId        Int                @map("class_id")
   sectionId      Int                @map("section_id")
   academicYearId Int                @map("academic_year_id")
+  schoolId       Int                @default(1) @map("school_id")
   rollNumber     Int?               @map("roll_number")
   status         StudentClassStatus @default(active)
   createdAt      DateTime           @default(now()) @map("created_at")
@@ -483,8 +497,11 @@ model StudentClass {
   class        Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
   section      Section      @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  school       School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   attendances  Attendance[]
   reportCards  ReportCard[]
+  examResults  ExamResult[]
+  submissions  Submission[]
 
   @@unique([studentId, academicYearId])
   @@index([studentId])
@@ -493,6 +510,7 @@ model StudentClass {
   @@index([academicYearId])
   @@index([status])
   @@index([classId, sectionId, academicYearId])
+  @@index([schoolId])
   @@map("student_classes")
 }
 
@@ -504,6 +522,7 @@ model StudentClass {
 model Parent {
   id         Int      @id @default(autoincrement())
   userId     Int      @unique @map("user_id")
+  schoolId   Int      @default(1) @map("school_id")
   occupation String?  @db.VarChar(100)
   workplace  String?  @db.VarChar(255)
   address    String?  @db.Text
@@ -511,10 +530,12 @@ model Parent {
   updatedAt  DateTime @updatedAt @map("updated_at")
 
   // Relations
+  school         School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   studentParents StudentParent[]
 
   @@index([userId])
+  @@index([schoolId])
   @@map("parents")
 }
 
@@ -527,17 +548,20 @@ model StudentParent {
   id           Int          @id @default(autoincrement())
   studentId    Int          @map("student_id")
   parentId     Int          @map("parent_id")
+  schoolId     Int          @default(1) @map("school_id")
   relationship Relationship
   isPrimary    Boolean      @default(false) @map("is_primary")
   createdAt    DateTime     @default(now()) @map("created_at")
 
   // Relations
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   parent  Parent  @relation(fields: [parentId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, parentId])
   @@index([studentId])
   @@index([parentId])
+  @@index([schoolId])
   @@map("student_parents")
 }
 
@@ -551,6 +575,7 @@ model Attendance {
   id             Int              @id @default(autoincrement())
   studentClassId Int              @map("student_class_id")
   studentId      Int              @map("student_id")
+  schoolId       Int              @default(1) @map("school_id")
   attendanceDate DateTime         @map("attendance_date") @db.Date
   status         AttendanceStatus
   remarks        String?          @db.Text
@@ -561,6 +586,7 @@ model Attendance {
   // Relations
   studentClass StudentClass @relation(fields: [studentClassId], references: [id], onDelete: Cascade)
   student      Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  school       School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   markedByUser User         @relation("MarkedBy", fields: [markedBy], references: [id], onDelete: Restrict)
 
   // FIXED: Unique constraint now includes studentClassId
@@ -571,6 +597,7 @@ model Attendance {
   @@index([status])
   @@index([markedBy])
   @@index([studentId, attendanceDate])
+  @@index([schoolId])
   @@map("attendance")
 }
 
@@ -648,6 +675,8 @@ model ExamResult {
   id             Int      @id @default(autoincrement())
   examSubjectId  Int      @map("exam_subject_id")
   studentId      Int      @map("student_id")
+  studentClassId Int      @map("student_class_id")
+  schoolId       Int      @default(1) @map("school_id")
   marksObtained  Decimal? @map("marks_obtained") @db.Decimal(5, 2)
   practicalMarks Decimal? @default(0) @map("practical_marks") @db.Decimal(5, 2)
   isAbsent       Boolean  @default(false) @map("is_absent")
@@ -660,13 +689,17 @@ model ExamResult {
   // Relations
   examSubject   ExamSubject @relation(fields: [examSubjectId], references: [id], onDelete: Cascade)
   student       Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentClass  StudentClass @relation(fields: [studentClassId], references: [id], onDelete: Cascade)
+  school        School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   enteredByUser User        @relation("EnteredBy", fields: [enteredBy], references: [id], onDelete: Restrict)
 
   @@unique([examSubjectId, studentId])
   @@index([examSubjectId])
   @@index([studentId])
+  @@index([studentClassId])
   @@index([enteredBy])
   @@index([grade])
+  @@index([schoolId])
   @@map("exam_results")
 }
 
@@ -762,6 +795,8 @@ model Submission {
   id            Int              @id @default(autoincrement())
   assignmentId  Int              @map("assignment_id")
   studentId     Int              @map("student_id")
+  studentClassId Int             @map("student_class_id")
+  schoolId      Int              @default(1) @map("school_id")
   content       String?          @db.Text
   status        SubmissionStatus @default(submitted)
   marksObtained Decimal?         @map("marks_obtained") @db.Decimal(5, 2)
@@ -774,14 +809,18 @@ model Submission {
   // Relations
   assignment      Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   student         Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentClass    StudentClass     @relation(fields: [studentClassId], references: [id], onDelete: Cascade)
+  school          School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   gradedByUser    User?            @relation("GradedBy", fields: [gradedBy], references: [id], onDelete: SetNull)
   submissionFiles SubmissionFile[]
 
   @@unique([assignmentId, studentId])
   @@index([assignmentId])
   @@index([studentId])
+  @@index([studentClassId])
   @@index([status])
   @@index([gradedBy])
+  @@index([schoolId])
   @@map("submissions")
 }
 
@@ -881,14 +920,20 @@ model RefreshToken {
   id        Int      @id @default(autoincrement())
   userId    Int      @map("user_id")
   token     String   @db.VarChar(500)
+  userAgent String?  @map("user_agent") @db.VarChar(255)
+  ipAddress String?  @map("ip_address") @db.VarChar(45)
+  revokedAt DateTime? @map("revoked_at")
+  replacedByTokenId Int? @map("replaced_by_token_id")
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([token])
   @@index([userId])
   @@index([token(255)])
   @@index([expiresAt])
+  @@index([revokedAt])
   @@map("refresh_tokens")
 }

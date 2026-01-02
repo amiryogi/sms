@@ -1,5 +1,5 @@
-const prisma = require('../config/database');
-const { ApiError, ApiResponse, asyncHandler } = require('../utils');
+const prisma = require("../config/database");
+const { ApiError, ApiResponse, asyncHandler } = require("../utils");
 
 /**
  * @desc    Get all teacher assignments
@@ -11,8 +11,8 @@ const getTeacherAssignments = asyncHandler(async (req, res) => {
 
   const where = {
     classSubject: {
-      subject: { schoolId: req.user.schoolId }
-    }
+      subject: { schoolId: req.user.schoolId },
+    },
   };
 
   if (userId) where.userId = parseInt(userId);
@@ -20,9 +20,12 @@ const getTeacherAssignments = asyncHandler(async (req, res) => {
   if (sectionId) where.sectionId = parseInt(sectionId);
 
   // Security: Non-admins can only see their own assignments
-  if (!req.user.roles.includes('ADMIN') && !req.user.roles.includes('SUPER_ADMIN')) {
+  if (
+    !req.user.roles.includes("ADMIN") &&
+    !req.user.roles.includes("SUPER_ADMIN")
+  ) {
     if (userId && parseInt(userId) !== req.user.id) {
-       throw ApiError.forbidden('You can only view your own assignments');
+      throw ApiError.forbidden("You can only view your own assignments");
     }
     // Force filtering by own ID if not specifically requested (or if requested correctly)
     where.userId = req.user.id;
@@ -38,14 +41,14 @@ const getTeacherAssignments = asyncHandler(async (req, res) => {
           lastName: true,
           email: true,
           avatarUrl: true,
-        }
+        },
       },
       classSubject: {
         include: {
           class: true,
           subject: true,
           academicYear: true,
-        }
+        },
       },
       section: true,
     },
@@ -67,27 +70,12 @@ const assignTeacher = asyncHandler(async (req, res) => {
     where: {
       id: parseInt(userId),
       schoolId: req.user.schoolId,
-      userRoles: { some: { role: { name: 'TEACHER' } } },
-    }
-  });
-
-  if (!teacher) {
-    throw ApiError.badRequest('Valid teacher not found in this school');
-  }
-
-  // Check if already assigned
-  const existing = await prisma.teacherSubject.findUnique({
-    where: {
-      userId_classSubjectId_sectionId: {
-        userId: parseInt(userId),
-        classSubjectId: parseInt(classSubjectId),
-        sectionId: parseInt(sectionId),
-      },
+      userRoles: { some: { role: { name: "TEACHER" } } },
     },
   });
 
-  if (existing) {
-    throw ApiError.conflict('Teacher is already assigned to this class-subject-section');
+  if (!teacher) {
+    throw ApiError.badRequest("Valid teacher not found in this school");
   }
 
   // If setting as class teacher, check if another exist
@@ -104,17 +92,50 @@ const assignTeacher = asyncHandler(async (req, res) => {
 
     if (existingClassTeacher) {
       // Option: override or error. Let's error for safety.
-      throw ApiError.conflict('Another teacher is already the class teacher for this section');
+      throw ApiError.conflict(
+        "Another teacher is already the class teacher for this section"
+      );
     }
   }
 
   // Get ClassSubject to find Academic Year
   const classSubject = await prisma.classSubject.findUnique({
     where: { id: parseInt(classSubjectId) },
+    include: { class: true, academicYear: true },
   });
 
   if (!classSubject) {
-    throw ApiError.badRequest('Invalid Subject selected');
+    throw ApiError.badRequest("Invalid Subject selected");
+  }
+
+  if (classSubject.class.schoolId !== req.user.schoolId) {
+    throw ApiError.forbidden("Class subject does not belong to your school");
+  }
+
+  const section = await prisma.section.findUnique({
+    where: { id: parseInt(sectionId) },
+  });
+
+  if (!section || section.schoolId !== req.user.schoolId) {
+    throw ApiError.forbidden("Section does not belong to your school");
+  }
+
+  // Check if already assigned (year-aware)
+  const existing = await prisma.teacherSubject.findUnique({
+    where: {
+      userId_classSubjectId_sectionId_academicYearId: {
+        userId: parseInt(userId),
+        classSubjectId: parseInt(classSubjectId),
+        sectionId: parseInt(sectionId),
+        academicYearId: classSubject.academicYearId,
+      },
+    },
+  });
+
+  if (existing) {
+    throw ApiError.conflict(
+      "Teacher is already assigned to this class-subject-section for this academic year"
+    );
   }
 
   const assignment = await prisma.teacherSubject.create({
@@ -132,7 +153,7 @@ const assignTeacher = asyncHandler(async (req, res) => {
     },
   });
 
-  ApiResponse.created(res, assignment, 'Teacher assigned successfully');
+  ApiResponse.created(res, assignment, "Teacher assigned successfully");
 });
 
 /**
@@ -146,17 +167,51 @@ const updateAssignment = asyncHandler(async (req, res) => {
 
   const currentAssignment = await prisma.teacherSubject.findUnique({
     where: { id: parseInt(id) },
+    include: {
+      classSubject: { include: { class: true, academicYear: true } },
+      section: true,
+    },
   });
 
   if (!currentAssignment) {
-    throw ApiError.notFound('Assignment not found');
+    throw ApiError.notFound("Assignment not found");
+  }
+
+  if (currentAssignment.classSubject.class.schoolId !== req.user.schoolId) {
+    throw ApiError.forbidden("Assignment does not belong to your school");
   }
 
   // Determine target values (new or existing)
   const targetUserId = userId ? parseInt(userId) : currentAssignment.userId;
-  const targetClassSubjectId = classSubjectId ? parseInt(classSubjectId) : currentAssignment.classSubjectId;
-  const targetSectionId = sectionId ? parseInt(sectionId) : currentAssignment.sectionId;
-  const targetIsClassTeacher = isClassTeacher !== undefined ? isClassTeacher : currentAssignment.isClassTeacher;
+  const targetClassSubjectId = classSubjectId
+    ? parseInt(classSubjectId)
+    : currentAssignment.classSubjectId;
+  const targetSectionId = sectionId
+    ? parseInt(sectionId)
+    : currentAssignment.sectionId;
+  const targetIsClassTeacher =
+    isClassTeacher !== undefined
+      ? isClassTeacher
+      : currentAssignment.isClassTeacher;
+
+  const targetClassSubject = await prisma.classSubject.findUnique({
+    where: { id: targetClassSubjectId },
+    include: { class: true, academicYear: true },
+  });
+
+  if (
+    !targetClassSubject ||
+    targetClassSubject.class.schoolId !== req.user.schoolId
+  ) {
+    throw ApiError.forbidden("Class subject does not belong to your school");
+  }
+
+  const targetSection = await prisma.section.findUnique({
+    where: { id: targetSectionId },
+  });
+  if (!targetSection || targetSection.schoolId !== req.user.schoolId) {
+    throw ApiError.forbidden("Section does not belong to your school");
+  }
 
   // Check unique constraint conflict only if FKs changed
   if (
@@ -166,16 +221,19 @@ const updateAssignment = asyncHandler(async (req, res) => {
   ) {
     const existing = await prisma.teacherSubject.findUnique({
       where: {
-        userId_classSubjectId_sectionId: {
+        userId_classSubjectId_sectionId_academicYearId: {
           userId: targetUserId,
           classSubjectId: targetClassSubjectId,
           sectionId: targetSectionId,
+          academicYearId: targetClassSubject.academicYearId,
         },
       },
     });
 
     if (existing && existing.id !== parseInt(id)) {
-      throw ApiError.conflict('Teacher is already assigned to this class-subject-section');
+      throw ApiError.conflict(
+        "Teacher is already assigned to this class-subject-section"
+      );
     }
   }
 
@@ -191,17 +249,16 @@ const updateAssignment = asyncHandler(async (req, res) => {
     });
 
     if (existingClassTeacher) {
-      throw ApiError.conflict('Another teacher is already the class teacher for this section');
+      throw ApiError.conflict(
+        "Another teacher is already the class teacher for this section"
+      );
     }
   }
 
-  // If classSubjectId changed, we need to ensure academicYearId is updated too
-  let academicYearUpdate = {};
-  if (targetClassSubjectId !== currentAssignment.classSubjectId) {
-    const cs = await prisma.classSubject.findUnique({ where: { id: targetClassSubjectId } });
-    if (!cs) throw ApiError.badRequest('Invalid Subject');
-    academicYearUpdate = { academicYear: { connect: { id: cs.academicYearId } } };
-  }
+  // Always realign academicYear with target classSubject to avoid drift
+  const academicYearUpdate = {
+    academicYear: { connect: { id: targetClassSubject.academicYearId } },
+  };
 
   const updated = await prisma.teacherSubject.update({
     where: { id: parseInt(id) },
@@ -210,7 +267,7 @@ const updateAssignment = asyncHandler(async (req, res) => {
       classSubject: { connect: { id: targetClassSubjectId } },
       section: { connect: { id: targetSectionId } },
       isClassTeacher: targetIsClassTeacher,
-      ...academicYearUpdate
+      ...academicYearUpdate,
     },
     include: {
       user: { select: { firstName: true, lastName: true } },
@@ -219,7 +276,7 @@ const updateAssignment = asyncHandler(async (req, res) => {
     },
   });
 
-  ApiResponse.success(res, updated, 'Assignment updated successfully');
+  ApiResponse.success(res, updated, "Assignment updated successfully");
 });
 
 /**
@@ -235,7 +292,7 @@ const removeAssignment = asyncHandler(async (req, res) => {
   });
 
   if (!assignment) {
-    throw ApiError.notFound('Assignment not found');
+    throw ApiError.notFound("Assignment not found");
   }
 
   // Check for related records (e.g., assignments/LMS data created by this teacher assignment)
@@ -244,14 +301,16 @@ const removeAssignment = asyncHandler(async (req, res) => {
   });
 
   if (lmsDataCount > 0) {
-    throw ApiError.badRequest('Cannot remove assignment - LMS data (assignments) is linked to it');
+    throw ApiError.badRequest(
+      "Cannot remove assignment - LMS data (assignments) is linked to it"
+    );
   }
 
   await prisma.teacherSubject.delete({
     where: { id: parseInt(id) },
   });
 
-  ApiResponse.success(res, null, 'Assignment removed successfully');
+  ApiResponse.success(res, null, "Assignment removed successfully");
 });
 
 module.exports = {
