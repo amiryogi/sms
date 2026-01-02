@@ -72,6 +72,7 @@ const MarksEntry = () => {
                 studentId: r.student.id,
                 studentName: `${r.student.user?.firstName} ${r.student.user?.lastName}`,
                 marksObtained: r.isAbsent ? '' : (r.marksObtained || ''),
+                practicalMarks: r.isAbsent ? '' : (r.practicalMarks || ''),
                 isAbsent: r.isAbsent || false,
                 remarks: r.remarks || '',
               }));
@@ -89,6 +90,7 @@ const MarksEntry = () => {
               studentId: s.studentId,
               studentName: `${s.firstName} ${s.lastName}`,
               marksObtained: '',
+              practicalMarks: '',
               isAbsent: false,
               remarks: '',
             }));
@@ -134,6 +136,7 @@ const MarksEntry = () => {
           .map(m => ({
             studentId: m.studentId,
             marksObtained: m.isAbsent ? 0 : parseFloat(m.marksObtained),
+            practicalMarks: m.isAbsent ? 0 : parseFloat(m.practicalMarks),
             isAbsent: m.isAbsent,
             remarks: m.remarks,
           })),
@@ -155,9 +158,14 @@ const MarksEntry = () => {
   }));
 
   const selectedExam = exams.find(e => e.id?.toString() === filters.examId);
-  const maxMarks = selectedExam?.examSubjects?.find(es =>
+  /* Find the specific exam subject to get max marks config */
+  const currentExamSubject = selectedExam?.examSubjects?.find(es =>
     es.classSubjectId?.toString() === filters.classSubjectId
-  )?.maxMarks || 100;
+  );
+
+  const theoryMax = currentExamSubject?.theoryFullMarks || 100;
+  const practicalMax = currentExamSubject?.practicalFullMarks || 0;
+  const hasPractical = practicalMax > 0;
 
   return (
     <div className="page-container">
@@ -206,7 +214,8 @@ const MarksEntry = () => {
             <>
               <div className="marks-header">
                 <span>Student</span>
-                <span>Marks (Max: {maxMarks})</span>
+                <span>Theory (Max: {theoryMax})</span>
+                {hasPractical && <span>Practical (Max: {practicalMax})</span>}
                 <span>Remarks</span>
               </div>
               <div className="marks-list">
@@ -218,10 +227,22 @@ const MarksEntry = () => {
                       value={record.marksObtained}
                       onChange={(e) => updateMarks(record.studentId, 'marksObtained', e.target.value)}
                       min="0"
-                      max={maxMarks}
+                      max={theoryMax}
                       className="marks-input"
                       disabled={record.isAbsent}
                     />
+                    {hasPractical && (
+                      <input
+                        type="number"
+                        value={record.practicalMarks}
+                        onChange={(e) => updateMarks(record.studentId, 'practicalMarks', e.target.value)}
+                        min="0"
+                        max={practicalMax}
+                        className="marks-input"
+                        disabled={record.isAbsent}
+                        placeholder="Prac."
+                      />
+                    )}
                     <label className="checkbox-inline">
                       <input
                         type="checkbox"

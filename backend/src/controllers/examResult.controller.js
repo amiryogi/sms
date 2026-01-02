@@ -221,6 +221,17 @@ const saveResults = asyncHandler(async (req, res) => {
         const upsertedResults = [];
 
         for (const result of validResults) {
+            // Validate marks limits
+            const theoryObtained = result.marksObtained ? parseFloat(result.marksObtained) : 0;
+            const practicalObtained = result.practicalMarks ? parseFloat(result.practicalMarks) : 0;
+
+            if (theoryObtained > (examSubject.theoryFullMarks || 100)) {
+                throw ApiError.badRequest(`Theory marks for student ${result.studentId} cannot exceed ${examSubject.theoryFullMarks || 100}`);
+            }
+            if (practicalObtained > (examSubject.practicalFullMarks || 0)) {
+                throw ApiError.badRequest(`Practical marks for student ${result.studentId} cannot exceed ${examSubject.practicalFullMarks || 0}`);
+            }
+
             const upserted = await tx.examResult.upsert({
                 where: {
                     examSubjectId_studentId: {
