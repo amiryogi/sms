@@ -34,12 +34,21 @@ const submitAssignment = asyncHandler(async (req, res) => {
       content,
       status,
       submissionFiles: {
-        create: files ? files.map(file => ({
-          fileName: file.originalname,
-          fileUrl: file.path || file.secure_url,
-          fileType: file.mimetype,
-          fileSize: file.size
-        })) : []
+        create: files ? files.map(file => {
+          // Normalizing path for local storage
+          let fileUrl = file.path;
+          if (!file.path.startsWith('http')) {
+            // For local uploads, use relative path with forward slashes
+            fileUrl = `uploads/${file.filename}`;
+          }
+
+          return {
+            fileName: file.originalname,
+            fileUrl: fileUrl, // Now clean: uploads/filename.ext
+            fileType: file.mimetype,
+            fileSize: file.size
+          };
+        }) : []
       }
     },
     include: { submissionFiles: true }

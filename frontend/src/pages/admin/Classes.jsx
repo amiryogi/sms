@@ -34,9 +34,9 @@ const Classes = () => {
   const openModal = (cls = null) => {
     setEditingClass(cls);
     if (cls) {
-      reset({ name: cls.name, grade: cls.grade, description: cls.description });
+      reset({ name: cls.name, gradeLevel: cls.gradeLevel, description: cls.description });
     } else {
-      reset({ name: '', grade: '', description: '' });
+      reset({ name: '', gradeLevel: '', description: '' });
     }
     setModalOpen(true);
   };
@@ -50,7 +50,7 @@ const Classes = () => {
   const onSubmit = async (data) => {
     setSubmitting(true);
     try {
-      const payload = { ...data, grade: parseInt(data.grade) };
+      const payload = { ...data, gradeLevel: parseInt(data.gradeLevel) };
       if (editingClass) {
         await academicService.updateClass(editingClass.id, payload);
       } else {
@@ -79,7 +79,7 @@ const Classes = () => {
 
   const columns = [
     { header: 'Name', accessor: 'name' },
-    { header: 'Grade', accessor: 'grade' },
+    { header: 'Grade', accessor: 'gradeLevel' },
     { header: 'Description', accessor: 'description', render: (row) => row.description || '-' },
     {
       header: 'Actions',
@@ -137,11 +137,11 @@ const Classes = () => {
           />
           <Input
             label="Grade Number"
-            name="grade"
+            name="gradeLevel"
             type="number"
             placeholder="1-12"
             register={register}
-            error={errors.grade?.message}
+            error={errors.gradeLevel?.message}
             required
             min={1}
             max={12}

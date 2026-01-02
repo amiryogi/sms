@@ -19,10 +19,13 @@ const examSubjectUpdateRules = [
 
 const resultSaveRules = [
   body('examSubjectId').isInt().withMessage('Valid exam subject ID is required'),
+  body('sectionId').isInt().withMessage('Valid section ID is required'),
   body('results').isArray({ min: 1 }).withMessage('Results array is required'),
   body('results.*.studentId').isInt().withMessage('Valid student ID required'),
-  body('results.*.marksObtained').isDecimal().withMessage('Marks obtained must be a number'),
-  body('results.*.practicalMarks').optional().isDecimal(),
+  body('results.*.marksObtained').optional().isFloat({ min: 0 }).withMessage('Marks obtained must be a non-negative number'),
+  body('results.*.practicalMarks').optional().isFloat({ min: 0 }),
+  body('results.*.isAbsent').optional().isBoolean().withMessage('isAbsent must be a boolean'),
+  body('results.*.remarks').optional().isString(),
 ];
 
 module.exports = {

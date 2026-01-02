@@ -21,6 +21,9 @@ const getExams = asyncHandler(async (req, res) => {
     orderBy: { startDate: "desc" },
     include: {
       academicYear: true,
+      createdByUser: {
+        select: { id: true, firstName: true, lastName: true }
+      },
       _count: {
         select: { examSubjects: true },
       },
@@ -42,6 +45,9 @@ const getExam = asyncHandler(async (req, res) => {
     where: { id: parseInt(id), schoolId: req.user.schoolId },
     include: {
       academicYear: true,
+      createdByUser: {
+        select: { id: true, firstName: true, lastName: true }
+      },
       examSubjects: {
         include: {
           classSubject: {
@@ -71,13 +77,15 @@ const createExam = asyncHandler(async (req, res) => {
   const { name, examType, startDate, endDate, academicYearId, classIds } =
     req.body;
 
-  // 1. Create Exam
+  // 1. Create Exam with DRAFT status
   const exam = await prisma.exam.create({
     data: {
       schoolId: req.user.schoolId,
       academicYearId: parseInt(academicYearId),
       name,
       examType,
+      status: "DRAFT",
+      createdBy: req.user.id,
       startDate: startDate ? new Date(startDate) : null,
       endDate: endDate ? new Date(endDate) : null,
     },
@@ -107,7 +115,7 @@ const createExam = asyncHandler(async (req, res) => {
   ApiResponse.created(
     res,
     exam,
-    "Exam created and subjects linked successfully"
+    "Exam created with DRAFT status. Subjects linked successfully."
   );
 });
 
@@ -125,6 +133,11 @@ const updateExamSubjects = asyncHandler(async (req, res) => {
   });
 
   if (!exam) throw ApiError.notFound("Exam not found");
+
+  // Only allow subject updates when exam is DRAFT
+  if (exam.status !== "DRAFT") {
+    throw ApiError.badRequest("Cannot modify exam subjects after publishing. Exam must be in DRAFT status.");
+  }
 
   const results = await prisma.$transaction(async (tx) => {
     const updatedSubjects = [];
@@ -162,14 +175,47 @@ const updateExamSubjects = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Publish exam results
+ * @desc    Update exam details
+ * @route   PUT /api/v1/exams/:id
+ * @access  Private/Admin
+ */
+const updateExam = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { name, examType, startDate, endDate, academicYearId } = req.body;
+
+  const exam = await prisma.exam.findFirst({
+    where: { id: parseInt(id), schoolId: req.user.schoolId },
+  });
+
+  if (!exam) throw ApiError.notFound("Exam not found");
+
+  // Only allow edits when exam is DRAFT
+  if (exam.status !== "DRAFT") {
+    throw ApiError.badRequest("Cannot edit exam after publishing. Exam must be in DRAFT status.");
+  }
+
+  const updatedExam = await prisma.exam.update({
+    where: { id: parseInt(id) },
+    data: {
+      name: name || exam.name,
+      examType: examType || exam.examType,
+      startDate: startDate ? new Date(startDate) : exam.startDate,
+      endDate: endDate ? new Date(endDate) : exam.endDate,
+      academicYearId: academicYearId ? parseInt(academicYearId) : exam.academicYearId,
+    },
+  });
+
+  ApiResponse.success(res, updatedExam, "Exam updated successfully");
+});
+
+/**
+ * @desc    Publish exam - allows teachers to enter marks
  * @route   PUT /api/v1/exams/:id/publish
  * @access  Private/Admin
  */
 const publishExam = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  // Validate exam belongs to school before updating
   const exam = await prisma.exam.findFirst({
     where: { id: parseInt(id), schoolId: req.user.schoolId },
   });
@@ -178,12 +224,56 @@ const publishExam = asyncHandler(async (req, res) => {
     throw ApiError.notFound("Exam not found or does not belong to your school");
   }
 
-  const updatedExam = await prisma.exam.update({
-    where: { id: parseInt(id) },
-    data: { isPublished: true },
+  if (exam.status !== "DRAFT") {
+    throw ApiError.badRequest(`Cannot publish exam. Current status is ${exam.status}.`);
+  }
+
+  // Check if exam has subjects linked
+  const subjectCount = await prisma.examSubject.count({
+    where: { examId: parseInt(id) }
   });
 
-  ApiResponse.success(res, updatedExam, "Exam results published successfully");
+  if (subjectCount === 0) {
+    throw ApiError.badRequest("Cannot publish exam without any subjects. Please link classes/subjects first.");
+  }
+
+  const updatedExam = await prisma.exam.update({
+    where: { id: parseInt(id) },
+    data: {
+      status: "PUBLISHED",
+      publishedAt: new Date()
+    },
+  });
+
+  ApiResponse.success(res, updatedExam, "Exam published successfully. Teachers can now enter marks.");
+});
+
+/**
+ * @desc    Lock exam - freezes all marks
+ * @route   PUT /api/v1/exams/:id/lock
+ * @access  Private/Admin
+ */
+const lockExam = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const exam = await prisma.exam.findFirst({
+    where: { id: parseInt(id), schoolId: req.user.schoolId },
+  });
+
+  if (!exam) {
+    throw ApiError.notFound("Exam not found or does not belong to your school");
+  }
+
+  if (exam.status !== "PUBLISHED") {
+    throw ApiError.badRequest(`Cannot lock exam. Exam must be PUBLISHED first. Current status is ${exam.status}.`);
+  }
+
+  const updatedExam = await prisma.exam.update({
+    where: { id: parseInt(id) },
+    data: { status: "LOCKED" },
+  });
+
+  ApiResponse.success(res, updatedExam, "Exam locked successfully. Marks are now frozen.");
 });
 
 /**
@@ -200,15 +290,18 @@ const deleteExam = asyncHandler(async (req, res) => {
 
   if (!exam) throw ApiError.notFound("Exam not found");
 
-  // Check if results exist
-  const resultCount = await prisma.examResult.count({
-    where: { examSubject: { examId: parseInt(id) } },
-  });
+  // Only allow deletion of DRAFT exams or by checking results count
+  if (exam.status !== "DRAFT") {
+    // Check if results exist
+    const resultCount = await prisma.examResult.count({
+      where: { examSubject: { examId: parseInt(id) } },
+    });
 
-  if (resultCount > 0) {
-    throw ApiError.badRequest(
-      "Cannot delete exam - marks have already been entered"
-    );
+    if (resultCount > 0) {
+      throw ApiError.badRequest(
+        "Cannot delete exam - marks have already been entered. Lock the exam instead."
+      );
+    }
   }
 
   await prisma.exam.delete({
@@ -222,7 +315,9 @@ module.exports = {
   getExams,
   getExam,
   createExam,
+  updateExam,
   updateExamSubjects,
   publishExam,
+  lockExam,
   deleteExam,
 };

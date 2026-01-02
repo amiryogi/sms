@@ -54,13 +54,13 @@ const getAssignments = asyncHandler(async (req, res) => {
       // Include own submission for students to track status
       submissions: req.user.roles.includes('STUDENT') ? {
         where: { student: { userId: req.user.id } },
-        select: { 
-          id: true, 
-          status: true, 
-          submittedAt: true, 
+        select: {
+          id: true,
+          status: true,
+          submittedAt: true,
           marksObtained: true,
-          feedback: true 
-        } 
+          feedback: true
+        }
       } : undefined,
     },
     orderBy: { createdAt: "desc" },
@@ -99,9 +99,9 @@ const getAssignment = asyncHandler(async (req, res) => {
       assignmentFiles: true,
       submissions: req.user.roles.includes("STUDENT")
         ? {
-            where: { student: { userId: req.user.id } },
-            include: { submissionFiles: true },
-          }
+          where: { student: { userId: req.user.id } },
+          include: { submissionFiles: true },
+        }
         : false,
     },
   });
@@ -186,11 +186,11 @@ const createAssignment = asyncHandler(async (req, res) => {
       assignmentFiles: {
         create: files
           ? files.map((file) => ({
-              fileName: file.originalname,
-              fileUrl: file.path || file.secure_url,
-              fileType: file.mimetype,
-              fileSize: file.size,
-            }))
+            fileName: file.originalname,
+            fileUrl: file.path || file.secure_url,
+            fileType: file.mimetype,
+            fileSize: file.size,
+          }))
           : [],
       },
     },
@@ -257,7 +257,18 @@ const updateAssignment = asyncHandler(async (req, res) => {
         isPublished !== undefined
           ? isPublished === "true" || isPublished === true
           : assignment.isPublished,
+      assignmentFiles: {
+        create: req.files
+          ? req.files.map((file) => ({
+            fileName: file.originalname,
+            fileUrl: file.path || file.secure_url,
+            fileType: file.mimetype,
+            fileSize: file.size,
+          }))
+          : [],
+      },
     },
+    include: { assignmentFiles: true },
   });
 
   ApiResponse.success(res, updated, "Assignment updated successfully");

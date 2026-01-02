@@ -14,27 +14,28 @@ router.get('/', assignmentController.getAssignments);
 router.get('/:id', [idParamRule], validate, assignmentController.getAssignment);
 
 // Create assignment (Teacher only)
-router.post('/', 
-  isTeacher, 
-  upload.array('files', 5), 
-  assignmentRules, 
-  validate, 
+router.post('/',
+  isTeacher,
+  upload.array('files', 5),
+  assignmentRules,
+  validate,
   assignmentController.createAssignment
 );
 
 // Update assignment (Teacher/Admin)
-router.put('/:id', 
-  isTeacher, 
-  [idParamRule], 
-  validate, 
+router.put('/:id',
+  isTeacher,
+  upload.array('files', 5),
+  [idParamRule],
+  validate,
   assignmentController.updateAssignment
 );
 
 // Delete assignment (Teacher/Admin)
-router.delete('/:id', 
-  isTeacher, 
-  [idParamRule], 
-  validate, 
+router.delete('/:id',
+  isTeacher,
+  [idParamRule],
+  validate,
   assignmentController.deleteAssignment
 );
 

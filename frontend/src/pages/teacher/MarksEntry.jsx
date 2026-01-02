@@ -4,13 +4,11 @@ import { Select, Button } from '../../components/common/FormElements';
 import { Save } from 'lucide-react';
 import { examService } from '../../api/examService';
 import { teacherService } from '../../api/teacherService';
-import { studentService } from '../../api/studentService';
 
 const MarksEntry = () => {
   const { user } = useAuth();
   const [exams, setExams] = useState([]);
   const [teacherAssignments, setTeacherAssignments] = useState([]);
-  const [students, setStudents] = useState([]);
   const [marksData, setMarksData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -29,10 +27,12 @@ const MarksEntry = () => {
   const fetchInitialData = async () => {
     try {
       const [examsRes, assignmentsRes] = await Promise.all([
-        examService.getExams(),
+        examService.getTeacherExams(),
         teacherService.getTeacherAssignments({ userId: user?.id }),
       ]);
-      setExams(examsRes.data || []);
+      // Filter out only PUBLISHED exams (backend should handle this, but safety first)
+      const publishedExams = (examsRes.data || []).filter(e => e.status === 'PUBLISHED');
+      setExams(publishedExams);
       setTeacherAssignments(assignmentsRes.data || []);
     } catch (error) {
       console.error('Error fetching initial data:', error);
@@ -43,62 +43,62 @@ const MarksEntry = () => {
     setLoading(true);
     try {
       // Find the class ID from the assignment
-      const assignment = teacherAssignments.find(a => 
+      const assignment = teacherAssignments.find(a =>
         a.classSubjectId?.toString() === filters.classSubjectId &&
         a.sectionId?.toString() === filters.sectionId
       );
 
       if (!assignment) return;
 
-      // Fetch students
-      const studentsRes = await studentService.getStudents({
-        classId: assignment.classSubject?.classId,
-        sectionId: filters.sectionId,
-      });
-      const studentList = studentsRes.data?.students || studentsRes.data || [];
-      setStudents(studentList);
-
-      // Try to fetch existing marks
+      // Fetch students and existing marks together via new API
       try {
         // Find exam subject ID
         const exam = exams.find(e => e.id?.toString() === filters.examId);
-        const examSubject = exam?.examSubjects?.find(es => 
+        const examSubject = exam?.examSubjects?.find(es =>
           es.classSubjectId?.toString() === filters.classSubjectId
         );
 
         if (examSubject) {
-          const resultsRes = await examService.getResultsBySubject(examSubject.id);
-          const existingMarks = resultsRes.data || [];
-          
-          const marks = studentList.map(student => {
-            const existing = existingMarks.find(m => m.studentId === student.id);
-            return {
-              studentId: student.id,
-              studentName: `${student.user?.firstName} ${student.user?.lastName}`,
-              marksObtained: existing?.marksObtained || '',
-              remarks: existing?.remarks || '',
-            };
-          });
-          setMarksData(marks);
-        } else {
-          // No exam subject found, initialize empty
-          const marks = studentList.map(student => ({
-            studentId: student.id,
-            studentName: `${student.user?.firstName} ${student.user?.lastName}`,
-            marksObtained: '',
-            remarks: '',
-          }));
+          // Get existing results or student list for entry
+          let marks = [];
+
+          try {
+            // Try fetching existing results first
+            const resultsRes = await examService.getResultsBySubject(examSubject.id, filters.sectionId);
+            const { results } = resultsRes.data;
+
+            if (results && results.length > 0) {
+              marks = results.map(r => ({
+                studentId: r.student.id,
+                studentName: `${r.student.user?.firstName} ${r.student.user?.lastName}`,
+                marksObtained: r.isAbsent ? '' : (r.marksObtained || ''),
+                isAbsent: r.isAbsent || false,
+                remarks: r.remarks || '',
+              }));
+            }
+          } catch (err) {
+            // If 404 or no results, we'll fetch student list next
+          }
+
+          // If no existing marks, fetch students for initial entry
+          if (marks.length === 0) {
+            const studentsRes = await examService.getStudentsForMarksEntry(examSubject.id, filters.sectionId);
+            const studentList = studentsRes.data?.students || [];
+
+            marks = studentList.map(s => ({
+              studentId: s.studentId,
+              studentName: `${s.firstName} ${s.lastName}`,
+              marksObtained: '',
+              isAbsent: false,
+              remarks: '',
+            }));
+          }
+
           setMarksData(marks);
         }
       } catch (error) {
-        // Initialize empty marks
-        const marks = studentList.map(student => ({
-          studentId: student.id,
-          studentName: `${student.user?.firstName} ${student.user?.lastName}`,
-          marksObtained: '',
-          remarks: '',
-        }));
-        setMarksData(marks);
+        console.error('Error fetching marks data:', error);
+        setMarksData([]);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -117,7 +117,7 @@ const MarksEntry = () => {
     setSaving(true);
     try {
       const exam = exams.find(e => e.id?.toString() === filters.examId);
-      const examSubject = exam?.examSubjects?.find(es => 
+      const examSubject = exam?.examSubjects?.find(es =>
         es.classSubjectId?.toString() === filters.classSubjectId
       );
 
@@ -128,11 +128,13 @@ const MarksEntry = () => {
 
       await examService.saveResults({
         examSubjectId: examSubject.id,
+        sectionId: parseInt(filters.sectionId),
         results: marksData
-          .filter(m => m.marksObtained !== '')
+          .filter(m => (m.marksObtained !== '' || m.isAbsent)) // Send only entered data
           .map(m => ({
             studentId: m.studentId,
-            marksObtained: parseFloat(m.marksObtained),
+            marksObtained: m.isAbsent ? 0 : parseFloat(m.marksObtained),
+            isAbsent: m.isAbsent,
             remarks: m.remarks,
           })),
       });
@@ -146,14 +148,14 @@ const MarksEntry = () => {
   };
 
   const examOptions = exams.map(e => ({ value: e.id.toString(), label: e.name }));
-  
+
   const classSubjectSectionOptions = teacherAssignments.map(ta => ({
     value: `${ta.classSubjectId}-${ta.sectionId}`,
     label: `${ta.classSubject?.class?.name} ${ta.section?.name} - ${ta.classSubject?.subject?.name}`,
   }));
 
   const selectedExam = exams.find(e => e.id?.toString() === filters.examId);
-  const maxMarks = selectedExam?.examSubjects?.find(es => 
+  const maxMarks = selectedExam?.examSubjects?.find(es =>
     es.classSubjectId?.toString() === filters.classSubjectId
   )?.maxMarks || 100;
 
@@ -198,7 +200,7 @@ const MarksEntry = () => {
         <div className="card">
           {loading ? (
             <div className="text-center">Loading students...</div>
-          ) : students.length === 0 ? (
+          ) : marksData.length === 0 ? (
             <div className="text-muted text-center">No students found.</div>
           ) : (
             <>
@@ -218,7 +220,15 @@ const MarksEntry = () => {
                       min="0"
                       max={maxMarks}
                       className="marks-input"
+                      disabled={record.isAbsent}
                     />
+                    <label className="checkbox-inline">
+                      <input
+                        type="checkbox"
+                        checked={record.isAbsent}
+                        onChange={(e) => updateMarks(record.studentId, 'isAbsent', e.target.checked)}
+                      /> Absent
+                    </label>
                     <input
                       type="text"
                       value={record.remarks}
