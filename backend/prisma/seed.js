@@ -368,7 +368,7 @@ async function main() {
   const grade10 = createdClasses.find(c => c.name === 'Grade 10');
   const sectionA = createdSections.find(s => s.name === 'A');
   const mathSubject = createdSubjects.find(s => s.code === 'MATH');
-  
+
   if (grade10 && sectionA && mathSubject) {
     const classSubject = await prisma.classSubject.findFirst({
       where: { classId: grade10.id, subjectId: mathSubject.id, academicYearId: academicYear.id },
@@ -503,9 +503,10 @@ async function main() {
       academicYearId: academicYear.id,
       name: 'First Term Examination',
       examType: 'midterm',
+      status: 'DRAFT',
+      createdBy: adminUser.id,
       startDate: new Date('2024-09-01'),
       endDate: new Date('2024-09-15'),
-      isPublished: false,
     },
   });
   console.log(`   ✓ Created exam: ${exam.name}\n`);
