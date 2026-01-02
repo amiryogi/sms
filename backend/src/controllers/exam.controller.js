@@ -107,6 +107,8 @@ const createExam = asyncHandler(async (req, res) => {
           classSubjectId: cs.id,
           fullMarks: cs.fullMarks,
           passMarks: cs.passMarks,
+          theoryFullMarks: cs.theoryMarks || 100,
+          practicalFullMarks: cs.practicalMarks || 0,
         })),
       });
     }
@@ -155,6 +157,8 @@ const updateExamSubjects = asyncHandler(async (req, res) => {
           endTime: sub.endTime ? new Date(sub.endTime) : undefined,
           fullMarks: sub.fullMarks || undefined,
           passMarks: sub.passMarks || undefined,
+          theoryFullMarks: sub.theoryFullMarks || undefined,
+          practicalFullMarks: sub.practicalFullMarks || undefined,
         },
         create: {
           examId,
@@ -164,6 +168,8 @@ const updateExamSubjects = asyncHandler(async (req, res) => {
           endTime: sub.endTime ? new Date(sub.endTime) : null,
           fullMarks: sub.fullMarks || 100,
           passMarks: sub.passMarks || 40,
+          theoryFullMarks: sub.theoryFullMarks || 100,
+          practicalFullMarks: sub.practicalFullMarks || 0,
         },
       });
       updatedSubjects.push(examSub);

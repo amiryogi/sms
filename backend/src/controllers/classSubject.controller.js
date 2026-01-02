@@ -49,7 +49,7 @@ const getClassSubjects = asyncHandler(async (req, res) => {
  * @access  Private/Admin
  */
 const assignSubjectToClass = asyncHandler(async (req, res) => {
-  const { classId, academicYearId, subjectId, fullMarks, passMarks, creditHours } = req.body;
+  const { classId, academicYearId, subjectId, fullMarks, passMarks, creditHours, theoryMarks, practicalMarks } = req.body;
 
   // Check if already assigned
   const existing = await prisma.classSubject.findUnique({
@@ -71,8 +71,10 @@ const assignSubjectToClass = asyncHandler(async (req, res) => {
       classId: parseInt(classId),
       academicYearId: parseInt(academicYearId),
       subjectId: parseInt(subjectId),
-      fullMarks: fullMarks || 100,
+      fullMarks: (theoryMarks || 100) + (practicalMarks || 0),
       passMarks: passMarks || 40,
+      theoryMarks: theoryMarks || 100,
+      practicalMarks: practicalMarks || 0,
       creditHours: creditHours || 3.0,
     },
     include: {
@@ -90,7 +92,7 @@ const assignSubjectToClass = asyncHandler(async (req, res) => {
  */
 const updateClassSubject = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { fullMarks, passMarks, creditHours } = req.body;
+  const { fullMarks, passMarks, creditHours, theoryMarks, practicalMarks } = req.body;
 
   const classSubject = await prisma.classSubject.findUnique({
     where: { id: parseInt(id) },
@@ -103,8 +105,12 @@ const updateClassSubject = asyncHandler(async (req, res) => {
   const updated = await prisma.classSubject.update({
     where: { id: parseInt(id) },
     data: {
-      fullMarks: fullMarks || classSubject.fullMarks,
+      fullMarks: (theoryMarks !== undefined || practicalMarks !== undefined)
+        ? ((theoryMarks !== undefined ? theoryMarks : classSubject.theoryMarks) + (practicalMarks !== undefined ? practicalMarks : classSubject.practicalMarks))
+        : (fullMarks || classSubject.fullMarks),
       passMarks: passMarks || classSubject.passMarks,
+      theoryMarks: theoryMarks !== undefined ? theoryMarks : classSubject.theoryMarks,
+      practicalMarks: practicalMarks !== undefined ? practicalMarks : classSubject.practicalMarks,
       creditHours: creditHours || classSubject.creditHours,
     },
     include: {

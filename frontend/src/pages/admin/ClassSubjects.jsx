@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { Plus, Trash2, Link as LinkIcon } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
-import { Select, Button } from '../../components/common/FormElements';
+import { Select, Button, Input } from '../../components/common/FormElements';
 import { academicService } from '../../api/academicService';
 
 const ClassSubjects = () => {
@@ -38,7 +38,7 @@ const ClassSubjects = () => {
       setClasses(classesRes.data || []);
       setSubjects(subjectsRes.data || []);
       setAcademicYears(yearsRes.data || []);
-      
+
       // Set default filter to current year
       const currentYear = yearsRes.data?.find(y => y.isCurrent);
       if (currentYear) {
@@ -67,10 +67,10 @@ const ClassSubjects = () => {
   };
 
   const openModal = () => {
-    reset({ 
-      academicYearId: filters.academicYearId, 
-      classId: filters.classId, 
-      subjectId: '' 
+    reset({
+      academicYearId: filters.academicYearId,
+      classId: filters.classId,
+      subjectId: ''
     });
     setModalOpen(true);
   };
@@ -87,6 +87,9 @@ const ClassSubjects = () => {
         academicYearId: parseInt(data.academicYearId),
         classId: parseInt(data.classId),
         subjectId: parseInt(data.subjectId),
+        theoryMarks: parseInt(data.theoryMarks || 100),
+        practicalMarks: parseInt(data.practicalMarks || 0),
+        creditHours: parseFloat(data.creditHours || 3.0),
       });
       fetchClassSubjects();
       closeModal();
@@ -117,6 +120,9 @@ const ClassSubjects = () => {
     { header: 'Academic Year', render: (row) => getYearName(row.academicYearId) },
     { header: 'Class', render: (row) => getClassName(row.classId) },
     { header: 'Subject', render: (row) => getSubjectName(row.subjectId) },
+    { header: 'Theory', accessor: 'theoryMarks' },
+    { header: 'Practical', accessor: 'practicalMarks' },
+    { header: 'Credit Hours', accessor: 'creditHours' },
     {
       header: 'Actions',
       width: '80px',
@@ -200,6 +206,30 @@ const ClassSubjects = () => {
             register={register}
             error={errors.subjectId?.message}
             required
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Theory Marks"
+              name="theoryMarks"
+              type="number"
+              defaultValue={100}
+              register={register}
+            />
+            <Input
+              label="Practical Marks"
+              name="practicalMarks"
+              type="number"
+              defaultValue={0}
+              register={register}
+            />
+          </div>
+          <Input
+            label="Credit Hours"
+            name="creditHours"
+            type="number"
+            step="0.1"
+            defaultValue={3.0}
+            register={register}
           />
           <div className="modal-actions">
             <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>

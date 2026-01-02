@@ -352,8 +352,10 @@ model Subject {
   name        String   @db.VarChar(100)
   code        String   @db.VarChar(20)
   description String?  @db.Text
-  isOptional  Boolean  @default(false) @map("is_optional")
-  createdAt   DateTime @default(now()) @map("created_at")
+  isOptional   Boolean  @default(false) @map("is_optional")
+  creditHours  Decimal  @default(3.0) @map("credit_hours") @db.Decimal(3, 1)
+  hasPractical Boolean  @default(false) @map("has_practical")
+  createdAt    DateTime @default(now()) @map("created_at")
 
   // Relations
   school        School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -377,6 +379,8 @@ model ClassSubject {
   subjectId      Int      @map("subject_id")
   fullMarks      Int      @default(100) @map("full_marks")
   passMarks      Int      @default(40) @map("pass_marks")
+  theoryMarks    Int      @default(100) @map("theory_marks")
+  practicalMarks Int      @default(0) @map("practical_marks")
   creditHours    Decimal  @default(3.0) @map("credit_hours") @db.Decimal(3, 1)
   createdAt      DateTime @default(now()) @map("created_at")
 
@@ -617,8 +621,10 @@ model ExamSubject {
   examDate       DateTime? @map("exam_date") @db.Date
   startTime      DateTime? @map("start_time") @db.Time()
   endTime        DateTime? @map("end_time") @db.Time()
-  fullMarks      Int       @map("full_marks")
-  passMarks      Int       @map("pass_marks")
+  fullMarks          Int       @map("full_marks")
+  passMarks          Int       @map("pass_marks")
+  theoryFullMarks    Int       @default(100) @map("theory_full_marks")
+  practicalFullMarks Int       @default(0) @map("practical_full_marks")
   createdAt      DateTime  @default(now()) @map("created_at")
 
   // Relations

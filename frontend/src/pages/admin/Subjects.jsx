@@ -34,9 +34,15 @@ const Subjects = () => {
   const openModal = (subject = null) => {
     setEditingSubject(subject);
     if (subject) {
-      reset({ name: subject.name, code: subject.code, description: subject.description });
+      reset({
+        name: subject.name,
+        code: subject.code,
+        description: subject.description,
+        creditHours: subject.creditHours,
+        hasPractical: subject.hasPractical
+      });
     } else {
-      reset({ name: '', code: '', description: '' });
+      reset({ name: '', code: '', description: '', creditHours: 3.0, hasPractical: false });
     }
     setModalOpen(true);
   };
@@ -77,8 +83,8 @@ const Subjects = () => {
   };
 
   const columns = [
-    { 
-      header: 'Subject', 
+    {
+      header: 'Subject',
       render: (row) => (
         <div className="subject-cell">
           <BookOpen size={16} />
@@ -87,6 +93,16 @@ const Subjects = () => {
       )
     },
     { header: 'Code', accessor: 'code' },
+    { header: 'Credit Hours', accessor: 'creditHours', width: '120px' },
+    {
+      header: 'Practical',
+      width: '100px',
+      render: (row) => (
+        <span className={`badge ${row.hasPractical ? 'badge-success' : 'badge-secondary'}`}>
+          {row.hasPractical ? 'Yes' : 'No'}
+        </span>
+      )
+    },
     { header: 'Description', render: (row) => row.description || '-' },
     {
       header: 'Actions',
@@ -150,6 +166,27 @@ const Subjects = () => {
             error={errors.code?.message}
             required
           />
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Credit Hours"
+              name="creditHours"
+              type="number"
+              step="0.1"
+              register={register}
+              error={errors.creditHours?.message}
+              required
+            />
+            <div className="form-group" style={{ marginTop: '30px' }}>
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  {...register('hasPractical')}
+                  style={{ marginRight: '8px' }}
+                />
+                Has Practical?
+              </label>
+            </div>
+          </div>
           <Input
             label="Description (Optional)"
             name="description"

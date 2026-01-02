@@ -8,9 +8,9 @@ const { ApiError, ApiResponse, asyncHandler, buildSearchQuery } = require('../ut
  */
 const getSubjects = asyncHandler(async (req, res) => {
   const { search } = req.query;
-  
+
   const where = { schoolId: req.user.schoolId };
-  
+
   if (search) {
     const searchQuery = buildSearchQuery(search, ['name', 'code']);
     if (searchQuery) where.OR = searchQuery.OR;
@@ -49,7 +49,7 @@ const getSubject = asyncHandler(async (req, res) => {
  * @access  Private/Admin
  */
 const createSubject = asyncHandler(async (req, res) => {
-  const { name, code, description, isOptional } = req.body;
+  const { name, code, description, isOptional, creditHours, hasPractical } = req.body;
 
   const existingSubject = await prisma.subject.findFirst({
     where: { schoolId: req.user.schoolId, code },
@@ -65,7 +65,10 @@ const createSubject = asyncHandler(async (req, res) => {
       name,
       code,
       description,
+      description,
       isOptional: !!isOptional,
+      creditHours: creditHours || 3.0,
+      hasPractical: !!hasPractical,
     },
   });
 
@@ -79,7 +82,7 @@ const createSubject = asyncHandler(async (req, res) => {
  */
 const updateSubject = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { name, code, description, isOptional } = req.body;
+  const { name, code, description, isOptional, creditHours, hasPractical } = req.body;
 
   const subject = await prisma.subject.findFirst({
     where: { id: parseInt(id), schoolId: req.user.schoolId },
@@ -107,6 +110,8 @@ const updateSubject = asyncHandler(async (req, res) => {
       code: code || subject.code,
       description: description !== undefined ? description : subject.description,
       isOptional: isOptional !== undefined ? isOptional : subject.isOptional,
+      creditHours: creditHours !== undefined ? creditHours : subject.creditHours,
+      hasPractical: hasPractical !== undefined ? hasPractical : subject.hasPractical,
     },
   });
 
