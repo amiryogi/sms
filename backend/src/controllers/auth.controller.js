@@ -30,7 +30,7 @@ const generateTokens = (userId) => {
 const parseExpiresIn = (expiresIn) => {
   const unit = expiresIn.slice(-1);
   const value = parseInt(expiresIn.slice(0, -1), 10);
-  
+
   switch (unit) {
     case 's': return value * 1000;
     case 'm': return value * 60 * 1000;
@@ -66,6 +66,21 @@ const login = asyncHandler(async (req, res) => {
           },
         },
       },
+      student: {
+        include: {
+          studentClasses: {
+            where: { status: 'active' },
+            orderBy: { academicYear: { startDate: 'desc' } },
+            take: 1,
+            include: {
+              class: true,
+              section: true,
+              academicYear: true,
+            },
+          },
+        },
+      },
+      parent: true,
     },
   });
 
@@ -75,7 +90,7 @@ const login = asyncHandler(async (req, res) => {
 
   // Check password
   const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-  
+
   if (!isPasswordValid) {
     throw ApiError.unauthorized('Invalid email or password');
   }
@@ -90,7 +105,7 @@ const login = asyncHandler(async (req, res) => {
 
   // Store refresh token in database
   const expiresAt = new Date(Date.now() + parseExpiresIn(config.jwt.refreshExpiresIn));
-  
+
   await prisma.refreshToken.create({
     data: {
       userId: user.id,
@@ -107,7 +122,7 @@ const login = asyncHandler(async (req, res) => {
 
   // Prepare response - extract roles and permissions
   const roles = user.userRoles.map((ur) => ur.role.name);
-  
+
   // Extract unique permissions from all roles
   const permissions = [];
   user.userRoles.forEach((ur) => {
@@ -129,10 +144,14 @@ const login = asyncHandler(async (req, res) => {
       roles,
       permissions,
       school: {
-        id: user.school.id,
-        name: user.school.name,
         code: user.school.code,
       },
+      student: user.student ? {
+        ...user.student,
+        rollNumber: user.student.studentClasses?.[0]?.rollNumber,
+        enrollments: user.student.studentClasses,
+      } : undefined,
+      parentId: user.parent?.id,
     },
     accessToken,
     refreshToken,
@@ -210,7 +229,7 @@ const register = asyncHandler(async (req, res) => {
 
   // Store refresh token
   const expiresAt = new Date(Date.now() + parseExpiresIn(config.jwt.refreshExpiresIn));
-  
+
   await prisma.refreshToken.create({
     data: {
       userId: user.id,
@@ -275,7 +294,7 @@ const refreshToken = asyncHandler(async (req, res) => {
 
   // Store new refresh token
   const expiresAt = new Date(Date.now() + parseExpiresIn(config.jwt.refreshExpiresIn));
-  
+
   await prisma.refreshToken.create({
     data: {
       userId: decoded.userId,
@@ -351,7 +370,7 @@ const getMe = asyncHandler(async (req, res) => {
 
   const roles = user.userRoles.map((ur) => ur.role.name);
   const permissions = [];
-  
+
   user.userRoles.forEach((ur) => {
     ur.role.rolePermissions.forEach((rp) => {
       if (!permissions.includes(rp.permission.name)) {
@@ -400,7 +419,7 @@ const changePassword = asyncHandler(async (req, res) => {
 
   // Verify current password
   const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
-  
+
   if (!isPasswordValid) {
     throw ApiError.badRequest('Current password is incorrect');
   }

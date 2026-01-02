@@ -144,19 +144,25 @@ const markAttendance = asyncHandler(async (req, res) => {
     for (const record of attendanceRecords) {
       const { studentId, studentClassId, status, remarks } = record;
 
-      // Validate student belongs to school and is in the correct class/section
-      const studentClass = await tx.studentClass.findFirst({
-        where: {
-          id: parseInt(studentClassId),
-          studentId: parseInt(studentId),
-          classId: parseInt(classId),
-          sectionId: parseInt(sectionId),
-          student: {
-            user: {
-              schoolId: req.user.schoolId, // School-level isolation
-            },
+      // Build where clause
+      const whereInput = {
+        studentId: parseInt(studentId),
+        classId: parseInt(classId),
+        sectionId: parseInt(sectionId),
+        student: {
+          user: {
+            schoolId: req.user.schoolId,
           },
         },
+      };
+
+      if (studentClassId && !isNaN(parseInt(studentClassId))) {
+        whereInput.id = parseInt(studentClassId);
+      }
+
+      // Validate student belongs to school and is in the correct class/section
+      const studentClass = await tx.studentClass.findFirst({
+        where: whereInput,
       });
 
       if (!studentClass) {
@@ -168,8 +174,9 @@ const markAttendance = asyncHandler(async (req, res) => {
       // Upsert attendance record
       const attendance = await tx.attendance.upsert({
         where: {
-          studentId_attendanceDate: {
+          studentId_studentClassId_attendanceDate: {
             studentId: parseInt(studentId),
+            studentClassId: studentClass.id,
             attendanceDate,
           },
         },
@@ -177,11 +184,11 @@ const markAttendance = asyncHandler(async (req, res) => {
           status,
           remarks: remarks || null,
           markedBy: req.user.id,
-          studentClassId: parseInt(studentClassId),
+          studentClassId: studentClass.id,
         },
         create: {
           studentId: parseInt(studentId),
-          studentClassId: parseInt(studentClassId),
+          studentClassId: studentClass.id,
           attendanceDate,
           status,
           remarks: remarks || null,
