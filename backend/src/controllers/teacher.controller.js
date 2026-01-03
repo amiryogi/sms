@@ -1,6 +1,13 @@
-const bcrypt = require('bcryptjs');
-const prisma = require('../config/database');
-const { ApiError, ApiResponse, asyncHandler, parsePagination, parseSort, buildSearchQuery } = require('../utils');
+const bcrypt = require("bcryptjs");
+const prisma = require("../config/database");
+const {
+  ApiError,
+  ApiResponse,
+  asyncHandler,
+  parsePagination,
+  parseSort,
+  buildSearchQuery,
+} = require("../utils");
 
 /**
  * @desc    Get all teachers
@@ -15,7 +22,7 @@ const getTeachers = asyncHandler(async (req, res) => {
     schoolId: req.user.schoolId,
     userRoles: {
       some: {
-        role: { name: 'TEACHER' },
+        role: { name: "TEACHER" },
       },
     },
   };
@@ -23,7 +30,11 @@ const getTeachers = asyncHandler(async (req, res) => {
   if (status) where.status = status;
 
   if (search) {
-    const searchQuery = buildSearchQuery(search, ['firstName', 'lastName', 'email']);
+    const searchQuery = buildSearchQuery(search, [
+      "firstName",
+      "lastName",
+      "email",
+    ]);
     if (searchQuery) where.OR = searchQuery.OR;
   }
 
@@ -32,7 +43,11 @@ const getTeachers = asyncHandler(async (req, res) => {
       where,
       skip,
       take: limit,
-      orderBy: parseSort(req.query.sort, ['firstName', 'lastName', 'createdAt']),
+      orderBy: parseSort(req.query.sort, [
+        "firstName",
+        "lastName",
+        "createdAt",
+      ]),
       select: {
         id: true,
         email: true,
@@ -75,7 +90,7 @@ const getTeacher = asyncHandler(async (req, res) => {
       id: teacherId,
       schoolId: req.user.schoolId,
       userRoles: {
-        some: { role: { name: 'TEACHER' } },
+        some: { role: { name: "TEACHER" } },
       },
     },
     select: {
@@ -104,7 +119,7 @@ const getTeacher = asyncHandler(async (req, res) => {
   });
 
   if (!teacher) {
-    throw ApiError.notFound('Teacher not found');
+    throw ApiError.notFound("Teacher not found");
   }
 
   ApiResponse.success(res, teacher);
@@ -133,12 +148,12 @@ const updateTeacher = asyncHandler(async (req, res) => {
     where: {
       id: teacherId,
       schoolId: req.user.schoolId,
-      userRoles: { some: { role: { name: 'TEACHER' } } },
+      userRoles: { some: { role: { name: "TEACHER" } } },
     },
   });
 
   if (!teacher) {
-    throw ApiError.notFound('Teacher not found');
+    throw ApiError.notFound("Teacher not found");
   }
 
   const updatedTeacher = await prisma.user.update({
@@ -148,11 +163,186 @@ const updateTeacher = asyncHandler(async (req, res) => {
       ...(lastName && { lastName }),
       ...(phone !== undefined && { phone }),
       ...(avatarUrl !== undefined && { avatarUrl }),
-      ...(status && req.user.roles.includes('ADMIN') && { status }),
+      ...(status && req.user.roles.includes("ADMIN") && { status }),
     },
   });
 
-  ApiResponse.success(res, null, 'Teacher updated successfully');
+  ApiResponse.success(res, null, "Teacher updated successfully");
+});
+
+/**
+ * @desc    Get students for teacher's assigned classes/sections
+ * @route   GET /api/v1/teachers/my-students
+ * @access  Private/Teacher
+ */
+const getMyStudents = asyncHandler(async (req, res) => {
+  const teacherId = req.user.id;
+  const schoolId = req.user.schoolId;
+  const { academicYearId } = req.query;
+
+  // Determine academic year (default to current)
+  let yearFilter = {};
+  if (academicYearId) {
+    yearFilter = { academicYearId: parseInt(academicYearId) };
+  } else {
+    const currentYear = await prisma.academicYear.findFirst({
+      where: { schoolId, isCurrent: true },
+    });
+    if (!currentYear) {
+      return ApiResponse.success(res, [], "No current academic year found.");
+    }
+    yearFilter = { academicYearId: currentYear.id };
+  }
+
+  // Step 1: Get teacher's assignments (class/section combinations)
+  const teacherAssignments = await prisma.teacherSubject.findMany({
+    where: {
+      userId: teacherId,
+      ...yearFilter,
+    },
+    include: {
+      classSubject: {
+        include: {
+          class: true,
+          subject: true,
+        },
+      },
+      section: true,
+    },
+  });
+
+  if (teacherAssignments.length === 0) {
+    return ApiResponse.success(
+      res,
+      [],
+      "No class assignments found for this academic year."
+    );
+  }
+
+  // Step 2: Extract unique class/section combinations the teacher is assigned to
+  const classSectionCombos = [];
+  const seenCombos = new Set();
+
+  for (const assignment of teacherAssignments) {
+    const key = `${assignment.classSubject.classId}-${assignment.sectionId}`;
+    if (!seenCombos.has(key)) {
+      seenCombos.add(key);
+      classSectionCombos.push({
+        classId: assignment.classSubject.classId,
+        className: assignment.classSubject.class.name,
+        classDisplayOrder: assignment.classSubject.class.displayOrder,
+        sectionId: assignment.sectionId,
+        sectionName: assignment.section.name,
+      });
+    }
+  }
+
+  // Step 3: Fetch students enrolled in those class/section combinations
+  const studentClasses = await prisma.studentClass.findMany({
+    where: {
+      OR: classSectionCombos.map((combo) => ({
+        classId: combo.classId,
+        sectionId: combo.sectionId,
+      })),
+      ...yearFilter,
+      status: "active",
+      schoolId: schoolId,
+    },
+    include: {
+      student: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              avatarUrl: true,
+            },
+          },
+        },
+      },
+      class: true,
+      section: true,
+    },
+    orderBy: [
+      { class: { displayOrder: "asc" } },
+      { section: { name: "asc" } },
+      { rollNumber: "asc" },
+    ],
+  });
+
+  // Step 4: Group students by Class → Section
+  const classMap = new Map();
+
+  for (const enrollment of studentClasses) {
+    const classId = enrollment.classId;
+    const sectionId = enrollment.sectionId;
+
+    // Verify this class/section is in teacher's assignments (defense-in-depth)
+    const isAuthorized = classSectionCombos.some(
+      (combo) => combo.classId === classId && combo.sectionId === sectionId
+    );
+    if (!isAuthorized) continue;
+
+    // Initialize class entry if not exists
+    if (!classMap.has(classId)) {
+      classMap.set(classId, {
+        classId: classId,
+        className: enrollment.class.name,
+        displayOrder: enrollment.class.displayOrder,
+        sections: new Map(),
+      });
+    }
+
+    const classEntry = classMap.get(classId);
+
+    // Initialize section entry if not exists
+    if (!classEntry.sections.has(sectionId)) {
+      classEntry.sections.set(sectionId, {
+        sectionId: sectionId,
+        sectionName: enrollment.section.name,
+        students: [],
+      });
+    }
+
+    // Add student to section
+    classEntry.sections.get(sectionId).students.push({
+      studentId: enrollment.student.id,
+      rollNumber: enrollment.rollNumber,
+      firstName: enrollment.student.user.firstName,
+      lastName: enrollment.student.user.lastName,
+      fullName: `${enrollment.student.user.firstName} ${enrollment.student.user.lastName}`,
+      email: enrollment.student.user.email,
+      admissionNumber: enrollment.student.admissionNumber,
+      avatarUrl: enrollment.student.user.avatarUrl,
+    });
+  }
+
+  // Step 5: Convert Maps to arrays and sort
+  const result = Array.from(classMap.values())
+    .map((classEntry) => ({
+      classId: classEntry.classId,
+      className: classEntry.className,
+      displayOrder: classEntry.displayOrder,
+      sections: Array.from(classEntry.sections.values()).sort((a, b) =>
+        a.sectionName.localeCompare(b.sectionName)
+      ),
+    }))
+    .sort((a, b) => a.displayOrder - b.displayOrder);
+
+  // Calculate summary
+  const summary = {
+    totalClasses: result.length,
+    totalSections: result.reduce((acc, c) => acc + c.sections.length, 0),
+    totalStudents: result.reduce(
+      (acc, c) =>
+        acc + c.sections.reduce((sAcc, s) => sAcc + s.students.length, 0),
+      0
+    ),
+  };
+
+  ApiResponse.success(res, { summary, classes: result });
 });
 
 module.exports = {
@@ -160,4 +350,5 @@ module.exports = {
   getTeacher,
   // createTeacher, // Removed
   updateTeacher,
+  getMyStudents,
 };

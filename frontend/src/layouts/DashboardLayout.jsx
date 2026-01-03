@@ -82,6 +82,11 @@ const DashboardLayout = () => {
           path: "/teacher/dashboard",
         },
         {
+          title: "My Students",
+          icon: GraduationCap,
+          path: "/teacher/students",
+        },
+        {
           title: "Attendance",
           icon: ClipboardList,
           path: "/teacher/attendance",

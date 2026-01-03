@@ -379,11 +379,14 @@ model Subject {
 // =====================================================
 
 /// Links subjects to classes for specific academic years
+/// IMPORTANT: hasTheory/hasPractical control evaluation structure per class
 model ClassSubject {
   id             Int      @id @default(autoincrement())
   classId        Int      @map("class_id")
   academicYearId Int      @map("academic_year_id")
   subjectId      Int      @map("subject_id")
+  hasTheory      Boolean  @default(true) @map("has_theory")
+  hasPractical   Boolean  @default(false) @map("has_practical")
   fullMarks      Int      @default(100) @map("full_marks")
   passMarks      Int      @default(40) @map("pass_marks")
   theoryMarks    Int      @default(100) @map("theory_marks")
@@ -641,6 +644,7 @@ model Exam {
 // =====================================================
 
 /// Links exams to class subjects with schedule
+/// IMPORTANT: hasTheory/hasPractical are snapshots copied from ClassSubject at exam creation time
 model ExamSubject {
   id             Int       @id @default(autoincrement())
   examId         Int       @map("exam_id")
@@ -648,6 +652,8 @@ model ExamSubject {
   examDate       DateTime? @map("exam_date") @db.Date
   startTime      DateTime? @map("start_time") @db.Time()
   endTime        DateTime? @map("end_time") @db.Time()
+  hasTheory          Boolean   @default(true) @map("has_theory")
+  hasPractical       Boolean   @default(false) @map("has_practical")
   fullMarks          Int       @map("full_marks")
   passMarks          Int       @map("pass_marks")
   theoryFullMarks    Int       @default(100) @map("theory_full_marks")

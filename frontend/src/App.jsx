@@ -1,44 +1,68 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import ProtectedRoute from './components/auth/ProtectedRoute';
-import DashboardLayout from './layouts/DashboardLayout';
+import React from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+import DashboardLayout from "./layouts/DashboardLayout";
 
 // Lazy loading for better performance
-const Login = React.lazy(() => import('./pages/Login'));
+const Login = React.lazy(() => import("./pages/Login"));
 
 // Admin Pages
-const AdminDashboard = React.lazy(() => import('./pages/admin/Dashboard'));
-const AcademicYears = React.lazy(() => import('./pages/admin/AcademicYears'));
-const Classes = React.lazy(() => import('./pages/admin/Classes'));
-const Sections = React.lazy(() => import('./pages/admin/Sections'));
-const Subjects = React.lazy(() => import('./pages/admin/Subjects'));
-const ClassSubjects = React.lazy(() => import('./pages/admin/ClassSubjects'));
-const Exams = React.lazy(() => import('./pages/admin/Exams'));
-const TeacherAssignment = React.lazy(() => import('./pages/admin/TeacherAssignment'));
-const AdminStudents = React.lazy(() => import('./pages/admin/Students'));
-const AdminTeachers = React.lazy(() => import('./pages/admin/Teachers'));
+const AdminDashboard = React.lazy(() => import("./pages/admin/Dashboard"));
+const AcademicYears = React.lazy(() => import("./pages/admin/AcademicYears"));
+const Classes = React.lazy(() => import("./pages/admin/Classes"));
+const Sections = React.lazy(() => import("./pages/admin/Sections"));
+const Subjects = React.lazy(() => import("./pages/admin/Subjects"));
+const ClassSubjects = React.lazy(() => import("./pages/admin/ClassSubjects"));
+const Exams = React.lazy(() => import("./pages/admin/Exams"));
+const TeacherAssignment = React.lazy(() =>
+  import("./pages/admin/TeacherAssignment")
+);
+const AdminStudents = React.lazy(() => import("./pages/admin/Students"));
+const AdminTeachers = React.lazy(() => import("./pages/admin/Teachers"));
 
 // Teacher Pages
-const TeacherDashboard = React.lazy(() => import('./pages/teacher/Dashboard'));
-const TeacherAttendance = React.lazy(() => import('./pages/teacher/Attendance'));
-const TeacherAssignments = React.lazy(() => import('./pages/teacher/Assignments'));
-const MarksEntry = React.lazy(() => import('./pages/teacher/MarksEntry'));
+const TeacherDashboard = React.lazy(() => import("./pages/teacher/Dashboard"));
+const TeacherAttendance = React.lazy(() =>
+  import("./pages/teacher/Attendance")
+);
+const TeacherAssignments = React.lazy(() =>
+  import("./pages/teacher/Assignments")
+);
+const MarksEntry = React.lazy(() => import("./pages/teacher/MarksEntry"));
+const MyStudents = React.lazy(() => import("./pages/teacher/MyStudents"));
 
 // Student Pages
-const StudentDashboard = React.lazy(() => import('./pages/student/Dashboard'));
-const StudentAssignments = React.lazy(() => import('./pages/student/Assignments'));
-const StudentResults = React.lazy(() => import('./pages/student/Results'));
-const StudentReportCard = React.lazy(() => import('./pages/student/ReportCard'));
+const StudentDashboard = React.lazy(() => import("./pages/student/Dashboard"));
+const StudentAssignments = React.lazy(() =>
+  import("./pages/student/Assignments")
+);
+const StudentResults = React.lazy(() => import("./pages/student/Results"));
+const StudentReportCard = React.lazy(() =>
+  import("./pages/student/ReportCard")
+);
 
 // Parent Pages
-const ParentDashboard = React.lazy(() => import('./pages/parent/Dashboard'));
-const ParentAttendance = React.lazy(() => import('./pages/parent/Attendance'));
-const ParentResults = React.lazy(() => import('./pages/parent/Results'));
+const ParentDashboard = React.lazy(() => import("./pages/parent/Dashboard"));
+const ParentAttendance = React.lazy(() => import("./pages/parent/Attendance"));
+const ParentResults = React.lazy(() => import("./pages/parent/Results"));
 
 // Error Pages
-const NotFound = () => <div className="card error-page"><h1>404 - Page Not Found</h1></div>;
-const Unauthorized = () => <div className="card error-page"><h1>401 - Unauthorized Access</h1></div>;
+const NotFound = () => (
+  <div className="card error-page">
+    <h1>404 - Page Not Found</h1>
+  </div>
+);
+const Unauthorized = () => (
+  <div className="card error-page">
+    <h1>401 - Unauthorized Access</h1>
+  </div>
+);
 
 // Loading Component
 const LoadingFallback = () => (
@@ -58,11 +82,13 @@ function App() {
             <Route path="/login" element={<Login />} />
 
             {/* Admin Routes */}
-            <Route element={
-              <ProtectedRoute roles={['ADMIN']}>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }>
+            <Route
+              element={
+                <ProtectedRoute roles={["ADMIN"]}>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/academic-years" element={<AcademicYears />} />
               <Route path="/admin/classes" element={<Classes />} />
@@ -70,48 +96,76 @@ function App() {
               <Route path="/admin/subjects" element={<Subjects />} />
               <Route path="/admin/class-subjects" element={<ClassSubjects />} />
               <Route path="/admin/exams" element={<Exams />} />
-              <Route path="/admin/teacher-assignment" element={<TeacherAssignment />} />
+              <Route
+                path="/admin/teacher-assignment"
+                element={<TeacherAssignment />}
+              />
               <Route path="/admin/students" element={<AdminStudents />} />
               <Route path="/admin/teachers" element={<AdminTeachers />} />
             </Route>
 
             {/* Teacher Routes */}
-            <Route element={
-              <ProtectedRoute roles={['TEACHER', 'ADMIN']}>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }>
+            <Route
+              element={
+                <ProtectedRoute roles={["TEACHER", "ADMIN"]}>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
               <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
-              <Route path="/teacher/attendance" element={<TeacherAttendance />} />
-              <Route path="/teacher/assignments" element={<TeacherAssignments />} />
+              <Route
+                path="/teacher/attendance"
+                element={<TeacherAttendance />}
+              />
+              <Route
+                path="/teacher/assignments"
+                element={<TeacherAssignments />}
+              />
               <Route path="/teacher/marks" element={<MarksEntry />} />
+              <Route path="/teacher/students" element={<MyStudents />} />
             </Route>
 
             {/* Student Routes */}
-            <Route element={
-              <ProtectedRoute roles={['STUDENT']}>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }>
+            <Route
+              element={
+                <ProtectedRoute roles={["STUDENT"]}>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
               <Route path="/student/dashboard" element={<StudentDashboard />} />
-              <Route path="/student/assignments" element={<StudentAssignments />} />
+              <Route
+                path="/student/assignments"
+                element={<StudentAssignments />}
+              />
               <Route path="/student/results" element={<StudentResults />} />
-              <Route path="/student/report-card" element={<StudentReportCard />} />
+              <Route
+                path="/student/report-card"
+                element={<StudentReportCard />}
+              />
             </Route>
 
             {/* Parent Routes */}
-            <Route element={
-              <ProtectedRoute roles={['PARENT']}>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }>
+            <Route
+              element={
+                <ProtectedRoute roles={["PARENT"]}>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
               <Route path="/parent/dashboard" element={<ParentDashboard />} />
               <Route path="/parent/attendance" element={<ParentAttendance />} />
               <Route path="/parent/results" element={<ParentResults />} />
             </Route>
 
             {/* Dashboard Redirect Logic */}
-            <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+            <Route
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
               <Route path="/dashboard" element={<RoleBasedDashboard />} />
             </Route>
 
@@ -137,16 +191,16 @@ function RoleBasedDashboard() {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  if (user.roles.includes('ADMIN')) {
+  if (user.roles.includes("ADMIN")) {
     return <Navigate to="/admin/dashboard" replace />;
   }
-  if (user.roles.includes('TEACHER')) {
+  if (user.roles.includes("TEACHER")) {
     return <Navigate to="/teacher/dashboard" replace />;
   }
-  if (user.roles.includes('STUDENT')) {
+  if (user.roles.includes("STUDENT")) {
     return <Navigate to="/student/dashboard" replace />;
   }
-  if (user.roles.includes('PARENT')) {
+  if (user.roles.includes("PARENT")) {
     return <Navigate to="/parent/dashboard" replace />;
   }
 

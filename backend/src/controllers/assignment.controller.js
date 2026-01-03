@@ -52,16 +52,18 @@ const getAssignments = asyncHandler(async (req, res) => {
       assignmentFiles: true,
       _count: { select: { submissions: true } },
       // Include own submission for students to track status
-      submissions: req.user.roles.includes('STUDENT') ? {
-        where: { student: { userId: req.user.id } },
-        select: {
-          id: true,
-          status: true,
-          submittedAt: true,
-          marksObtained: true,
-          feedback: true
-        }
-      } : undefined,
+      submissions: req.user.roles.includes("STUDENT")
+        ? {
+            where: { student: { userId: req.user.id } },
+            select: {
+              id: true,
+              status: true,
+              submittedAt: true,
+              marksObtained: true,
+              feedback: true,
+            },
+          }
+        : undefined,
     },
     orderBy: { createdAt: "desc" },
   });
@@ -99,9 +101,9 @@ const getAssignment = asyncHandler(async (req, res) => {
       assignmentFiles: true,
       submissions: req.user.roles.includes("STUDENT")
         ? {
-          where: { student: { userId: req.user.id } },
-          include: { submissionFiles: true },
-        }
+            where: { student: { userId: req.user.id } },
+            include: { submissionFiles: true },
+          }
         : false,
     },
   });
@@ -145,14 +147,23 @@ const createAssignment = asyncHandler(async (req, res) => {
       classSubject: {
         include: {
           class: true,
+          academicYear: true, // Include academic year for validation
         },
       },
+      academicYear: true,
     },
   });
 
   if (!ts && !req.user.roles.includes("ADMIN")) {
     throw ApiError.forbidden(
       "You are not authorized to create assignments for this subject or it does not belong to your school"
+    );
+  }
+
+  // Fix Issue #8: Validate that the academic year is current
+  if (ts && !ts.academicYear.isCurrent) {
+    throw ApiError.badRequest(
+      "Cannot create assignments for past academic years. Please select a current academic year."
     );
   }
 
@@ -166,6 +177,9 @@ const createAssignment = asyncHandler(async (req, res) => {
             schoolId: req.user.schoolId,
           },
         },
+      },
+      include: {
+        academicYear: true,
       },
     });
     if (!adminCheck) {
@@ -185,12 +199,21 @@ const createAssignment = asyncHandler(async (req, res) => {
       isPublished: isPublished === "true" || isPublished === true,
       assignmentFiles: {
         create: files
-          ? files.map((file) => ({
-            fileName: file.originalname,
-            fileUrl: file.path || file.secure_url,
-            fileType: file.mimetype,
-            fileSize: file.size,
-          }))
+          ? files.map((file) => {
+              // Normalize path for local storage (use forward slashes)
+              let fileUrl = file.path;
+              if (file.path && !file.path.startsWith("http")) {
+                fileUrl = `uploads/${file.filename}`;
+              } else if (file.secure_url) {
+                fileUrl = file.secure_url;
+              }
+              return {
+                fileName: file.originalname,
+                fileUrl: fileUrl,
+                fileType: file.mimetype,
+                fileSize: file.size,
+              };
+            })
           : [],
       },
     },
@@ -259,12 +282,21 @@ const updateAssignment = asyncHandler(async (req, res) => {
           : assignment.isPublished,
       assignmentFiles: {
         create: req.files
-          ? req.files.map((file) => ({
-            fileName: file.originalname,
-            fileUrl: file.path || file.secure_url,
-            fileType: file.mimetype,
-            fileSize: file.size,
-          }))
+          ? req.files.map((file) => {
+              // Normalize path for local storage (use forward slashes)
+              let fileUrl = file.path;
+              if (file.path && !file.path.startsWith("http")) {
+                fileUrl = `uploads/${file.filename}`;
+              } else if (file.secure_url) {
+                fileUrl = file.secure_url;
+              }
+              return {
+                fileName: file.originalname,
+                fileUrl: fileUrl,
+                fileType: file.mimetype,
+                fileSize: file.size,
+              };
+            })
           : [],
       },
     },

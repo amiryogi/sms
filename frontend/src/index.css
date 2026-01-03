@@ -175,10 +175,22 @@ body {
 }
 
 .user-avatar-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 36px;
   height: 36px;
   border-radius: 50%;
+  overflow: hidden;
+  background: #f3f4f6;
+  flex-shrink: 0;
+}
+
+.user-avatar-sm img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 .user-avatar-placeholder-sm {
@@ -869,7 +881,8 @@ body {
 /* User Cell */
 .user-cell {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .user-name {

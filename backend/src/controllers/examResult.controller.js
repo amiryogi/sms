@@ -10,21 +10,42 @@ const getTeacherExams = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const { academicYearId } = req.query;
 
-  // Get teacher's assigned subjects
+  // Determine academic year filter
+  let yearFilter = {};
+  if (academicYearId) {
+    yearFilter = { academicYearId: parseInt(academicYearId) };
+  } else {
+    // Default to current academic year
+    const currentYear = await prisma.academicYear.findFirst({
+      where: { schoolId: req.user.schoolId, isCurrent: true },
+    });
+    if (currentYear) {
+      yearFilter = { academicYearId: currentYear.id };
+    }
+  }
+
+  // Get teacher's assigned subjects for the academic year
   const teacherSubjects = await prisma.teacherSubject.findMany({
     where: {
       userId,
-      ...(academicYearId ? { academicYearId: parseInt(academicYearId) } : {}),
+      ...yearFilter,
     },
-    select: { classSubjectId: true, sectionId: true },
+    select: { classSubjectId: true, sectionId: true, academicYearId: true },
   });
 
   if (teacherSubjects.length === 0) {
-    return ApiResponse.success(res, [], "No subjects assigned to you.");
+    return ApiResponse.success(
+      res,
+      [],
+      "No subjects assigned to you for this academic year."
+    );
   }
 
   const classSubjectIds = [
     ...new Set(teacherSubjects.map((ts) => ts.classSubjectId)),
+  ];
+  const academicYearIds = [
+    ...new Set(teacherSubjects.map((ts) => ts.academicYearId)),
   ];
 
   // Find exams that have subjects assigned to this teacher
@@ -32,14 +53,12 @@ const getTeacherExams = asyncHandler(async (req, res) => {
     where: {
       schoolId: req.user.schoolId,
       status: "PUBLISHED", // Only PUBLISHED exams for marks entry
+      academicYearId: { in: academicYearIds }, // Only exams from teacher's assigned years
       examSubjects: {
         some: {
           classSubjectId: { in: classSubjectIds },
         },
       },
-      ...(academicYearId
-        ? { academicYearId: parseInt(academicYearId) }
-        : { academicYear: { isCurrent: true } }),
     },
     orderBy: { startDate: "desc" },
     include: {
@@ -48,7 +67,20 @@ const getTeacherExams = asyncHandler(async (req, res) => {
         where: {
           classSubjectId: { in: classSubjectIds },
         },
-        include: {
+        select: {
+          id: true,
+          examId: true,
+          classSubjectId: true,
+          examDate: true,
+          startTime: true,
+          endTime: true,
+          hasTheory: true,
+          hasPractical: true,
+          fullMarks: true,
+          passMarks: true,
+          theoryFullMarks: true,
+          practicalFullMarks: true,
+          createdAt: true,
           classSubject: {
             include: {
               class: true,
@@ -123,6 +155,7 @@ const getResultsByExamSubject = asyncHandler(async (req, res) => {
   const results = await prisma.examResult.findMany({
     where: {
       examSubjectId: parseInt(examSubjectId),
+      schoolId: req.user.schoolId, // Fix Issue #6: Add schoolId filter
       student: {
         studentClasses: {
           some: {
@@ -130,6 +163,7 @@ const getResultsByExamSubject = asyncHandler(async (req, res) => {
             sectionId: parseInt(sectionId),
             academicYearId: examSubject.exam.academicYearId,
             status: "active",
+            schoolId: req.user.schoolId, // Additional school isolation
           },
         },
       },
@@ -247,32 +281,42 @@ const saveResults = asyncHandler(async (req, res) => {
         ? parseFloat(result.practicalMarks)
         : 0;
 
-      // Practical limit: prefer exam subject, then class subject, otherwise allow entered value when subject is practical
-      const hasPracticalFlag =
-        (examSubject.practicalFullMarks ?? 0) > 0 ||
-        (examSubject.classSubject?.practicalMarks ?? 0) > 0 ||
-        !!examSubject.classSubject?.subject?.hasPractical;
+      // CORRECT: Use ExamSubject.hasPractical (single source of truth for evaluation structure)
+      // This is a snapshot copied from ClassSubject at exam creation time
+      const hasPracticalFlag = examSubject.hasPractical === true;
+      const hasTheoryFlag = examSubject.hasTheory !== false; // Default to true
 
-      const practicalLimit = Math.max(
-        examSubject.practicalFullMarks ?? 0,
-        examSubject.classSubject?.practicalMarks ?? 0,
-        hasPracticalFlag ? practicalObtained : 0,
-        0
-      );
+      // Reject practical marks if the exam subject doesn't have practical component
+      if (!hasPracticalFlag && practicalObtained > 0) {
+        throw ApiError.badRequest(
+          `Practical marks not allowed for student ${result.studentId} - this subject does not have a practical component`
+        );
+      }
+
+      // Reject theory marks if the exam subject is practical-only (rare case)
+      if (!hasTheoryFlag && theoryObtained > 0) {
+        throw ApiError.badRequest(
+          `Theory marks not allowed for student ${result.studentId} - this is a practical-only subject`
+        );
+      }
+
+      // Calculate limits from ExamSubject full marks (already a snapshot)
+      const theoryLimit = examSubject.theoryFullMarks || 100;
+      const practicalLimit = hasPracticalFlag
+        ? examSubject.practicalFullMarks || 0
+        : 0;
 
       if (theoryObtained < 0 || practicalObtained < 0) {
         throw ApiError.badRequest(
           `Marks cannot be negative for student ${result.studentId}`
         );
       }
-      if (theoryObtained > (examSubject.theoryFullMarks || 100)) {
+      if (hasTheoryFlag && theoryObtained > theoryLimit) {
         throw ApiError.badRequest(
-          `Theory marks for student ${result.studentId} cannot exceed ${
-            examSubject.theoryFullMarks || 100
-          }`
+          `Theory marks for student ${result.studentId} cannot exceed ${theoryLimit}`
         );
       }
-      if (practicalObtained > practicalLimit) {
+      if (hasPracticalFlag && practicalObtained > practicalLimit) {
         throw ApiError.badRequest(
           `Practical marks for student ${result.studentId} cannot exceed ${practicalLimit}`
         );

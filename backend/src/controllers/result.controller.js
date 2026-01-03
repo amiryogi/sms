@@ -63,6 +63,27 @@ const getResultsBySubject = asyncHandler(async (req, res) => {
     );
   }
 
+  // Verify teacher is assigned to this subject/section (skip for admins)
+  if (
+    req.user.roles.includes("TEACHER") &&
+    !req.user.roles.includes("ADMIN") &&
+    !req.user.roles.includes("SUPER_ADMIN")
+  ) {
+    const teacherAssignment = await prisma.teacherSubject.findFirst({
+      where: {
+        userId: req.user.id,
+        classSubjectId: examSubject.classSubjectId,
+        sectionId: parseInt(sectionId),
+      },
+    });
+
+    if (!teacherAssignment) {
+      throw ApiError.forbidden(
+        "You are not assigned to this subject/section. Cannot view results."
+      );
+    }
+  }
+
   // Get all students enrolled in this section for this academic year
   const students = await prisma.studentClass.findMany({
     where: {
@@ -148,9 +169,42 @@ const saveResults = asyncHandler(async (req, res) => {
     );
   }
 
+  // Fix Issue #7: Check exam status before marks entry
+  if (examSubject.exam.status !== "PUBLISHED") {
+    throw ApiError.badRequest(
+      `Cannot enter marks. Exam status is ${examSubject.exam.status}. Marks can only be entered when exam is PUBLISHED.`
+    );
+  }
+
   // Validate academic year belongs to school
   if (examSubject.classSubject.academicYear.schoolId !== req.user.schoolId) {
     throw ApiError.forbidden("Academic year does not belong to your school");
+  }
+
+  // Fix Issue #2: Verify teacher is assigned to this subject (skip for admins)
+  if (
+    req.user.roles.includes("TEACHER") &&
+    !req.user.roles.includes("ADMIN") &&
+    !req.user.roles.includes("SUPER_ADMIN")
+  ) {
+    const { sectionId } = req.body;
+    if (!sectionId) {
+      throw ApiError.badRequest("Section ID is required for teachers");
+    }
+
+    const teacherAssignment = await prisma.teacherSubject.findFirst({
+      where: {
+        userId: req.user.id,
+        classSubjectId: examSubject.classSubjectId,
+        sectionId: parseInt(sectionId),
+      },
+    });
+
+    if (!teacherAssignment) {
+      throw ApiError.forbidden(
+        "You are not assigned to this subject/section. Cannot enter marks."
+      );
+    }
   }
 
   const savedResults = await prisma.$transaction(async (tx) => {
@@ -314,10 +368,10 @@ const getStudentExamResults = asyncHandler(async (req, res) => {
     },
   });
 
-  // Only show results if published, or if user is Admin/Teacher
+  // Only show results if published/locked, or if user is Admin/Teacher
   const canSeeAll =
     req.user.roles.includes("ADMIN") || req.user.roles.includes("TEACHER");
-  if (!exam.isPublished && !canSeeAll) {
+  if (exam.status === "DRAFT" && !canSeeAll) {
     throw ApiError.forbidden(
       "Results for this exam have not been published yet"
     );
