@@ -25,6 +25,7 @@ const TeacherAssignment = React.lazy(() =>
 );
 const AdminStudents = React.lazy(() => import("./pages/admin/Students"));
 const AdminTeachers = React.lazy(() => import("./pages/admin/Teachers"));
+const AdminReportCards = React.lazy(() => import("./pages/admin/ReportCards"));
 
 // Teacher Pages
 const TeacherDashboard = React.lazy(() => import("./pages/teacher/Dashboard"));
@@ -102,6 +103,10 @@ function App() {
               />
               <Route path="/admin/students" element={<AdminStudents />} />
               <Route path="/admin/teachers" element={<AdminTeachers />} />
+              <Route
+                path="/admin/report-cards"
+                element={<AdminReportCards />}
+              />
             </Route>
 
             {/* Teacher Routes */}

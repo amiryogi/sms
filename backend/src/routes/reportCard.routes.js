@@ -8,9 +8,22 @@ const {
   canAccessResults,
   validate,
 } = require("../middleware");
-const { body } = require("express-validator");
+const { body, query } = require("express-validator");
 
 router.use(authenticate);
+
+// Get report cards for a class/section (Admin view)
+router.get(
+  "/",
+  isAdmin,
+  [
+    query("examId").isInt().withMessage("Exam ID is required"),
+    query("classId").isInt().withMessage("Class ID is required"),
+    query("sectionId").isInt().withMessage("Section ID is required"),
+  ],
+  validate,
+  reportCardController.getReportCards
+);
 
 // Generate report cards (Admin only)
 router.post(
@@ -40,6 +53,15 @@ router.put(
   [body("examId").isInt(), body("classId").isInt(), body("sectionId").isInt()],
   validate,
   reportCardController.publishReportCards
+);
+
+// Unpublish report cards (Admin only)
+router.put(
+  "/unpublish",
+  isAdmin,
+  [body("examId").isInt(), body("classId").isInt(), body("sectionId").isInt()],
+  validate,
+  reportCardController.unpublishReportCards
 );
 
 module.exports = router;
