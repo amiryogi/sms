@@ -83,6 +83,8 @@ const ClassSubjects = () => {
       academicYearId: filters.academicYearId,
       classId: filters.classId,
       subjectId: "",
+      hasTheory: true,
+      hasPractical: false,
       theoryMarks: 100,
       practicalMarks: 0,
       creditHours: 3.0,
@@ -96,6 +98,8 @@ const ClassSubjects = () => {
       academicYearId: row.academicYearId?.toString(),
       classId: row.classId?.toString(),
       subjectId: row.subjectId?.toString(),
+      hasTheory: row.hasTheory !== false,
+      hasPractical: row.hasPractical === true,
       theoryMarks: row.theoryMarks,
       practicalMarks: row.practicalMarks,
       creditHours: row.creditHours,
@@ -147,6 +151,9 @@ const ClassSubjects = () => {
           : parseInt(data.academicYearId),
         classId: editing ? editing.classId : parseInt(data.classId),
         subjectId: editing ? editing.subjectId : parseInt(data.subjectId),
+        hasTheory: data.hasTheory === true || data.hasTheory === "true",
+        hasPractical:
+          data.hasPractical === true || data.hasPractical === "true",
         theoryMarks: theory,
         practicalMarks: practical,
         creditHours: credits,
@@ -207,8 +214,26 @@ const ClassSubjects = () => {
     },
     { header: "Class", render: (row) => getClassName(row.classId) },
     { header: "Subject", render: (row) => getSubjectName(row.subjectId) },
-    { header: "Theory", accessor: "theoryMarks" },
-    { header: "Practical", accessor: "practicalMarks" },
+    {
+      header: "Evaluation",
+      render: (row) => (
+        <div className="flex gap-1">
+          {row.hasTheory !== false && (
+            <span className="badge badge-info" title="Has Theory">
+              T: {row.theoryMarks}
+            </span>
+          )}
+          {row.hasPractical === true && (
+            <span className="badge badge-success" title="Has Practical">
+              P: {row.practicalMarks}
+            </span>
+          )}
+          {row.hasTheory === false && row.hasPractical !== true && (
+            <span className="badge badge-secondary">No Config</span>
+          )}
+        </div>
+      ),
+    },
     { header: "Credit Hours", accessor: "creditHours" },
     {
       header: "Actions",
@@ -344,16 +369,66 @@ const ClassSubjects = () => {
             required
             disabled={!!editing}
           />
+
+          {/* Evaluation Structure Configuration */}
+          <div className="form-section">
+            <label className="form-label">Evaluation Structure</label>
+            <p
+              className="form-helper text-muted"
+              style={{ marginBottom: "0.75rem" }}
+            >
+              Configure which components this subject has for this class. This
+              determines what mark fields teachers see during marks entry.
+            </p>
+            <div
+              className="checkbox-row"
+              style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}
+            >
+              <label
+                className="checkbox-label"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  {...register("hasTheory")}
+                  style={{ width: "18px", height: "18px" }}
+                />
+                <span>Has Theory Component</span>
+              </label>
+              <label
+                className="checkbox-label"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  {...register("hasPractical")}
+                  style={{ width: "18px", height: "18px" }}
+                />
+                <span>Has Practical Component</span>
+              </label>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Theory Marks"
+              label="Theory Full Marks"
               name="theoryMarks"
               type="number"
               defaultValue={100}
               register={register}
             />
             <Input
-              label="Practical Marks"
+              label="Practical Full Marks"
               name="practicalMarks"
               type="number"
               defaultValue={0}

@@ -130,7 +130,10 @@ const getSubmissionsByAssignment = asyncHandler(async (req, res) => {
   }
 
   const submissions = await prisma.submission.findMany({
-    where: { assignmentId },
+    where: {
+      assignmentId,
+      schoolId: req.user.schoolId, // Fix Issue #9: Add schoolId filter
+    },
     include: {
       student: {
         include: {

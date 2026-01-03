@@ -17,6 +17,7 @@ import Modal from "../../components/common/Modal";
 import { Input, Select, Button } from "../../components/common/FormElements";
 import { examService } from "../../api/examService";
 import { academicService } from "../../api/academicService";
+import apiClient from "../../api/apiClient";
 
 // MultiSelect Component for Classes
 const MultiSelectClasses = ({ classes, control, name, label }) => (
@@ -87,7 +88,10 @@ const Exams = () => {
   const [exams, setExams] = useState([]);
   const [academicYears, setAcademicYears] = useState([]);
   const [classes, setClasses] = useState([]);
+  const [classSubjects, setClassSubjects] = useState([]); // All class subjects for adding
   const [loading, setLoading] = useState(true);
+  const [viewingExam, setViewingExam] = useState(null); // For viewing exam details
+  const [addingSubjects, setAddingSubjects] = useState(false); // Loading state for adding
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -159,6 +163,102 @@ const Exams = () => {
     setModalOpen(false);
     setEditingExam(null);
     reset();
+  };
+
+  // View exam details with subject evaluation structure
+  const openViewModal = async (examId) => {
+    try {
+      const response = await examService.getExam(examId);
+      setViewingExam(response.data);
+
+      // Fetch class subjects for the exam's academic year (for adding new classes)
+      if (response.data.academicYearId) {
+        const csRes = await academicService.getClassSubjects({
+          academicYearId: response.data.academicYearId,
+        });
+        setClassSubjects(csRes.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching exam details:", error);
+      alert("Error loading exam details");
+    }
+  };
+
+  const closeViewModal = () => {
+    setViewingExam(null);
+    setClassSubjects([]);
+  };
+
+  // Add a class's subjects to the exam
+  const handleAddClassToExam = async (classId) => {
+    if (!viewingExam) return;
+
+    // Find all class subjects for this class that aren't already in the exam
+    const existingClassSubjectIds =
+      viewingExam.examSubjects?.map((es) => es.classSubjectId) || [];
+    const subjectsToAdd = classSubjects.filter(
+      (cs) =>
+        cs.classId === parseInt(classId) &&
+        !existingClassSubjectIds.includes(cs.id)
+    );
+
+    if (subjectsToAdd.length === 0) {
+      alert("All subjects from this class are already linked to the exam.");
+      return;
+    }
+
+    if (
+      !confirm(
+        `Add ${subjectsToAdd.length} subject(s) from this class to the exam?`
+      )
+    )
+      return;
+
+    setAddingSubjects(true);
+    try {
+      // Use the updateExamSubjects API to add subjects
+      await examService.updateExamSubjects(
+        viewingExam.id,
+        subjectsToAdd.map((cs) => ({
+          classSubjectId: cs.id,
+          theoryFullMarks: cs.theoryMarks,
+          practicalFullMarks: cs.practicalMarks,
+          fullMarks: cs.fullMarks,
+          passMarks: cs.passMarks,
+        }))
+      );
+
+      alert(`${subjectsToAdd.length} subject(s) added successfully!`);
+
+      // Refresh the exam details
+      const response = await examService.getExam(viewingExam.id);
+      setViewingExam(response.data);
+      fetchData(); // Refresh exam list too
+    } catch (error) {
+      console.error("Error adding subjects:", error);
+      alert(error.response?.data?.message || "Error adding subjects to exam");
+    } finally {
+      setAddingSubjects(false);
+    }
+  };
+
+  // Remove an exam subject
+  const handleRemoveExamSubject = async (examSubjectId) => {
+    if (!confirm("Remove this subject from the exam?")) return;
+
+    try {
+      await apiClient.delete(
+        `/exams/${viewingExam.id}/subjects/${examSubjectId}`
+      );
+
+      // Refresh the exam details
+      const response = await examService.getExam(viewingExam.id);
+      setViewingExam(response.data);
+      fetchData();
+    } catch (error) {
+      console.error("Error removing subject:", error);
+      alert(error.response?.data?.message || "Error removing subject");
+    }
   };
 
   const handlePublish = async (id) => {
@@ -287,16 +387,35 @@ const Exams = () => {
     {
       header: "Subjects",
       render: (row) => (
-        <span className="text-sm text-muted">
+        <button
+          className="btn-link text-sm"
+          onClick={() => openViewModal(row.id)}
+          title="View Subjects"
+          style={{
+            textDecoration: "underline",
+            cursor: "pointer",
+            background: "none",
+            border: "none",
+            padding: 0,
+            color: "#3b82f6",
+          }}
+        >
           {row._count?.examSubjects || 0} Linked
-        </span>
+        </button>
       ),
     },
     {
       header: "Actions",
-      width: "180px",
+      width: "200px",
       render: (row) => (
         <div className="action-buttons">
+          <button
+            className="btn-icon"
+            onClick={() => openViewModal(row.id)}
+            title="View Details"
+          >
+            <Eye size={16} />
+          </button>
           {row.status === "DRAFT" && (
             <>
               <button
@@ -457,6 +576,343 @@ const Exams = () => {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* View Exam Details Modal */}
+      <Modal
+        isOpen={!!viewingExam}
+        onClose={closeViewModal}
+        title={viewingExam ? `${viewingExam.name} - Subjects` : "Exam Details"}
+        size="lg"
+      >
+        {viewingExam && (
+          <div className="exam-details">
+            <div
+              className="exam-info-grid"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                gap: "1rem",
+                marginBottom: "1.5rem",
+                padding: "1rem",
+                background: "#f8fafc",
+                borderRadius: "8px",
+              }}
+            >
+              <div>
+                <span className="text-muted text-sm">Status</span>
+                <div>
+                  <span
+                    className={`badge ${
+                      viewingExam.status === "PUBLISHED"
+                        ? "badge-success"
+                        : viewingExam.status === "LOCKED"
+                        ? "badge-danger"
+                        : "badge-warning"
+                    }`}
+                  >
+                    {viewingExam.status}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <span className="text-muted text-sm">Type</span>
+                <div className="font-medium">
+                  {viewingExam.examType?.replace("_", " ").toUpperCase()}
+                </div>
+              </div>
+              <div>
+                <span className="text-muted text-sm">Dates</span>
+                <div className="font-medium text-sm">
+                  {viewingExam.startDate &&
+                    new Date(viewingExam.startDate).toLocaleDateString()}{" "}
+                  -{" "}
+                  {viewingExam.endDate &&
+                    new Date(viewingExam.endDate).toLocaleDateString()}
+                </div>
+              </div>
+            </div>
+
+            <h4 style={{ marginBottom: "1rem" }}>
+              Linked Subjects ({viewingExam.examSubjects?.length || 0})
+            </h4>
+
+            {/* Add Class Section - Only for DRAFT exams */}
+            {viewingExam.status === "DRAFT" && (
+              <div
+                style={{
+                  background: "#f0fdf4",
+                  border: "1px solid #86efac",
+                  borderRadius: "8px",
+                  padding: "1rem",
+                  marginBottom: "1rem",
+                }}
+              >
+                <label
+                  style={{
+                    fontWeight: 500,
+                    marginBottom: "0.5rem",
+                    display: "block",
+                  }}
+                >
+                  Add Class Subjects
+                </label>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "0.5rem",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {(() => {
+                    // Get classes that have subjects for this academic year
+                    const existingClassIds = [
+                      ...new Set(
+                        viewingExam.examSubjects?.map(
+                          (es) => es.classSubject?.class?.id
+                        ) || []
+                      ),
+                    ];
+                    const availableClasses = [
+                      ...new Set(classSubjects.map((cs) => cs.classId)),
+                    ]
+                      .map((classId) => {
+                        const cs = classSubjects.find(
+                          (c) => c.classId === classId
+                        );
+                        return cs
+                          ? {
+                              id: classId,
+                              name: cs.class?.name || `Class ${classId}`,
+                            }
+                          : null;
+                      })
+                      .filter(Boolean)
+                      .sort((a, b) => a.name.localeCompare(b.name));
+
+                    return availableClasses.map((cls) => {
+                      const isAlreadyAdded = existingClassIds.includes(cls.id);
+                      const subjectCount = classSubjects.filter(
+                        (cs) => cs.classId === cls.id
+                      ).length;
+                      const addedCount =
+                        viewingExam.examSubjects?.filter(
+                          (es) => es.classSubject?.class?.id === cls.id
+                        ).length || 0;
+
+                      return (
+                        <button
+                          key={cls.id}
+                          onClick={() => handleAddClassToExam(cls.id)}
+                          disabled={
+                            addingSubjects || addedCount === subjectCount
+                          }
+                          style={{
+                            padding: "0.5rem 1rem",
+                            border: "1px solid #16a34a",
+                            borderRadius: "6px",
+                            background:
+                              addedCount === subjectCount
+                                ? "#e2e8f0"
+                                : "#ffffff",
+                            color:
+                              addedCount === subjectCount
+                                ? "#64748b"
+                                : "#16a34a",
+                            cursor:
+                              addedCount === subjectCount
+                                ? "not-allowed"
+                                : "pointer",
+                            fontSize: "0.875rem",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.25rem",
+                          }}
+                          title={
+                            addedCount === subjectCount
+                              ? "All subjects already added"
+                              : `Add ${subjectCount - addedCount} subject(s)`
+                          }
+                        >
+                          <Plus size={14} />
+                          {cls.name}
+                          {addedCount > 0 && (
+                            <span style={{ fontSize: "0.75rem" }}>
+                              ({addedCount}/{subjectCount})
+                            </span>
+                          )}
+                        </button>
+                      );
+                    });
+                  })()}
+                </div>
+                <p
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "#64748b",
+                    marginTop: "0.5rem",
+                  }}
+                >
+                  Click a class to add all its subjects (with their
+                  theory/practical configuration) to this exam.
+                </p>
+              </div>
+            )}
+
+            {viewingExam.examSubjects?.length > 0 ? (
+              <div
+                className="subjects-table"
+                style={{ maxHeight: "400px", overflowY: "auto" }}
+              >
+                <table
+                  className="table"
+                  style={{ width: "100%", borderCollapse: "collapse" }}
+                >
+                  <thead>
+                    <tr style={{ background: "#f1f5f9", textAlign: "left" }}>
+                      <th
+                        style={{
+                          padding: "0.75rem",
+                          borderBottom: "1px solid #e2e8f0",
+                        }}
+                      >
+                        Class
+                      </th>
+                      <th
+                        style={{
+                          padding: "0.75rem",
+                          borderBottom: "1px solid #e2e8f0",
+                        }}
+                      >
+                        Subject
+                      </th>
+                      <th
+                        style={{
+                          padding: "0.75rem",
+                          borderBottom: "1px solid #e2e8f0",
+                        }}
+                      >
+                        Evaluation
+                      </th>
+                      <th
+                        style={{
+                          padding: "0.75rem",
+                          borderBottom: "1px solid #e2e8f0",
+                        }}
+                      >
+                        Full Marks
+                      </th>
+                      <th
+                        style={{
+                          padding: "0.75rem",
+                          borderBottom: "1px solid #e2e8f0",
+                        }}
+                      >
+                        Pass Marks
+                      </th>
+                      {viewingExam.status === "DRAFT" && (
+                        <th
+                          style={{
+                            padding: "0.75rem",
+                            borderBottom: "1px solid #e2e8f0",
+                            width: "80px",
+                            textAlign: "center",
+                          }}
+                        >
+                          Actions
+                        </th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {viewingExam.examSubjects.map((es) => (
+                      <tr
+                        key={es.id}
+                        style={{ borderBottom: "1px solid #e2e8f0" }}
+                      >
+                        <td style={{ padding: "0.75rem" }}>
+                          {es.classSubject?.class?.name || "N/A"}
+                        </td>
+                        <td style={{ padding: "0.75rem" }}>
+                          {es.classSubject?.subject?.name || "N/A"}
+                        </td>
+                        <td style={{ padding: "0.75rem" }}>
+                          <div
+                            className="flex gap-1"
+                            style={{ display: "flex", gap: "0.25rem" }}
+                          >
+                            {es.hasTheory !== false && (
+                              <span
+                                className="badge badge-info"
+                                style={{ fontSize: "0.75rem" }}
+                              >
+                                Theory: {es.theoryFullMarks || 0}
+                              </span>
+                            )}
+                            {es.hasPractical === true && (
+                              <span
+                                className="badge badge-success"
+                                style={{ fontSize: "0.75rem" }}
+                              >
+                                Practical: {es.practicalFullMarks || 0}
+                              </span>
+                            )}
+                            {es.hasTheory === false &&
+                              es.hasPractical !== true && (
+                                <span
+                                  className="badge badge-secondary"
+                                  style={{ fontSize: "0.75rem" }}
+                                >
+                                  No Eval Config
+                                </span>
+                              )}
+                          </div>
+                        </td>
+                        <td style={{ padding: "0.75rem" }}>{es.fullMarks}</td>
+                        <td style={{ padding: "0.75rem" }}>{es.passMarks}</td>
+                        {viewingExam.status === "DRAFT" && (
+                          <td
+                            style={{ padding: "0.75rem", textAlign: "center" }}
+                          >
+                            <button
+                              onClick={() => handleRemoveExamSubject(es.id)}
+                              disabled={addingSubjects}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: addingSubjects
+                                  ? "not-allowed"
+                                  : "pointer",
+                                color: "#ef4444",
+                                padding: "0.25rem",
+                              }}
+                              title="Remove from exam"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-muted">No subjects linked to this exam.</p>
+            )}
+
+            <div className="modal-actions mt-6">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={closeViewModal}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

@@ -73,4 +73,13 @@ router.delete(
   examController.deleteExam
 );
 
+// Delete a specific exam subject (Admin only)
+router.delete(
+  "/:id/subjects/:subjectId",
+  isAdmin,
+  [idParamRule],
+  validate,
+  examController.deleteExamSubject
+);
+
 module.exports = router;

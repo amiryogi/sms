@@ -182,13 +182,16 @@ const MarksEntry = () => {
   const currentExamSubject = selectedExam?.examSubjects?.find(
     (es) => es.classSubjectId?.toString() === filters.classSubjectId
   );
-  // Prefer exam-level practical config; fall back to class-subject practical marks to avoid hiding the field on old exams
-  const theoryMax = currentExamSubject?.theoryFullMarks || 100;
-  const examPracticalMax = currentExamSubject?.practicalFullMarks ?? 0;
-  const classPracticalMax =
-    currentExamSubject?.classSubject?.practicalMarks ?? 0;
-  const practicalMax = Math.max(examPracticalMax, classPracticalMax, 0);
-  const hasPractical = practicalMax > 0;
+  // Use ExamSubject flags as single source of truth for evaluation structure
+  // These are snapshots copied from ClassSubject at exam creation time
+  const hasPractical =
+    currentExamSubject?.hasPractical === true ||
+    (currentExamSubject?.practicalFullMarks ?? 0) > 0; // Fallback for backward compatibility
+  const hasTheory = currentExamSubject?.hasTheory !== false; // Default to true
+  const theoryMax = hasTheory ? currentExamSubject?.theoryFullMarks || 100 : 0;
+  const practicalMax = hasPractical
+    ? currentExamSubject?.practicalFullMarks || 0
+    : 0;
 
   return (
     <div className="page-container">
@@ -245,31 +248,67 @@ const MarksEntry = () => {
             <div className="text-muted text-center">No students found.</div>
           ) : (
             <>
+              {/* Evaluation Structure Info Banner */}
+              <div
+                className="eval-info"
+                style={{
+                  background: "#f0f9ff",
+                  border: "1px solid #bae6fd",
+                  borderRadius: "8px",
+                  padding: "0.75rem 1rem",
+                  marginBottom: "1rem",
+                  display: "flex",
+                  gap: "1rem",
+                  alignItems: "center",
+                }}
+              >
+                <span style={{ fontWeight: 500 }}>Evaluation Structure:</span>
+                {hasTheory && (
+                  <span className="badge badge-info">
+                    Theory: {theoryMax} marks
+                  </span>
+                )}
+                {hasPractical && (
+                  <span className="badge badge-success">
+                    Practical: {practicalMax} marks
+                  </span>
+                )}
+                {!hasTheory && !hasPractical && (
+                  <span className="badge badge-warning">
+                    No evaluation configured
+                  </span>
+                )}
+              </div>
+
               <div className="marks-header">
                 <span>Student</span>
-                <span>Theory (Max: {theoryMax})</span>
+                {hasTheory && <span>Theory (Max: {theoryMax})</span>}
                 {hasPractical && <span>Practical (Max: {practicalMax})</span>}
+                <span>Absent</span>
                 <span>Remarks</span>
               </div>
               <div className="marks-list">
                 {marksData.map((record) => (
                   <div key={record.studentId} className="marks-row">
                     <span className="student-name">{record.studentName}</span>
-                    <input
-                      type="number"
-                      value={record.marksObtained}
-                      onChange={(e) =>
-                        updateMarks(
-                          record.studentId,
-                          "marksObtained",
-                          e.target.value
-                        )
-                      }
-                      min="0"
-                      max={theoryMax}
-                      className="marks-input"
-                      disabled={record.isAbsent}
-                    />
+                    {hasTheory && (
+                      <input
+                        type="number"
+                        value={record.marksObtained}
+                        onChange={(e) =>
+                          updateMarks(
+                            record.studentId,
+                            "marksObtained",
+                            e.target.value
+                          )
+                        }
+                        min="0"
+                        max={theoryMax}
+                        className="marks-input"
+                        disabled={record.isAbsent}
+                        placeholder="Theory"
+                      />
+                    )}
                     {hasPractical && (
                       <input
                         type="number"

@@ -58,6 +58,8 @@ const assignSubjectToClass = asyncHandler(async (req, res) => {
     creditHours,
     theoryMarks,
     practicalMarks,
+    hasTheory,
+    hasPractical,
   } = req.body;
 
   // Ensure class, subject, and academic year belong to the same school
@@ -83,6 +85,11 @@ const assignSubjectToClass = asyncHandler(async (req, res) => {
     practicalMarks !== undefined ? parseInt(practicalMarks, 10) : 0;
   const computedFull = tMarks + pMarks;
   const computedPass = passMarks !== undefined ? parseInt(passMarks, 10) : 40;
+
+  // Derive hasTheory/hasPractical from marks if not explicitly provided
+  const resolvedHasTheory = hasTheory !== undefined ? hasTheory : tMarks > 0;
+  const resolvedHasPractical =
+    hasPractical !== undefined ? hasPractical : pMarks > 0;
 
   if (tMarks < 0 || pMarks < 0 || computedFull <= 0) {
     throw ApiError.badRequest("Marks must be positive numbers");
@@ -115,6 +122,8 @@ const assignSubjectToClass = asyncHandler(async (req, res) => {
       classId: parseInt(classId),
       academicYearId: parseInt(academicYearId),
       subjectId: parseInt(subjectId),
+      hasTheory: resolvedHasTheory,
+      hasPractical: resolvedHasPractical,
       fullMarks: computedFull,
       passMarks: computedPass,
       theoryMarks: tMarks,
@@ -140,8 +149,15 @@ const assignSubjectToClass = asyncHandler(async (req, res) => {
  */
 const updateClassSubject = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { fullMarks, passMarks, creditHours, theoryMarks, practicalMarks } =
-    req.body;
+  const {
+    fullMarks,
+    passMarks,
+    creditHours,
+    theoryMarks,
+    practicalMarks,
+    hasTheory,
+    hasPractical,
+  } = req.body;
 
   const classSubject = await prisma.classSubject.findUnique({
     where: { id: parseInt(id) },
@@ -183,6 +199,9 @@ const updateClassSubject = asyncHandler(async (req, res) => {
   const updated = await prisma.classSubject.update({
     where: { id: parseInt(id) },
     data: {
+      hasTheory: hasTheory !== undefined ? hasTheory : classSubject.hasTheory,
+      hasPractical:
+        hasPractical !== undefined ? hasPractical : classSubject.hasPractical,
       fullMarks: full,
       passMarks: pass,
       theoryMarks: tMarks,

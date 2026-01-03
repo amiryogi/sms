@@ -1,9 +1,9 @@
-import apiClient from './apiClient';
+import apiClient from "./apiClient";
 
 export const teacherService = {
   // Teacher CRUD
   getTeachers: async (params = {}) => {
-    const response = await apiClient.get('/teachers', { params });
+    const response = await apiClient.get("/teachers", { params });
     return response.data;
   },
 
@@ -14,7 +14,10 @@ export const teacherService = {
 
   createTeacher: async (data) => {
     // Architecturally, Teachers are Users. Use the user creation endpoint.
-    const response = await apiClient.post('/users', { ...data, role: 'TEACHER' });
+    const response = await apiClient.post("/users", {
+      ...data,
+      role: "TEACHER",
+    });
     return response.data;
   },
 
@@ -23,14 +26,34 @@ export const teacherService = {
     return response.data;
   },
 
+  // =====================================================
+  // TEACHER SELF-SERVICE METHODS
+  // =====================================================
+
+  /**
+   * Get students for teacher's assigned classes/sections
+   * Returns students grouped by Class → Section
+   * @param {Object} params - Optional query params
+   * @param {number} params.academicYearId - Filter by academic year (defaults to current)
+   * @returns {Promise<{summary: Object, classes: Array}>}
+   */
+  getMyStudents: async (params = {}) => {
+    const response = await apiClient.get("/teachers/my-students", { params });
+    return response.data;
+  },
+
+  // =====================================================
+  // TEACHER-SUBJECT ASSIGNMENTS (Admin)
+  // =====================================================
+
   // Teacher-Subject Assignments
   getTeacherAssignments: async (params = {}) => {
-    const response = await apiClient.get('/teacher-subjects', { params });
+    const response = await apiClient.get("/teacher-subjects", { params });
     return response.data;
   },
 
   assignTeacher: async (data) => {
-    const response = await apiClient.post('/teacher-subjects', data);
+    const response = await apiClient.post("/teacher-subjects", data);
     return response.data;
   },
 

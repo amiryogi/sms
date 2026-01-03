@@ -49,7 +49,20 @@ const getExam = asyncHandler(async (req, res) => {
         select: { id: true, firstName: true, lastName: true },
       },
       examSubjects: {
-        include: {
+        select: {
+          id: true,
+          examId: true,
+          classSubjectId: true,
+          examDate: true,
+          startTime: true,
+          endTime: true,
+          hasTheory: true,
+          hasPractical: true,
+          fullMarks: true,
+          passMarks: true,
+          theoryFullMarks: true,
+          practicalFullMarks: true,
+          createdAt: true,
           classSubject: {
             include: {
               class: true,
@@ -101,10 +114,15 @@ const createExam = asyncHandler(async (req, res) => {
     });
 
     if (classSubjects.length > 0) {
+      // Copy evaluation structure from ClassSubject (single source of truth)
       await prisma.examSubject.createMany({
         data: classSubjects.map((cs) => ({
           examId: exam.id,
           classSubjectId: cs.id,
+          // Snapshot evaluation flags from ClassSubject
+          hasTheory: cs.hasTheory,
+          hasPractical: cs.hasPractical,
+          // Snapshot marks limits from ClassSubject
           fullMarks: cs.fullMarks,
           passMarks: cs.passMarks,
           theoryFullMarks: cs.theoryMarks || 100,
@@ -159,8 +177,20 @@ const updateExamSubjects = asyncHandler(async (req, res) => {
           ? parseInt(sub.practicalFullMarks, 10)
           : undefined;
 
-      const resolvedTheory = theoryFull ?? 100;
-      const resolvedPractical = practicalFull ?? 0;
+      // Fetch ClassSubject to get evaluation flags for new subjects
+      const classSubject = await tx.classSubject.findUnique({
+        where: { id: parseInt(sub.classSubjectId) },
+        select: {
+          hasTheory: true,
+          hasPractical: true,
+          theoryMarks: true,
+          practicalMarks: true,
+        },
+      });
+
+      const resolvedTheory = theoryFull ?? classSubject?.theoryMarks ?? 100;
+      const resolvedPractical =
+        practicalFull ?? classSubject?.practicalMarks ?? 0;
       const resolvedFull = full ?? resolvedTheory + resolvedPractical;
       const resolvedPass = pass ?? 40;
 
@@ -188,6 +218,7 @@ const updateExamSubjects = asyncHandler(async (req, res) => {
           passMarks: resolvedPass,
           theoryFullMarks: resolvedTheory,
           practicalFullMarks: resolvedPractical,
+          // Note: hasTheory/hasPractical not updated on UPDATE - they are snapshot at creation
         },
         create: {
           examId,
@@ -195,6 +226,9 @@ const updateExamSubjects = asyncHandler(async (req, res) => {
           examDate: sub.examDate ? new Date(sub.examDate) : null,
           startTime: sub.startTime ? new Date(sub.startTime) : null,
           endTime: sub.endTime ? new Date(sub.endTime) : null,
+          // Copy evaluation flags from ClassSubject (snapshot)
+          hasTheory: classSubject?.hasTheory ?? true,
+          hasPractical: classSubject?.hasPractical ?? false,
           fullMarks: resolvedFull,
           passMarks: resolvedPass,
           theoryFullMarks: resolvedTheory,
@@ -398,6 +432,63 @@ const deleteExam = asyncHandler(async (req, res) => {
   ApiResponse.success(res, null, "Exam deleted successfully");
 });
 
+/**
+ * @desc    Delete a specific exam subject
+ * @route   DELETE /api/v1/exams/:id/subjects/:subjectId
+ * @access  Private/Admin
+ */
+const deleteExamSubject = asyncHandler(async (req, res) => {
+  const { id, subjectId } = req.params;
+
+  // Verify exam exists and belongs to school
+  const exam = await prisma.exam.findFirst({
+    where: { id: parseInt(id), schoolId: req.user.schoolId },
+  });
+
+  if (!exam) throw ApiError.notFound("Exam not found");
+
+  // Only allow modification of DRAFT exams
+  if (exam.status !== "DRAFT") {
+    throw ApiError.badRequest(
+      "Cannot modify exam subjects - exam is not in DRAFT status"
+    );
+  }
+
+  // Verify exam subject exists and belongs to this exam
+  const examSubject = await prisma.examSubject.findFirst({
+    where: { id: parseInt(subjectId), examId: parseInt(id) },
+    include: { classSubject: { include: { class: true, subject: true } } },
+  });
+
+  if (!examSubject) {
+    throw ApiError.notFound("Exam subject not found");
+  }
+
+  // Check if any results exist for this exam subject
+  const resultCount = await prisma.examResult.count({
+    where: { examSubjectId: parseInt(subjectId) },
+  });
+
+  if (resultCount > 0) {
+    throw ApiError.badRequest(
+      `Cannot remove - ${resultCount} marks have been entered for this subject`
+    );
+  }
+
+  await prisma.examSubject.delete({
+    where: { id: parseInt(subjectId) },
+  });
+
+  const className = examSubject.classSubject?.class?.name || "Unknown";
+  const subjectName = examSubject.classSubject?.subject?.name || "Unknown";
+
+  ApiResponse.success(
+    res,
+    null,
+    `${className} - ${subjectName} removed from exam`
+  );
+});
+
 module.exports = {
   getExams,
   getExam,
@@ -408,4 +499,5 @@ module.exports = {
   lockExam,
   unlockExam,
   deleteExam,
+  deleteExamSubject,
 };

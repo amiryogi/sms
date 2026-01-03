@@ -230,10 +230,22 @@ const Students = () => {
       header: "Student",
       render: (row) => (
         <div className="user-cell">
-          <span className="user-name">
-            {row.firstName} {row.lastName}
-          </span>
-          <span className="user-email">{row.email}</span>
+          <div className="user-avatar-sm">
+            {row.avatarUrl ? (
+              <img
+                src={resolveAssetUrl(row.avatarUrl)}
+                alt={`${row.firstName} ${row.lastName}`}
+              />
+            ) : (
+              (row.firstName || "").charAt(0).toUpperCase()
+            )}
+          </div>
+          <div>
+            <span className="user-name">
+              {row.firstName} {row.lastName}
+            </span>
+            <span className="user-email">{row.email}</span>
+          </div>
         </div>
       ),
     },

@@ -134,6 +134,29 @@ const markAttendance = asyncHandler(async (req, res) => {
     );
   }
 
+  // Defense-in-depth: Verify teacher is assigned to this class/section (if teacher role)
+  if (
+    req.user.roles.includes("TEACHER") &&
+    !req.user.roles.includes("ADMIN") &&
+    !req.user.roles.includes("SUPER_ADMIN")
+  ) {
+    const teacherAssignment = await prisma.teacherSubject.findFirst({
+      where: {
+        userId: req.user.id,
+        sectionId: parseInt(sectionId),
+        classSubject: {
+          classId: parseInt(classId),
+        },
+      },
+    });
+
+    if (!teacherAssignment) {
+      throw ApiError.forbidden(
+        "You are not assigned to this class/section. Cannot mark attendance."
+      );
+    }
+  }
+
   const attendanceDate = new Date(date);
   attendanceDate.setHours(0, 0, 0, 0);
 
