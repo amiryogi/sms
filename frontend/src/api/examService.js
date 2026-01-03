@@ -91,4 +91,12 @@ export const examService = {
     const response = await apiClient.post("/exam-results", data);
     return response.data;
   },
+
+  // Get student's report card
+  getReportCard: async (studentId, examId) => {
+    const response = await apiClient.get(
+      `/report-cards/student/${studentId}/exam/${examId}`
+    );
+    return response.data;
+  },
 };

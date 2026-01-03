@@ -64,6 +64,7 @@ const DashboardLayout = () => {
           path: "/admin/class-subjects",
         },
         { title: "Exams", icon: ClipboardList, path: "/admin/exams" },
+        { title: "Report Cards", icon: Award, path: "/admin/report-cards" },
         {
           title: "Teacher Assignment",
           icon: Award,
