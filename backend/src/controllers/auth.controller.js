@@ -9,6 +9,30 @@ const { ApiError, ApiResponse, asyncHandler } = require("../utils");
 const hashRefreshToken = (token) =>
   crypto.createHash("sha256").update(token).digest("hex");
 
+const formatParentForAuth = (parent) => {
+  if (!parent) return undefined;
+
+  const children = (parent.studentParents || []).map((sp) => {
+    const enrollment = sp.student.studentClasses?.[0];
+    return {
+      studentId: sp.studentId,
+      studentName: `${sp.student.user.firstName} ${sp.student.user.lastName}`,
+      email: sp.student.user.email,
+      phone: sp.student.user.phone,
+      class: enrollment?.class?.name,
+      section: enrollment?.section?.name,
+      rollNumber: enrollment?.rollNumber,
+      relationship: sp.relationship,
+      isPrimary: sp.isPrimary,
+    };
+  });
+
+  return {
+    id: parent.id,
+    children,
+  };
+};
+
 const extractTokenMetadata = (req) => ({
   userAgent: req.headers["user-agent"]
     ? req.headers["user-agent"].slice(0, 255)
@@ -94,7 +118,36 @@ const login = asyncHandler(async (req, res) => {
           },
         },
       },
-      parent: true,
+      parent: {
+        include: {
+          studentParents: {
+            include: {
+              student: {
+                include: {
+                  user: {
+                    select: {
+                      firstName: true,
+                      lastName: true,
+                      email: true,
+                      phone: true,
+                    },
+                  },
+                  studentClasses: {
+                    where: { status: "active" },
+                    orderBy: { academicYear: { startDate: "desc" } },
+                    take: 1,
+                    include: {
+                      class: true,
+                      section: true,
+                      academicYear: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
   });
 
@@ -177,7 +230,7 @@ const login = asyncHandler(async (req, res) => {
               enrollments: user.student.studentClasses,
             }
           : undefined,
-        parentId: user.parent?.id,
+        parent: formatParentForAuth(user.parent),
       },
       accessToken,
       refreshToken,
@@ -418,7 +471,36 @@ const getMe = asyncHandler(async (req, res) => {
           },
         },
       },
-      parent: true,
+      parent: {
+        include: {
+          studentParents: {
+            include: {
+              student: {
+                include: {
+                  user: {
+                    select: {
+                      firstName: true,
+                      lastName: true,
+                      email: true,
+                      phone: true,
+                    },
+                  },
+                  studentClasses: {
+                    where: { status: "active" },
+                    orderBy: { academicYear: { startDate: "desc" } },
+                    take: 1,
+                    include: {
+                      class: true,
+                      section: true,
+                      academicYear: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
   });
 
@@ -459,7 +541,7 @@ const getMe = asyncHandler(async (req, res) => {
           enrollments: user.student.studentClasses, // Match frontend "enrollments" expectation
         }
       : undefined,
-    parentId: user.parent?.id,
+    parent: formatParentForAuth(user.parent),
     lastLogin: user.lastLogin,
   });
 });

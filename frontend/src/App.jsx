@@ -23,6 +23,7 @@ const Exams = React.lazy(() => import("./pages/admin/Exams"));
 const TeacherAssignment = React.lazy(() =>
   import("./pages/admin/TeacherAssignment")
 );
+const AdminParents = React.lazy(() => import("./pages/admin/Parents"));
 const AdminStudents = React.lazy(() => import("./pages/admin/Students"));
 const AdminTeachers = React.lazy(() => import("./pages/admin/Teachers"));
 const AdminReportCards = React.lazy(() => import("./pages/admin/ReportCards"));
@@ -52,6 +53,7 @@ const StudentReportCard = React.lazy(() =>
 const ParentDashboard = React.lazy(() => import("./pages/parent/Dashboard"));
 const ParentAttendance = React.lazy(() => import("./pages/parent/Attendance"));
 const ParentResults = React.lazy(() => import("./pages/parent/Results"));
+const ParentReportCard = React.lazy(() => import("./pages/parent/ReportCard"));
 
 // Error Pages
 const NotFound = () => (
@@ -101,6 +103,7 @@ function App() {
                 path="/admin/teacher-assignment"
                 element={<TeacherAssignment />}
               />
+              <Route path="/admin/parents" element={<AdminParents />} />
               <Route path="/admin/students" element={<AdminStudents />} />
               <Route path="/admin/teachers" element={<AdminTeachers />} />
               <Route
@@ -161,6 +164,10 @@ function App() {
               <Route path="/parent/dashboard" element={<ParentDashboard />} />
               <Route path="/parent/attendance" element={<ParentAttendance />} />
               <Route path="/parent/results" element={<ParentResults />} />
+              <Route
+                path="/parent/report-card"
+                element={<ParentReportCard />}
+              />
             </Route>
 
             {/* Dashboard Redirect Logic */}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import {
   FileText,
   RefreshCw,
@@ -10,8 +10,11 @@ import {
   CheckCircle,
   AlertCircle,
   Loader2,
+  Printer,
+  X,
 } from "lucide-react";
 import { Select, Button } from "../../components/common/FormElements";
+import NepalReportCard from "../../components/common/NepalReportCard";
 import { reportCardService } from "../../api/reportCardService";
 import { examService } from "../../api/examService";
 import { academicService } from "../../api/academicService";
@@ -33,6 +36,11 @@ const ReportCards = () => {
   const [generating, setGenerating] = useState(false);
   const [publishing, setPublishing] = useState(false);
 
+  // Preview modal state
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
   // Fetch initial data
   useEffect(() => {
     fetchInitialData();
@@ -41,8 +49,6 @@ const ReportCards = () => {
   // Filter sections when class changes
   useEffect(() => {
     if (selectedClass) {
-      // Sections are generic (A, B, C) and apply to all classes
-      // Show all sections when a class is selected
       setSections(allSections);
       setSelectedSection("");
     } else {
@@ -58,7 +64,6 @@ const ReportCards = () => {
         academicService.getSections(),
       ]);
 
-      // Only show PUBLISHED or LOCKED exams (marks entry complete)
       const eligibleExams = (examsRes.data || []).filter(
         (e) => e.status === "PUBLISHED" || e.status === "LOCKED"
       );
@@ -97,7 +102,7 @@ const ReportCards = () => {
 
     if (
       !confirm(
-        "Generate/recalculate report cards for all students in this section? This will calculate totals, grades, and ranks."
+        "Generate/recalculate report cards for all students in this section? This will calculate totals, grades, GPA, and ranks using Nepal grading system."
       )
     )
       return;
@@ -109,7 +114,7 @@ const ReportCards = () => {
         selectedClass,
         selectedSection
       );
-      alert("Report cards generated successfully!");
+      alert("Report cards generated successfully with Nepal GPA grading!");
       fetchReportCards();
     } catch (error) {
       console.error("Error generating report cards:", error);
@@ -124,7 +129,7 @@ const ReportCards = () => {
 
     if (
       !confirm(
-        "Publish report cards? Students and parents will be able to view them."
+        "Publish report cards? Students and parents will be able to view and download them."
       )
     )
       return;
@@ -173,6 +178,35 @@ const ReportCards = () => {
     }
   };
 
+  // Preview individual student report card
+  const handlePreview = async (studentId) => {
+    if (!selectedExam) return;
+
+    setPreviewLoading(true);
+    setPreviewOpen(true);
+
+    try {
+      const response = await reportCardService.getReportCard(
+        studentId,
+        selectedExam
+      );
+      setPreviewData(response.data);
+    } catch (error) {
+      console.error("Error fetching report card:", error);
+      alert(
+        error.response?.data?.message || "Error loading report card preview"
+      );
+      setPreviewOpen(false);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const closePreview = () => {
+    setPreviewOpen(false);
+    setPreviewData(null);
+  };
+
   const examOptions = exams.map((e) => ({
     value: e.id.toString(),
     label: `${e.name} (${e.status})`,
@@ -197,6 +231,15 @@ const ReportCards = () => {
     students.length > 0 && students.every((s) => s.reportCard?.isPublished);
   const somePublished = students.some((s) => s.reportCard?.isPublished);
 
+  // GPA color helper
+  const getGpaColor = (gpa) => {
+    if (gpa >= 3.6) return { bg: "#dcfce7", text: "#166534" };
+    if (gpa >= 2.8) return { bg: "#dbeafe", text: "#1e40af" };
+    if (gpa >= 2.0) return { bg: "#fef3c7", text: "#92400e" };
+    if (gpa >= 1.6) return { bg: "#fed7aa", text: "#9a3412" };
+    return { bg: "#fee2e2", text: "#991b1b" };
+  };
+
   return (
     <div className="page-container">
       <div className="page-header">
@@ -205,7 +248,7 @@ const ReportCards = () => {
             <FileText className="inline-icon" /> Report Cards
           </h1>
           <p className="text-muted">
-            Generate, review, and publish student report cards
+            Generate, review, and publish Nepal-style grade sheets
           </p>
         </div>
       </div>
@@ -294,6 +337,20 @@ const ReportCards = () => {
                   <div className="stat-label">Published</div>
                 </div>
               </div>
+              <div className="stat-item">
+                <Award size={20} style={{ color: "#16a34a" }} />
+                <div>
+                  <div className="stat-value">{summary.passed || 0}</div>
+                  <div className="stat-label">Passed</div>
+                </div>
+              </div>
+              <div className="stat-item">
+                <AlertCircle size={20} style={{ color: "#dc2626" }} />
+                <div>
+                  <div className="stat-value">{summary.failed || 0}</div>
+                  <div className="stat-label">Failed</div>
+                </div>
+              </div>
             </div>
 
             {/* Action Buttons */}
@@ -362,7 +419,9 @@ const ReportCards = () => {
       {/* Students Table */}
       {reportData && (
         <div className="card">
-          <h3 style={{ marginBottom: "1rem" }}>Student Results</h3>
+          <h3 style={{ marginBottom: "1rem" }}>
+            Student Results (Nepal GPA System)
+          </h3>
 
           {students.length === 0 ? (
             <div className="text-muted text-center" style={{ padding: "2rem" }}>
@@ -384,13 +443,13 @@ const ReportCards = () => {
                       Subjects
                     </th>
                     <th style={{ padding: "0.75rem", textAlign: "center" }}>
-                      Obtained
-                    </th>
-                    <th style={{ padding: "0.75rem", textAlign: "center" }}>
                       Total
                     </th>
                     <th style={{ padding: "0.75rem", textAlign: "center" }}>
                       %
+                    </th>
+                    <th style={{ padding: "0.75rem", textAlign: "center" }}>
+                      GPA
                     </th>
                     <th style={{ padding: "0.75rem", textAlign: "center" }}>
                       Grade
@@ -399,128 +458,174 @@ const ReportCards = () => {
                       Rank
                     </th>
                     <th style={{ padding: "0.75rem", textAlign: "center" }}>
+                      Result
+                    </th>
+                    <th style={{ padding: "0.75rem", textAlign: "center" }}>
                       Status
+                    </th>
+                    <th style={{ padding: "0.75rem", textAlign: "center" }}>
+                      Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {students.map((student) => (
-                    <tr
-                      key={student.studentId}
-                      style={{ borderBottom: "1px solid #e2e8f0" }}
-                    >
-                      <td style={{ padding: "0.75rem" }}>
-                        {student.rollNumber}
-                      </td>
-                      <td style={{ padding: "0.75rem" }}>
-                        {student.firstName} {student.lastName}
-                      </td>
-                      <td style={{ padding: "0.75rem", textAlign: "center" }}>
-                        {student.results?.length || 0}
-                      </td>
-                      <td style={{ padding: "0.75rem", textAlign: "center" }}>
-                        <strong>
-                          {student.totalObtained?.toFixed(1) || 0}
-                        </strong>
-                      </td>
-                      <td style={{ padding: "0.75rem", textAlign: "center" }}>
-                        {student.totalFull || 0}
-                      </td>
-                      <td style={{ padding: "0.75rem", textAlign: "center" }}>
-                        <span
-                          style={{
-                            padding: "0.25rem 0.5rem",
-                            borderRadius: "4px",
-                            background:
-                              parseFloat(student.percentage) >= 60
-                                ? "#dcfce7"
-                                : parseFloat(student.percentage) >= 40
-                                ? "#fef9c3"
-                                : "#fee2e2",
-                            color:
-                              parseFloat(student.percentage) >= 60
-                                ? "#166534"
-                                : parseFloat(student.percentage) >= 40
-                                ? "#854d0e"
-                                : "#991b1b",
-                          }}
-                        >
-                          {student.percentage}%
-                        </span>
-                      </td>
-                      <td style={{ padding: "0.75rem", textAlign: "center" }}>
-                        {student.reportCard ? (
+                  {students.map((student) => {
+                    const gpaColor = getGpaColor(student.gpa || 0);
+                    return (
+                      <tr
+                        key={student.studentId}
+                        style={{ borderBottom: "1px solid #e2e8f0" }}
+                      >
+                        <td style={{ padding: "0.75rem" }}>
+                          {student.rollNumber}
+                        </td>
+                        <td style={{ padding: "0.75rem" }}>
+                          {student.firstName} {student.lastName}
+                        </td>
+                        <td style={{ padding: "0.75rem", textAlign: "center" }}>
+                          <span style={{ color: "#16a34a" }}>
+                            {student.passedSubjects || 0}
+                          </span>
+                          /
+                          <span
+                            style={{
+                              color:
+                                student.failedSubjects > 0
+                                  ? "#dc2626"
+                                  : "#64748b",
+                            }}
+                          >
+                            {(student.passedSubjects || 0) +
+                              (student.failedSubjects || 0)}
+                          </span>
+                        </td>
+                        <td style={{ padding: "0.75rem", textAlign: "center" }}>
+                          <strong>
+                            {student.totalObtained?.toFixed(1) || 0}
+                          </strong>
+                          <span style={{ color: "#64748b" }}>
+                            /{student.totalFull || 0}
+                          </span>
+                        </td>
+                        <td style={{ padding: "0.75rem", textAlign: "center" }}>
+                          {student.percentage?.toFixed(1)}%
+                        </td>
+                        <td style={{ padding: "0.75rem", textAlign: "center" }}>
+                          <span
+                            style={{
+                              padding: "0.25rem 0.5rem",
+                              borderRadius: "4px",
+                              background: gpaColor.bg,
+                              color: gpaColor.text,
+                              fontWeight: "bold",
+                            }}
+                          >
+                            {student.gpa?.toFixed(2)}
+                          </span>
+                        </td>
+                        <td style={{ padding: "0.75rem", textAlign: "center" }}>
                           <span
                             className="badge"
                             style={{
-                              background: "#e0e7ff",
-                              color: "#3730a3",
+                              background: gpaColor.bg,
+                              color: gpaColor.text,
                               padding: "0.25rem 0.5rem",
                             }}
                           >
-                            {student.reportCard.overallGrade}
+                            {student.overallGrade || ""}
                           </span>
-                        ) : (
-                          <span className="text-muted">—</span>
-                        )}
-                      </td>
-                      <td style={{ padding: "0.75rem", textAlign: "center" }}>
-                        {student.reportCard?.classRank ? (
-                          <span
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: "0.25rem",
-                            }}
-                          >
-                            {student.reportCard.classRank <= 3 && (
-                              <Award
-                                size={16}
-                                style={{
-                                  color:
-                                    student.reportCard.classRank === 1
-                                      ? "#eab308"
-                                      : student.reportCard.classRank === 2
-                                      ? "#9ca3af"
-                                      : "#b45309",
-                                }}
-                              />
-                            )}
-                            #{student.reportCard.classRank}
-                          </span>
-                        ) : (
-                          <span className="text-muted">—</span>
-                        )}
-                      </td>
-                      <td style={{ padding: "0.75rem", textAlign: "center" }}>
-                        {student.reportCard ? (
-                          student.reportCard.isPublished ? (
+                        </td>
+                        <td style={{ padding: "0.75rem", textAlign: "center" }}>
+                          {student.reportCard?.classRank ? (
                             <span
-                              className="badge badge-success"
-                              style={{ fontSize: "0.75rem" }}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "0.25rem",
+                              }}
                             >
-                              <CheckCircle size={12} /> Published
+                              {student.reportCard.classRank <= 3 && (
+                                <Award
+                                  size={16}
+                                  style={{
+                                    color:
+                                      student.reportCard.classRank === 1
+                                        ? "#eab308"
+                                        : student.reportCard.classRank === 2
+                                        ? "#9ca3af"
+                                        : "#b45309",
+                                  }}
+                                />
+                              )}
+                              #{student.reportCard.classRank}
                             </span>
                           ) : (
-                            <span
-                              className="badge badge-warning"
-                              style={{ fontSize: "0.75rem" }}
-                            >
-                              Draft
-                            </span>
-                          )
-                        ) : (
+                            <span className="text-muted"></span>
+                          )}
+                        </td>
+                        <td style={{ padding: "0.75rem", textAlign: "center" }}>
                           <span
-                            className="badge badge-secondary"
+                            className={`badge ${
+                              student.isPassed
+                                ? "badge-success"
+                                : "badge-danger"
+                            }`}
                             style={{ fontSize: "0.75rem" }}
                           >
-                            Not Generated
+                            {student.isPassed ? "PASSED" : "FAILED"}
                           </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td style={{ padding: "0.75rem", textAlign: "center" }}>
+                          {student.reportCard ? (
+                            student.reportCard.isPublished ? (
+                              <span
+                                className="badge badge-success"
+                                style={{ fontSize: "0.75rem" }}
+                              >
+                                <CheckCircle size={12} /> Published
+                              </span>
+                            ) : (
+                              <span
+                                className="badge badge-warning"
+                                style={{ fontSize: "0.75rem" }}
+                              >
+                                Draft
+                              </span>
+                            )
+                          ) : (
+                            <span
+                              className="badge badge-secondary"
+                              style={{ fontSize: "0.75rem" }}
+                            >
+                              Not Generated
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ padding: "0.75rem", textAlign: "center" }}>
+                          <button
+                            className="btn-icon"
+                            onClick={() => handlePreview(student.studentId)}
+                            title="Preview Report Card"
+                            style={{
+                              background: "#e0e7ff",
+                              border: "none",
+                              borderRadius: "6px",
+                              padding: "6px 10px",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              color: "#3730a3",
+                            }}
+                          >
+                            <Printer size={14} />
+                            <span style={{ fontSize: "0.75rem" }}>View</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -534,10 +639,31 @@ const ReportCards = () => {
           <FileText size={64} style={{ opacity: 0.2, marginBottom: "1rem" }} />
           <h3>Select Filters to View Report Cards</h3>
           <p className="text-muted">
-            Choose an exam, class, and section to view and manage report cards.
+            Choose an exam, class, and section to view and manage Nepal-style
+            grade sheets.
           </p>
         </div>
       )}
+
+      {/* Nepal Report Card Preview Modal */}
+      {previewOpen &&
+        (previewLoading ? (
+          <div className="loading-overlay">
+            <div className="loading-modal">
+              <Loader2 className="spin" size={48} />
+              <p>Loading Report Card...</p>
+              <button className="btn btn-outline" onClick={closePreview}>
+                <X size={16} /> Cancel
+              </button>
+            </div>
+          </div>
+        ) : previewData ? (
+          <NepalReportCard
+            data={previewData}
+            onClose={closePreview}
+            showActions={true}
+          />
+        ) : null)}
 
       <style>{`
         .stat-item {
@@ -576,6 +702,45 @@ const ReportCards = () => {
         .badge-secondary {
           background: #e2e8f0;
           color: #475569;
+        }
+        .badge-danger {
+          background: #fee2e2;
+          color: #991b1b;
+        }
+        .loading-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.7);
+          z-index: 1000;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+        .loading-modal {
+          background: white;
+          padding: 2rem 3rem;
+          border-radius: 12px;
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 1rem;
+        }
+        .loading-modal .btn {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.5rem 1rem;
+          border-radius: 6px;
+          cursor: pointer;
+        }
+        .loading-modal .btn-outline {
+          background: white;
+          border: 1px solid #d1d5db;
+          color: #374151;
         }
       `}</style>
     </div>
