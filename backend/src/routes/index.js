@@ -20,6 +20,8 @@ const reportCardRoutes = require("./reportCard.routes");
 const assignmentRoutes = require("./assignment.routes");
 const submissionRoutes = require("./submission.routes");
 const uploadRoutes = require("./upload.routes");
+const parentAdminRoutes = require("./parentAdmin.routes");
+const parentRoutes = require("./parent.routes");
 // These will be created in subsequent steps
 // const assignmentRoutes = require('./assignment.routes');
 // const noticeRoutes = require('./notice.routes');
@@ -47,6 +49,8 @@ router.use(`${API_VERSION}/report-cards`, reportCardRoutes);
 router.use(`${API_VERSION}/assignments`, assignmentRoutes);
 router.use(`${API_VERSION}/submissions`, submissionRoutes);
 router.use(`${API_VERSION}/uploads`, uploadRoutes);
+router.use(`${API_VERSION}/admin/parents`, parentAdminRoutes);
+router.use(`${API_VERSION}/parents`, parentRoutes);
 // router.use(`${API_VERSION}/notices`, noticeRoutes);
 // router.use(`${API_VERSION}/notices`, noticeRoutes);
 // router.use(`${API_VERSION}/promotions`, promotionRoutes);

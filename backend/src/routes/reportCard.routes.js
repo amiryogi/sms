@@ -64,4 +64,28 @@ router.put(
   reportCardController.unpublishReportCards
 );
 
+// Get student's published exams (for student/parent to see available report cards)
+router.get(
+  "/student/:studentId/exams",
+  authorize(
+    "report_card.view_own",
+    "report_card.view_all",
+    "report_card.view_child"
+  ),
+  canAccessResults,
+  reportCardController.getStudentPublishedExams
+);
+
+// Get PDF data for report card (used by frontend for PDF generation)
+router.get(
+  "/student/:studentId/exam/:examId/pdf-data",
+  authorize(
+    "report_card.view_own",
+    "report_card.view_all",
+    "report_card.view_child"
+  ),
+  canAccessResults,
+  reportCardController.getReportCardPdfData
+);
+
 module.exports = router;

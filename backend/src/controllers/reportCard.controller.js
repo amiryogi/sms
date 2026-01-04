@@ -1,5 +1,57 @@
-const prisma = require("../config/database");
-const { ApiError, ApiResponse, asyncHandler } = require("../utils");
+﻿const prisma = require("../config/database");
+const { ApiError, ApiResponse, asyncHandler, gradeCalculator } = require("../utils");
+
+/**
+ * Build detailed subject results with Nepal-style grading
+ * @param {Array} examResults - Raw exam results from database
+ * @returns {Array} Processed subject results with grades and GPAs
+ */
+const buildSubjectResults = (examResults) => {
+  return examResults.map((result) => {
+    const examSubject = result.examSubject;
+    const classSubject = examSubject.classSubject;
+    
+    // Calculate subject grade using Nepal rules
+    const gradeResult = gradeCalculator.calculateSubjectGrade({
+      theoryMarks: result.marksObtained,
+      theoryFullMarks: examSubject.theoryFullMarks || examSubject.fullMarks,
+      practicalMarks: result.practicalMarks,
+      practicalFullMarks: examSubject.practicalFullMarks || 0,
+      hasPractical: examSubject.hasPractical,
+      isAbsent: result.isAbsent,
+    });
+
+    return {
+      subjectId: classSubject.subject.id,
+      subjectName: classSubject.subject.name,
+      subjectCode: classSubject.subject.code,
+      creditHours: parseFloat(classSubject.creditHours) || 3,
+      hasTheory: examSubject.hasTheory,
+      hasPractical: examSubject.hasPractical,
+      // Theory details
+      theoryMarks: gradeResult.theoryMarks,
+      theoryFullMarks: gradeResult.theoryFullMarks,
+      theoryPercentage: gradeResult.theoryPercentage,
+      theoryGrade: gradeResult.theoryGrade,
+      theoryGpa: gradeResult.theoryGpa,
+      // Practical details
+      practicalMarks: gradeResult.practicalMarks,
+      practicalFullMarks: gradeResult.practicalFullMarks,
+      practicalPercentage: gradeResult.practicalPercentage,
+      practicalGrade: gradeResult.practicalGrade,
+      practicalGpa: gradeResult.practicalGpa,
+      // Final/Combined
+      totalMarks: gradeResult.totalMarks,
+      totalFullMarks: gradeResult.totalFullMarks,
+      finalPercentage: gradeResult.finalPercentage,
+      finalGrade: gradeResult.finalGrade,
+      finalGpa: gradeResult.finalGpa,
+      isPassed: gradeResult.isPassed,
+      isAbsent: gradeResult.isAbsent,
+      remark: gradeResult.remark,
+    };
+  });
+};
 
 /**
  * @desc    Get report cards for a class/section in an exam (Admin view)
@@ -13,13 +65,39 @@ const getReportCards = asyncHandler(async (req, res) => {
     throw ApiError.badRequest("Exam ID, Class ID, and Section ID are required");
   }
 
-  // Get the exam to verify it belongs to this school
+  // Get the exam with school info
   const exam = await prisma.exam.findFirst({
     where: { id: parseInt(examId), schoolId: req.user.schoolId },
-    include: { academicYear: true },
+    include: { 
+      academicYear: true,
+      examSubjects: {
+        include: {
+          classSubject: {
+            include: { subject: true }
+          }
+        }
+      }
+    },
   });
 
   if (!exam) throw ApiError.notFound("Exam not found");
+
+  // Get school info
+  const school = await prisma.school.findUnique({
+    where: { id: req.user.schoolId },
+    select: { id: true, name: true, address: true, phone: true, email: true, logoUrl: true }
+  });
+
+  // Get class and section info
+  const classInfo = await prisma.class.findUnique({
+    where: { id: parseInt(classId) },
+    select: { id: true, name: true, gradeLevel: true }
+  });
+
+  const sectionInfo = await prisma.section.findUnique({
+    where: { id: parseInt(sectionId) },
+    select: { id: true, name: true }
+  });
 
   // Get all students in this class/section for this academic year
   const enrollments = await prisma.studentClass.findMany({
@@ -60,46 +138,40 @@ const getReportCards = asyncHandler(async (req, res) => {
     },
   });
 
-  // Group results by student
+  // Group results by student and process with Nepal grading
   const resultsByStudent = {};
   examResults.forEach((r) => {
     if (!resultsByStudent[r.studentId]) resultsByStudent[r.studentId] = [];
-    resultsByStudent[r.studentId].push({
-      subjectName: r.examSubject.classSubject.subject.name,
-      theoryMarks: r.marksObtained,
-      practicalMarks: r.practicalMarks || 0,
-      totalMarks:
-        (parseFloat(r.marksObtained) || 0) +
-        (parseFloat(r.practicalMarks) || 0),
-      fullMarks: r.examSubject.fullMarks,
-      grade: r.grade,
-      hasPractical: r.examSubject.hasPractical,
-    });
+    resultsByStudent[r.studentId].push(r);
   });
 
   // Build response with student data, results, and report card status
   const data = enrollments.map((enrollment) => {
-    const studentResults = resultsByStudent[enrollment.studentId] || [];
+    const rawResults = resultsByStudent[enrollment.studentId] || [];
+    const subjectResults = buildSubjectResults(rawResults);
+    const overallResult = gradeCalculator.calculateOverallGPA(subjectResults);
     const reportCard = enrollment.student.reportCards[0] || null;
 
-    const totalObtained = studentResults.reduce(
-      (sum, r) => sum + r.totalMarks,
-      0
-    );
-    const totalFull = studentResults.reduce((sum, r) => sum + r.fullMarks, 0);
+    const totalObtained = subjectResults.reduce((sum, r) => sum + r.totalMarks, 0);
+    const totalFull = subjectResults.reduce((sum, r) => sum + r.totalFullMarks, 0);
 
     return {
       studentId: enrollment.studentId,
+      enrollmentId: enrollment.id,
       rollNumber: enrollment.rollNumber,
       firstName: enrollment.student.user.firstName,
       lastName: enrollment.student.user.lastName,
       className: enrollment.class.name,
       sectionName: enrollment.section.name,
-      results: studentResults,
-      totalObtained,
+      results: subjectResults,
+      totalObtained: Math.round(totalObtained * 100) / 100,
       totalFull,
-      percentage:
-        totalFull > 0 ? ((totalObtained / totalFull) * 100).toFixed(2) : 0,
+      percentage: overallResult.averagePercentage,
+      gpa: overallResult.gpa,
+      overallGrade: overallResult.grade,
+      isPassed: overallResult.isPassed,
+      passedSubjects: overallResult.passedSubjects,
+      failedSubjects: overallResult.failedSubjects,
       reportCard: reportCard
         ? {
             id: reportCard.id,
@@ -117,9 +189,14 @@ const getReportCards = asyncHandler(async (req, res) => {
     examName: exam.name,
     examType: exam.examType,
     academicYear: exam.academicYear.name,
+    school: school,
+    class: classInfo,
+    section: sectionInfo,
     totalStudents: data.length,
     reportCardsGenerated: data.filter((d) => d.reportCard).length,
     published: data.filter((d) => d.reportCard?.isPublished).length,
+    passed: data.filter((d) => d.isPassed).length,
+    failed: data.filter((d) => !d.isPassed).length,
   };
 
   ApiResponse.success(res, { summary, students: data });
@@ -137,26 +214,31 @@ const generateReportCards = asyncHandler(async (req, res) => {
     throw ApiError.badRequest("Exam ID, Class ID, and Section ID are required");
   }
 
-  // 1. Get all students in this class-section
+  const exam = await prisma.exam.findUnique({ 
+    where: { id: parseInt(examId) },
+    include: { academicYear: true }
+  });
+  
+  if (!exam) throw ApiError.notFound("Exam not found");
+
+  // Get all students in this class-section
   const enrollments = await prisma.studentClass.findMany({
     where: {
       classId: parseInt(classId),
       sectionId: parseInt(sectionId),
-      academicYearId: {
-        equals: (
-          await prisma.exam.findUnique({ where: { id: parseInt(examId) } })
-        ).academicYearId,
-      },
+      academicYearId: exam.academicYearId,
       status: "active",
     },
   });
 
-  if (enrollments.length === 0)
+  if (enrollments.length === 0) {
     throw ApiError.notFound("No students found in this section");
+  }
 
-  // 2. Process each student
+  // Process each student and generate report cards
   const reportCards = await prisma.$transaction(async (tx) => {
     const results = [];
+    const studentData = [];
 
     for (const enrollment of enrollments) {
       // Get all results for this student in this exam
@@ -166,76 +248,74 @@ const generateReportCards = asyncHandler(async (req, res) => {
           examSubject: { examId: parseInt(examId) },
         },
         include: {
-          examSubject: true,
+          examSubject: {
+            include: {
+              classSubject: { include: { subject: true } }
+            }
+          },
         },
       });
 
       if (studentResults.length === 0) continue;
 
-      let totalObtained = 0;
-      let totalFull = 0;
+      // Process with Nepal grading
+      const subjectResults = buildSubjectResults(studentResults);
+      const overallResult = gradeCalculator.calculateOverallGPA(subjectResults);
 
-      studentResults.forEach((r) => {
-        totalObtained +=
-          (parseFloat(r.marksObtained) || 0) +
-          (parseFloat(r.practicalMarks) || 0);
-        totalFull += r.examSubject.fullMarks;
+      const totalObtained = subjectResults.reduce((sum, r) => sum + r.totalMarks, 0);
+      const totalFull = subjectResults.reduce((sum, r) => sum + r.totalFullMarks, 0);
+
+      // Store for ranking
+      studentData.push({
+        enrollmentId: enrollment.id,
+        studentId: enrollment.studentId,
+        totalMarks: totalObtained,
+        totalFullMarks: totalFull,
+        percentage: overallResult.averagePercentage,
+        gpa: overallResult.gpa,
+        grade: overallResult.grade,
+        isPassed: overallResult.isPassed,
       });
+    }
 
-      const percentage = totalFull > 0 ? (totalObtained / totalFull) * 100 : 0;
-      let overallGrade = "F";
-      if (percentage >= 90) overallGrade = "A+";
-      else if (percentage >= 80) overallGrade = "A";
-      else if (percentage >= 70) overallGrade = "B+";
-      else if (percentage >= 60) overallGrade = "B";
-      else if (percentage >= 50) overallGrade = "C+";
-      else if (percentage >= 40) overallGrade = "C";
+    // Sort by GPA (primary) and percentage (secondary) for ranking
+    studentData.sort((a, b) => {
+      if (b.gpa !== a.gpa) return b.gpa - a.gpa;
+      return b.percentage - a.percentage;
+    });
 
-      // Upsert report card
+    // Assign ranks and upsert report cards
+    for (let i = 0; i < studentData.length; i++) {
+      const data = studentData[i];
+      const rank = i + 1;
+
       const rc = await tx.reportCard.upsert({
         where: {
           studentId_examId: {
-            studentId: enrollment.studentId,
+            studentId: data.studentId,
             examId: parseInt(examId),
           },
         },
         update: {
-          studentClassId: enrollment.id,
-          totalMarks: totalObtained,
-          percentage: percentage,
-          overallGrade,
+          studentClassId: data.enrollmentId,
+          totalMarks: data.totalMarks,
+          percentage: data.percentage,
+          overallGrade: data.grade,
+          classRank: rank,
           generatedAt: new Date(),
         },
         create: {
-          studentId: enrollment.studentId,
+          studentId: data.studentId,
           examId: parseInt(examId),
-          studentClassId: enrollment.id,
-          totalMarks: totalObtained,
-          percentage: percentage,
-          overallGrade,
+          studentClassId: data.enrollmentId,
+          totalMarks: data.totalMarks,
+          percentage: data.percentage,
+          overallGrade: data.grade,
+          classRank: rank,
           generatedAt: new Date(),
         },
       });
       results.push(rc);
-    }
-
-    // 3. Assign Ranks within this class-section
-    const allRCs = await tx.reportCard.findMany({
-      where: {
-        examId: parseInt(examId),
-        studentClass: {
-          classId: parseInt(classId),
-          sectionId: parseInt(sectionId),
-        },
-      },
-      orderBy: { percentage: "desc" },
-    });
-
-    for (let i = 0; i < allRCs.length; i++) {
-      await tx.reportCard.update({
-        where: { id: allRCs[i].id },
-        data: { classRank: i + 1 },
-      });
     }
 
     return results;
@@ -243,13 +323,13 @@ const generateReportCards = asyncHandler(async (req, res) => {
 
   ApiResponse.success(
     res,
-    reportCards,
+    { count: reportCards.length },
     "Report cards generated and ranks assigned successfully"
   );
 });
 
 /**
- * @desc    Get report card for a student (published only for students/parents)
+ * @desc    Get detailed report card for a student (Nepal-style format)
  * @route   GET /api/v1/report-cards/student/:studentId/exam/:examId
  * @access  Private
  */
@@ -257,12 +337,150 @@ const getReportCard = asyncHandler(async (req, res) => {
   const studentId = parseInt(req.params.studentId);
   const examId = parseInt(req.params.examId);
 
+  // Get report card with all relations
   const reportCard = await prisma.reportCard.findUnique({
     where: {
       studentId_examId: { studentId, examId },
     },
     include: {
-      exam: true,
+      exam: {
+        include: {
+          academicYear: true,
+        }
+      },
+      student: {
+        include: {
+          user: {
+            select: { firstName: true, lastName: true, email: true }
+          }
+        }
+      },
+      studentClass: {
+        include: {
+          class: true,
+          section: true
+        }
+      },
+    },
+  });
+
+  if (!reportCard) throw ApiError.notFound("Report card not found");
+
+  // Authorization check
+  const canSeeUnpublished =
+    req.user.roles.includes("ADMIN") || req.user.roles.includes("TEACHER");
+  if (!reportCard.isPublished && !canSeeUnpublished) {
+    throw ApiError.forbidden("Report card not yet published");
+  }
+
+  // Get school info
+  const school = await prisma.school.findUnique({
+    where: { id: req.user.schoolId },
+    select: { id: true, name: true, address: true, phone: true, email: true, logoUrl: true }
+  });
+
+  // Get subject-wise results with Nepal grading
+  const examResults = await prisma.examResult.findMany({
+    where: {
+      studentId,
+      examSubject: { examId },
+    },
+    include: {
+      examSubject: {
+        include: {
+          classSubject: { include: { subject: true } },
+        },
+      },
+    },
+    orderBy: {
+      examSubject: {
+        classSubject: {
+          subject: { name: 'asc' }
+        }
+      }
+    }
+  });
+
+  // Process with Nepal grading
+  const subjectResults = buildSubjectResults(examResults);
+  const overallResult = gradeCalculator.calculateOverallGPA(subjectResults);
+
+  // Build Nepal-style report card response
+  const response = {
+    // School Information
+    school: {
+      name: school.name,
+      address: school.address,
+      phone: school.phone,
+      email: school.email,
+      logoUrl: school.logoUrl,
+    },
+    // Examination Information
+    examination: {
+      name: reportCard.exam.name,
+      type: reportCard.exam.examType,
+      academicYear: reportCard.exam.academicYear.name,
+      startDate: reportCard.exam.startDate,
+      endDate: reportCard.exam.endDate,
+    },
+    // Student Information
+    student: {
+      id: reportCard.student.id,
+      name: `${reportCard.student.user.firstName} ${reportCard.student.user.lastName}`,
+      firstName: reportCard.student.user.firstName,
+      lastName: reportCard.student.user.lastName,
+      rollNumber: reportCard.studentClass.rollNumber,
+      class: reportCard.studentClass.class.name,
+      section: reportCard.studentClass.section.name,
+      admissionNumber: reportCard.student.admissionNumber,
+    },
+    // Subject-wise Results (Nepal format)
+    subjects: subjectResults,
+    // Overall Summary
+    summary: {
+      totalMarks: subjectResults.reduce((sum, s) => sum + s.totalMarks, 0),
+      totalFullMarks: subjectResults.reduce((sum, s) => sum + s.totalFullMarks, 0),
+      percentage: overallResult.averagePercentage,
+      gpa: overallResult.gpa,
+      grade: overallResult.grade,
+      classRank: reportCard.classRank,
+      isPassed: overallResult.isPassed,
+      resultStatus: gradeCalculator.getResultStatus(overallResult.isPassed),
+      totalSubjects: overallResult.totalSubjects,
+      passedSubjects: overallResult.passedSubjects,
+      failedSubjects: overallResult.failedSubjects,
+    },
+    // Remarks
+    remarks: {
+      teacher: reportCard.teacherRemarks,
+      principal: reportCard.principalRemarks,
+    },
+    // Metadata
+    meta: {
+      reportCardId: reportCard.id,
+      isPublished: reportCard.isPublished,
+      generatedAt: reportCard.generatedAt,
+    },
+    // Grade reference table for display
+    gradeReference: gradeCalculator.GRADE_THRESHOLDS,
+  };
+
+  ApiResponse.success(res, response);
+});
+
+/**
+ * @desc    Get detailed report card data for PDF generation
+ * @route   GET /api/v1/report-cards/student/:studentId/exam/:examId/pdf-data
+ * @access  Private
+ */
+const getReportCardPdfData = asyncHandler(async (req, res) => {
+  const studentId = parseInt(req.params.studentId);
+  const examId = parseInt(req.params.examId);
+
+  const reportCard = await prisma.reportCard.findUnique({
+    where: { studentId_examId: { studentId, examId } },
+    include: {
+      exam: { include: { academicYear: true } },
       student: { include: { user: true } },
       studentClass: { include: { class: true, section: true } },
     },
@@ -277,22 +495,52 @@ const getReportCard = asyncHandler(async (req, res) => {
     throw ApiError.forbidden("Report card not yet published");
   }
 
-  // Get subject-wise details
-  const results = await prisma.examResult.findMany({
-    where: {
-      studentId,
-      examSubject: { examId },
-    },
-    include: {
-      examSubject: {
-        include: {
-          classSubject: { include: { subject: true } },
-        },
-      },
-    },
+  const school = await prisma.school.findUnique({
+    where: { id: req.user.schoolId },
   });
 
-  ApiResponse.success(res, { reportCard, results });
+  const examResults = await prisma.examResult.findMany({
+    where: { studentId, examSubject: { examId } },
+    include: {
+      examSubject: {
+        include: { classSubject: { include: { subject: true } } },
+      },
+    },
+    orderBy: { examSubject: { classSubject: { subject: { name: 'asc' } } } }
+  });
+
+  const subjectResults = buildSubjectResults(examResults);
+  const overallResult = gradeCalculator.calculateOverallGPA(subjectResults);
+
+  // Return formatted data for PDF generation
+  ApiResponse.success(res, {
+    school,
+    exam: reportCard.exam,
+    student: {
+      ...reportCard.student,
+      user: reportCard.student.user,
+      class: reportCard.studentClass.class,
+      section: reportCard.studentClass.section,
+      rollNumber: reportCard.studentClass.rollNumber,
+    },
+    subjects: subjectResults,
+    summary: {
+      totalMarks: subjectResults.reduce((sum, s) => sum + s.totalMarks, 0),
+      totalFullMarks: subjectResults.reduce((sum, s) => sum + s.totalFullMarks, 0),
+      percentage: overallResult.averagePercentage,
+      gpa: overallResult.gpa,
+      grade: overallResult.grade,
+      classRank: reportCard.classRank,
+      isPassed: overallResult.isPassed,
+      resultStatus: gradeCalculator.getResultStatus(overallResult.isPassed),
+    },
+    remarks: {
+      teacher: reportCard.teacherRemarks,
+      principal: reportCard.principalRemarks,
+    },
+    gradeReference: gradeCalculator.GRADE_THRESHOLDS,
+    generatedAt: new Date().toISOString(),
+  });
 });
 
 /**
@@ -303,7 +551,7 @@ const getReportCard = asyncHandler(async (req, res) => {
 const publishReportCards = asyncHandler(async (req, res) => {
   const { examId, classId, sectionId } = req.body;
 
-  await prisma.reportCard.updateMany({
+  const result = await prisma.reportCard.updateMany({
     where: {
       examId: parseInt(examId),
       studentClass: {
@@ -314,7 +562,7 @@ const publishReportCards = asyncHandler(async (req, res) => {
     data: { isPublished: true },
   });
 
-  ApiResponse.success(res, null, "Report cards published successfully");
+  ApiResponse.success(res, { updated: result.count }, "Report cards published successfully");
 });
 
 /**
@@ -343,10 +591,62 @@ const unpublishReportCards = asyncHandler(async (req, res) => {
   );
 });
 
+/**
+ * @desc    Get published exams for a student
+ * @route   GET /api/v1/report-cards/student/:studentId/exams
+ * @access  Private
+ */
+const getStudentPublishedExams = asyncHandler(async (req, res) => {
+  const studentId = parseInt(req.params.studentId);
+
+  // Get all published report cards for this student
+  const reportCards = await prisma.reportCard.findMany({
+    where: {
+      studentId,
+      isPublished: true,
+    },
+    include: {
+      exam: {
+        include: {
+          academicYear: true,
+        }
+      },
+      studentClass: {
+        include: {
+          class: true,
+          section: true,
+        }
+      }
+    },
+    orderBy: {
+      exam: {
+        startDate: 'desc'
+      }
+    }
+  });
+
+  const exams = reportCards.map(rc => ({
+    examId: rc.exam.id,
+    examName: rc.exam.name,
+    examType: rc.exam.examType,
+    academicYear: rc.exam.academicYear.name,
+    className: rc.studentClass.class.name,
+    sectionName: rc.studentClass.section.name,
+    overallGrade: rc.overallGrade,
+    percentage: rc.percentage,
+    classRank: rc.classRank,
+    generatedAt: rc.generatedAt,
+  }));
+
+  ApiResponse.success(res, exams);
+});
+
 module.exports = {
   getReportCards,
   generateReportCards,
   getReportCard,
+  getReportCardPdfData,
   publishReportCards,
   unpublishReportCards,
+  getStudentPublishedExams,
 };

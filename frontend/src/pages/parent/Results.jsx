@@ -1,24 +1,44 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { Select, Button } from '../../components/common/FormElements';
-import { Award, Printer } from 'lucide-react';
-import { examService } from '../../api/examService';
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../../context/AuthContext";
+import { Select, Button } from "../../components/common/FormElements";
+import { Award, Printer, RefreshCw, AlertCircle } from "lucide-react";
+import { examService } from "../../api/examService";
+import { parentService } from "../../api/parentService";
 
 const Results = () => {
   const { user } = useAuth();
+  const [children, setChildren] = useState([]);
   const [selectedChild, setSelectedChild] = useState(null);
   const [exams, setExams] = useState([]);
-  const [selectedExam, setSelectedExam] = useState('');
+  const [selectedExam, setSelectedExam] = useState("");
   const [reportCard, setReportCard] = useState(null);
   const [loading, setLoading] = useState(false);
-  
-  const children = user?.parent?.children || [];
+  const [loadingChildren, setLoadingChildren] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch children from dedicated endpoint
+  const loadChildren = async () => {
+    setLoadingChildren(true);
+    setError(null);
+    try {
+      const response = await parentService.getMyChildren();
+      const childList = response.data?.children || response.children || [];
+      setChildren(childList);
+      if (childList.length > 0 && !selectedChild) {
+        setSelectedChild(childList[0]);
+      }
+    } catch (err) {
+      console.error("Error loading children:", err);
+      setError(err.response?.data?.message || "Failed to load children");
+      setChildren([]);
+    } finally {
+      setLoadingChildren(false);
+    }
+  };
 
   useEffect(() => {
-    if (children.length > 0 && !selectedChild) {
-      setSelectedChild(children[0]);
-    }
-  }, [children]);
+    loadChildren();
+  }, []);
 
   useEffect(() => {
     if (selectedChild) {
@@ -35,20 +55,27 @@ const Results = () => {
   const fetchExams = async () => {
     try {
       const response = await examService.getExams();
-      const publishedExams = (response.data || []).filter(e => e.isPublished);
+      // Filter for published exams (status === 'PUBLISHED')
+      const publishedExams = (response.data || []).filter(
+        (e) => e.status === "PUBLISHED"
+      );
       setExams(publishedExams);
     } catch (error) {
-      console.error('Error fetching exams:', error);
+      console.error("Error fetching exams:", error);
     }
   };
 
   const fetchReportCard = async () => {
     setLoading(true);
     try {
-      const response = await examService.getReportCard(selectedChild.id, selectedExam);
+      // Use studentId from the child object
+      const response = await examService.getReportCard(
+        selectedChild.id,
+        selectedExam
+      );
       setReportCard(response.data);
     } catch (error) {
-      console.error('Error fetching report card:', error);
+      console.error("Error fetching report card:", error);
       setReportCard(null);
     } finally {
       setLoading(false);
@@ -57,9 +84,9 @@ const Results = () => {
 
   const handleChildChange = (e) => {
     const childId = parseInt(e.target.value);
-    const child = children.find(c => c.id === childId);
+    const child = children.find((c) => c.id === childId);
     setSelectedChild(child);
-    setSelectedExam('');
+    setSelectedExam("");
     setReportCard(null);
   };
 
@@ -67,12 +94,50 @@ const Results = () => {
     window.print();
   };
 
-  const childOptions = children.map(c => ({
+  // Map children to options using flat structure
+  const childOptions = children.map((c) => ({
     value: c.id.toString(),
-    label: `${c.user?.firstName} ${c.user?.lastName}`,
+    label: `${c.firstName} ${c.lastName}`,
   }));
 
-  const examOptions = exams.map(e => ({ value: e.id.toString(), label: e.name }));
+  const examOptions = exams.map((e) => ({
+    value: e.id.toString(),
+    label: e.name,
+  }));
+
+  // Helper to get enrollment
+  const getEnrollment = (child) => {
+    return child?.currentEnrollment || child?.enrollments?.[0] || null;
+  };
+
+  if (loadingChildren) {
+    return (
+      <div className="page-container">
+        <div className="card">
+          <div className="text-center">
+            <RefreshCw className="spinning" size={32} />
+            <p>Loading children data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="page-container">
+        <div className="card">
+          <div className="text-center text-danger">
+            <AlertCircle size={48} />
+            <p>{error}</p>
+            <button className="btn btn-primary" onClick={loadChildren}>
+              <RefreshCw size={16} /> Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-container">
@@ -90,7 +155,7 @@ const Results = () => {
               label="Select Child"
               name="childId"
               options={childOptions}
-              value={selectedChild?.id?.toString() || ''}
+              value={selectedChild?.id?.toString() || ""}
               onChange={handleChildChange}
             />
           )}
@@ -115,11 +180,13 @@ const Results = () => {
           {loading ? (
             <div className="text-center">Loading results...</div>
           ) : !reportCard ? (
-            <div className="text-muted text-center">Results not available for this exam.</div>
+            <div className="text-muted text-center">
+              Results not available for this exam.
+            </div>
           ) : (
             <div className="report-card printable">
               <div className="report-header">
-                <h2>{user?.school?.name || 'School Name'}</h2>
+                <h2>{user?.school?.name || "School Name"}</h2>
                 <h3>Report Card</h3>
                 <p>{reportCard.exam?.name}</p>
               </div>
@@ -127,15 +194,23 @@ const Results = () => {
               <div className="student-info">
                 <div className="info-row">
                   <span>Student Name:</span>
-                  <strong>{selectedChild?.user?.firstName} {selectedChild?.user?.lastName}</strong>
+                  <strong>
+                    {selectedChild?.firstName} {selectedChild?.lastName}
+                  </strong>
                 </div>
                 <div className="info-row">
                   <span>Class:</span>
-                  <strong>{reportCard.class?.name} - {reportCard.section?.name}</strong>
+                  <strong>
+                    {reportCard.class?.name ||
+                      getEnrollment(selectedChild)?.class?.name}{" "}
+                    -{" "}
+                    {reportCard.section?.name ||
+                      getEnrollment(selectedChild)?.section?.name}
+                  </strong>
                 </div>
                 <div className="info-row">
                   <span>Roll Number:</span>
-                  <strong>{selectedChild?.rollNumber || 'N/A'}</strong>
+                  <strong>{selectedChild?.rollNumber || "N/A"}</strong>
                 </div>
               </div>
 
@@ -160,10 +235,18 @@ const Results = () => {
                 </tbody>
                 <tfoot>
                   <tr className="total-row">
-                    <td><strong>Total</strong></td>
-                    <td><strong>{reportCard.totalMarks}</strong></td>
-                    <td><strong>{reportCard.maxTotalMarks}</strong></td>
-                    <td><strong>{reportCard.overallGrade}</strong></td>
+                    <td>
+                      <strong>Total</strong>
+                    </td>
+                    <td>
+                      <strong>{reportCard.totalMarks}</strong>
+                    </td>
+                    <td>
+                      <strong>{reportCard.maxTotalMarks}</strong>
+                    </td>
+                    <td>
+                      <strong>{reportCard.overallGrade}</strong>
+                    </td>
                   </tr>
                 </tfoot>
               </table>
@@ -175,12 +258,16 @@ const Results = () => {
                 </div>
                 <div className="summary-item">
                   <span>Rank:</span>
-                  <strong>{reportCard.classRank || 'N/A'}</strong>
+                  <strong>{reportCard.classRank || "N/A"}</strong>
                 </div>
                 <div className="summary-item">
                   <span>Result:</span>
-                  <strong className={reportCard.isPassed ? 'text-success' : 'text-danger'}>
-                    {reportCard.isPassed ? 'PASSED' : 'FAILED'}
+                  <strong
+                    className={
+                      reportCard.isPassed ? "text-success" : "text-danger"
+                    }
+                  >
+                    {reportCard.isPassed ? "PASSED" : "FAILED"}
                   </strong>
                 </div>
               </div>

@@ -70,6 +70,7 @@ const DashboardLayout = () => {
           icon: Award,
           path: "/admin/teacher-assignment",
         },
+        { title: "Parents", icon: Users, path: "/admin/parents" },
         { title: "Students", icon: GraduationCap, path: "/admin/students" },
         { title: "Teachers", icon: Users, path: "/admin/teachers" }
       );

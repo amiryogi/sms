@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { Select } from '../../components/common/FormElements';
-import { Award, TrendingUp } from 'lucide-react';
-import { examService } from '../../api/examService';
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../../context/AuthContext";
+import { Select } from "../../components/common/FormElements";
+import { Award, TrendingUp } from "lucide-react";
+import { examService } from "../../api/examService";
 
 const Results = () => {
   const { user } = useAuth();
   const [exams, setExams] = useState([]);
-  const [selectedExam, setSelectedExam] = useState('');
+  const [selectedExam, setSelectedExam] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -24,11 +24,13 @@ const Results = () => {
   const fetchExams = async () => {
     try {
       const response = await examService.getExams();
-      // Filter to only published exams
-      const publishedExams = (response.data || []).filter(e => e.isPublished);
+      // Filter to only published exams (status === 'PUBLISHED')
+      const publishedExams = (response.data || []).filter(
+        (e) => e.status === "PUBLISHED"
+      );
       setExams(publishedExams);
     } catch (error) {
-      console.error('Error fetching exams:', error);
+      console.error("Error fetching exams:", error);
     }
   };
 
@@ -37,11 +39,14 @@ const Results = () => {
     try {
       const studentId = user?.student?.id;
       if (!studentId) return;
-      
-      const response = await examService.getStudentExamResults(studentId, selectedExam);
+
+      const response = await examService.getStudentExamResults(
+        studentId,
+        selectedExam
+      );
       setResults(response.data || []);
     } catch (error) {
-      console.error('Error fetching results:', error);
+      console.error("Error fetching results:", error);
       setResults([]);
     } finally {
       setLoading(false);
@@ -49,8 +54,14 @@ const Results = () => {
   };
 
   const calculateTotal = () => {
-    const obtained = results.reduce((sum, r) => sum + (r.marksObtained || 0), 0);
-    const max = results.reduce((sum, r) => sum + (r.examSubject?.maxMarks || 0), 0);
+    const obtained = results.reduce(
+      (sum, r) => sum + (r.marksObtained || 0),
+      0
+    );
+    const max = results.reduce(
+      (sum, r) => sum + (r.examSubject?.maxMarks || 0),
+      0
+    );
     const percentage = max > 0 ? ((obtained / max) * 100).toFixed(2) : 0;
     return { obtained, max, percentage };
   };
@@ -58,16 +69,19 @@ const Results = () => {
   const totals = calculateTotal();
 
   const getGrade = (percentage) => {
-    if (percentage >= 90) return 'A+';
-    if (percentage >= 80) return 'A';
-    if (percentage >= 70) return 'B+';
-    if (percentage >= 60) return 'B';
-    if (percentage >= 50) return 'C';
-    if (percentage >= 40) return 'D';
-    return 'F';
+    if (percentage >= 90) return "A+";
+    if (percentage >= 80) return "A";
+    if (percentage >= 70) return "B+";
+    if (percentage >= 60) return "B";
+    if (percentage >= 50) return "C";
+    if (percentage >= 40) return "D";
+    return "F";
   };
 
-  const examOptions = exams.map(e => ({ value: e.id.toString(), label: e.name }));
+  const examOptions = exams.map((e) => ({
+    value: e.id.toString(),
+    label: e.name,
+  }));
 
   return (
     <div className="page-container">
@@ -94,7 +108,9 @@ const Results = () => {
           {loading ? (
             <div className="text-center">Loading results...</div>
           ) : results.length === 0 ? (
-            <div className="text-muted text-center">No results found for this exam.</div>
+            <div className="text-muted text-center">
+              No results found for this exam.
+            </div>
           ) : (
             <>
               <div className="results-summary">
@@ -102,7 +118,9 @@ const Results = () => {
                   <Award size={24} />
                   <div>
                     <span className="summary-label">Total Score</span>
-                    <span className="summary-value">{totals.obtained} / {totals.max}</span>
+                    <span className="summary-value">
+                      {totals.obtained} / {totals.max}
+                    </span>
                   </div>
                 </div>
                 <div className="summary-card">
@@ -113,7 +131,9 @@ const Results = () => {
                   </div>
                 </div>
                 <div className="summary-card grade-card">
-                  <div className="grade-badge">{getGrade(totals.percentage)}</div>
+                  <div className="grade-badge">
+                    {getGrade(totals.percentage)}
+                  </div>
                   <span className="summary-label">Grade</span>
                 </div>
               </div>
@@ -130,17 +150,27 @@ const Results = () => {
                 </thead>
                 <tbody>
                   {results.map((result) => {
-                    const pct = result.examSubject?.maxMarks 
-                      ? ((result.marksObtained / result.examSubject.maxMarks) * 100).toFixed(1)
+                    const pct = result.examSubject?.maxMarks
+                      ? (
+                          (result.marksObtained / result.examSubject.maxMarks) *
+                          100
+                        ).toFixed(1)
                       : 0;
                     return (
                       <tr key={result.id}>
-                        <td>{result.examSubject?.classSubject?.subject?.name || 'Subject'}</td>
+                        <td>
+                          {result.examSubject?.classSubject?.subject?.name ||
+                            "Subject"}
+                        </td>
                         <td>{result.marksObtained}</td>
                         <td>{result.examSubject?.maxMarks}</td>
                         <td>{pct}%</td>
                         <td>
-                          <span className={`grade-pill grade-${getGrade(pct).toLowerCase()}`}>
+                          <span
+                            className={`grade-pill grade-${getGrade(
+                              pct
+                            ).toLowerCase()}`}
+                          >
                             {getGrade(pct)}
                           </span>
                         </td>
