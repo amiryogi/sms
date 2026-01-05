@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { Link } from "react-router-dom";
 import StatCard from "../../components/common/StatCard";
+import NoticesFeed from "../../components/common/NoticesFeed";
 import {
   Users,
   ClipboardList,
@@ -218,6 +219,16 @@ const ParentDashboard = () => {
                   </strong>
                 </div>
               </div>
+            </div>
+
+            {/* Notices Feed */}
+            <div className="card">
+              <NoticesFeed
+                limit={4}
+                showViewAll={true}
+                viewAllPath="/parent/notices"
+                compact={true}
+              />
             </div>
           </div>
         </>

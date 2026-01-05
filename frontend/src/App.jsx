@@ -27,6 +27,7 @@ const AdminParents = React.lazy(() => import("./pages/admin/Parents"));
 const AdminStudents = React.lazy(() => import("./pages/admin/Students"));
 const AdminTeachers = React.lazy(() => import("./pages/admin/Teachers"));
 const AdminReportCards = React.lazy(() => import("./pages/admin/ReportCards"));
+const AdminNotices = React.lazy(() => import("./pages/admin/Notices"));
 
 // Teacher Pages
 const TeacherDashboard = React.lazy(() => import("./pages/teacher/Dashboard"));
@@ -54,6 +55,9 @@ const ParentDashboard = React.lazy(() => import("./pages/parent/Dashboard"));
 const ParentAttendance = React.lazy(() => import("./pages/parent/Attendance"));
 const ParentResults = React.lazy(() => import("./pages/parent/Results"));
 const ParentReportCard = React.lazy(() => import("./pages/parent/ReportCard"));
+
+// Shared Pages
+const NoticesView = React.lazy(() => import("./pages/shared/NoticesView"));
 
 // Error Pages
 const NotFound = () => (
@@ -110,6 +114,7 @@ function App() {
                 path="/admin/report-cards"
                 element={<AdminReportCards />}
               />
+              <Route path="/admin/notices" element={<AdminNotices />} />
             </Route>
 
             {/* Teacher Routes */}
@@ -121,6 +126,7 @@ function App() {
               }
             >
               <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
+              <Route path="/teacher/notices" element={<NoticesView />} />
               <Route
                 path="/teacher/attendance"
                 element={<TeacherAttendance />}
@@ -142,6 +148,7 @@ function App() {
               }
             >
               <Route path="/student/dashboard" element={<StudentDashboard />} />
+              <Route path="/student/notices" element={<NoticesView />} />
               <Route
                 path="/student/assignments"
                 element={<StudentAssignments />}
@@ -162,6 +169,7 @@ function App() {
               }
             >
               <Route path="/parent/dashboard" element={<ParentDashboard />} />
+              <Route path="/parent/notices" element={<NoticesView />} />
               <Route path="/parent/attendance" element={<ParentAttendance />} />
               <Route path="/parent/results" element={<ParentResults />} />
               <Route

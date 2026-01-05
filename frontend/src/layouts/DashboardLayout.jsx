@@ -17,6 +17,7 @@ import {
   Award,
   FolderOpen,
   FileText,
+  Bell,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -72,7 +73,8 @@ const DashboardLayout = () => {
         },
         { title: "Parents", icon: Users, path: "/admin/parents" },
         { title: "Students", icon: GraduationCap, path: "/admin/students" },
-        { title: "Teachers", icon: Users, path: "/admin/teachers" }
+        { title: "Teachers", icon: Users, path: "/admin/teachers" },
+        { title: "Notices", icon: Bell, path: "/admin/notices" }
       );
     }
 
@@ -82,6 +84,11 @@ const DashboardLayout = () => {
           title: "Dashboard",
           icon: LayoutDashboard,
           path: "/teacher/dashboard",
+        },
+        {
+          title: "Notices",
+          icon: Bell,
+          path: "/teacher/notices",
         },
         {
           title: "My Students",
@@ -105,6 +112,11 @@ const DashboardLayout = () => {
           icon: LayoutDashboard,
           path: "/student/dashboard",
         },
+        {
+          title: "Notices",
+          icon: Bell,
+          path: "/student/notices",
+        },
         { title: "Assignments", icon: Calendar, path: "/student/assignments" },
         { title: "Results", icon: Award, path: "/student/results" },
         { title: "Report Card", icon: FileText, path: "/student/report-card" }
@@ -117,6 +129,11 @@ const DashboardLayout = () => {
           title: "Dashboard",
           icon: LayoutDashboard,
           path: "/parent/dashboard",
+        },
+        {
+          title: "Notices",
+          icon: Bell,
+          path: "/parent/notices",
         },
         {
           title: "Attendance",

@@ -22,9 +22,8 @@ const submissionRoutes = require("./submission.routes");
 const uploadRoutes = require("./upload.routes");
 const parentAdminRoutes = require("./parentAdmin.routes");
 const parentRoutes = require("./parent.routes");
+const noticeRoutes = require("./notice.routes");
 // These will be created in subsequent steps
-// const assignmentRoutes = require('./assignment.routes');
-// const noticeRoutes = require('./notice.routes');
 // const promotionRoutes = require('./promotion.routes');
 
 // API Version prefix
@@ -51,8 +50,7 @@ router.use(`${API_VERSION}/submissions`, submissionRoutes);
 router.use(`${API_VERSION}/uploads`, uploadRoutes);
 router.use(`${API_VERSION}/admin/parents`, parentAdminRoutes);
 router.use(`${API_VERSION}/parents`, parentRoutes);
-// router.use(`${API_VERSION}/notices`, noticeRoutes);
-// router.use(`${API_VERSION}/notices`, noticeRoutes);
+router.use(`${API_VERSION}/notices`, noticeRoutes);
 // router.use(`${API_VERSION}/promotions`, promotionRoutes);
 
 // Root route
