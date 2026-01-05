@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import StatCard from "../../components/common/StatCard";
+import NoticesFeed from "../../components/common/NoticesFeed";
 import { BookOpen, ClipboardList, Users, Calendar } from "lucide-react";
 import { teacherService } from "../../api/teacherService";
 import { studentService } from "../../api/studentService";
@@ -173,6 +174,16 @@ const TeacherDashboard = () => {
               </p>
             )}
           </div>
+        </div>
+
+        {/* Notices Feed */}
+        <div className="card">
+          <NoticesFeed
+            limit={4}
+            showViewAll={true}
+            viewAllPath="/teacher/notices"
+            compact={true}
+          />
         </div>
       </div>
     </div>

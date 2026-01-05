@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { Link } from 'react-router-dom';
-import StatCard from '../../components/common/StatCard';
-import { BookOpen, ClipboardList, Award, Calendar } from 'lucide-react';
-import { assignmentService } from '../../api/assignmentService';
-import { attendanceService } from '../../api/attendanceService';
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../../context/AuthContext";
+import { Link } from "react-router-dom";
+import StatCard from "../../components/common/StatCard";
+import NoticesFeed from "../../components/common/NoticesFeed";
+import { BookOpen, ClipboardList, Award, Calendar } from "lucide-react";
+import { assignmentService } from "../../api/assignmentService";
+import { attendanceService } from "../../api/attendanceService";
 
 const StudentDashboard = () => {
   const { user } = useAuth();
@@ -24,12 +25,12 @@ const StudentDashboard = () => {
       const [assignmentsRes] = await Promise.all([
         assignmentService.getAssignments(),
       ]);
-      
+
       const assignments = assignmentsRes.data || [];
-      setStats(prev => ({ ...prev, assignments: assignments.length }));
+      setStats((prev) => ({ ...prev, assignments: assignments.length }));
       setRecentAssignments(assignments.slice(0, 5));
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      console.error("Error fetching dashboard data:", error);
     } finally {
       setLoading(false);
     }
@@ -43,9 +44,9 @@ const StudentDashboard = () => {
         <div>
           <h1>Welcome, {user?.firstName}!</h1>
           <p className="text-muted">
-            {enrollment 
-              ? `${enrollment.class?.name} - Section ${enrollment.section?.name}` 
-              : 'Student Dashboard'}
+            {enrollment
+              ? `${enrollment.class?.name} - Section ${enrollment.section?.name}`
+              : "Student Dashboard"}
           </p>
         </div>
       </div>
@@ -53,19 +54,19 @@ const StudentDashboard = () => {
       <div className="stats-grid">
         <StatCard
           title="Pending Assignments"
-          value={loading ? '...' : stats.assignments}
+          value={loading ? "..." : stats.assignments}
           icon={ClipboardList}
           color="primary"
         />
         <StatCard
           title="Current Class"
-          value={enrollment?.class?.name || 'N/A'}
+          value={enrollment?.class?.name || "N/A"}
           icon={BookOpen}
           color="success"
         />
         <StatCard
           title="Roll Number"
-          value={user?.student?.rollNumber || enrollment?.rollNumber || 'N/A'}
+          value={user?.student?.rollNumber || enrollment?.rollNumber || "N/A"}
           icon={Award}
           color="info"
         />
@@ -93,7 +94,9 @@ const StudentDashboard = () => {
               ))}
             </div>
           )}
-          <Link to="/student/assignments" className="view-all-link">View All Assignments →</Link>
+          <Link to="/student/assignments" className="view-all-link">
+            View All Assignments →
+          </Link>
         </div>
 
         <div className="card">
@@ -112,6 +115,16 @@ const StudentDashboard = () => {
               <span>Report Card</span>
             </Link>
           </div>
+        </div>
+
+        {/* Notices Feed */}
+        <div className="card">
+          <NoticesFeed
+            limit={4}
+            showViewAll={true}
+            viewAllPath="/student/notices"
+            compact={true}
+          />
         </div>
       </div>
     </div>

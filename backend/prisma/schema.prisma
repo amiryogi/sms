@@ -90,6 +90,18 @@ enum NoticePriority {
   urgent
 }
 
+enum NoticeStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum NoticeTargetType {
+  GLOBAL          // School-wide, all roles see it
+  ROLE_SPECIFIC   // Only specific role(s)
+  CLASS_SPECIFIC  // Only specific class(es)
+}
+
 enum ExamStatus {
   DRAFT
   PUBLISHED
@@ -146,8 +158,9 @@ model Role {
   createdAt   DateTime @default(now()) @map("created_at")
 
   // Relations
-  userRoles       UserRole[]
-  rolePermissions RolePermission[]
+  userRoles         UserRole[]
+  rolePermissions   RolePermission[]
+  noticeRoleTargets NoticeRoleTarget[]
 
   @@index([name])
   @@map("roles")
@@ -234,7 +247,7 @@ model User {
   submissionsGraded Submission[] @relation("GradedBy")
 
   // Notices created by this user
-  noticesCreated Notice[] @relation("CreatedBy")
+  noticesCreated Notice[] @relation("NoticeCreatedBy")
 
   // Promotions processed by this user (admin)
   promotionsProcessed Promotion[] @relation("ProcessedBy")
@@ -284,13 +297,14 @@ model AcademicYear {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  school          School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  classSubjects   ClassSubject[]
-  studentClasses  StudentClass[]
-  teacherSubjects TeacherSubject[]
-  exams           Exam[]
-  promotionsFrom  Promotion[]      @relation("FromYear")
-  promotionsTo    Promotion[]      @relation("ToYear")
+  school             School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classSubjects      ClassSubject[]
+  studentClasses     StudentClass[]
+  teacherSubjects    TeacherSubject[]
+  exams              Exam[]
+  promotionsFrom     Promotion[]         @relation("FromYear")
+  promotionsTo       Promotion[]         @relation("ToYear")
+  noticeClassTargets NoticeClassTarget[]
 
   @@unique([schoolId, name])
   @@index([schoolId])
@@ -314,11 +328,12 @@ model Class {
   createdAt    DateTime @default(now()) @map("created_at")
 
   // Relations
-  school         School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  classSubjects  ClassSubject[]
-  studentClasses StudentClass[]
-  promotionsFrom Promotion[]    @relation("FromClass")
-  promotionsTo   Promotion[]    @relation("ToClass")
+  school             School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classSubjects      ClassSubject[]
+  studentClasses     StudentClass[]
+  promotionsFrom     Promotion[]         @relation("FromClass")
+  promotionsTo       Promotion[]         @relation("ToClass")
+  noticeClassTargets NoticeClassTarget[]
 
   @@unique([schoolId, name])
   @@index([schoolId])
@@ -339,9 +354,10 @@ model Section {
   createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
-  school          School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  teacherSubjects TeacherSubject[]
-  studentClasses  StudentClass[]
+  school             School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacherSubjects    TeacherSubject[]
+  studentClasses     StudentClass[]
+  noticeClassTargets NoticeClassTarget[]
 
   @@unique([schoolId, name])
   @@index([schoolId])
@@ -855,32 +871,103 @@ model SubmissionFile {
 // NOTICES
 // =====================================================
 
-/// School notices/announcements
+/// School notices/announcements with granular targeting
 model Notice {
-  id             Int            @id @default(autoincrement())
-  schoolId       Int            @map("school_id")
-  createdBy      Int            @map("created_by")
-  title          String         @db.VarChar(255)
-  content        String         @db.Text
-  targetAudience TargetAudience @default(all) @map("target_audience")
-  priority       NoticePriority @default(normal)
-  isPublished    Boolean        @default(false) @map("is_published")
-  publishDate    DateTime?      @map("publish_date") @db.Date
-  expiryDate     DateTime?      @map("expiry_date") @db.Date
-  createdAt      DateTime       @default(now()) @map("created_at")
-  updatedAt      DateTime       @updatedAt @map("updated_at")
+  id          Int              @id @default(autoincrement())
+  schoolId    Int              @map("school_id")
+  createdById Int              @map("created_by_id")
+  
+  // Content
+  title       String           @db.VarChar(255)
+  content     String           @db.Text
+  
+  // Targeting
+  targetType  NoticeTargetType @default(GLOBAL) @map("target_type")
+  
+  // Metadata
+  priority    NoticePriority   @default(normal)
+  status      NoticeStatus     @default(DRAFT)
+  
+  // Publish window (null = no restriction)
+  publishFrom DateTime?        @map("publish_from")
+  publishTo   DateTime?        @map("publish_to")
+  
+  // Audit timestamps
+  publishedAt DateTime?        @map("published_at")
+  archivedAt  DateTime?        @map("archived_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
 
   // Relations
-  school        School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  createdByUser User   @relation("CreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
+  school       School              @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  createdBy    User                @relation("NoticeCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  roleTargets  NoticeRoleTarget[]
+  classTargets NoticeClassTarget[]
+  attachments  NoticeAttachment[]
 
-  @@index([schoolId])
-  @@index([createdBy])
-  @@index([targetAudience])
+  @@index([schoolId, status])
+  @@index([schoolId, targetType])
+  @@index([schoolId, status, publishFrom, publishTo])
+  @@index([createdById])
   @@index([priority])
-  @@index([isPublished])
-  @@index([publishDate, expiryDate])
   @@map("notices")
+}
+
+/// Which roles can see a ROLE_SPECIFIC notice
+model NoticeRoleTarget {
+  id        Int      @id @default(autoincrement())
+  noticeId  Int      @map("notice_id")
+  roleId    Int      @map("role_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  notice Notice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([noticeId, roleId])
+  @@index([noticeId])
+  @@index([roleId])
+  @@map("notice_role_targets")
+}
+
+/// Which classes/sections can see a CLASS_SPECIFIC notice
+model NoticeClassTarget {
+  id             Int      @id @default(autoincrement())
+  noticeId       Int      @map("notice_id")
+  classId        Int      @map("class_id")
+  sectionId      Int?     @map("section_id")
+  academicYearId Int      @map("academic_year_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // Relations
+  notice       Notice       @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  class        Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  section      Section?     @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+
+  @@unique([noticeId, classId, sectionId, academicYearId])
+  @@index([noticeId])
+  @@index([classId])
+  @@index([sectionId])
+  @@index([academicYearId])
+  @@map("notice_class_targets")
+}
+
+/// File attachments for notices
+model NoticeAttachment {
+  id         Int      @id @default(autoincrement())
+  noticeId   Int      @map("notice_id")
+  fileName   String   @map("file_name") @db.VarChar(255)
+  filePath   String   @map("file_path") @db.VarChar(500)
+  fileSize   Int      @map("file_size")
+  mimeType   String   @map("mime_type") @db.VarChar(100)
+  uploadedAt DateTime @default(now()) @map("uploaded_at")
+
+  // Relations
+  notice Notice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+
+  @@index([noticeId])
+  @@map("notice_attachments")
 }
 
 // =====================================================
