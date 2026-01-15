@@ -18,7 +18,7 @@ import {
   FolderOpen,
   FileText,
   Bell,
-  DollarSign,
+  Banknote,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -76,13 +76,13 @@ const DashboardLayout = () => {
         { title: "Students", icon: GraduationCap, path: "/admin/students" },
         { title: "Teachers", icon: Users, path: "/admin/teachers" },
         { title: "Notices", icon: Bell, path: "/admin/notices" },
-        { title: "Fee Types", icon: DollarSign, path: "/admin/fee-types" },
+        { title: "Fee Types", icon: Banknote, path: "/admin/fee-types" },
         {
           title: "Fee Structures",
-          icon: DollarSign,
+          icon: Banknote,
           path: "/admin/fee-structures",
         },
-        { title: "Fee Payments", icon: DollarSign, path: "/admin/fee-payments" }
+        { title: "Fee Payments", icon: Banknote, path: "/admin/fee-payments" }
       );
     }
 
@@ -128,7 +128,7 @@ const DashboardLayout = () => {
         { title: "Assignments", icon: Calendar, path: "/student/assignments" },
         { title: "Results", icon: Award, path: "/student/results" },
         { title: "Report Card", icon: FileText, path: "/student/report-card" },
-        { title: "Fees", icon: DollarSign, path: "/student/fees" }
+        { title: "Fees", icon: Banknote, path: "/student/fees" }
       );
     }
 
@@ -150,7 +150,7 @@ const DashboardLayout = () => {
           path: "/parent/attendance",
         },
         { title: "Results", icon: Award, path: "/parent/results" },
-        { title: "Fees", icon: DollarSign, path: "/parent/fees" }
+        { title: "Fees", icon: Banknote, path: "/parent/fees" }
       );
     }
 

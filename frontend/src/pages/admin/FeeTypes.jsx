@@ -4,7 +4,7 @@ import {
   Plus,
   Edit2,
   Trash2,
-  DollarSign,
+  Banknote,
   ToggleLeft,
   ToggleRight,
 } from "lucide-react";
@@ -109,7 +109,7 @@ const FeeTypes = () => {
       header: "Fee Type",
       render: (row) => (
         <div className="flex items-center gap-2">
-          <DollarSign size={16} className="text-primary" />
+          <Banknote size={16} className="text-primary" />
           <span className="font-medium">{row.name}</span>
         </div>
       ),

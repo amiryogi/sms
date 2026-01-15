@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { DollarSign, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { Banknote, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import { feeService } from "../../api/feeService";
 
 const StudentFees = () => {
@@ -51,11 +51,10 @@ const StudentFees = () => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
+    return `NRs. ${new Intl.NumberFormat("en-NP", {
       minimumFractionDigits: 0,
-    }).format(amount);
+      maximumFractionDigits: 2,
+    }).format(amount)}`;
   };
 
   const getStatusBadge = (status) => {
@@ -97,7 +96,7 @@ const StudentFees = () => {
       {feeSummary.length === 0 ? (
         <div className="card">
           <div className="empty-state">
-            <DollarSign size={48} className="text-muted" />
+            <Banknote size={48} className="text-muted" />
             <h3>No Fee Records</h3>
             <p className="text-muted">
               No fee records have been generated yet.
@@ -190,7 +189,7 @@ const StudentFees = () => {
                     <tr key={fee.id}>
                       <td>
                         <div className="flex items-center gap-2">
-                          <DollarSign size={14} className="text-primary" />
+                          <Banknote size={14} className="text-primary" />
                           {fee.feeStructure?.feeType?.name}
                         </div>
                       </td>
