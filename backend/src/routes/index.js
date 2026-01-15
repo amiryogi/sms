@@ -23,6 +23,7 @@ const uploadRoutes = require("./upload.routes");
 const parentAdminRoutes = require("./parentAdmin.routes");
 const parentRoutes = require("./parent.routes");
 const noticeRoutes = require("./notice.routes");
+const feeRoutes = require("./fee.routes");
 // These will be created in subsequent steps
 // const promotionRoutes = require('./promotion.routes');
 
@@ -51,6 +52,7 @@ router.use(`${API_VERSION}/uploads`, uploadRoutes);
 router.use(`${API_VERSION}/admin/parents`, parentAdminRoutes);
 router.use(`${API_VERSION}/parents`, parentRoutes);
 router.use(`${API_VERSION}/notices`, noticeRoutes);
+router.use(`${API_VERSION}/fees`, feeRoutes);
 // router.use(`${API_VERSION}/promotions`, promotionRoutes);
 
 // Root route
@@ -75,6 +77,7 @@ router.get("/", (req, res) => {
       reportCards: "/api/v1/report-cards",
       assignments: "/api/v1/assignments",
       notices: "/api/v1/notices",
+      fees: "/api/v1/fees",
       promotions: "/api/v1/promotions",
     },
   });

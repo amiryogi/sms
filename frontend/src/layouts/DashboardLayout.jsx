@@ -18,6 +18,7 @@ import {
   FolderOpen,
   FileText,
   Bell,
+  DollarSign,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -74,7 +75,14 @@ const DashboardLayout = () => {
         { title: "Parents", icon: Users, path: "/admin/parents" },
         { title: "Students", icon: GraduationCap, path: "/admin/students" },
         { title: "Teachers", icon: Users, path: "/admin/teachers" },
-        { title: "Notices", icon: Bell, path: "/admin/notices" }
+        { title: "Notices", icon: Bell, path: "/admin/notices" },
+        { title: "Fee Types", icon: DollarSign, path: "/admin/fee-types" },
+        {
+          title: "Fee Structures",
+          icon: DollarSign,
+          path: "/admin/fee-structures",
+        },
+        { title: "Fee Payments", icon: DollarSign, path: "/admin/fee-payments" }
       );
     }
 
@@ -119,7 +127,8 @@ const DashboardLayout = () => {
         },
         { title: "Assignments", icon: Calendar, path: "/student/assignments" },
         { title: "Results", icon: Award, path: "/student/results" },
-        { title: "Report Card", icon: FileText, path: "/student/report-card" }
+        { title: "Report Card", icon: FileText, path: "/student/report-card" },
+        { title: "Fees", icon: DollarSign, path: "/student/fees" }
       );
     }
 
@@ -140,7 +149,8 @@ const DashboardLayout = () => {
           icon: ClipboardList,
           path: "/parent/attendance",
         },
-        { title: "Results", icon: Award, path: "/parent/results" }
+        { title: "Results", icon: Award, path: "/parent/results" },
+        { title: "Fees", icon: DollarSign, path: "/parent/fees" }
       );
     }
 

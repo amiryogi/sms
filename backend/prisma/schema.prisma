@@ -108,6 +108,12 @@ enum ExamStatus {
   LOCKED
 }
 
+enum PaymentStatus {
+  pending
+  partial
+  paid
+}
+
 // =====================================================
 // CORE: SCHOOLS (Multi-school Ready)
 // =====================================================
@@ -140,6 +146,9 @@ model School {
   attendances    Attendance[]
   submissions    Submission[]
   examResults    ExamResult[]
+  feeTypes       FeeType[]
+  feeStructures  FeeStructure[]
+  feePayments    FeePayment[]
 
   @@index([code])
   @@index([isActive])
@@ -305,6 +314,7 @@ model AcademicYear {
   promotionsFrom     Promotion[]         @relation("FromYear")
   promotionsTo       Promotion[]         @relation("ToYear")
   noticeClassTargets NoticeClassTarget[]
+  feeStructures      FeeStructure[]
 
   @@unique([schoolId, name])
   @@index([schoolId])
@@ -334,6 +344,7 @@ model Class {
   promotionsFrom     Promotion[]         @relation("FromClass")
   promotionsTo       Promotion[]         @relation("ToClass")
   noticeClassTargets NoticeClassTarget[]
+  feeStructures      FeeStructure[]
 
   @@unique([schoolId, name])
   @@index([schoolId])
@@ -521,6 +532,7 @@ model StudentClass {
   reportCards  ReportCard[]
   examResults  ExamResult[]
   submissions  Submission[]
+  feePayments  FeePayment[]
 
   @@unique([studentId, academicYearId])
   @@index([studentId])
@@ -1002,6 +1014,91 @@ model Promotion {
   @@index([status])
   @@index([processedBy])
   @@map("promotions")
+}
+
+// =====================================================
+// REFRESH_TOKENS (For JWT Auth)
+// =====================================================
+
+// =====================================================
+// FEE MODULE
+// =====================================================
+
+/// Master list of fee categories per school
+model FeeType {
+  id          Int      @id @default(autoincrement())
+  schoolId    Int      @map("school_id")
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  school        School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  feeStructures FeeStructure[]
+
+  @@unique([schoolId, name])
+  @@index([schoolId])
+  @@index([isActive])
+  @@map("fee_types")
+}
+
+/// Fee amounts per class per academic year
+model FeeStructure {
+  id             Int      @id @default(autoincrement())
+  schoolId       Int      @map("school_id")
+  feeTypeId      Int      @map("fee_type_id")
+  classId        Int      @map("class_id")
+  academicYearId Int      @map("academic_year_id")
+  amount         Decimal  @db.Decimal(10, 2)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  school       School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  feeType      FeeType      @relation(fields: [feeTypeId], references: [id], onDelete: Cascade)
+  class        Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  feePayments  FeePayment[]
+
+  @@unique([feeTypeId, classId, academicYearId])
+  @@index([schoolId])
+  @@index([feeTypeId])
+  @@index([classId])
+  @@index([academicYearId])
+  @@index([classId, academicYearId])
+  @@map("fee_structures")
+}
+
+/// Payment records linked to student enrollment
+model FeePayment {
+  id             Int           @id @default(autoincrement())
+  schoolId       Int           @map("school_id")
+  studentClassId Int           @map("student_class_id")
+  feeStructureId Int           @map("fee_structure_id")
+  amountDue      Decimal       @map("amount_due") @db.Decimal(10, 2)
+  amountPaid     Decimal       @default(0) @map("amount_paid") @db.Decimal(10, 2)
+  status         PaymentStatus @default(pending)
+  paymentDate    DateTime?     @map("payment_date") @db.Date
+  receiptNumber  String?       @map("receipt_number") @db.VarChar(50)
+  paymentMethod  String?       @map("payment_method") @db.VarChar(50)
+  remarks        String?       @db.Text
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  school       School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  studentClass StudentClass @relation(fields: [studentClassId], references: [id], onDelete: Cascade)
+  feeStructure FeeStructure @relation(fields: [feeStructureId], references: [id], onDelete: Cascade)
+
+  @@unique([studentClassId, feeStructureId])
+  @@index([schoolId])
+  @@index([studentClassId])
+  @@index([feeStructureId])
+  @@index([status])
+  @@index([paymentDate])
+  @@map("fee_payments")
 }
 
 // =====================================================

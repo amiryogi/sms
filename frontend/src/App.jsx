@@ -28,6 +28,11 @@ const AdminStudents = React.lazy(() => import("./pages/admin/Students"));
 const AdminTeachers = React.lazy(() => import("./pages/admin/Teachers"));
 const AdminReportCards = React.lazy(() => import("./pages/admin/ReportCards"));
 const AdminNotices = React.lazy(() => import("./pages/admin/Notices"));
+const AdminFeeTypes = React.lazy(() => import("./pages/admin/FeeTypes"));
+const AdminFeeStructures = React.lazy(() =>
+  import("./pages/admin/FeeStructures")
+);
+const AdminFeePayments = React.lazy(() => import("./pages/admin/FeePayments"));
 
 // Teacher Pages
 const TeacherDashboard = React.lazy(() => import("./pages/teacher/Dashboard"));
@@ -49,12 +54,14 @@ const StudentResults = React.lazy(() => import("./pages/student/Results"));
 const StudentReportCard = React.lazy(() =>
   import("./pages/student/ReportCard")
 );
+const StudentFees = React.lazy(() => import("./pages/student/Fees"));
 
 // Parent Pages
 const ParentDashboard = React.lazy(() => import("./pages/parent/Dashboard"));
 const ParentAttendance = React.lazy(() => import("./pages/parent/Attendance"));
 const ParentResults = React.lazy(() => import("./pages/parent/Results"));
 const ParentReportCard = React.lazy(() => import("./pages/parent/ReportCard"));
+const ParentFees = React.lazy(() => import("./pages/parent/Fees"));
 
 // Shared Pages
 const NoticesView = React.lazy(() => import("./pages/shared/NoticesView"));
@@ -115,6 +122,15 @@ function App() {
                 element={<AdminReportCards />}
               />
               <Route path="/admin/notices" element={<AdminNotices />} />
+              <Route path="/admin/fee-types" element={<AdminFeeTypes />} />
+              <Route
+                path="/admin/fee-structures"
+                element={<AdminFeeStructures />}
+              />
+              <Route
+                path="/admin/fee-payments"
+                element={<AdminFeePayments />}
+              />
             </Route>
 
             {/* Teacher Routes */}
@@ -158,6 +174,7 @@ function App() {
                 path="/student/report-card"
                 element={<StudentReportCard />}
               />
+              <Route path="/student/fees" element={<StudentFees />} />
             </Route>
 
             {/* Parent Routes */}
@@ -176,6 +193,7 @@ function App() {
                 path="/parent/report-card"
                 element={<ParentReportCard />}
               />
+              <Route path="/parent/fees" element={<ParentFees />} />
             </Route>
 
             {/* Dashboard Redirect Logic */}

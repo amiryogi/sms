@@ -7,6 +7,7 @@ const examValidators = require("./exam.validators");
 const assignmentValidators = require("./assignment.validators");
 const parentValidators = require("./parent.validators");
 const noticeValidators = require("./notice.validators");
+const feeValidators = require("./fee.validators");
 
 module.exports = {
   ...commonValidators,
@@ -18,4 +19,5 @@ module.exports = {
   ...assignmentValidators,
   ...parentValidators,
   ...noticeValidators,
+  ...feeValidators,
 };
