@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import {
-  DollarSign,
+  Banknote,
   Filter,
   CreditCard,
   CheckCircle,
@@ -156,11 +156,10 @@ const FeePayments = () => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
+    return `NRs. ${new Intl.NumberFormat("en-NP", {
       minimumFractionDigits: 0,
-    }).format(amount);
+      maximumFractionDigits: 2,
+    }).format(amount)}`;
   };
 
   const getStatusBadge = (status) => {
@@ -220,7 +219,7 @@ const FeePayments = () => {
       header: "Fee Type",
       render: (row) => (
         <div className="flex items-center gap-2">
-          <DollarSign size={14} className="text-primary" />
+          <Banknote size={14} className="text-primary" />
           <span>{row.feeStructure?.feeType?.name}</span>
         </div>
       ),
@@ -430,7 +429,7 @@ const FeePayments = () => {
             </div>
 
             <Input
-              label="Amount to Pay (₹)"
+              label="Amount to Pay (NRs.)"
               name="amountPaid"
               type="number"
               step="0.01"

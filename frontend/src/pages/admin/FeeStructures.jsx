@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { Plus, Edit2, Trash2, DollarSign, Filter } from "lucide-react";
+import { Plus, Edit2, Trash2, Banknote, Filter } from "lucide-react";
 import DataTable from "../../components/common/DataTable";
 import Modal from "../../components/common/Modal";
 import { Input, Select, Button } from "../../components/common/FormElements";
@@ -140,11 +140,10 @@ const FeeStructures = () => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
+    return `NRs. ${new Intl.NumberFormat("en-NP", {
       minimumFractionDigits: 0,
-    }).format(amount);
+      maximumFractionDigits: 2,
+    }).format(amount)}`;
   };
 
   // Calculate totals per class
@@ -166,7 +165,7 @@ const FeeStructures = () => {
       header: "Fee Type",
       render: (row) => (
         <div className="flex items-center gap-2">
-          <DollarSign size={16} className="text-primary" />
+          <Banknote size={16} className="text-primary" />
           <span>{row.feeType?.name}</span>
         </div>
       ),
@@ -333,7 +332,7 @@ const FeeStructures = () => {
             ]}
           />
           <Input
-            label="Amount (₹)"
+            label="Amount (NRs.)"
             name="amount"
             type="number"
             step="0.01"

@@ -16,6 +16,7 @@ const {
   studentFeeQueryRules,
   feePaymentIdParamRule,
   studentClassIdParamRule,
+  studentIdParamRule,
 } = require("../validators");
 
 // All fee routes require authentication
@@ -133,7 +134,7 @@ router.get(
 // GET /api/v1/fees/payments/student/:studentId - Get student fee summary
 router.get(
   "/payments/student/:studentId",
-  [idParamRule],
+  [studentIdParamRule],
   validate,
   feePaymentController.getStudentFeeSummary
 );

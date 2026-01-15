@@ -1,11 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  DollarSign,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  Users,
-} from "lucide-react";
+import { Banknote, CheckCircle, Clock, AlertCircle, Users } from "lucide-react";
 import { Select } from "../../components/common/FormElements";
 import { feeService } from "../../api/feeService";
 import { parentService } from "../../api/parentService";
@@ -29,7 +23,7 @@ const ParentFees = () => {
   const fetchChildren = async () => {
     try {
       const response = await parentService.getMyChildren();
-      const childrenData = response.data || [];
+      const childrenData = response.data?.children || [];
       setChildren(childrenData);
       if (childrenData.length > 0) {
         setSelectedChildId(childrenData[0].id.toString());
@@ -55,11 +49,10 @@ const ParentFees = () => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
+    return `NRs. ${new Intl.NumberFormat("en-NP", {
       minimumFractionDigits: 0,
-    }).format(amount);
+      maximumFractionDigits: 2,
+    }).format(amount)}`;
   };
 
   const getStatusBadge = (status) => {
@@ -150,7 +143,7 @@ const ParentFees = () => {
       ) : feeSummary.length === 0 ? (
         <div className="card">
           <div className="empty-state">
-            <DollarSign size={48} className="text-muted" />
+            <Banknote size={48} className="text-muted" />
             <h3>No Fee Records</h3>
             <p className="text-muted">
               No fee records have been generated yet.
@@ -239,7 +232,7 @@ const ParentFees = () => {
                   <tr key={fee.id}>
                     <td>
                       <div className="flex items-center gap-2">
-                        <DollarSign size={14} className="text-primary" />
+                        <Banknote size={14} className="text-primary" />
                         {fee.feeType?.name}
                       </div>
                     </td>
