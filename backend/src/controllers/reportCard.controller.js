@@ -1,5 +1,10 @@
 ﻿const prisma = require("../config/database");
-const { ApiError, ApiResponse, asyncHandler, gradeCalculator } = require("../utils");
+const {
+  ApiError,
+  ApiResponse,
+  asyncHandler,
+  gradeCalculator,
+} = require("../utils");
 
 /**
  * Build detailed subject results with Nepal-style grading
@@ -10,7 +15,7 @@ const buildSubjectResults = (examResults) => {
   return examResults.map((result) => {
     const examSubject = result.examSubject;
     const classSubject = examSubject.classSubject;
-    
+
     // Calculate subject grade using Nepal rules
     const gradeResult = gradeCalculator.calculateSubjectGrade({
       theoryMarks: result.marksObtained,
@@ -68,15 +73,15 @@ const getReportCards = asyncHandler(async (req, res) => {
   // Get the exam with school info
   const exam = await prisma.exam.findFirst({
     where: { id: parseInt(examId), schoolId: req.user.schoolId },
-    include: { 
+    include: {
       academicYear: true,
       examSubjects: {
         include: {
           classSubject: {
-            include: { subject: true }
-          }
-        }
-      }
+            include: { subject: true },
+          },
+        },
+      },
     },
   });
 
@@ -85,18 +90,25 @@ const getReportCards = asyncHandler(async (req, res) => {
   // Get school info
   const school = await prisma.school.findUnique({
     where: { id: req.user.schoolId },
-    select: { id: true, name: true, address: true, phone: true, email: true, logoUrl: true }
+    select: {
+      id: true,
+      name: true,
+      address: true,
+      phone: true,
+      email: true,
+      logoUrl: true,
+    },
   });
 
   // Get class and section info
   const classInfo = await prisma.class.findUnique({
     where: { id: parseInt(classId) },
-    select: { id: true, name: true, gradeLevel: true }
+    select: { id: true, name: true, gradeLevel: true },
   });
 
   const sectionInfo = await prisma.section.findUnique({
     where: { id: parseInt(sectionId) },
-    select: { id: true, name: true }
+    select: { id: true, name: true },
   });
 
   // Get all students in this class/section for this academic year
@@ -152,8 +164,14 @@ const getReportCards = asyncHandler(async (req, res) => {
     const overallResult = gradeCalculator.calculateOverallGPA(subjectResults);
     const reportCard = enrollment.student.reportCards[0] || null;
 
-    const totalObtained = subjectResults.reduce((sum, r) => sum + r.totalMarks, 0);
-    const totalFull = subjectResults.reduce((sum, r) => sum + r.totalFullMarks, 0);
+    const totalObtained = subjectResults.reduce(
+      (sum, r) => sum + r.totalMarks,
+      0
+    );
+    const totalFull = subjectResults.reduce(
+      (sum, r) => sum + r.totalFullMarks,
+      0
+    );
 
     return {
       studentId: enrollment.studentId,
@@ -214,12 +232,13 @@ const generateReportCards = asyncHandler(async (req, res) => {
     throw ApiError.badRequest("Exam ID, Class ID, and Section ID are required");
   }
 
-  const exam = await prisma.exam.findUnique({ 
-    where: { id: parseInt(examId) },
-    include: { academicYear: true }
+  const exam = await prisma.exam.findFirst({
+    where: { id: parseInt(examId), schoolId: req.user.schoolId },
+    include: { academicYear: true },
   });
-  
-  if (!exam) throw ApiError.notFound("Exam not found");
+
+  if (!exam)
+    throw ApiError.notFound("Exam not found or does not belong to your school");
 
   // Get all students in this class-section
   const enrollments = await prisma.studentClass.findMany({
@@ -228,6 +247,7 @@ const generateReportCards = asyncHandler(async (req, res) => {
       sectionId: parseInt(sectionId),
       academicYearId: exam.academicYearId,
       status: "active",
+      schoolId: req.user.schoolId,
     },
   });
 
@@ -250,8 +270,8 @@ const generateReportCards = asyncHandler(async (req, res) => {
         include: {
           examSubject: {
             include: {
-              classSubject: { include: { subject: true } }
-            }
+              classSubject: { include: { subject: true } },
+            },
           },
         },
       });
@@ -262,8 +282,14 @@ const generateReportCards = asyncHandler(async (req, res) => {
       const subjectResults = buildSubjectResults(studentResults);
       const overallResult = gradeCalculator.calculateOverallGPA(subjectResults);
 
-      const totalObtained = subjectResults.reduce((sum, r) => sum + r.totalMarks, 0);
-      const totalFull = subjectResults.reduce((sum, r) => sum + r.totalFullMarks, 0);
+      const totalObtained = subjectResults.reduce(
+        (sum, r) => sum + r.totalMarks,
+        0
+      );
+      const totalFull = subjectResults.reduce(
+        (sum, r) => sum + r.totalFullMarks,
+        0
+      );
 
       // Store for ranking
       studentData.push({
@@ -337,29 +363,31 @@ const getReportCard = asyncHandler(async (req, res) => {
   const studentId = parseInt(req.params.studentId);
   const examId = parseInt(req.params.examId);
 
-  // Get report card with all relations
-  const reportCard = await prisma.reportCard.findUnique({
+  // Get report card with all relations - use findFirst with schoolId filter
+  const reportCard = await prisma.reportCard.findFirst({
     where: {
-      studentId_examId: { studentId, examId },
+      studentId,
+      examId,
+      exam: { schoolId: req.user.schoolId },
     },
     include: {
       exam: {
         include: {
           academicYear: true,
-        }
+        },
       },
       student: {
         include: {
           user: {
-            select: { firstName: true, lastName: true, email: true }
-          }
-        }
+            select: { firstName: true, lastName: true, email: true },
+          },
+        },
       },
       studentClass: {
         include: {
           class: true,
-          section: true
-        }
+          section: true,
+        },
       },
     },
   });
@@ -376,7 +404,14 @@ const getReportCard = asyncHandler(async (req, res) => {
   // Get school info
   const school = await prisma.school.findUnique({
     where: { id: req.user.schoolId },
-    select: { id: true, name: true, address: true, phone: true, email: true, logoUrl: true }
+    select: {
+      id: true,
+      name: true,
+      address: true,
+      phone: true,
+      email: true,
+      logoUrl: true,
+    },
   });
 
   // Get subject-wise results with Nepal grading
@@ -395,10 +430,10 @@ const getReportCard = asyncHandler(async (req, res) => {
     orderBy: {
       examSubject: {
         classSubject: {
-          subject: { name: 'asc' }
-        }
-      }
-    }
+          subject: { name: "asc" },
+        },
+      },
+    },
   });
 
   // Process with Nepal grading
@@ -439,7 +474,10 @@ const getReportCard = asyncHandler(async (req, res) => {
     // Overall Summary
     summary: {
       totalMarks: subjectResults.reduce((sum, s) => sum + s.totalMarks, 0),
-      totalFullMarks: subjectResults.reduce((sum, s) => sum + s.totalFullMarks, 0),
+      totalFullMarks: subjectResults.reduce(
+        (sum, s) => sum + s.totalFullMarks,
+        0
+      ),
       percentage: overallResult.averagePercentage,
       gpa: overallResult.gpa,
       grade: overallResult.grade,
@@ -477,8 +515,12 @@ const getReportCardPdfData = asyncHandler(async (req, res) => {
   const studentId = parseInt(req.params.studentId);
   const examId = parseInt(req.params.examId);
 
-  const reportCard = await prisma.reportCard.findUnique({
-    where: { studentId_examId: { studentId, examId } },
+  const reportCard = await prisma.reportCard.findFirst({
+    where: {
+      studentId,
+      examId,
+      exam: { schoolId: req.user.schoolId },
+    },
     include: {
       exam: { include: { academicYear: true } },
       student: { include: { user: true } },
@@ -506,7 +548,7 @@ const getReportCardPdfData = asyncHandler(async (req, res) => {
         include: { classSubject: { include: { subject: true } } },
       },
     },
-    orderBy: { examSubject: { classSubject: { subject: { name: 'asc' } } } }
+    orderBy: { examSubject: { classSubject: { subject: { name: "asc" } } } },
   });
 
   const subjectResults = buildSubjectResults(examResults);
@@ -526,7 +568,10 @@ const getReportCardPdfData = asyncHandler(async (req, res) => {
     subjects: subjectResults,
     summary: {
       totalMarks: subjectResults.reduce((sum, s) => sum + s.totalMarks, 0),
-      totalFullMarks: subjectResults.reduce((sum, s) => sum + s.totalFullMarks, 0),
+      totalFullMarks: subjectResults.reduce(
+        (sum, s) => sum + s.totalFullMarks,
+        0
+      ),
       percentage: overallResult.averagePercentage,
       gpa: overallResult.gpa,
       grade: overallResult.grade,
@@ -551,18 +596,29 @@ const getReportCardPdfData = asyncHandler(async (req, res) => {
 const publishReportCards = asyncHandler(async (req, res) => {
   const { examId, classId, sectionId } = req.body;
 
+  // Verify exam belongs to school
+  const exam = await prisma.exam.findFirst({
+    where: { id: parseInt(examId), schoolId: req.user.schoolId },
+  });
+  if (!exam) throw ApiError.notFound("Exam not found");
+
   const result = await prisma.reportCard.updateMany({
     where: {
       examId: parseInt(examId),
       studentClass: {
         classId: parseInt(classId),
         sectionId: parseInt(sectionId),
+        schoolId: req.user.schoolId,
       },
     },
     data: { isPublished: true },
   });
 
-  ApiResponse.success(res, { updated: result.count }, "Report cards published successfully");
+  ApiResponse.success(
+    res,
+    { updated: result.count },
+    "Report cards published successfully"
+  );
 });
 
 /**
@@ -573,12 +629,19 @@ const publishReportCards = asyncHandler(async (req, res) => {
 const unpublishReportCards = asyncHandler(async (req, res) => {
   const { examId, classId, sectionId } = req.body;
 
+  // Verify exam belongs to school
+  const exam = await prisma.exam.findFirst({
+    where: { id: parseInt(examId), schoolId: req.user.schoolId },
+  });
+  if (!exam) throw ApiError.notFound("Exam not found");
+
   const result = await prisma.reportCard.updateMany({
     where: {
       examId: parseInt(examId),
       studentClass: {
         classId: parseInt(classId),
         sectionId: parseInt(sectionId),
+        schoolId: req.user.schoolId,
       },
     },
     data: { isPublished: false },
@@ -599,33 +662,34 @@ const unpublishReportCards = asyncHandler(async (req, res) => {
 const getStudentPublishedExams = asyncHandler(async (req, res) => {
   const studentId = parseInt(req.params.studentId);
 
-  // Get all published report cards for this student
+  // Get all published report cards for this student (filtered by school)
   const reportCards = await prisma.reportCard.findMany({
     where: {
       studentId,
       isPublished: true,
+      exam: { schoolId: req.user.schoolId },
     },
     include: {
       exam: {
         include: {
           academicYear: true,
-        }
+        },
       },
       studentClass: {
         include: {
           class: true,
           section: true,
-        }
-      }
+        },
+      },
     },
     orderBy: {
       exam: {
-        startDate: 'desc'
-      }
-    }
+        startDate: "desc",
+      },
+    },
   });
 
-  const exams = reportCards.map(rc => ({
+  const exams = reportCards.map((rc) => ({
     examId: rc.exam.id,
     examName: rc.exam.name,
     examType: rc.exam.examType,

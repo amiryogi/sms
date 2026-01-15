@@ -54,14 +54,14 @@ const Results = () => {
 
   const fetchExams = async () => {
     try {
-      const response = await examService.getExams();
-      // Filter for published exams (status === 'PUBLISHED')
-      const publishedExams = (response.data || []).filter(
-        (e) => e.status === "PUBLISHED"
+      // Fetch exams that have PUBLISHED report cards for this student
+      const response = await examService.getStudentPublishedExams(
+        selectedChild.id
       );
-      setExams(publishedExams);
+      setExams(response.data || []);
     } catch (error) {
       console.error("Error fetching exams:", error);
+      setExams([]);
     }
   };
 
@@ -100,9 +100,10 @@ const Results = () => {
     label: `${c.firstName} ${c.lastName}`,
   }));
 
+  // Exams from getStudentPublishedExams have examId, examName, etc.
   const examOptions = exams.map((e) => ({
-    value: e.id.toString(),
-    label: e.name,
+    value: (e.examId || e.id).toString(),
+    label: `${e.examName || e.name} (${e.academicYear || ""})`,
   }));
 
   // Helper to get enrollment
@@ -186,31 +187,43 @@ const Results = () => {
           ) : (
             <div className="report-card printable">
               <div className="report-header">
-                <h2>{user?.school?.name || "School Name"}</h2>
+                <h2>
+                  {reportCard.school?.name ||
+                    user?.school?.name ||
+                    "School Name"}
+                </h2>
                 <h3>Report Card</h3>
-                <p>{reportCard.exam?.name}</p>
+                <p>
+                  {reportCard.examination?.name} -{" "}
+                  {reportCard.examination?.academicYear}
+                </p>
               </div>
 
               <div className="student-info">
                 <div className="info-row">
                   <span>Student Name:</span>
                   <strong>
-                    {selectedChild?.firstName} {selectedChild?.lastName}
+                    {reportCard.student?.name ||
+                      `${selectedChild?.firstName} ${selectedChild?.lastName}`}
                   </strong>
                 </div>
                 <div className="info-row">
                   <span>Class:</span>
                   <strong>
-                    {reportCard.class?.name ||
+                    {reportCard.student?.class ||
                       getEnrollment(selectedChild)?.class?.name}{" "}
                     -{" "}
-                    {reportCard.section?.name ||
+                    {reportCard.student?.section ||
                       getEnrollment(selectedChild)?.section?.name}
                   </strong>
                 </div>
                 <div className="info-row">
                   <span>Roll Number:</span>
-                  <strong>{selectedChild?.rollNumber || "N/A"}</strong>
+                  <strong>
+                    {reportCard.student?.rollNumber ||
+                      selectedChild?.rollNumber ||
+                      "N/A"}
+                  </strong>
                 </div>
               </div>
 
@@ -219,17 +232,19 @@ const Results = () => {
                   <tr>
                     <th>Subject</th>
                     <th>Marks</th>
-                    <th>Max</th>
+                    <th>Full Marks</th>
                     <th>Grade</th>
+                    <th>GPA</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {reportCard.results?.map((result, i) => (
+                  {reportCard.subjects?.map((subject, i) => (
                     <tr key={i}>
-                      <td>{result.subject?.name}</td>
-                      <td>{result.marksObtained}</td>
-                      <td>{result.maxMarks}</td>
-                      <td>{result.grade}</td>
+                      <td>{subject.subjectName}</td>
+                      <td>{subject.totalMarks}</td>
+                      <td>{subject.totalFullMarks}</td>
+                      <td>{subject.finalGrade}</td>
+                      <td>{subject.finalGpa}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -239,13 +254,16 @@ const Results = () => {
                       <strong>Total</strong>
                     </td>
                     <td>
-                      <strong>{reportCard.totalMarks}</strong>
+                      <strong>{reportCard.summary?.totalMarks}</strong>
                     </td>
                     <td>
-                      <strong>{reportCard.maxTotalMarks}</strong>
+                      <strong>{reportCard.summary?.totalFullMarks}</strong>
                     </td>
                     <td>
-                      <strong>{reportCard.overallGrade}</strong>
+                      <strong>{reportCard.summary?.grade}</strong>
+                    </td>
+                    <td>
+                      <strong>{reportCard.summary?.gpa}</strong>
                     </td>
                   </tr>
                 </tfoot>
@@ -254,20 +272,26 @@ const Results = () => {
               <div className="report-summary">
                 <div className="summary-item">
                   <span>Percentage:</span>
-                  <strong>{reportCard.percentage}%</strong>
+                  <strong>{reportCard.summary?.percentage}%</strong>
+                </div>
+                <div className="summary-item">
+                  <span>GPA:</span>
+                  <strong>{reportCard.summary?.gpa}</strong>
                 </div>
                 <div className="summary-item">
                   <span>Rank:</span>
-                  <strong>{reportCard.classRank || "N/A"}</strong>
+                  <strong>{reportCard.summary?.classRank || "N/A"}</strong>
                 </div>
                 <div className="summary-item">
                   <span>Result:</span>
                   <strong
                     className={
-                      reportCard.isPassed ? "text-success" : "text-danger"
+                      reportCard.summary?.isPassed
+                        ? "text-success"
+                        : "text-danger"
                     }
                   >
-                    {reportCard.isPassed ? "PASSED" : "FAILED"}
+                    {reportCard.summary?.isPassed ? "PASSED" : "FAILED"}
                   </strong>
                 </div>
               </div>

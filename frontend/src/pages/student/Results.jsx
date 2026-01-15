@@ -23,14 +23,15 @@ const Results = () => {
 
   const fetchExams = async () => {
     try {
-      const response = await examService.getExams();
-      // Filter to only published exams (status === 'PUBLISHED')
-      const publishedExams = (response.data || []).filter(
-        (e) => e.status === "PUBLISHED"
-      );
-      setExams(publishedExams);
+      const studentId = user?.student?.id;
+      if (!studentId) return;
+
+      // Fetch exams that have PUBLISHED report cards for this student
+      const response = await examService.getStudentPublishedExams(studentId);
+      setExams(response.data || []);
     } catch (error) {
       console.error("Error fetching exams:", error);
+      setExams([]);
     }
   };
 
@@ -78,9 +79,10 @@ const Results = () => {
     return "F";
   };
 
+  // Exams from getStudentPublishedExams have examId, examName, etc.
   const examOptions = exams.map((e) => ({
-    value: e.id.toString(),
-    label: e.name,
+    value: (e.examId || e.id).toString(),
+    label: `${e.examName || e.name} (${e.academicYear || ""})`,
   }));
 
   return (

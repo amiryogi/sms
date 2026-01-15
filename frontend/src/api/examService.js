@@ -92,6 +92,22 @@ export const examService = {
     return response.data;
   },
 
+  // Get student's published exams (exams with published report cards)
+  getStudentPublishedExams: async (studentId) => {
+    const response = await apiClient.get(
+      `/report-cards/student/${studentId}/exams`
+    );
+    return response.data;
+  },
+
+  // Get student's exam results (individual subject marks)
+  getStudentExamResults: async (studentId, examId) => {
+    const response = await apiClient.get(
+      `/results/student/${studentId}/exam/${examId}`
+    );
+    return response.data;
+  },
+
   // Get student's report card
   getReportCard: async (studentId, examId) => {
     const response = await apiClient.get(
