@@ -145,18 +145,26 @@ const MarksEntry = () => {
         return;
       }
 
+      const resultsToSave = marksData
+        .filter((m) => m.marksObtained !== "" || m.isAbsent) // Send only entered data
+        .map((m) => ({
+          studentId: m.studentId,
+          marksObtained: m.isAbsent ? 0 : parseFloat(m.marksObtained) || 0,
+          practicalMarks: m.isAbsent ? 0 : parseFloat(m.practicalMarks) || 0,
+          isAbsent: m.isAbsent,
+          remarks: m.remarks || "",
+        }));
+
+      if (resultsToSave.length === 0) {
+        alert("Please enter marks for at least one student before saving.");
+        setSaving(false);
+        return;
+      }
+
       await examService.saveResults({
         examSubjectId: examSubject.id,
         sectionId: parseInt(filters.sectionId),
-        results: marksData
-          .filter((m) => m.marksObtained !== "" || m.isAbsent) // Send only entered data
-          .map((m) => ({
-            studentId: m.studentId,
-            marksObtained: m.isAbsent ? 0 : parseFloat(m.marksObtained),
-            practicalMarks: m.isAbsent ? 0 : parseFloat(m.practicalMarks),
-            isAbsent: m.isAbsent,
-            remarks: m.remarks,
-          })),
+        results: resultsToSave,
       });
       alert("Marks saved successfully!");
     } catch (error) {

@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const { param } = require("express-validator");
 const resultController = require("../controllers/result.controller");
 const {
   authenticate,
@@ -7,15 +8,20 @@ const {
   canAccessResults,
   validate,
 } = require("../middleware");
-const { resultSaveRules, idParamRule } = require("../validators");
+const { resultSaveRules } = require("../validators");
 
 router.use(authenticate);
+
+// Validator for examSubjectId param
+const examSubjectIdRule = param("examSubjectId")
+  .isInt({ min: 1 })
+  .withMessage("Exam Subject ID must be a valid positive integer");
 
 // Get results for an exam subject (Admin/Teacher)
 router.get(
   "/:examSubjectId",
   authorize("result.enter", "result.view_all"),
-  [idParamRule.replace("id", "examSubjectId")],
+  [examSubjectIdRule],
   validate,
   canAccessResults,
   resultController.getResultsBySubject
