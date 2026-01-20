@@ -136,7 +136,7 @@ function App() {
             {/* Teacher Routes */}
             <Route
               element={
-                <ProtectedRoute roles={["TEACHER", "ADMIN"]}>
+                <ProtectedRoute roles={["TEACHER", "EXAM_OFFICER", "ADMIN"]}>
                   <DashboardLayout />
                 </ProtectedRoute>
               }
@@ -231,6 +231,9 @@ function RoleBasedDashboard() {
 
   if (user.roles.includes("ADMIN")) {
     return <Navigate to="/admin/dashboard" replace />;
+  }
+  if (user.roles.includes("EXAM_OFFICER")) {
+    return <Navigate to="/teacher/marks" replace />;
   }
   if (user.roles.includes("TEACHER")) {
     return <Navigate to="/teacher/dashboard" replace />;

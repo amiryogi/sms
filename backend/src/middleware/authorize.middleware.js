@@ -116,6 +116,59 @@ const isParent = (req, res, next) => {
 };
 
 /**
+ * Check if user is exam officer
+ */
+const isExamOfficer = (req, res, next) => {
+  if (!req.user) {
+    throw ApiError.unauthorized('Authentication required');
+  }
+
+  if (!req.user.roles.includes('EXAM_OFFICER')) {
+    throw ApiError.forbidden('Exam Officer access required');
+  }
+
+  next();
+};
+
+/**
+ * Check if user can enter marks (TEACHER, EXAM_OFFICER, or ADMIN)
+ * TEACHER: must be assigned to the subject (checked in controller)
+ * EXAM_OFFICER: can enter marks for any subject
+ * ADMIN: can enter marks with override flag
+ */
+const canEnterMarks = (req, res, next) => {
+  if (!req.user) {
+    throw ApiError.unauthorized('Authentication required');
+  }
+
+  const allowedRoles = ['TEACHER', 'EXAM_OFFICER', 'ADMIN', 'SUPER_ADMIN'];
+  const hasRole = req.user.roles.some((role) => allowedRoles.includes(role));
+
+  if (!hasRole) {
+    throw ApiError.forbidden('You do not have permission to enter marks');
+  }
+
+  next();
+};
+
+/**
+ * Determine the role used for marks entry (for audit trail)
+ * Priority: EXAM_OFFICER > ADMIN > TEACHER
+ */
+const getMarksEntryRole = (user) => {
+  if (user.roles.includes('EXAM_OFFICER')) {
+    return 'EXAM_OFFICER';
+  }
+  if (user.roles.includes('SUPER_ADMIN') || user.roles.includes('ADMIN')) {
+    return 'ADMIN';
+  }
+  if (user.roles.includes('TEACHER')) {
+    return 'TEACHER';
+  }
+  return 'UNKNOWN';
+};
+
+/**
  * School scope middleware
  * Ensures user can only access data from their own school
  */
@@ -137,5 +190,8 @@ module.exports = {
   isTeacher,
   isStudent,
   isParent,
+  isExamOfficer,
+  canEnterMarks,
+  getMarksEntryRole,
   schoolScope,
 };

@@ -239,6 +239,7 @@ const permissions = [
 const roles = [
   { name: "ADMIN", description: "School Administrator" },
   { name: "TEACHER", description: "Teacher" },
+  { name: "EXAM_OFFICER", description: "Exam Officer - Can enter marks for any subject" },
   { name: "STUDENT", description: "Student" },
   { name: "PARENT", description: "Parent/Guardian" },
 ];
@@ -322,6 +323,14 @@ const rolePermissions = {
     "result.view_child",
     "report_card.view_child",
     "assignment.view_own",
+    "notice.read",
+  ],
+  EXAM_OFFICER: [
+    "student.read",
+    "student.list",
+    "exam.read",
+    "result.enter",
+    "result.view_all",
     "notice.read",
   ],
 };
@@ -592,6 +601,37 @@ async function main() {
   });
   console.log(`   ✓ Teacher: teacher@svi.edu.np / password123`);
 
+  // Exam Officer User
+  const examOfficerRole = await prisma.role.findUnique({
+    where: { name: "EXAM_OFFICER" },
+  });
+  const examOfficerUser = await prisma.user.upsert({
+    where: {
+      email_schoolId: {
+        email: "examofficer@svi.edu.np",
+        schoolId: school.id,
+      },
+    },
+    update: {},
+    create: {
+      schoolId: school.id,
+      email: "examofficer@svi.edu.np",
+      passwordHash,
+      firstName: "Exam",
+      lastName: "Officer",
+      phone: "+977-9807654321",
+      status: "active",
+    },
+  });
+  await prisma.userRole.upsert({
+    where: {
+      userId_roleId: { userId: examOfficerUser.id, roleId: examOfficerRole.id },
+    },
+    update: {},
+    create: { userId: examOfficerUser.id, roleId: examOfficerRole.id },
+  });
+  console.log(`   ✓ Exam Officer: examofficer@svi.edu.np / password123`);
+
   // Assign teacher to Grade 10 Section A for Math
   const grade10 = createdClasses.find((c) => c.name === "Grade 10");
   const sectionA = createdSections.find((s) => s.name === "A");
@@ -782,14 +822,15 @@ async function main() {
   console.log("✅ Database seeded successfully!");
   console.log("═══════════════════════════════════════════════════════════");
   console.log("\n📋 Demo Credentials:");
-  console.log("   ┌─────────────────────────────────────────────────────┐");
-  console.log("   │ Role     │ Email                        │ Password │");
-  console.log("   ├─────────────────────────────────────────────────────┤");
-  console.log("   │ Admin    │ admin@svi.edu.np     │ password123 │");
-  console.log("   │ Teacher  │ teacher@svi.edu.np   │ password123 │");
-  console.log("   │ Student  │ student@svi.edu.np   │ password123 │");
-  console.log("   │ Parent   │ parent@svi.edu.np    │ password123 │");
-  console.log("   └─────────────────────────────────────────────────────┘");
+  console.log("   ┌──────────────────────────────────────────────────────────────┐");
+  console.log("   │ Role         │ Email                      │ Password        │");
+  console.log("   ├──────────────────────────────────────────────────────────────┤");
+  console.log("   │ Admin        │ admin@svi.edu.np           │ password123     │");
+  console.log("   │ Teacher      │ teacher@svi.edu.np         │ password123     │");
+  console.log("   │ Exam Officer │ examofficer@svi.edu.np     │ password123     │");
+  console.log("   │ Student      │ student@svi.edu.np         │ password123     │");
+  console.log("   │ Parent       │ parent@svi.edu.np          │ password123     │");
+  console.log("   └──────────────────────────────────────────────────────────────┘");
   console.log("\n");
 }
 

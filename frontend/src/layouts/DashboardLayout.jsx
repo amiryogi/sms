@@ -113,6 +113,22 @@ const DashboardLayout = () => {
       );
     }
 
+    // EXAM_OFFICER: Limited navigation - only marks entry and notices
+    if (hasRole("EXAM_OFFICER") && !hasRole("TEACHER") && !hasRole("ADMIN")) {
+      items.push(
+        {
+          title: "Marks Entry",
+          icon: BookOpenCheck,
+          path: "/teacher/marks",
+        },
+        {
+          title: "Notices",
+          icon: Bell,
+          path: "/teacher/notices",
+        }
+      );
+    }
+
     if (hasRole("STUDENT")) {
       items.push(
         {

@@ -60,7 +60,17 @@ export const examService = {
 
   // --- Teacher Methods ---
 
+  // Get exams for marks entry (works for Teacher, EXAM_OFFICER, Admin)
+  // Uses unified endpoint that returns all exams for EXAM_OFFICER/Admin
+  // or only assigned subjects for Teachers
+  getExamsForMarksEntry: async (academicYearId) => {
+    const params = academicYearId ? { academicYearId } : {};
+    const response = await apiClient.get("/exam-results/exams", { params });
+    return response.data;
+  },
+
   // Get teacher's exams (PUBLISHED exams for assigned subjects)
+  // @deprecated Use getExamsForMarksEntry instead
   getTeacherExams: async (academicYearId) => {
     const params = academicYearId ? { academicYearId } : {};
     const response = await apiClient.get("/exam-results/teacher/exams", {
