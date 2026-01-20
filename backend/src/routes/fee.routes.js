@@ -4,7 +4,7 @@ const router = express.Router();
 const feeTypeController = require("../controllers/feeType.controller");
 const feeStructureController = require("../controllers/feeStructure.controller");
 const feePaymentController = require("../controllers/feePayment.controller");
-const { authenticate, isAdmin, validate } = require("../middleware");
+const { authenticate, isAdmin, canManageFees, validate } = require("../middleware");
 const {
   idParamRule,
   feeTypeRules,
@@ -32,19 +32,19 @@ router.get("/types", feeTypeController.getFeeTypes);
 // GET /api/v1/fees/types/:id - Get single fee type
 router.get("/types/:id", [idParamRule], validate, feeTypeController.getFeeType);
 
-// POST /api/v1/fees/types - Create fee type (Admin only)
+// POST /api/v1/fees/types - Create fee type (Admin or Accountant)
 router.post(
   "/types",
-  isAdmin,
+  canManageFees,
   feeTypeRules,
   validate,
   feeTypeController.createFeeType
 );
 
-// PUT /api/v1/fees/types/:id - Update fee type (Admin only)
+// PUT /api/v1/fees/types/:id - Update fee type (Admin or Accountant)
 router.put(
   "/types/:id",
-  isAdmin,
+  canManageFees,
   [idParamRule, ...feeTypeUpdateRules],
   validate,
   feeTypeController.updateFeeType
@@ -85,26 +85,26 @@ router.get(
   feeStructureController.getFeeStructure
 );
 
-// POST /api/v1/fees/structures - Create fee structure (Admin only)
+// POST /api/v1/fees/structures - Create fee structure (Admin or Accountant)
 router.post(
   "/structures",
-  isAdmin,
+  canManageFees,
   feeStructureRules,
   validate,
   feeStructureController.createFeeStructure
 );
 
-// POST /api/v1/fees/structures/bulk - Bulk create fee structures (Admin only)
+// POST /api/v1/fees/structures/bulk - Bulk create fee structures (Admin or Accountant)
 router.post(
   "/structures/bulk",
-  isAdmin,
+  canManageFees,
   feeStructureController.bulkCreateFeeStructures
 );
 
-// PUT /api/v1/fees/structures/:id - Update fee structure (Admin only)
+// PUT /api/v1/fees/structures/:id - Update fee structure (Admin or Accountant)
 router.put(
   "/structures/:id",
-  isAdmin,
+  canManageFees,
   [idParamRule, ...feeStructureUpdateRules],
   validate,
   feeStructureController.updateFeeStructure
@@ -139,28 +139,28 @@ router.get(
   feePaymentController.getStudentFeeSummary
 );
 
-// POST /api/v1/fees/payments/:feePaymentId/pay - Record payment (Admin only)
+// POST /api/v1/fees/payments/:feePaymentId/pay - Record payment (Admin or Accountant)
 router.post(
   "/payments/:feePaymentId/pay",
-  isAdmin,
+  canManageFees,
   [feePaymentIdParamRule, ...feePaymentRules],
   validate,
   feePaymentController.recordPayment
 );
 
-// POST /api/v1/fees/payments/generate/:studentClassId - Generate fees for student (Admin only)
+// POST /api/v1/fees/payments/generate/:studentClassId - Generate fees for student (Admin or Accountant)
 router.post(
   "/payments/generate/:studentClassId",
-  isAdmin,
+  canManageFees,
   [studentClassIdParamRule],
   validate,
   feePaymentController.generateStudentFees
 );
 
-// POST /api/v1/fees/payments/generate-bulk - Bulk generate fees (Admin only)
+// POST /api/v1/fees/payments/generate-bulk - Bulk generate fees (Admin or Accountant)
 router.post(
   "/payments/generate-bulk",
-  isAdmin,
+  canManageFees,
   feePaymentController.bulkGenerateFees
 );
 

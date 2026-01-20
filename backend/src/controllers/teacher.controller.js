@@ -18,8 +18,8 @@ const getTeachers = asyncHandler(async (req, res) => {
   const { page, limit, skip } = parsePagination(req.query);
   const { search, status, role } = req.query;
 
-  // Build role filter - include both TEACHER and EXAM_OFFICER by default
-  const staffRoles = role ? [role] : ["TEACHER", "EXAM_OFFICER"];
+  // Build role filter - include TEACHER, EXAM_OFFICER, and ACCOUNTANT by default
+  const staffRoles = role ? [role] : ["TEACHER", "EXAM_OFFICER", "ACCOUNTANT"];
 
   const where = {
     schoolId: req.user.schoolId,

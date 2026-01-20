@@ -17,6 +17,7 @@ import { uploadService } from "../../api/uploadService";
 const STAFF_ROLES = [
   { value: "TEACHER", label: "Teacher" },
   { value: "EXAM_OFFICER", label: "Exam Officer" },
+  { value: "ACCOUNTANT", label: "Accountant" },
 ];
 
 const resolveAssetUrl = (url) => {
@@ -161,6 +162,9 @@ const Teachers = () => {
       header: "Role", 
       render: (row) => {
         const roles = row.roles || [];
+        if (roles.includes("ACCOUNTANT")) {
+          return <span className="badge badge-success">Accountant</span>;
+        }
         if (roles.includes("EXAM_OFFICER")) {
           return <span className="badge badge-info">Exam Officer</span>;
         }
@@ -193,7 +197,7 @@ const Teachers = () => {
       <div className="page-header">
         <div>
           <h1>Teachers & Staff</h1>
-          <p className="text-muted">Manage teachers and exam officers</p>
+          <p className="text-muted">Manage teachers, exam officers, and accountants</p>
         </div>
       </div>
 

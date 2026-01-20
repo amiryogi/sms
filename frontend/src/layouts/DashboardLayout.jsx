@@ -170,6 +170,37 @@ const DashboardLayout = () => {
       );
     }
 
+    // ACCOUNTANT: Limited navigation - only fee management
+    if (hasRole("ACCOUNTANT") && !hasRole("ADMIN")) {
+      items.push(
+        {
+          title: "Dashboard",
+          icon: LayoutDashboard,
+          path: "/accountant/dashboard",
+        },
+        {
+          title: "Fee Types",
+          icon: Banknote,
+          path: "/accountant/fee-types",
+        },
+        {
+          title: "Fee Structures",
+          icon: Banknote,
+          path: "/accountant/fee-structures",
+        },
+        {
+          title: "Fee Payments",
+          icon: Banknote,
+          path: "/accountant/fee-payments",
+        },
+        {
+          title: "Notices",
+          icon: Bell,
+          path: "/accountant/notices",
+        }
+      );
+    }
+
     return items;
   };
 

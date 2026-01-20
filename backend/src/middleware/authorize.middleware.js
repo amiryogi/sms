@@ -131,6 +131,55 @@ const isExamOfficer = (req, res, next) => {
 };
 
 /**
+ * Check if user is accountant
+ */
+const isAccountant = (req, res, next) => {
+  if (!req.user) {
+    throw ApiError.unauthorized('Authentication required');
+  }
+
+  if (!req.user.roles.includes('ACCOUNTANT')) {
+    throw ApiError.forbidden('Accountant access required');
+  }
+
+  next();
+};
+
+/**
+ * Check if user can manage fees (ACCOUNTANT or ADMIN)
+ * ACCOUNTANT: full fee management access
+ * ADMIN: full access with override capability
+ */
+const canManageFees = (req, res, next) => {
+  if (!req.user) {
+    throw ApiError.unauthorized('Authentication required');
+  }
+
+  const allowedRoles = ['ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'];
+  const hasRole = req.user.roles.some((role) => allowedRoles.includes(role));
+
+  if (!hasRole) {
+    throw ApiError.forbidden('You do not have permission to manage fees');
+  }
+
+  next();
+};
+
+/**
+ * Determine the role used for fee operations (for audit trail)
+ * Priority: ACCOUNTANT > ADMIN
+ */
+const getFeeManagementRole = (user) => {
+  if (user.roles.includes('ACCOUNTANT')) {
+    return 'ACCOUNTANT';
+  }
+  if (user.roles.includes('SUPER_ADMIN') || user.roles.includes('ADMIN')) {
+    return 'ADMIN';
+  }
+  return 'UNKNOWN';
+};
+
+/**
  * Check if user can enter marks (TEACHER, EXAM_OFFICER, or ADMIN)
  * TEACHER: must be assigned to the subject (checked in controller)
  * EXAM_OFFICER: can enter marks for any subject
@@ -191,7 +240,10 @@ module.exports = {
   isStudent,
   isParent,
   isExamOfficer,
+  isAccountant,
   canEnterMarks,
   getMarksEntryRole,
+  canManageFees,
+  getFeeManagementRole,
   schoolScope,
 };
