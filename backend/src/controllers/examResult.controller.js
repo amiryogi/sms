@@ -7,7 +7,7 @@ const { getMarksEntryRole } = require("../middleware");
  * EXAM_OFFICER and ADMIN can enter marks for any subject
  */
 const canBypassTeacherCheck = (user) => {
-  const bypassRoles = ['EXAM_OFFICER', 'ADMIN', 'SUPER_ADMIN'];
+  const bypassRoles = ["EXAM_OFFICER", "ADMIN", "SUPER_ADMIN"];
   return user.roles.some((role) => bypassRoles.includes(role));
 };
 
@@ -92,14 +92,32 @@ const getExamsForMarksEntry = asyncHandler(async (req, res) => {
               },
               select: { id: true, name: true },
             });
+
+            // Check if NEB class (Grade 11-12) and fetch components
+            const gradeLevel = es.classSubject.class.gradeLevel;
+            const isNEBClass = gradeLevel >= 11;
+            let nebComponents = null;
+
+            if (isNEBClass) {
+              nebComponents = await prisma.subjectComponent.findMany({
+                where: {
+                  classId: es.classSubject.classId,
+                  subjectId: es.classSubject.subjectId,
+                },
+                orderBy: { type: "asc" },
+              });
+            }
+
             return {
               ...es,
               assignedSectionIds: sections.map((s) => s.id),
               sections: sections,
+              isNEBClass,
+              nebComponents: nebComponents || [],
             };
-          })
+          }),
         ),
-      }))
+      })),
     );
 
     return ApiResponse.success(res, examsWithSections);
@@ -118,7 +136,7 @@ const getExamsForMarksEntry = asyncHandler(async (req, res) => {
     return ApiResponse.success(
       res,
       [],
-      "No subjects assigned to you for this academic year."
+      "No subjects assigned to you for this academic year.",
     );
   }
 
@@ -172,18 +190,41 @@ const getExamsForMarksEntry = asyncHandler(async (req, res) => {
     },
   });
 
-  const examsWithSections = exams.map((exam) => ({
-    ...exam,
-    examSubjects: exam.examSubjects.map((es) => {
-      const assignedSections = teacherSubjects
-        .filter((ts) => ts.classSubjectId === es.classSubjectId)
-        .map((ts) => ts.sectionId);
-      return {
-        ...es,
-        assignedSectionIds: assignedSections,
-      };
-    }),
-  }));
+  // Map exams with sections and NEB info
+  const examsWithSections = await Promise.all(
+    exams.map(async (exam) => ({
+      ...exam,
+      examSubjects: await Promise.all(
+        exam.examSubjects.map(async (es) => {
+          const assignedSections = teacherSubjects
+            .filter((ts) => ts.classSubjectId === es.classSubjectId)
+            .map((ts) => ts.sectionId);
+
+          // Check if NEB class (Grade 11-12) and fetch components
+          const gradeLevel = es.classSubject.class.gradeLevel;
+          const isNEBClass = gradeLevel >= 11;
+          let nebComponents = null;
+
+          if (isNEBClass) {
+            nebComponents = await prisma.subjectComponent.findMany({
+              where: {
+                classId: es.classSubject.classId,
+                subjectId: es.classSubject.subjectId,
+              },
+              orderBy: { type: "asc" },
+            });
+          }
+
+          return {
+            ...es,
+            assignedSectionIds: assignedSections,
+            isNEBClass,
+            nebComponents: nebComponents || [],
+          };
+        }),
+      ),
+    })),
+  );
 
   ApiResponse.success(res, examsWithSections);
 });
@@ -225,7 +266,7 @@ const getTeacherExams = asyncHandler(async (req, res) => {
     return ApiResponse.success(
       res,
       [],
-      "No subjects assigned to you for this academic year."
+      "No subjects assigned to you for this academic year.",
     );
   }
 
@@ -327,6 +368,22 @@ const getResultsByExamSubject = asyncHandler(async (req, res) => {
     throw ApiError.forbidden("Exam subject does not belong to your school");
   }
 
+  // Check if this is NEB class (Grade 11 or 12) and get SubjectComponents
+  const gradeLevel = examSubject.classSubject.class.gradeLevel;
+  const isNEBClass = gradeLevel >= 11;
+  let nebComponents = null;
+
+  if (isNEBClass) {
+    // Fetch NEB subject components for this subject/class combination
+    nebComponents = await prisma.subjectComponent.findMany({
+      where: {
+        classId: examSubject.classSubject.classId,
+        subjectId: examSubject.classSubject.subjectId,
+      },
+      orderBy: { type: "asc" }, // THEORY first, then PRACTICAL
+    });
+  }
+
   // TEACHER: Verify teacher is assigned to this subject
   // EXAM_OFFICER/ADMIN: Skip assignment check
   if (!isExamOfficerOrAdmin) {
@@ -374,6 +431,9 @@ const getResultsByExamSubject = asyncHandler(async (req, res) => {
   ApiResponse.success(res, {
     examSubject,
     results,
+    // NEB-specific info for Grade 11-12
+    isNEBClass,
+    nebComponents: nebComponents || [],
   });
 });
 
@@ -412,7 +472,7 @@ const saveResults = asyncHandler(async (req, res) => {
   // 2. CHECK: Exam must be PUBLISHED (not DRAFT or LOCKED)
   if (examSubject.exam.status !== "PUBLISHED") {
     throw ApiError.badRequest(
-      `Cannot enter marks. Exam status is ${examSubject.exam.status}. Marks can only be entered when exam is PUBLISHED.`
+      `Cannot enter marks. Exam status is ${examSubject.exam.status}. Marks can only be entered when exam is PUBLISHED.`,
     );
   }
 
@@ -428,7 +488,7 @@ const saveResults = asyncHandler(async (req, res) => {
 
     if (!teacherAssignment) {
       throw ApiError.forbidden(
-        "You are not assigned to this subject/section. Cannot enter marks."
+        "You are not assigned to this subject/section. Cannot enter marks.",
       );
     }
   }
@@ -450,17 +510,17 @@ const saveResults = asyncHandler(async (req, res) => {
 
   const validStudentIds = new Set(validStudents.map((vs) => vs.studentId));
   const studentClassMap = new Map(
-    validStudents.map((vs) => [vs.studentId, vs.id])
+    validStudents.map((vs) => [vs.studentId, vs.id]),
   );
 
   // Filter to only valid students
   const validResults = results.filter((r) =>
-    validStudentIds.has(parseInt(r.studentId))
+    validStudentIds.has(parseInt(r.studentId)),
   );
 
   if (validResults.length === 0) {
     throw ApiError.badRequest(
-      "No valid students found. Students must be enrolled in the correct class/section."
+      "No valid students found. Students must be enrolled in the correct class/section.",
     );
   }
 
@@ -485,14 +545,14 @@ const saveResults = asyncHandler(async (req, res) => {
       // Reject practical marks if the exam subject doesn't have practical component
       if (!hasPracticalFlag && practicalObtained > 0) {
         throw ApiError.badRequest(
-          `Practical marks not allowed for student ${result.studentId} - this subject does not have a practical component`
+          `Practical marks not allowed for student ${result.studentId} - this subject does not have a practical component`,
         );
       }
 
       // Reject theory marks if the exam subject is practical-only (rare case)
       if (!hasTheoryFlag && theoryObtained > 0) {
         throw ApiError.badRequest(
-          `Theory marks not allowed for student ${result.studentId} - this is a practical-only subject`
+          `Theory marks not allowed for student ${result.studentId} - this is a practical-only subject`,
         );
       }
 
@@ -504,17 +564,17 @@ const saveResults = asyncHandler(async (req, res) => {
 
       if (theoryObtained < 0 || practicalObtained < 0) {
         throw ApiError.badRequest(
-          `Marks cannot be negative for student ${result.studentId}`
+          `Marks cannot be negative for student ${result.studentId}`,
         );
       }
       if (hasTheoryFlag && theoryObtained > theoryLimit) {
         throw ApiError.badRequest(
-          `Theory marks for student ${result.studentId} cannot exceed ${theoryLimit}`
+          `Theory marks for student ${result.studentId} cannot exceed ${theoryLimit}`,
         );
       }
       if (hasPracticalFlag && practicalObtained > practicalLimit) {
         throw ApiError.badRequest(
-          `Practical marks for student ${result.studentId} cannot exceed ${practicalLimit}`
+          `Practical marks for student ${result.studentId} cannot exceed ${practicalLimit}`,
         );
       }
 
@@ -568,7 +628,7 @@ const saveResults = asyncHandler(async (req, res) => {
   ApiResponse.success(
     res,
     savedResults,
-    `Successfully saved marks for ${savedResults.length} students.`
+    `Successfully saved marks for ${savedResults.length} students.`,
   );
 });
 

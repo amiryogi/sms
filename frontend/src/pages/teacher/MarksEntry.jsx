@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { Select, Button } from "../../components/common/FormElements";
-import { Save } from "lucide-react";
+import { Save, GraduationCap, AlertCircle } from "lucide-react";
 import { examService } from "../../api/examService";
 import { teacherService } from "../../api/teacherService";
 
@@ -19,7 +19,8 @@ const MarksEntry = () => {
   });
 
   // Check if user is EXAM_OFFICER (not TEACHER or ADMIN)
-  const isExamOfficer = hasRole("EXAM_OFFICER") && !hasRole("TEACHER") && !hasRole("ADMIN");
+  const isExamOfficer =
+    hasRole("EXAM_OFFICER") && !hasRole("TEACHER") && !hasRole("ADMIN");
   const isTeacher = hasRole("TEACHER");
 
   useEffect(() => {
@@ -36,17 +37,19 @@ const MarksEntry = () => {
     try {
       // Use unified endpoint that works for all roles (Teacher, EXAM_OFFICER, Admin)
       const examsRes = await examService.getExamsForMarksEntry();
-      
+
       // Filter out only PUBLISHED exams (backend should handle this, but safety first)
       const publishedExams = (examsRes.data || []).filter(
-        (e) => e.status === "PUBLISHED"
+        (e) => e.status === "PUBLISHED",
       );
       setExams(publishedExams);
 
       // For TEACHER role, also fetch their assignments for filtering
       // EXAM_OFFICER doesn't need assignments - they can access all subjects
       if (isTeacher) {
-        const assignmentsRes = await teacherService.getTeacherAssignments({ userId: user?.id });
+        const assignmentsRes = await teacherService.getTeacherAssignments({
+          userId: user?.id,
+        });
         setTeacherAssignments(assignmentsRes.data || []);
       }
     } catch (error) {
@@ -60,7 +63,7 @@ const MarksEntry = () => {
       // Find exam subject ID
       const exam = exams.find((e) => e.id?.toString() === filters.examId);
       const examSubject = exam?.examSubjects?.find(
-        (es) => es.classSubjectId?.toString() === filters.classSubjectId
+        (es) => es.classSubjectId?.toString() === filters.classSubjectId,
       );
 
       if (examSubject) {
@@ -71,7 +74,7 @@ const MarksEntry = () => {
           // Try fetching existing results first
           const resultsRes = await examService.getResultsBySubject(
             examSubject.id,
-            filters.sectionId
+            filters.sectionId,
           );
           const { results } = resultsRes.data;
 
@@ -93,7 +96,7 @@ const MarksEntry = () => {
         if (marks.length === 0) {
           const studentsRes = await examService.getStudentsForMarksEntry(
             examSubject.id,
-            filters.sectionId
+            filters.sectionId,
           );
           const studentList = studentsRes.data?.students || [];
 
@@ -120,8 +123,8 @@ const MarksEntry = () => {
   const updateMarks = (studentId, field, value) => {
     setMarksData((prev) =>
       prev.map((m) =>
-        m.studentId === studentId ? { ...m, [field]: value } : m
-      )
+        m.studentId === studentId ? { ...m, [field]: value } : m,
+      ),
     );
   };
 
@@ -130,12 +133,12 @@ const MarksEntry = () => {
     try {
       const exam = exams.find((e) => e.id?.toString() === filters.examId);
       const examSubject = exam?.examSubjects?.find(
-        (es) => es.classSubjectId?.toString() === filters.classSubjectId
+        (es) => es.classSubjectId?.toString() === filters.classSubjectId,
       );
 
       if (!examSubject) {
         alert(
-          "Exam subject not found. Please ensure the exam includes this subject."
+          "Exam subject not found. Please ensure the exam includes this subject.",
         );
         return;
       }
@@ -186,21 +189,24 @@ const MarksEntry = () => {
         label: `${ta.classSubject?.class?.name} ${ta.section?.name} - ${ta.classSubject?.subject?.name}`,
       }));
     }
-    
+
     // For EXAM_OFFICER/ADMIN: Build options from the selected exam's subjects
     if (!filters.examId) return [];
-    
-    const selectedExamForOptions = exams.find((e) => e.id?.toString() === filters.examId);
+
+    const selectedExamForOptions = exams.find(
+      (e) => e.id?.toString() === filters.examId,
+    );
     if (!selectedExamForOptions?.examSubjects) return [];
-    
+
     const options = [];
     selectedExamForOptions.examSubjects.forEach((es) => {
       // Get sections from the exam subject (backend provides assignedSectionIds or sections)
-      const sectionIds = es.assignedSectionIds || (es.sections?.map(s => s.id)) || [];
+      const sectionIds =
+        es.assignedSectionIds || es.sections?.map((s) => s.id) || [];
       const sections = es.sections || [];
-      
+
       sectionIds.forEach((sectionId) => {
-        const section = sections.find(s => s.id === sectionId);
+        const section = sections.find((s) => s.id === sectionId);
         const sectionName = section?.name || `Section ${sectionId}`;
         options.push({
           value: `${es.classSubjectId}-${sectionId}`,
@@ -208,7 +214,7 @@ const MarksEntry = () => {
         });
       });
     });
-    
+
     return options;
   };
 
@@ -217,18 +223,40 @@ const MarksEntry = () => {
   const selectedExam = exams.find((e) => e.id?.toString() === filters.examId);
   /* Find the specific exam subject to get max marks config */
   const currentExamSubject = selectedExam?.examSubjects?.find(
-    (es) => es.classSubjectId?.toString() === filters.classSubjectId
+    (es) => es.classSubjectId?.toString() === filters.classSubjectId,
   );
+
+  // Check if this is NEB class (Grade 11-12) with component data
+  const isNEBClass = currentExamSubject?.isNEBClass || false;
+  const nebComponents = currentExamSubject?.nebComponents || [];
+  const theoryComponent = nebComponents.find((c) => c.type === "THEORY");
+  const practicalComponent = nebComponents.find((c) => c.type === "PRACTICAL");
+
   // Use ExamSubject flags as single source of truth for evaluation structure
-  // These are snapshots copied from ClassSubject at exam creation time
+  // For NEB classes, use SubjectComponent data if available
   const hasPractical =
-    currentExamSubject?.hasPractical === true ||
-    (currentExamSubject?.practicalFullMarks ?? 0) > 0; // Fallback for backward compatibility
-  const hasTheory = currentExamSubject?.hasTheory !== false; // Default to true
-  const theoryMax = hasTheory ? currentExamSubject?.theoryFullMarks || 100 : 0;
-  const practicalMax = hasPractical
-    ? currentExamSubject?.practicalFullMarks || 0
-    : 0;
+    isNEBClass && nebComponents.length > 0
+      ? !!practicalComponent
+      : currentExamSubject?.hasPractical === true ||
+        (currentExamSubject?.practicalFullMarks ?? 0) > 0;
+  const hasTheory =
+    isNEBClass && nebComponents.length > 0
+      ? !!theoryComponent
+      : currentExamSubject?.hasTheory !== false;
+
+  // For NEB classes, use SubjectComponent marks; otherwise use ExamSubject marks
+  const theoryMax =
+    isNEBClass && theoryComponent
+      ? theoryComponent.fullMarks
+      : hasTheory
+        ? currentExamSubject?.theoryFullMarks || 100
+        : 0;
+  const practicalMax =
+    isNEBClass && practicalComponent
+      ? practicalComponent.fullMarks
+      : hasPractical
+        ? currentExamSubject?.practicalFullMarks || 0
+        : 0;
 
   return (
     <div className="page-container">
@@ -236,8 +264,8 @@ const MarksEntry = () => {
         <div>
           <h1>Marks Entry</h1>
           <p className="text-muted">
-            {isExamOfficer 
-              ? "Enter exam marks for any subject (Exam Officer)" 
+            {isExamOfficer
+              ? "Enter exam marks for any subject (Exam Officer)"
               : "Enter exam marks for your assigned subjects"}
           </p>
         </div>
@@ -251,8 +279,8 @@ const MarksEntry = () => {
             options={examOptions}
             value={filters.examId}
             onChange={(e) =>
-              setFilters((prev) => ({ 
-                ...prev, 
+              setFilters((prev) => ({
+                ...prev,
                 examId: e.target.value,
                 // Reset class/subject/section when exam changes (for EXAM_OFFICER)
                 classSubjectId: isExamOfficer ? "" : prev.classSubjectId,
@@ -293,6 +321,31 @@ const MarksEntry = () => {
             <div className="text-muted text-center">No students found.</div>
           ) : (
             <>
+              {/* NEB Info Banner for Grade 11-12 */}
+              {isNEBClass && nebComponents.length > 0 && (
+                <div
+                  className="neb-info"
+                  style={{
+                    background: "#fef3c7",
+                    border: "1px solid #fcd34d",
+                    borderRadius: "8px",
+                    padding: "0.75rem 1rem",
+                    marginBottom: "0.75rem",
+                    display: "flex",
+                    gap: "0.75rem",
+                    alignItems: "center",
+                  }}
+                >
+                  <GraduationCap size={18} style={{ color: "#92400e" }} />
+                  <span style={{ fontWeight: 500, color: "#92400e" }}>
+                    NEB Class (Grade 11-12)
+                  </span>
+                  <span style={{ color: "#78350f", fontSize: "0.9em" }}>
+                    Using NEB subject component structure with credit-weighted GPA
+                  </span>
+                </div>
+              )}
+
               {/* Evaluation Structure Info Banner */}
               <div
                 className="eval-info"
@@ -305,17 +358,28 @@ const MarksEntry = () => {
                   display: "flex",
                   gap: "1rem",
                   alignItems: "center",
+                  flexWrap: "wrap",
                 }}
               >
                 <span style={{ fontWeight: 500 }}>Evaluation Structure:</span>
                 {hasTheory && (
                   <span className="badge badge-info">
                     Theory: {theoryMax} marks
+                    {isNEBClass && theoryComponent && (
+                      <span style={{ marginLeft: "6px", opacity: 0.8 }}>
+                        ({theoryComponent.subjectCode} • {theoryComponent.creditHours} cr)
+                      </span>
+                    )}
                   </span>
                 )}
                 {hasPractical && (
                   <span className="badge badge-success">
                     Practical: {practicalMax} marks
+                    {isNEBClass && practicalComponent && (
+                      <span style={{ marginLeft: "6px", opacity: 0.8 }}>
+                        ({practicalComponent.subjectCode} • {practicalComponent.creditHours} cr)
+                      </span>
+                    )}
                   </span>
                 )}
                 {!hasTheory && !hasPractical && (
@@ -323,6 +387,7 @@ const MarksEntry = () => {
                     No evaluation configured
                   </span>
                 )}
+              </div>
               </div>
 
               <div className="marks-header">
@@ -344,7 +409,7 @@ const MarksEntry = () => {
                           updateMarks(
                             record.studentId,
                             "marksObtained",
-                            e.target.value
+                            e.target.value,
                           )
                         }
                         min="0"
@@ -362,7 +427,7 @@ const MarksEntry = () => {
                           updateMarks(
                             record.studentId,
                             "practicalMarks",
-                            e.target.value
+                            e.target.value,
                           )
                         }
                         min="0"
@@ -380,7 +445,7 @@ const MarksEntry = () => {
                           updateMarks(
                             record.studentId,
                             "isAbsent",
-                            e.target.checked
+                            e.target.checked,
                           )
                         }
                       />{" "}

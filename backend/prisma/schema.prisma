@@ -114,6 +114,12 @@ enum PaymentStatus {
   paid
 }
 
+// NEB (Nepal Education Board) component types for Grade 11-12
+enum ComponentType {
+  THEORY
+  PRACTICAL
+}
+
 // =====================================================
 // CORE: SCHOOLS (Multi-school Ready)
 // =====================================================
@@ -354,6 +360,7 @@ model Class {
   promotionsTo       Promotion[]         @relation("ToClass")
   noticeClassTargets NoticeClassTarget[]
   feeStructures      FeeStructure[]
+  subjectComponents  SubjectComponent[]  // NEB Grade 11-12 components
 
   @@unique([schoolId, name])
   @@index([schoolId])
@@ -401,13 +408,43 @@ model Subject {
   createdAt    DateTime @default(now()) @map("created_at")
 
   // Relations
-  school        School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  classSubjects ClassSubject[]
+  school            School             @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classSubjects     ClassSubject[]
+  subjectComponents SubjectComponent[] // NEB Grade 11-12 components
 
   @@unique([schoolId, code])
   @@index([schoolId])
   @@index([code])
   @@map("subjects")
+}
+
+// =====================================================
+// SUBJECT_COMPONENTS (NEB Grade 11-12 Only)
+// =====================================================
+
+/// NEB-compliant subject components for Grade 11-12
+/// Theory and Practical are SEPARATE assessment components
+/// Each component has its own subject code, marks, and credit hours
+model SubjectComponent {
+  id          Int           @id @default(autoincrement())
+  subjectId   Int           @map("subject_id")
+  classId     Int           @map("class_id")
+  type        ComponentType
+  subjectCode String        @map("subject_code") @db.VarChar(20)
+  fullMarks   Int           @map("full_marks")
+  passMarks   Int           @map("pass_marks")
+  creditHours Float         @map("credit_hours")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, subjectId, type])
+  @@index([subjectId])
+  @@index([classId])
+  @@map("subject_components")
 }
 
 // =====================================================

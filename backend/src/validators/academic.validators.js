@@ -40,10 +40,41 @@ const classSubjectRules = [
   body('creditHours').optional().isDecimal({ decimal_digits: '0,1' }).withMessage('Credit hours must be a decimal (e.g. 3.0)'),
 ];
 
+// NEB Subject Component validation rules (Grade 11-12 only)
+const subjectComponentRules = [
+  body('subjectId').isInt({ min: 1 }).withMessage('Valid Subject ID is required'),
+  body('classId').isInt({ min: 1 }).withMessage('Valid Class ID is required'),
+  body('type')
+    .isIn(['THEORY', 'PRACTICAL'])
+    .withMessage('Type must be either THEORY or PRACTICAL'),
+  body('subjectCode')
+    .trim()
+    .notEmpty()
+    .withMessage('Subject code is required')
+    .isLength({ max: 20 })
+    .withMessage('Subject code must be at most 20 characters'),
+  body('fullMarks')
+    .isInt({ min: 1 })
+    .withMessage('Full marks must be at least 1'),
+  body('passMarks')
+    .isInt({ min: 0 })
+    .withMessage('Pass marks must be a non-negative integer')
+    .custom((value, { req }) => {
+      if (parseInt(value) > parseInt(req.body.fullMarks)) {
+        throw new Error('Pass marks cannot exceed full marks');
+      }
+      return true;
+    }),
+  body('creditHours')
+    .isFloat({ gt: 0 })
+    .withMessage('Credit hours must be greater than 0'),
+];
+
 module.exports = {
   academicYearRules,
   classRules,
   sectionRules,
   subjectRules,
   classSubjectRules,
+  subjectComponentRules,
 };
