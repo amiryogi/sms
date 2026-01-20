@@ -208,10 +208,20 @@ const calculateSubjectGrade = ({
  * Calculate overall GPA from array of subject GPAs
  * Nepal Rule: If any subject has NG (0.0), overall result is FAIL
  *
- * @param {Array<Object>} subjects - Array of subject results with gpa property
- * @returns {Object} { gpa, grade, isPassed, totalSubjects, passedSubjects, failedSubjects }
+ * For NEB Grade 11-12 (useCreditWeighting=true):
+ *   GPA = Σ(gradePoint × creditHours) / Σ(creditHours)
+ *
+ * For Grade 1-10 (useCreditWeighting=false):
+ *   GPA = Simple average of all subject GPAs
+ *
+ * @param {Array<Object>} subjects - Array of subject results with gpa and creditHours properties
+ * @param {Object} options - Calculation options
+ * @param {boolean} options.useCreditWeighting - Whether to use credit-weighted calculation (NEB mode)
+ * @returns {Object} { gpa, grade, isPassed, totalSubjects, passedSubjects, failedSubjects, totalCredits }
  */
-const calculateOverallGPA = (subjects) => {
+const calculateOverallGPA = (subjects, options = {}) => {
+  const { useCreditWeighting = false } = options;
+
   if (!subjects || subjects.length === 0) {
     return {
       gpa: 0,
@@ -221,11 +231,14 @@ const calculateOverallGPA = (subjects) => {
       passedSubjects: 0,
       failedSubjects: 0,
       averagePercentage: 0,
+      totalCredits: 0,
     };
   }
 
   let totalGpa = 0;
   let totalPercentage = 0;
+  let totalCredits = 0;
+  let weightedGpaSum = 0;
   let passedSubjects = 0;
   let failedSubjects = 0;
   let hasNG = false;
@@ -233,9 +246,14 @@ const calculateOverallGPA = (subjects) => {
   subjects.forEach((subject) => {
     const gpa = parseFloat(subject.finalGpa) || 0;
     const percentage = parseFloat(subject.finalPercentage) || 0;
+    const creditHours = parseFloat(subject.creditHours) || 3; // Default 3 credit hours
 
     totalGpa += gpa;
     totalPercentage += percentage;
+
+    // For credit-weighted calculation (NEB)
+    weightedGpaSum += gpa * creditHours;
+    totalCredits += creditHours;
 
     if (subject.isPassed) {
       passedSubjects++;
@@ -245,12 +263,21 @@ const calculateOverallGPA = (subjects) => {
     }
   });
 
-  const averageGpa = subjects.length > 0 ? totalGpa / subjects.length : 0;
+  // Calculate GPA based on mode
+  let calculatedGpa;
+  if (useCreditWeighting && totalCredits > 0) {
+    // NEB Mode: Credit-weighted GPA = Σ(GPA × Credits) / Σ(Credits)
+    calculatedGpa = weightedGpaSum / totalCredits;
+  } else {
+    // Standard Mode: Simple average
+    calculatedGpa = subjects.length > 0 ? totalGpa / subjects.length : 0;
+  }
+
   const averagePercentage =
     subjects.length > 0 ? totalPercentage / subjects.length : 0;
 
   // Round GPA to 2 decimal places
-  const roundedGpa = Math.round(averageGpa * 100) / 100;
+  const roundedGpa = Math.round(calculatedGpa * 100) / 100;
 
   // Get grade from average percentage for display
   const gradeResult = calculateGradeFromPercentage(averagePercentage);
@@ -267,6 +294,7 @@ const calculateOverallGPA = (subjects) => {
     passedSubjects,
     failedSubjects,
     averagePercentage: Math.round(averagePercentage * 100) / 100,
+    totalCredits: Math.round(totalCredits * 10) / 10, // Round to 1 decimal
   };
 };
 

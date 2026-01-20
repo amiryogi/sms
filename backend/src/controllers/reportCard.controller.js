@@ -157,20 +157,25 @@ const getReportCards = asyncHandler(async (req, res) => {
     resultsByStudent[r.studentId].push(r);
   });
 
+  // Check if this is NEB class (Grade 11 or 12) for credit-weighted GPA
+  const isNEBClass = classInfo.gradeLevel >= 11;
+
   // Build response with student data, results, and report card status
   const data = enrollments.map((enrollment) => {
     const rawResults = resultsByStudent[enrollment.studentId] || [];
     const subjectResults = buildSubjectResults(rawResults);
-    const overallResult = gradeCalculator.calculateOverallGPA(subjectResults);
+    const overallResult = gradeCalculator.calculateOverallGPA(subjectResults, {
+      useCreditWeighting: isNEBClass,
+    });
     const reportCard = enrollment.student.reportCards[0] || null;
 
     const totalObtained = subjectResults.reduce(
       (sum, r) => sum + r.totalMarks,
-      0
+      0,
     );
     const totalFull = subjectResults.reduce(
       (sum, r) => sum + r.totalFullMarks,
-      0
+      0,
     );
 
     return {
@@ -240,6 +245,16 @@ const generateReportCards = asyncHandler(async (req, res) => {
   if (!exam)
     throw ApiError.notFound("Exam not found or does not belong to your school");
 
+  // Get class info to determine if NEB (Grade 11-12)
+  const classInfo = await prisma.class.findUnique({
+    where: { id: parseInt(classId) },
+    select: { id: true, name: true, gradeLevel: true },
+  });
+
+  if (!classInfo) throw ApiError.notFound("Class not found");
+
+  const isNEBClass = classInfo.gradeLevel >= 11;
+
   // Get all students in this class-section
   const enrollments = await prisma.studentClass.findMany({
     where: {
@@ -278,17 +293,22 @@ const generateReportCards = asyncHandler(async (req, res) => {
 
       if (studentResults.length === 0) continue;
 
-      // Process with Nepal grading
+      // Process with Nepal grading - use credit weighting for NEB classes
       const subjectResults = buildSubjectResults(studentResults);
-      const overallResult = gradeCalculator.calculateOverallGPA(subjectResults);
+      const overallResult = gradeCalculator.calculateOverallGPA(
+        subjectResults,
+        {
+          useCreditWeighting: isNEBClass,
+        },
+      );
 
       const totalObtained = subjectResults.reduce(
         (sum, r) => sum + r.totalMarks,
-        0
+        0,
       );
       const totalFull = subjectResults.reduce(
         (sum, r) => sum + r.totalFullMarks,
-        0
+        0,
       );
 
       // Store for ranking
@@ -350,7 +370,7 @@ const generateReportCards = asyncHandler(async (req, res) => {
   ApiResponse.success(
     res,
     { count: reportCards.length },
-    "Report cards generated and ranks assigned successfully"
+    "Report cards generated and ranks assigned successfully",
   );
 });
 
@@ -436,9 +456,12 @@ const getReportCard = asyncHandler(async (req, res) => {
     },
   });
 
-  // Process with Nepal grading
+  // Process with Nepal grading - use credit weighting for NEB classes (Grade 11-12)
+  const isNEBClass = reportCard.studentClass.class.gradeLevel >= 11;
   const subjectResults = buildSubjectResults(examResults);
-  const overallResult = gradeCalculator.calculateOverallGPA(subjectResults);
+  const overallResult = gradeCalculator.calculateOverallGPA(subjectResults, {
+    useCreditWeighting: isNEBClass,
+  });
 
   // Build Nepal-style report card response
   const response = {
@@ -467,16 +490,19 @@ const getReportCard = asyncHandler(async (req, res) => {
       rollNumber: reportCard.studentClass.rollNumber,
       class: reportCard.studentClass.class.name,
       section: reportCard.studentClass.section.name,
+      gradeLevel: reportCard.studentClass.class.gradeLevel,
       admissionNumber: reportCard.student.admissionNumber,
     },
     // Subject-wise Results (Nepal format)
     subjects: subjectResults,
+    // NEB (Nepal Education Board) specific info
+    isNEBClass,
     // Overall Summary
     summary: {
       totalMarks: subjectResults.reduce((sum, s) => sum + s.totalMarks, 0),
       totalFullMarks: subjectResults.reduce(
         (sum, s) => sum + s.totalFullMarks,
-        0
+        0,
       ),
       percentage: overallResult.averagePercentage,
       gpa: overallResult.gpa,
@@ -485,6 +511,7 @@ const getReportCard = asyncHandler(async (req, res) => {
       isPassed: overallResult.isPassed,
       resultStatus: gradeCalculator.getResultStatus(overallResult.isPassed),
       totalSubjects: overallResult.totalSubjects,
+      totalCredits: overallResult.totalCredits, // NEB credit hours total
       passedSubjects: overallResult.passedSubjects,
       failedSubjects: overallResult.failedSubjects,
     },
@@ -551,8 +578,12 @@ const getReportCardPdfData = asyncHandler(async (req, res) => {
     orderBy: { examSubject: { classSubject: { subject: { name: "asc" } } } },
   });
 
+  // Use credit-weighted GPA for NEB classes (Grade 11-12)
+  const isNEBClass = reportCard.studentClass.class.gradeLevel >= 11;
   const subjectResults = buildSubjectResults(examResults);
-  const overallResult = gradeCalculator.calculateOverallGPA(subjectResults);
+  const overallResult = gradeCalculator.calculateOverallGPA(subjectResults, {
+    useCreditWeighting: isNEBClass,
+  });
 
   // Return formatted data for PDF generation
   ApiResponse.success(res, {
@@ -566,11 +597,12 @@ const getReportCardPdfData = asyncHandler(async (req, res) => {
       rollNumber: reportCard.studentClass.rollNumber,
     },
     subjects: subjectResults,
+    isNEBClass,
     summary: {
       totalMarks: subjectResults.reduce((sum, s) => sum + s.totalMarks, 0),
       totalFullMarks: subjectResults.reduce(
         (sum, s) => sum + s.totalFullMarks,
-        0
+        0,
       ),
       percentage: overallResult.averagePercentage,
       gpa: overallResult.gpa,
@@ -578,6 +610,7 @@ const getReportCardPdfData = asyncHandler(async (req, res) => {
       classRank: reportCard.classRank,
       isPassed: overallResult.isPassed,
       resultStatus: gradeCalculator.getResultStatus(overallResult.isPassed),
+      totalCredits: overallResult.totalCredits,
     },
     remarks: {
       teacher: reportCard.teacherRemarks,
@@ -617,7 +650,7 @@ const publishReportCards = asyncHandler(async (req, res) => {
   ApiResponse.success(
     res,
     { updated: result.count },
-    "Report cards published successfully"
+    "Report cards published successfully",
   );
 });
 
@@ -650,7 +683,7 @@ const unpublishReportCards = asyncHandler(async (req, res) => {
   ApiResponse.success(
     res,
     { updated: result.count },
-    "Report cards unpublished successfully"
+    "Report cards unpublished successfully",
   );
 });
 

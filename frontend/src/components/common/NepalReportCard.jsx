@@ -220,7 +220,7 @@ const NepalReportCard = ({ data, onClose, showActions = true }) => {
                             className="grade-badge small"
                             style={{
                               backgroundColor: getGradeColor(
-                                subject.practicalGrade
+                                subject.practicalGrade,
                               ).bg,
                               color: getGradeColor(subject.practicalGrade).text,
                             }}
@@ -318,9 +318,29 @@ const NepalReportCard = ({ data, onClose, showActions = true }) => {
                 <span className="label">Class Rank:</span>
                 <span className="value">{summary?.classRank || "N/A"}</span>
               </div>
+              {/* Show total credit hours for NEB classes */}
+              {data.isNEBClass && summary?.totalCredits && (
+                <div className="summary-item">
+                  <span className="label">Total Credits:</span>
+                  <span className="value">{summary.totalCredits}</span>
+                </div>
+              )}
               <div className="summary-item highlight">
                 <span className="label">Final GPA:</span>
-                <span className="value large">{summary?.gpa?.toFixed(2)}</span>
+                <span className="value large">
+                  {summary?.gpa?.toFixed(2)}
+                  {data.isNEBClass && (
+                    <small
+                      style={{
+                        fontSize: "0.7em",
+                        marginLeft: "4px",
+                        opacity: 0.8,
+                      }}
+                    >
+                      (Credit Weighted)
+                    </small>
+                  )}
+                </span>
               </div>
               <div className="summary-item highlight">
                 <span className="label">Result:</span>
