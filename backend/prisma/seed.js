@@ -234,12 +234,45 @@ const permissions = [
     module: "promotions",
     description: "View promotion history",
   },
+
+  // Fee Management
+  {
+    name: "fee.manage_types",
+    module: "fees",
+    description: "Create/update/delete fee types",
+  },
+  {
+    name: "fee.manage_structures",
+    module: "fees",
+    description: "Create/update/delete fee structures",
+  },
+  {
+    name: "fee.record_payment",
+    module: "fees",
+    description: "Record fee payments",
+  },
+  {
+    name: "fee.view_all",
+    module: "fees",
+    description: "View all fee records and reports",
+  },
+  {
+    name: "fee.generate_invoice",
+    module: "fees",
+    description: "Generate fee invoices for students",
+  },
+  {
+    name: "fee.apply_discount",
+    module: "fees",
+    description: "Apply discounts or fines to fees",
+  },
 ];
 
 const roles = [
   { name: "ADMIN", description: "School Administrator" },
   { name: "TEACHER", description: "Teacher" },
   { name: "EXAM_OFFICER", description: "Exam Officer - Can enter marks for any subject" },
+  { name: "ACCOUNTANT", description: "Accountant - Manages fee collection and billing" },
   { name: "STUDENT", description: "Student" },
   { name: "PARENT", description: "Parent/Guardian" },
 ];
@@ -292,6 +325,12 @@ const rolePermissions = {
     "notice.delete",
     "promotion.process",
     "promotion.view",
+    "fee.manage_types",
+    "fee.manage_structures",
+    "fee.record_payment",
+    "fee.view_all",
+    "fee.generate_invoice",
+    "fee.apply_discount",
   ],
   TEACHER: [
     "student.read",
@@ -331,6 +370,17 @@ const rolePermissions = {
     "exam.read",
     "result.enter",
     "result.view_all",
+    "notice.read",
+  ],
+  ACCOUNTANT: [
+    "student.read",
+    "student.list",
+    "fee.manage_types",
+    "fee.manage_structures",
+    "fee.record_payment",
+    "fee.view_all",
+    "fee.generate_invoice",
+    "fee.apply_discount",
     "notice.read",
   ],
 };
@@ -632,6 +682,37 @@ async function main() {
   });
   console.log(`   ✓ Exam Officer: examofficer@svi.edu.np / password123`);
 
+  // Accountant User
+  const accountantRole = await prisma.role.findUnique({
+    where: { name: "ACCOUNTANT" },
+  });
+  const accountantUser = await prisma.user.upsert({
+    where: {
+      email_schoolId: {
+        email: "accountant@svi.edu.np",
+        schoolId: school.id,
+      },
+    },
+    update: {},
+    create: {
+      schoolId: school.id,
+      email: "accountant@svi.edu.np",
+      passwordHash,
+      firstName: "Accounts",
+      lastName: "Officer",
+      phone: "+977-9806543210",
+      status: "active",
+    },
+  });
+  await prisma.userRole.upsert({
+    where: {
+      userId_roleId: { userId: accountantUser.id, roleId: accountantRole.id },
+    },
+    update: {},
+    create: { userId: accountantUser.id, roleId: accountantRole.id },
+  });
+  console.log(`   ✓ Accountant: accountant@svi.edu.np / password123`);
+
   // Assign teacher to Grade 10 Section A for Math
   const grade10 = createdClasses.find((c) => c.name === "Grade 10");
   const sectionA = createdSections.find((s) => s.name === "A");
@@ -828,6 +909,7 @@ async function main() {
   console.log("   │ Admin        │ admin@svi.edu.np           │ password123     │");
   console.log("   │ Teacher      │ teacher@svi.edu.np         │ password123     │");
   console.log("   │ Exam Officer │ examofficer@svi.edu.np     │ password123     │");
+  console.log("   │ Accountant   │ accountant@svi.edu.np      │ password123     │");
   console.log("   │ Student      │ student@svi.edu.np         │ password123     │");
   console.log("   │ Parent       │ parent@svi.edu.np          │ password123     │");
   console.log("   └──────────────────────────────────────────────────────────────┘");

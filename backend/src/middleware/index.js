@@ -8,8 +8,11 @@ const {
   isStudent,
   isParent,
   isExamOfficer,
+  isAccountant,
   canEnterMarks,
   getMarksEntryRole,
+  canManageFees,
+  getFeeManagementRole,
   schoolScope,
 } = require('./authorize.middleware');
 const validate = require('./validate.middleware');
@@ -48,8 +51,11 @@ module.exports = {
   isStudent,
   isParent,
   isExamOfficer,
+  isAccountant,
   canEnterMarks,
   getMarksEntryRole,
+  canManageFees,
+  getFeeManagementRole,
   schoolScope,
   
   // Validation

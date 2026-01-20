@@ -1,5 +1,6 @@
 const prisma = require("../config/database");
 const { ApiError, ApiResponse, asyncHandler } = require("../utils");
+const { getFeeManagementRole } = require("../middleware");
 
 /**
  * @desc    Get all fee payments (with filters)
@@ -195,12 +196,13 @@ const getStudentFeeSummary = asyncHandler(async (req, res) => {
 /**
  * @desc    Record a fee payment
  * @route   POST /api/v1/fees/payments/:feePaymentId/pay
- * @access  Private/Admin
+ * @access  Private/Admin or Accountant
  */
 const recordPayment = asyncHandler(async (req, res) => {
   const { feePaymentId } = req.params;
   const { amountPaid, paymentDate, paymentMethod, remarks } = req.body;
   const schoolId = req.user.schoolId;
+  const actorRole = getFeeManagementRole(req.user);
 
   const feePayment = await prisma.feePayment.findFirst({
     where: { id: parseInt(feePaymentId), schoolId },
@@ -253,6 +255,9 @@ const recordPayment = asyncHandler(async (req, res) => {
       paymentMethod: paymentMethod || feePayment.paymentMethod,
       receiptNumber,
       remarks: remarks || feePayment.remarks,
+      updatedByUserId: req.user.id,
+      recordedByUserId: req.user.id,
+      actorRole,
     },
     include: {
       feeStructure: { include: { feeType: { select: { name: true } } } },
@@ -278,11 +283,12 @@ const recordPayment = asyncHandler(async (req, res) => {
 /**
  * @desc    Generate fee records for a student's enrollment
  * @route   POST /api/v1/fees/payments/generate/:studentClassId
- * @access  Private/Admin
+ * @access  Private/Admin or Accountant
  */
 const generateStudentFees = asyncHandler(async (req, res) => {
   const { studentClassId } = req.params;
   const schoolId = req.user.schoolId;
+  const actorRole = getFeeManagementRole(req.user);
 
   // Get student enrollment
   const studentClass = await prisma.studentClass.findFirst({
@@ -341,6 +347,9 @@ const generateStudentFees = asyncHandler(async (req, res) => {
           amountDue: fs.amount,
           amountPaid: 0,
           status: "pending",
+          createdByUserId: req.user.id,
+          updatedByUserId: req.user.id,
+          actorRole,
         },
       })
     )
@@ -357,11 +366,12 @@ const generateStudentFees = asyncHandler(async (req, res) => {
 /**
  * @desc    Bulk generate fees for all students in a class
  * @route   POST /api/v1/fees/payments/generate-bulk
- * @access  Private/Admin
+ * @access  Private/Admin or Accountant
  */
 const bulkGenerateFees = asyncHandler(async (req, res) => {
   const { classId, academicYearId } = req.body;
   const schoolId = req.user.schoolId;
+  const actorRole = getFeeManagementRole(req.user);
 
   // Get all active students in the class for this year
   const studentClasses = await prisma.studentClass.findMany({
@@ -418,6 +428,9 @@ const bulkGenerateFees = asyncHandler(async (req, res) => {
           amountDue: fs.amount,
           amountPaid: 0,
           status: "pending",
+          createdByUserId: req.user.id,
+          updatedByUserId: req.user.id,
+          actorRole,
         });
       }
     }

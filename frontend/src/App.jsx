@@ -196,6 +196,21 @@ function App() {
               <Route path="/parent/fees" element={<ParentFees />} />
             </Route>
 
+            {/* Accountant Routes */}
+            <Route
+              element={
+                <ProtectedRoute roles={["ACCOUNTANT", "ADMIN"]}>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/accountant/dashboard" element={<AdminFeePayments />} />
+              <Route path="/accountant/fee-types" element={<AdminFeeTypes />} />
+              <Route path="/accountant/fee-structures" element={<AdminFeeStructures />} />
+              <Route path="/accountant/fee-payments" element={<AdminFeePayments />} />
+              <Route path="/accountant/notices" element={<NoticesView />} />
+            </Route>
+
             {/* Dashboard Redirect Logic */}
             <Route
               element={
@@ -231,6 +246,9 @@ function RoleBasedDashboard() {
 
   if (user.roles.includes("ADMIN")) {
     return <Navigate to="/admin/dashboard" replace />;
+  }
+  if (user.roles.includes("ACCOUNTANT")) {
+    return <Navigate to="/accountant/dashboard" replace />;
   }
   if (user.roles.includes("EXAM_OFFICER")) {
     return <Navigate to="/teacher/marks" replace />;

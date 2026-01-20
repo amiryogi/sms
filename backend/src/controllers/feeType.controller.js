@@ -5,6 +5,7 @@ const {
   asyncHandler,
   buildSearchQuery,
 } = require("../utils");
+const { getFeeManagementRole } = require("../middleware");
 
 /**
  * @desc    Get all fee types
@@ -63,10 +64,11 @@ const getFeeType = asyncHandler(async (req, res) => {
 /**
  * @desc    Create fee type
  * @route   POST /api/v1/fees/types
- * @access  Private/Admin
+ * @access  Private/Admin or Accountant
  */
 const createFeeType = asyncHandler(async (req, res) => {
   const { name, description, isActive } = req.body;
+  const actorRole = getFeeManagementRole(req.user);
 
   // Check for duplicate name
   const existingFeeType = await prisma.feeType.findFirst({
@@ -83,6 +85,9 @@ const createFeeType = asyncHandler(async (req, res) => {
       name,
       description,
       isActive: isActive !== undefined ? isActive : true,
+      createdByUserId: req.user.id,
+      updatedByUserId: req.user.id,
+      actorRole,
     },
   });
 
@@ -92,11 +97,12 @@ const createFeeType = asyncHandler(async (req, res) => {
 /**
  * @desc    Update fee type
  * @route   PUT /api/v1/fees/types/:id
- * @access  Private/Admin
+ * @access  Private/Admin or Accountant
  */
 const updateFeeType = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { name, description, isActive } = req.body;
+  const actorRole = getFeeManagementRole(req.user);
 
   const feeType = await prisma.feeType.findFirst({
     where: { id: parseInt(id), schoolId: req.user.schoolId },
@@ -124,6 +130,8 @@ const updateFeeType = asyncHandler(async (req, res) => {
       description:
         description !== undefined ? description : feeType.description,
       isActive: isActive !== undefined ? isActive : feeType.isActive,
+      updatedByUserId: req.user.id,
+      actorRole,
     },
   });
 

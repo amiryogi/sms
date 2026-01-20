@@ -261,6 +261,15 @@ model User {
   // Promotions processed by this user (admin)
   promotionsProcessed Promotion[] @relation("ProcessedBy")
 
+  // Fee audit relations
+  feeTypesCreated      FeeType[]      @relation("FeeTypeCreatedBy")
+  feeTypesUpdated      FeeType[]      @relation("FeeTypeUpdatedBy")
+  feeStructuresCreated FeeStructure[] @relation("FeeStructureCreatedBy")
+  feeStructuresUpdated FeeStructure[] @relation("FeeStructureUpdatedBy")
+  feePaymentsCreated   FeePayment[]   @relation("FeePaymentCreatedBy")
+  feePaymentsUpdated   FeePayment[]   @relation("FeePaymentUpdatedBy")
+  feePaymentsRecorded  FeePayment[]   @relation("FeePaymentRecordedBy")
+
   @@unique([email, schoolId])
   @@index([schoolId])
   @@index([email])
@@ -1027,40 +1036,51 @@ model Promotion {
 
 /// Master list of fee categories per school
 model FeeType {
-  id          Int      @id @default(autoincrement())
-  schoolId    Int      @map("school_id")
-  name        String   @db.VarChar(100)
-  description String?  @db.Text
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id            Int      @id @default(autoincrement())
+  schoolId      Int      @map("school_id")
+  name          String   @db.VarChar(100)
+  description   String?  @db.Text
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  createdByUserId Int?   @map("created_by_user_id")
+  updatedByUserId Int?   @map("updated_by_user_id")
+  actorRole     String?  @map("actor_role") @db.VarChar(50)
 
   // Relations
   school        School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  createdByUser User?          @relation("FeeTypeCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  updatedByUser User?          @relation("FeeTypeUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
   feeStructures FeeStructure[]
 
   @@unique([schoolId, name])
   @@index([schoolId])
   @@index([isActive])
+  @@index([createdByUserId])
   @@map("fee_types")
 }
 
 /// Fee amounts per class per academic year
 model FeeStructure {
-  id             Int      @id @default(autoincrement())
-  schoolId       Int      @map("school_id")
-  feeTypeId      Int      @map("fee_type_id")
-  classId        Int      @map("class_id")
-  academicYearId Int      @map("academic_year_id")
-  amount         Decimal  @db.Decimal(10, 2)
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id              Int      @id @default(autoincrement())
+  schoolId        Int      @map("school_id")
+  feeTypeId       Int      @map("fee_type_id")
+  classId         Int      @map("class_id")
+  academicYearId  Int      @map("academic_year_id")
+  amount          Decimal  @db.Decimal(10, 2)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  createdByUserId Int?     @map("created_by_user_id")
+  updatedByUserId Int?     @map("updated_by_user_id")
+  actorRole       String?  @map("actor_role") @db.VarChar(50)
 
   // Relations
   school       School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   feeType      FeeType      @relation(fields: [feeTypeId], references: [id], onDelete: Cascade)
   class        Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
   academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  createdByUser User?       @relation("FeeStructureCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  updatedByUser User?       @relation("FeeStructureUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
   feePayments  FeePayment[]
 
   @@unique([feeTypeId, classId, academicYearId])
@@ -1069,29 +1089,37 @@ model FeeStructure {
   @@index([classId])
   @@index([academicYearId])
   @@index([classId, academicYearId])
+  @@index([createdByUserId])
   @@map("fee_structures")
 }
 
 /// Payment records linked to student enrollment
 model FeePayment {
-  id             Int           @id @default(autoincrement())
-  schoolId       Int           @map("school_id")
-  studentClassId Int           @map("student_class_id")
-  feeStructureId Int           @map("fee_structure_id")
-  amountDue      Decimal       @map("amount_due") @db.Decimal(10, 2)
-  amountPaid     Decimal       @default(0) @map("amount_paid") @db.Decimal(10, 2)
-  status         PaymentStatus @default(pending)
-  paymentDate    DateTime?     @map("payment_date") @db.Date
-  receiptNumber  String?       @map("receipt_number") @db.VarChar(50)
-  paymentMethod  String?       @map("payment_method") @db.VarChar(50)
-  remarks        String?       @db.Text
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
+  id              Int           @id @default(autoincrement())
+  schoolId        Int           @map("school_id")
+  studentClassId  Int           @map("student_class_id")
+  feeStructureId  Int           @map("fee_structure_id")
+  amountDue       Decimal       @map("amount_due") @db.Decimal(10, 2)
+  amountPaid      Decimal       @default(0) @map("amount_paid") @db.Decimal(10, 2)
+  status          PaymentStatus @default(pending)
+  paymentDate     DateTime?     @map("payment_date") @db.Date
+  receiptNumber   String?       @map("receipt_number") @db.VarChar(50)
+  paymentMethod   String?       @map("payment_method") @db.VarChar(50)
+  remarks         String?       @db.Text
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  createdByUserId Int?          @map("created_by_user_id")
+  updatedByUserId Int?          @map("updated_by_user_id")
+  recordedByUserId Int?         @map("recorded_by_user_id")
+  actorRole       String?       @map("actor_role") @db.VarChar(50)
 
   // Relations
-  school       School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  studentClass StudentClass @relation(fields: [studentClassId], references: [id], onDelete: Cascade)
-  feeStructure FeeStructure @relation(fields: [feeStructureId], references: [id], onDelete: Cascade)
+  school         School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  studentClass   StudentClass @relation(fields: [studentClassId], references: [id], onDelete: Cascade)
+  feeStructure   FeeStructure @relation(fields: [feeStructureId], references: [id], onDelete: Cascade)
+  createdByUser  User?        @relation("FeePaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  updatedByUser  User?        @relation("FeePaymentUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  recordedByUser User?        @relation("FeePaymentRecordedBy", fields: [recordedByUserId], references: [id], onDelete: SetNull)
 
   @@unique([studentClassId, feeStructureId])
   @@index([schoolId])
@@ -1099,6 +1127,7 @@ model FeePayment {
   @@index([feeStructureId])
   @@index([status])
   @@index([paymentDate])
+  @@index([recordedByUserId])
   @@map("fee_payments")
 }
 

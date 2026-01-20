@@ -1,5 +1,6 @@
 const prisma = require("../config/database");
 const { ApiError, ApiResponse, asyncHandler } = require("../utils");
+const { getFeeManagementRole } = require("../middleware");
 
 /**
  * @desc    Get all fee structures
@@ -88,11 +89,12 @@ const getFeeStructure = asyncHandler(async (req, res) => {
 /**
  * @desc    Create fee structure
  * @route   POST /api/v1/fees/structures
- * @access  Private/Admin
+ * @access  Private/Admin or Accountant
  */
 const createFeeStructure = asyncHandler(async (req, res) => {
   const { feeTypeId, classId, academicYearId, amount } = req.body;
   const schoolId = req.user.schoolId;
+  const actorRole = getFeeManagementRole(req.user);
 
   // Validate feeType exists and belongs to school
   const feeType = await prisma.feeType.findFirst({
@@ -135,6 +137,9 @@ const createFeeStructure = asyncHandler(async (req, res) => {
       classId,
       academicYearId,
       amount: parseFloat(amount),
+      createdByUserId: req.user.id,
+      updatedByUserId: req.user.id,
+      actorRole,
     },
     include: {
       feeType: { select: { id: true, name: true } },
@@ -149,11 +154,12 @@ const createFeeStructure = asyncHandler(async (req, res) => {
 /**
  * @desc    Update fee structure (amount only)
  * @route   PUT /api/v1/fees/structures/:id
- * @access  Private/Admin
+ * @access  Private/Admin or Accountant
  */
 const updateFeeStructure = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { amount } = req.body;
+  const actorRole = getFeeManagementRole(req.user);
 
   const feeStructure = await prisma.feeStructure.findFirst({
     where: { id: parseInt(id), schoolId: req.user.schoolId },
@@ -178,6 +184,8 @@ const updateFeeStructure = asyncHandler(async (req, res) => {
     where: { id: parseInt(id) },
     data: {
       amount: amount !== undefined ? parseFloat(amount) : feeStructure.amount,
+      updatedByUserId: req.user.id,
+      actorRole,
     },
     include: {
       feeType: { select: { id: true, name: true } },
@@ -230,11 +238,12 @@ const deleteFeeStructure = asyncHandler(async (req, res) => {
 /**
  * @desc    Bulk create fee structures for a class
  * @route   POST /api/v1/fees/structures/bulk
- * @access  Private/Admin
+ * @access  Private/Admin or Accountant
  */
 const bulkCreateFeeStructures = asyncHandler(async (req, res) => {
   const { classId, academicYearId, fees } = req.body;
   const schoolId = req.user.schoolId;
+  const actorRole = getFeeManagementRole(req.user);
 
   // Validate class
   const classRecord = await prisma.class.findFirst({
@@ -291,6 +300,9 @@ const bulkCreateFeeStructures = asyncHandler(async (req, res) => {
           classId,
           academicYearId,
           amount: parseFloat(fee.amount),
+          createdByUserId: req.user.id,
+          updatedByUserId: req.user.id,
+          actorRole,
         },
       })
     )
