@@ -14,15 +14,28 @@ export const teacherService = {
 
   createTeacher: async (data) => {
     // Architecturally, Teachers are Users. Use the user creation endpoint.
+    // Support custom role (default to TEACHER)
+    const role = data.role || "TEACHER";
     const response = await apiClient.post("/users", {
       ...data,
-      role: "TEACHER",
+      role,
     });
     return response.data;
   },
 
   updateTeacher: async (id, data) => {
     const response = await apiClient.put(`/teachers/${id}`, data);
+    return response.data;
+  },
+
+  // Get staff members (Teachers and Exam Officers)
+  getStaff: async (params = {}) => {
+    const response = await apiClient.get("/users", { 
+      params: {
+        ...params,
+        // Filter by staff roles
+      }
+    });
     return response.data;
   },
 

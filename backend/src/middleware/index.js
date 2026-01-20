@@ -7,6 +7,9 @@ const {
   isTeacher,
   isStudent,
   isParent,
+  isExamOfficer,
+  canEnterMarks,
+  getMarksEntryRole,
   schoolScope,
 } = require('./authorize.middleware');
 const validate = require('./validate.middleware');
@@ -44,6 +47,9 @@ module.exports = {
   isTeacher,
   isStudent,
   isParent,
+  isExamOfficer,
+  canEnterMarks,
+  getMarksEntryRole,
   schoolScope,
   
   // Validation

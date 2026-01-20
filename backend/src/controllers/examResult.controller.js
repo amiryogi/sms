@@ -1,10 +1,198 @@
 const prisma = require("../config/database");
 const { ApiError, ApiResponse, asyncHandler } = require("../utils");
+const { getMarksEntryRole } = require("../middleware");
+
+/**
+ * Helper: Check if user can bypass teacher assignment check
+ * EXAM_OFFICER and ADMIN can enter marks for any subject
+ */
+const canBypassTeacherCheck = (user) => {
+  const bypassRoles = ['EXAM_OFFICER', 'ADMIN', 'SUPER_ADMIN'];
+  return user.roles.some((role) => bypassRoles.includes(role));
+};
+
+/**
+ * @desc    Get exams available for marks entry (PUBLISHED status only)
+ * @route   GET /api/v1/exam-results/exams
+ * @access  Private/Teacher, EXAM_OFFICER, Admin
+ */
+const getExamsForMarksEntry = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const { academicYearId } = req.query;
+  const isExamOfficerOrAdmin = canBypassTeacherCheck(req.user);
+
+  // Determine academic year filter
+  let yearFilter = {};
+  if (academicYearId) {
+    yearFilter = { academicYearId: parseInt(academicYearId) };
+  } else {
+    // Default to current academic year
+    const currentYear = await prisma.academicYear.findFirst({
+      where: { schoolId: req.user.schoolId, isCurrent: true },
+    });
+    if (currentYear) {
+      yearFilter = { academicYearId: currentYear.id };
+    }
+  }
+
+  // EXAM_OFFICER/ADMIN: Can see all exams for the school
+  if (isExamOfficerOrAdmin) {
+    const exams = await prisma.exam.findMany({
+      where: {
+        schoolId: req.user.schoolId,
+        status: "PUBLISHED",
+        ...yearFilter,
+      },
+      orderBy: { startDate: "desc" },
+      include: {
+        academicYear: true,
+        examSubjects: {
+          select: {
+            id: true,
+            examId: true,
+            classSubjectId: true,
+            examDate: true,
+            startTime: true,
+            endTime: true,
+            hasTheory: true,
+            hasPractical: true,
+            fullMarks: true,
+            passMarks: true,
+            theoryFullMarks: true,
+            practicalFullMarks: true,
+            createdAt: true,
+            classSubject: {
+              include: {
+                class: true,
+                subject: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // For EXAM_OFFICER/ADMIN, get all sections for each class
+    const examsWithSections = await Promise.all(
+      exams.map(async (exam) => ({
+        ...exam,
+        examSubjects: await Promise.all(
+          exam.examSubjects.map(async (es) => {
+            // Get all sections that have students enrolled in this class
+            const sections = await prisma.section.findMany({
+              where: {
+                schoolId: req.user.schoolId,
+                studentClasses: {
+                  some: {
+                    classId: es.classSubject.classId,
+                    academicYearId: exam.academicYearId,
+                    status: "active",
+                  },
+                },
+              },
+              select: { id: true, name: true },
+            });
+            return {
+              ...es,
+              assignedSectionIds: sections.map((s) => s.id),
+              sections: sections,
+            };
+          })
+        ),
+      }))
+    );
+
+    return ApiResponse.success(res, examsWithSections);
+  }
+
+  // TEACHER: Can only see exams for assigned subjects
+  const teacherSubjects = await prisma.teacherSubject.findMany({
+    where: {
+      userId,
+      ...yearFilter,
+    },
+    select: { classSubjectId: true, sectionId: true, academicYearId: true },
+  });
+
+  if (teacherSubjects.length === 0) {
+    return ApiResponse.success(
+      res,
+      [],
+      "No subjects assigned to you for this academic year."
+    );
+  }
+
+  const classSubjectIds = [
+    ...new Set(teacherSubjects.map((ts) => ts.classSubjectId)),
+  ];
+  const academicYearIds = [
+    ...new Set(teacherSubjects.map((ts) => ts.academicYearId)),
+  ];
+
+  const exams = await prisma.exam.findMany({
+    where: {
+      schoolId: req.user.schoolId,
+      status: "PUBLISHED",
+      academicYearId: { in: academicYearIds },
+      examSubjects: {
+        some: {
+          classSubjectId: { in: classSubjectIds },
+        },
+      },
+    },
+    orderBy: { startDate: "desc" },
+    include: {
+      academicYear: true,
+      examSubjects: {
+        where: {
+          classSubjectId: { in: classSubjectIds },
+        },
+        select: {
+          id: true,
+          examId: true,
+          classSubjectId: true,
+          examDate: true,
+          startTime: true,
+          endTime: true,
+          hasTheory: true,
+          hasPractical: true,
+          fullMarks: true,
+          passMarks: true,
+          theoryFullMarks: true,
+          practicalFullMarks: true,
+          createdAt: true,
+          classSubject: {
+            include: {
+              class: true,
+              subject: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const examsWithSections = exams.map((exam) => ({
+    ...exam,
+    examSubjects: exam.examSubjects.map((es) => {
+      const assignedSections = teacherSubjects
+        .filter((ts) => ts.classSubjectId === es.classSubjectId)
+        .map((ts) => ts.sectionId);
+      return {
+        ...es,
+        assignedSectionIds: assignedSections,
+      };
+    }),
+  }));
+
+  ApiResponse.success(res, examsWithSections);
+});
 
 /**
  * @desc    Get exams available for the teacher (PUBLISHED status only)
  * @route   GET /api/v1/exam-results/teacher/exams
  * @access  Private/Teacher
+ * @deprecated Use getExamsForMarksEntry instead
  */
 const getTeacherExams = asyncHandler(async (req, res) => {
   const userId = req.user.id;
@@ -112,12 +300,13 @@ const getTeacherExams = asyncHandler(async (req, res) => {
 /**
  * @desc    Get existing results for an exam subject
  * @route   GET /api/v1/exam-results/exam-subjects/:examSubjectId
- * @access  Private/Teacher
+ * @access  Private/Teacher, EXAM_OFFICER, Admin
  */
 const getResultsByExamSubject = asyncHandler(async (req, res) => {
   const { examSubjectId } = req.params;
   const { sectionId } = req.query;
   const userId = req.user.id;
+  const isExamOfficerOrAdmin = canBypassTeacherCheck(req.user);
 
   // Validate exam subject exists
   const examSubject = await prisma.examSubject.findUnique({
@@ -138,17 +327,20 @@ const getResultsByExamSubject = asyncHandler(async (req, res) => {
     throw ApiError.forbidden("Exam subject does not belong to your school");
   }
 
-  // Verify teacher is assigned to this subject
-  const teacherAssignment = await prisma.teacherSubject.findFirst({
-    where: {
-      userId,
-      classSubjectId: examSubject.classSubjectId,
-      sectionId: sectionId ? parseInt(sectionId) : undefined,
-    },
-  });
+  // TEACHER: Verify teacher is assigned to this subject
+  // EXAM_OFFICER/ADMIN: Skip assignment check
+  if (!isExamOfficerOrAdmin) {
+    const teacherAssignment = await prisma.teacherSubject.findFirst({
+      where: {
+        userId,
+        classSubjectId: examSubject.classSubjectId,
+        sectionId: sectionId ? parseInt(sectionId) : undefined,
+      },
+    });
 
-  if (!teacherAssignment) {
-    throw ApiError.forbidden("You are not assigned to this subject/section");
+    if (!teacherAssignment) {
+      throw ApiError.forbidden("You are not assigned to this subject/section");
+    }
   }
 
   // Get existing results with student info
@@ -188,11 +380,13 @@ const getResultsByExamSubject = asyncHandler(async (req, res) => {
 /**
  * @desc    Save/update exam results (marks entry)
  * @route   POST /api/v1/exam-results
- * @access  Private/Teacher
+ * @access  Private/Teacher, EXAM_OFFICER, Admin
  */
 const saveResults = asyncHandler(async (req, res) => {
   const { examSubjectId, sectionId, results } = req.body;
   const userId = req.user.id;
+  const isExamOfficerOrAdmin = canBypassTeacherCheck(req.user);
+  const enteredByRole = getMarksEntryRole(req.user);
 
   // 1. Validate exam subject exists
   const examSubject = await prisma.examSubject.findUnique({
@@ -215,26 +409,28 @@ const saveResults = asyncHandler(async (req, res) => {
     throw ApiError.forbidden("Exam subject does not belong to your school");
   }
 
-  // 2. CHECK: Exam must be PUBLISHED
+  // 2. CHECK: Exam must be PUBLISHED (not DRAFT or LOCKED)
   if (examSubject.exam.status !== "PUBLISHED") {
     throw ApiError.badRequest(
       `Cannot enter marks. Exam status is ${examSubject.exam.status}. Marks can only be entered when exam is PUBLISHED.`
     );
   }
 
-  // 3. CHECK: Teacher must be assigned to this subject/section
-  const teacherAssignment = await prisma.teacherSubject.findFirst({
-    where: {
-      userId,
-      classSubjectId: examSubject.classSubjectId,
-      sectionId: parseInt(sectionId),
-    },
-  });
+  // 3. CHECK: Teacher must be assigned OR user is EXAM_OFFICER/ADMIN
+  if (!isExamOfficerOrAdmin) {
+    const teacherAssignment = await prisma.teacherSubject.findFirst({
+      where: {
+        userId,
+        classSubjectId: examSubject.classSubjectId,
+        sectionId: parseInt(sectionId),
+      },
+    });
 
-  if (!teacherAssignment) {
-    throw ApiError.forbidden(
-      "You are not assigned to this subject/section. Cannot enter marks."
-    );
+    if (!teacherAssignment) {
+      throw ApiError.forbidden(
+        "You are not assigned to this subject/section. Cannot enter marks."
+      );
+    }
   }
 
   // 4. Validate students belong to correct class/section
@@ -342,6 +538,7 @@ const saveResults = asyncHandler(async (req, res) => {
           isAbsent: result.isAbsent || false,
           remarks: result.remarks || null,
           enteredBy: userId,
+          enteredByRole: enteredByRole,
           studentClassId,
           schoolId: req.user.schoolId,
         },
@@ -357,6 +554,7 @@ const saveResults = asyncHandler(async (req, res) => {
           isAbsent: result.isAbsent || false,
           remarks: result.remarks || null,
           enteredBy: userId,
+          enteredByRole: enteredByRole,
           studentClassId,
           schoolId: req.user.schoolId,
         },
@@ -377,11 +575,12 @@ const saveResults = asyncHandler(async (req, res) => {
 /**
  * @desc    Get students for marks entry
  * @route   GET /api/v1/exam-results/students
- * @access  Private/Teacher
+ * @access  Private/Teacher, EXAM_OFFICER, Admin
  */
 const getStudentsForMarksEntry = asyncHandler(async (req, res) => {
   const { examSubjectId, sectionId } = req.query;
   const userId = req.user.id;
+  const isExamOfficerOrAdmin = canBypassTeacherCheck(req.user);
 
   if (!examSubjectId || !sectionId) {
     throw ApiError.badRequest("examSubjectId and sectionId are required");
@@ -402,17 +601,24 @@ const getStudentsForMarksEntry = asyncHandler(async (req, res) => {
     throw ApiError.notFound("Exam subject not found");
   }
 
-  // Verify teacher assignment
-  const teacherAssignment = await prisma.teacherSubject.findFirst({
-    where: {
-      userId,
-      classSubjectId: examSubject.classSubjectId,
-      sectionId: parseInt(sectionId),
-    },
-  });
+  if (examSubject.exam.schoolId !== req.user.schoolId) {
+    throw ApiError.forbidden("Exam subject does not belong to your school");
+  }
 
-  if (!teacherAssignment) {
-    throw ApiError.forbidden("You are not assigned to this subject/section");
+  // TEACHER: Verify teacher assignment
+  // EXAM_OFFICER/ADMIN: Skip assignment check
+  if (!isExamOfficerOrAdmin) {
+    const teacherAssignment = await prisma.teacherSubject.findFirst({
+      where: {
+        userId,
+        classSubjectId: examSubject.classSubjectId,
+        sectionId: parseInt(sectionId),
+      },
+    });
+
+    if (!teacherAssignment) {
+      throw ApiError.forbidden("You are not assigned to this subject/section");
+    }
   }
 
   // Get students in this class/section
@@ -422,6 +628,7 @@ const getStudentsForMarksEntry = asyncHandler(async (req, res) => {
       sectionId: parseInt(sectionId),
       academicYearId: examSubject.exam.academicYearId,
       status: "active",
+      schoolId: req.user.schoolId,
     },
     include: {
       student: {
@@ -454,6 +661,7 @@ const getStudentsForMarksEntry = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  getExamsForMarksEntry,
   getTeacherExams,
   getResultsByExamSubject,
   saveResults,

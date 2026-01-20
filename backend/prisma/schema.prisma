@@ -717,6 +717,7 @@ model ExamResult {
   grade          String?  @db.VarChar(5)
   remarks        String?  @db.Text
   enteredBy      Int      @map("entered_by")
+  enteredByRole  String   @default("TEACHER") @map("entered_by_role") @db.VarChar(20)
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 

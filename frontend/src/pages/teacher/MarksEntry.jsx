@@ -6,7 +6,7 @@ import { examService } from "../../api/examService";
 import { teacherService } from "../../api/teacherService";
 
 const MarksEntry = () => {
-  const { user } = useAuth();
+  const { user, hasRole } = useAuth();
   const [exams, setExams] = useState([]);
   const [teacherAssignments, setTeacherAssignments] = useState([]);
   const [marksData, setMarksData] = useState([]);
@@ -17,6 +17,10 @@ const MarksEntry = () => {
     classSubjectId: "",
     sectionId: "",
   });
+
+  // Check if user is EXAM_OFFICER (not TEACHER or ADMIN)
+  const isExamOfficer = hasRole("EXAM_OFFICER") && !hasRole("TEACHER") && !hasRole("ADMIN");
+  const isTeacher = hasRole("TEACHER");
 
   useEffect(() => {
     fetchInitialData();
@@ -30,16 +34,21 @@ const MarksEntry = () => {
 
   const fetchInitialData = async () => {
     try {
-      const [examsRes, assignmentsRes] = await Promise.all([
-        examService.getTeacherExams(),
-        teacherService.getTeacherAssignments({ userId: user?.id }),
-      ]);
+      // Use unified endpoint that works for all roles (Teacher, EXAM_OFFICER, Admin)
+      const examsRes = await examService.getExamsForMarksEntry();
+      
       // Filter out only PUBLISHED exams (backend should handle this, but safety first)
       const publishedExams = (examsRes.data || []).filter(
         (e) => e.status === "PUBLISHED"
       );
       setExams(publishedExams);
-      setTeacherAssignments(assignmentsRes.data || []);
+
+      // For TEACHER role, also fetch their assignments for filtering
+      // EXAM_OFFICER doesn't need assignments - they can access all subjects
+      if (isTeacher) {
+        const assignmentsRes = await teacherService.getTeacherAssignments({ userId: user?.id });
+        setTeacherAssignments(assignmentsRes.data || []);
+      }
     } catch (error) {
       console.error("Error fetching initial data:", error);
     }
@@ -48,75 +57,61 @@ const MarksEntry = () => {
   const fetchStudentsAndMarks = async () => {
     setLoading(true);
     try {
-      // Find the class ID from the assignment
-      const assignment = teacherAssignments.find(
-        (a) =>
-          a.classSubjectId?.toString() === filters.classSubjectId &&
-          a.sectionId?.toString() === filters.sectionId
+      // Find exam subject ID
+      const exam = exams.find((e) => e.id?.toString() === filters.examId);
+      const examSubject = exam?.examSubjects?.find(
+        (es) => es.classSubjectId?.toString() === filters.classSubjectId
       );
 
-      if (!assignment) return;
+      if (examSubject) {
+        // Get existing results or student list for entry
+        let marks = [];
 
-      // Fetch students and existing marks together via new API
-      try {
-        // Find exam subject ID
-        const exam = exams.find((e) => e.id?.toString() === filters.examId);
-        const examSubject = exam?.examSubjects?.find(
-          (es) => es.classSubjectId?.toString() === filters.classSubjectId
-        );
+        try {
+          // Try fetching existing results first
+          const resultsRes = await examService.getResultsBySubject(
+            examSubject.id,
+            filters.sectionId
+          );
+          const { results } = resultsRes.data;
 
-        if (examSubject) {
-          // Get existing results or student list for entry
-          let marks = [];
-
-          try {
-            // Try fetching existing results first
-            const resultsRes = await examService.getResultsBySubject(
-              examSubject.id,
-              filters.sectionId
-            );
-            const { results } = resultsRes.data;
-
-            if (results && results.length > 0) {
-              marks = results.map((r) => ({
-                studentId: r.student.id,
-                studentName: `${r.student.user?.firstName} ${r.student.user?.lastName}`,
-                marksObtained: r.isAbsent ? "" : r.marksObtained || "",
-                practicalMarks: r.isAbsent ? "" : r.practicalMarks || "",
-                isAbsent: r.isAbsent || false,
-                remarks: r.remarks || "",
-              }));
-            }
-          } catch (err) {
-            // If 404 or no results, we'll fetch student list next
-          }
-
-          // If no existing marks, fetch students for initial entry
-          if (marks.length === 0) {
-            const studentsRes = await examService.getStudentsForMarksEntry(
-              examSubject.id,
-              filters.sectionId
-            );
-            const studentList = studentsRes.data?.students || [];
-
-            marks = studentList.map((s) => ({
-              studentId: s.studentId,
-              studentName: `${s.firstName} ${s.lastName}`,
-              marksObtained: "",
-              practicalMarks: "",
-              isAbsent: false,
-              remarks: "",
+          if (results && results.length > 0) {
+            marks = results.map((r) => ({
+              studentId: r.student.id,
+              studentName: `${r.student.user?.firstName} ${r.student.user?.lastName}`,
+              marksObtained: r.isAbsent ? "" : r.marksObtained || "",
+              practicalMarks: r.isAbsent ? "" : r.practicalMarks || "",
+              isAbsent: r.isAbsent || false,
+              remarks: r.remarks || "",
             }));
           }
-
-          setMarksData(marks);
+        } catch (err) {
+          // If 404 or no results, we'll fetch student list next
         }
-      } catch (error) {
-        console.error("Error fetching marks data:", error);
-        setMarksData([]);
+
+        // If no existing marks, fetch students for initial entry
+        if (marks.length === 0) {
+          const studentsRes = await examService.getStudentsForMarksEntry(
+            examSubject.id,
+            filters.sectionId
+          );
+          const studentList = studentsRes.data?.students || [];
+
+          marks = studentList.map((s) => ({
+            studentId: s.studentId,
+            studentName: `${s.firstName} ${s.lastName}`,
+            marksObtained: "",
+            practicalMarks: "",
+            isAbsent: false,
+            remarks: "",
+          }));
+        }
+
+        setMarksData(marks);
       }
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error fetching marks data:", error);
+      setMarksData([]);
     } finally {
       setLoading(false);
     }
@@ -180,10 +175,44 @@ const MarksEntry = () => {
     label: e.name,
   }));
 
-  const classSubjectSectionOptions = teacherAssignments.map((ta) => ({
-    value: `${ta.classSubjectId}-${ta.sectionId}`,
-    label: `${ta.classSubject?.class?.name} ${ta.section?.name} - ${ta.classSubject?.subject?.name}`,
-  }));
+  // Build class/subject/section options based on role
+  // TEACHER: Use their assignments
+  // EXAM_OFFICER/ADMIN: Use exam subjects directly from selected exam
+  const getClassSubjectSectionOptions = () => {
+    if (isTeacher && teacherAssignments.length > 0) {
+      // For teachers, filter by their assignments
+      return teacherAssignments.map((ta) => ({
+        value: `${ta.classSubjectId}-${ta.sectionId}`,
+        label: `${ta.classSubject?.class?.name} ${ta.section?.name} - ${ta.classSubject?.subject?.name}`,
+      }));
+    }
+    
+    // For EXAM_OFFICER/ADMIN: Build options from the selected exam's subjects
+    if (!filters.examId) return [];
+    
+    const selectedExamForOptions = exams.find((e) => e.id?.toString() === filters.examId);
+    if (!selectedExamForOptions?.examSubjects) return [];
+    
+    const options = [];
+    selectedExamForOptions.examSubjects.forEach((es) => {
+      // Get sections from the exam subject (backend provides assignedSectionIds or sections)
+      const sectionIds = es.assignedSectionIds || (es.sections?.map(s => s.id)) || [];
+      const sections = es.sections || [];
+      
+      sectionIds.forEach((sectionId) => {
+        const section = sections.find(s => s.id === sectionId);
+        const sectionName = section?.name || `Section ${sectionId}`;
+        options.push({
+          value: `${es.classSubjectId}-${sectionId}`,
+          label: `${es.classSubject?.class?.name} ${sectionName} - ${es.classSubject?.subject?.name}`,
+        });
+      });
+    });
+    
+    return options;
+  };
+
+  const classSubjectSectionOptions = getClassSubjectSectionOptions();
 
   const selectedExam = exams.find((e) => e.id?.toString() === filters.examId);
   /* Find the specific exam subject to get max marks config */
@@ -207,7 +236,9 @@ const MarksEntry = () => {
         <div>
           <h1>Marks Entry</h1>
           <p className="text-muted">
-            Enter exam marks for your assigned subjects
+            {isExamOfficer 
+              ? "Enter exam marks for any subject (Exam Officer)" 
+              : "Enter exam marks for your assigned subjects"}
           </p>
         </div>
       </div>
@@ -220,7 +251,13 @@ const MarksEntry = () => {
             options={examOptions}
             value={filters.examId}
             onChange={(e) =>
-              setFilters((prev) => ({ ...prev, examId: e.target.value }))
+              setFilters((prev) => ({ 
+                ...prev, 
+                examId: e.target.value,
+                // Reset class/subject/section when exam changes (for EXAM_OFFICER)
+                classSubjectId: isExamOfficer ? "" : prev.classSubjectId,
+                sectionId: isExamOfficer ? "" : prev.sectionId,
+              }))
             }
             placeholder="Select Exam"
           />

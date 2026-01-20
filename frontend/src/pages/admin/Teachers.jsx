@@ -8,9 +8,16 @@ import {
   Button,
   FormRow,
   FileUpload,
+  Select,
 } from "../../components/common/FormElements";
 import { teacherService } from "../../api/teacherService";
 import { uploadService } from "../../api/uploadService";
+
+// Staff roles that can be created from this page
+const STAFF_ROLES = [
+  { value: "TEACHER", label: "Teacher" },
+  { value: "EXAM_OFFICER", label: "Exam Officer" },
+];
 
 const resolveAssetUrl = (url) => {
   if (!url) return "";
@@ -32,6 +39,7 @@ const Teachers = () => {
   const [submitting, setSubmitting] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [selectedRole, setSelectedRole] = useState("TEACHER");
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -80,9 +88,12 @@ const Teachers = () => {
         phone: teacher.phone,
       });
       setAvatarUrl(teacher.avatarUrl || "");
+      // Set role from existing teacher (if available)
+      setSelectedRole(teacher.roles?.[0] || "TEACHER");
     } else {
       reset({});
       setAvatarUrl("");
+      setSelectedRole("TEACHER");
     }
     setModalOpen(true);
   };
@@ -91,13 +102,18 @@ const Teachers = () => {
     setModalOpen(false);
     setEditingTeacher(null);
     setAvatarUrl("");
+    setSelectedRole("TEACHER");
     reset();
   };
 
   const onSubmit = async (data) => {
     setSubmitting(true);
     try {
-      const payload = { ...data, avatarUrl: avatarUrl || undefined };
+      const payload = { 
+        ...data, 
+        avatarUrl: avatarUrl || undefined,
+        role: selectedRole,
+      };
       if (editingTeacher) {
         await teacherService.updateTeacher(editingTeacher.id, payload);
       } else {
@@ -131,7 +147,7 @@ const Teachers = () => {
 
   const columns = [
     {
-      header: "Teacher",
+      header: "Staff Member",
       render: (row) => (
         <div className="user-cell">
           <span className="user-name">
@@ -140,6 +156,19 @@ const Teachers = () => {
           <span className="user-email">{row.email}</span>
         </div>
       ),
+    },
+    { 
+      header: "Role", 
+      render: (row) => {
+        const roles = row.roles || [];
+        if (roles.includes("EXAM_OFFICER")) {
+          return <span className="badge badge-info">Exam Officer</span>;
+        }
+        if (roles.includes("TEACHER")) {
+          return <span className="badge badge-primary">Teacher</span>;
+        }
+        return "-";
+      }
     },
     { header: "Phone", render: (row) => row.phone || "-" },
     {
@@ -163,8 +192,8 @@ const Teachers = () => {
     <div className="page-container">
       <div className="page-header">
         <div>
-          <h1>Teachers</h1>
-          <p className="text-muted">Manage teacher staff records</p>
+          <h1>Teachers & Staff</h1>
+          <p className="text-muted">Manage teachers and exam officers</p>
         </div>
       </div>
 
@@ -217,6 +246,29 @@ const Teachers = () => {
             />
             <Input label="Phone" name="phone" type="tel" register={register} />
           </FormRow>
+          {!editingTeacher && (
+            <FormRow>
+              <div className="form-group">
+                <label>Role</label>
+                <select
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                  className="form-control"
+                >
+                  {STAFF_ROLES.map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
+                <small className="text-muted">
+                  {selectedRole === "EXAM_OFFICER" 
+                    ? "Exam Officers can enter marks for any subject without being assigned" 
+                    : "Teachers can only enter marks for their assigned subjects"}
+                </small>
+              </div>
+            </FormRow>
+          )}
           <div className="form-group">
             <label>Profile Photo</label>
             <div className="flex items-center gap-3">

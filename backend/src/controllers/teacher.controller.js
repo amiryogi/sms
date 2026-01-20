@@ -16,13 +16,16 @@ const {
  */
 const getTeachers = asyncHandler(async (req, res) => {
   const { page, limit, skip } = parsePagination(req.query);
-  const { search, status } = req.query;
+  const { search, status, role } = req.query;
+
+  // Build role filter - include both TEACHER and EXAM_OFFICER by default
+  const staffRoles = role ? [role] : ["TEACHER", "EXAM_OFFICER"];
 
   const where = {
     schoolId: req.user.schoolId,
     userRoles: {
       some: {
-        role: { name: "TEACHER" },
+        role: { name: { in: staffRoles } },
       },
     },
   };
@@ -58,6 +61,15 @@ const getTeachers = asyncHandler(async (req, res) => {
         status: true,
         lastLogin: true,
         createdAt: true,
+        userRoles: {
+          select: {
+            role: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
         teacherSubjects: {
           include: {
             classSubject: {
@@ -74,7 +86,14 @@ const getTeachers = asyncHandler(async (req, res) => {
     prisma.user.count({ where }),
   ]);
 
-  ApiResponse.paginated(res, teachers, { page, limit, total });
+  // Format response to include roles array
+  const formattedTeachers = teachers.map((t) => ({
+    ...t,
+    roles: t.userRoles.map((ur) => ur.role.name),
+    userRoles: undefined,
+  }));
+
+  ApiResponse.paginated(res, formattedTeachers, { page, limit, total });
 });
 
 /**
