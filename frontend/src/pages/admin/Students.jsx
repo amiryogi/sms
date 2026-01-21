@@ -13,6 +13,7 @@ import {
 import { studentService } from "../../api/studentService";
 import { academicService } from "../../api/academicService";
 import { uploadService } from "../../api/uploadService";
+import { programService } from "../../api/programService";
 
 const resolveAssetUrl = (url) => {
   if (!url) return "";
@@ -46,6 +47,12 @@ const Students = () => {
     totalPages: 1,
   });
   const [search, setSearch] = useState("");
+
+  // Program / Faculty State (Grade 11/12)
+  const [availablePrograms, setAvailablePrograms] = useState([]);
+  const [programSubjects, setProgramSubjects] = useState([]); // Subjects from the selected program
+  const [selectedSubjectIds, setSelectedSubjectIds] = useState(new Set());
+  const [showProgramSelect, setShowProgramSelect] = useState(false);
 
   const {
     register,
@@ -104,6 +111,59 @@ const Students = () => {
     }
   };
 
+  const handleClassChange = async (classId, yearId) => {
+    // 1. Fetch Sections
+    if (!classId) {
+      setSections([]);
+      setAvailablePrograms([]);
+      setShowProgramSelect(false);
+      return;
+    }
+    
+    fetchSectionsForClass(classId);
+
+    // 2. Check Grade Level for Programs
+    const selectedClass = classes.find(c => c.id.toString() === classId.toString());
+    if (selectedClass && selectedClass.gradeLevel >= 11) {
+      setShowProgramSelect(true);
+      try {
+        const res = await programService.getProgramsByClass(classId, yearId);
+        setAvailablePrograms(res.data || []);
+      } catch (err) {
+        console.error("Error fetching programs:", err);
+      }
+    } else {
+      setShowProgramSelect(false);
+      setAvailablePrograms([]);
+      setProgramSubjects([]);
+      setSelectedSubjectIds(new Set());
+    }
+  };
+
+  const handleProgramChange = async (programId) => {
+    if (!programId) {
+      setProgramSubjects([]);
+      setSelectedSubjectIds(new Set());
+      return;
+    }
+    try {
+      const res = await programService.getProgram(programId);
+      const subjects = res.data?.programSubjects || [];
+      setProgramSubjects(subjects);
+      // Auto-select all by default
+      setSelectedSubjectIds(new Set(subjects.map(ps => ps.classSubjectId)));
+    } catch (err) {
+      console.error("Error fetching program details:", err);
+    }
+  };
+
+  const toggleSubject = (id) => {
+    const newSet = new Set(selectedSubjectIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedSubjectIds(newSet);
+  };
+
   const openModal = (student = null) => {
     setEditingStudent(student);
     if (student) {
@@ -141,6 +201,11 @@ const Students = () => {
         sectionId: "",
       });
       setAvatarUrl("");
+      // Reset program state
+      setShowProgramSelect(false);
+      setAvailablePrograms([]);
+      setProgramSubjects([]);
+      setSelectedSubjectIds(new Set());
     }
     setModalOpen(true);
   };
@@ -149,6 +214,10 @@ const Students = () => {
     setModalOpen(false);
     setEditingStudent(null);
     setAvatarUrl("");
+    setShowProgramSelect(false);
+    setAvailablePrograms([]);
+    setProgramSubjects([]);
+    setSelectedSubjectIds(new Set());
     reset();
   };
 
@@ -162,6 +231,10 @@ const Students = () => {
     setEnrollModalOpen(false);
     setSelectedStudent(null);
     enrollForm.reset();
+    setShowProgramSelect(false);
+    setAvailablePrograms([]);
+    setProgramSubjects([]);
+    setSelectedSubjectIds(new Set());
   };
 
   const onSubmit = async (data) => {
@@ -177,6 +250,8 @@ const Students = () => {
           classId: parseInt(data.classId),
           sectionId: parseInt(data.sectionId),
           rollNumber: data.rollNumber ? parseInt(data.rollNumber) : undefined,
+          programId: data.programId ? parseInt(data.programId) : undefined,
+          subjectIds: data.programId ? Array.from(selectedSubjectIds).map(id => parseInt(id)) : undefined
         };
         await studentService.createStudent(payload);
       }
@@ -214,6 +289,8 @@ const Students = () => {
         classId: parseInt(data.classId),
         sectionId: parseInt(data.sectionId),
         rollNumber: data.rollNumber,
+        programId: data.programId ? parseInt(data.programId) : undefined,
+        subjectIds: data.programId ? Array.from(selectedSubjectIds).map(id => parseInt(id)) : undefined
       });
       fetchStudents();
       closeEnrollModal();
@@ -479,7 +556,7 @@ const Students = () => {
                   options={classOptions}
                   register={register}
                   required
-                  onChange={(e) => fetchSectionsForClass(e.target.value)}
+                  onChange={(e) => handleClassChange(e.target.value, academicYears.find(y => y.isCurrent)?.id)}
                 />
                 <Select
                   label="Section"
@@ -489,6 +566,38 @@ const Students = () => {
                   required
                 />
               </FormRow>
+
+               {showProgramSelect && (
+                <div className="form-group bg-gray-50 p-3 rounded mb-3 border">
+                  <Select
+                    label="Program / Faculty"
+                    name="programId"
+                    options={availablePrograms.map(p => ({ value: p.id.toString(), label: p.name }))}
+                    register={register}
+                    required
+                    onChange={(e) => handleProgramChange(e.target.value)}
+                    placeholder="Select Program"
+                  />
+                  
+                  {programSubjects.length > 0 && (
+                    <div className="mt-3">
+                      <label className="form-label mb-2 block">Assigned Subjects (Uncheck to remove)</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {programSubjects.map(ps => (
+                          <label key={ps.classSubjectId} className="flex items-center gap-2 text-sm bg-white p-2 rounded border cursor-pointer hover:bg-blue-50">
+                            <input
+                              type="checkbox"
+                              checked={selectedSubjectIds.has(ps.classSubjectId)}
+                              onChange={() => toggleSubject(ps.classSubjectId)}
+                            />
+                            <span>{ps.classSubject?.subject?.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
           <div className="modal-actions">
@@ -540,7 +649,7 @@ const Students = () => {
             options={classOptions}
             register={enrollForm.register}
             required
-            onChange={(e) => fetchSectionsForClass(e.target.value)}
+            onChange={(e) => handleClassChange(e.target.value, enrollForm.getValues('academicYearId'))}
           />
           <Select
             label="Section"
@@ -549,6 +658,39 @@ const Students = () => {
             register={enrollForm.register}
             required
           />
+
+           {showProgramSelect && (
+            <div className="form-group bg-gray-50 p-3 rounded mb-3 border">
+              <Select
+                label="Program / Faculty"
+                name="programId"
+                options={availablePrograms.map(p => ({ value: p.id.toString(), label: p.name }))}
+                register={enrollForm.register}
+                required
+                onChange={(e) => handleProgramChange(e.target.value)}
+                placeholder="Select Program"
+              />
+              
+              {programSubjects.length > 0 && (
+                <div className="mt-3">
+                  <label className="form-label mb-2 block">Assigned Subjects (Uncheck to remove)</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {programSubjects.map(ps => (
+                      <label key={ps.classSubjectId} className="flex items-center gap-2 text-sm bg-white p-2 rounded border cursor-pointer hover:bg-blue-50">
+                        <input
+                          type="checkbox"
+                          checked={selectedSubjectIds.has(ps.classSubjectId)}
+                          onChange={() => toggleSubject(ps.classSubjectId)}
+                        />
+                        <span>{ps.classSubject?.subject?.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <Input
             label="Roll Number"
             name="rollNumber"

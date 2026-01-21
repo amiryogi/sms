@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { Plus, Trash2, Link as LinkIcon, Pencil } from "lucide-react";
+import { Plus, Trash2, Link as LinkIcon, Pencil, Lock } from "lucide-react";
 import DataTable from "../../components/common/DataTable";
 import Modal from "../../components/common/Modal";
 import { Select, Button, Input } from "../../components/common/FormElements";
@@ -236,6 +236,19 @@ const ClassSubjects = () => {
     },
     { header: "Credit Hours", accessor: "creditHours" },
     {
+      header: "Status",
+      width: "80px",
+      render: (row) => (
+        row.isLocked ? (
+          <span className="badge badge-warning flex items-center gap-1" title="Locked - Cannot be modified">
+            <Lock size={12} /> Locked
+          </span>
+        ) : (
+          <span className="badge badge-success">Active</span>
+        )
+      ),
+    },
+    {
       header: "Actions",
       width: "80px",
       render: (row) => (
@@ -243,14 +256,16 @@ const ClassSubjects = () => {
           <button
             className="btn-icon"
             onClick={() => openEditModal(row)}
-            title="Edit"
+            title={row.isLocked ? "Locked - Cannot edit" : "Edit"}
+            disabled={row.isLocked}
           >
             <Pencil size={16} />
           </button>
           <button
             className="btn-icon btn-danger"
             onClick={() => handleDelete(row.id)}
-            title="Delete"
+            title={row.isLocked ? "Locked - Cannot delete" : "Delete"}
+            disabled={row.isLocked}
           >
             <Trash2 size={16} />
           </button>

@@ -120,6 +120,20 @@ enum ComponentType {
   PRACTICAL
 }
 
+// Student subject enrollment status (Grade 11-12)
+enum StudentSubjectStatus {
+  ACTIVE
+  DROPPED
+}
+
+// Subject audit action types
+enum SubjectAuditAction {
+  CREATE
+  UPDATE
+  LOCK
+  DELETE
+}
+
 // =====================================================
 // CORE: SCHOOLS (Multi-school Ready)
 // =====================================================
@@ -155,6 +169,7 @@ model School {
   feeTypes       FeeType[]
   feeStructures  FeeStructure[]
   feePayments    FeePayment[]
+  programs       Program[]
 
   @@index([code])
   @@index([isActive])
@@ -330,6 +345,7 @@ model AcademicYear {
   promotionsTo       Promotion[]         @relation("ToYear")
   noticeClassTargets NoticeClassTarget[]
   feeStructures      FeeStructure[]
+  programs           Program[]
 
   @@unique([schoolId, name])
   @@index([schoolId])
@@ -465,14 +481,17 @@ model ClassSubject {
   theoryMarks    Int      @default(100) @map("theory_marks")
   practicalMarks Int      @default(0) @map("practical_marks")
   creditHours    Decimal  @default(3.0) @map("credit_hours") @db.Decimal(3, 1)
+  isLocked       Boolean  @default(false) @map("is_locked")
   createdAt      DateTime @default(now()) @map("created_at")
 
   // Relations
   class           Class            @relation(fields: [classId], references: [id], onDelete: Cascade)
   academicYear    AcademicYear     @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
   subject         Subject          @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  teacherSubjects TeacherSubject[]
-  examSubjects    ExamSubject[]
+  teacherSubjects  TeacherSubject[]
+  examSubjects     ExamSubject[]
+  programSubjects  ProgramSubject[]
+  studentSubjects  StudentSubject[]
 
   @@unique([classId, academicYearId, subjectId])
   @@index([classId])
@@ -577,8 +596,10 @@ model StudentClass {
   attendances  Attendance[]
   reportCards  ReportCard[]
   examResults  ExamResult[]
-  submissions  Submission[]
-  feePayments  FeePayment[]
+  submissions     Submission[]
+  feePayments     FeePayment[]
+  studentProgram  StudentProgram?
+  studentSubjects StudentSubject[]
 
   @@unique([studentId, academicYearId])
   @@index([studentId])
@@ -1166,6 +1187,110 @@ model FeePayment {
   @@index([paymentDate])
   @@index([recordedByUserId])
   @@map("fee_payments")
+}
+
+// =====================================================
+// PROGRAMS (NEB +2 Faculty Grouping - Grade 11-12 Only)
+// =====================================================
+
+/// Program/Faculty grouping for Grade 11-12 (Science, Management, Humanities)
+/// Used for subject grouping, student assignment, and reporting
+model Program {
+  id             Int      @id @default(autoincrement())
+  schoolId       Int      @map("school_id")
+  academicYearId Int      @map("academic_year_id")
+  name           String   @db.VarChar(100) // Science, Management, Humanities, etc.
+  description    String?  @db.Text
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  school          School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  academicYear    AcademicYear     @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  programSubjects ProgramSubject[]
+  studentPrograms StudentProgram[]
+
+  @@unique([schoolId, academicYearId, name])
+  @@index([schoolId])
+  @@index([academicYearId])
+  @@index([isActive])
+  @@map("programs")
+}
+
+/// Links subjects to programs - defines which subjects belong to a program
+model ProgramSubject {
+  id             Int      @id @default(autoincrement())
+  programId      Int      @map("program_id")
+  classSubjectId Int      @map("class_subject_id")
+  isCompulsory   Boolean  @default(true) @map("is_compulsory")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // Relations
+  program      Program      @relation(fields: [programId], references: [id], onDelete: Cascade)
+  classSubject ClassSubject @relation(fields: [classSubjectId], references: [id], onDelete: Cascade)
+
+  @@unique([programId, classSubjectId])
+  @@index([programId])
+  @@index([classSubjectId])
+  @@map("program_subjects")
+}
+
+/// Assigns students to programs - one program per student enrollment
+model StudentProgram {
+  id             Int      @id @default(autoincrement())
+  studentClassId Int      @unique @map("student_class_id")
+  programId      Int      @map("program_id")
+  assignedAt     DateTime @default(now()) @map("assigned_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // Relations
+  studentClass StudentClass @relation(fields: [studentClassId], references: [id], onDelete: Cascade)
+  program      Program      @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([studentClassId])
+  @@index([programId])
+  @@map("student_programs")
+}
+
+/// Specific subjects a student is taking (e.g. for Grade 11/12 overrides)
+model StudentSubject {
+  id             Int      @id @default(autoincrement())
+  studentClassId Int                  @map("student_class_id")
+  classSubjectId Int                  @map("class_subject_id")
+  status         StudentSubjectStatus @default(ACTIVE)
+  createdAt      DateTime             @default(now()) @map("created_at")
+
+  // Relations
+  studentClass StudentClass @relation(fields: [studentClassId], references: [id], onDelete: Cascade)
+  classSubject ClassSubject @relation(fields: [classSubjectId], references: [id], onDelete: Cascade)
+
+  @@unique([studentClassId, classSubjectId])
+  @@index([studentClassId])
+  @@index([classSubjectId])
+  @@map("student_subjects")
+}
+
+// =====================================================
+// SUBJECT_AUDIT (Audit Trail for Subject Changes)
+// =====================================================
+
+/// Tracks changes to subjects and class subjects for audit purposes
+model SubjectAudit {
+  id               Int                @id @default(autoincrement())
+  classSubjectId   Int?               @map("class_subject_id")
+  subjectId        Int?               @map("subject_id")
+  action           SubjectAuditAction
+  oldValue         Json?              @map("old_value")
+  newValue         Json?              @map("new_value")
+  performedByUserId Int               @map("performed_by_user_id")
+  createdAt        DateTime           @default(now()) @map("created_at")
+
+  @@index([classSubjectId])
+  @@index([subjectId])
+  @@index([performedByUserId])
+  @@index([action])
+  @@map("subject_audits")
 }
 
 // =====================================================

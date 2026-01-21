@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Plus, Edit2, Trash2, BookOpen } from 'lucide-react';
+import { Plus, Edit2, Trash2, BookOpen, Upload } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import { Input, Button } from '../../components/common/FormElements';
 import { academicService } from '../../api/academicService';
+import SubjectImportModal from '../../components/admin/SubjectImportModal';
 
 const Subjects = () => {
   const [subjects, setSubjects] = useState([]);
@@ -12,6 +13,7 @@ const Subjects = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
 
@@ -136,9 +138,14 @@ const Subjects = () => {
           loading={loading}
           emptyMessage="No subjects found"
           actions={
-            <Button icon={Plus} onClick={() => openModal()}>
-              Add Subject
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="secondary" icon={Upload} onClick={() => setImportModalOpen(true)}>
+                Import Excel
+              </Button>
+              <Button icon={Plus} onClick={() => openModal()}>
+                Add Subject
+              </Button>
+            </div>
           }
         />
       </div>
@@ -203,6 +210,13 @@ const Subjects = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Import Modal */}
+      <SubjectImportModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onSuccess={fetchSubjects}
+      />
     </div>
   );
 };

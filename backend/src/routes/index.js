@@ -25,6 +25,8 @@ const parentRoutes = require("./parent.routes");
 const noticeRoutes = require("./notice.routes");
 const feeRoutes = require("./fee.routes");
 const subjectComponentRoutes = require("./subjectComponent.routes");
+const programRoutes = require("./program.routes");
+const subjectImportRoutes = require("./subjectImport.routes");
 // These will be created in subsequent steps
 // const promotionRoutes = require('./promotion.routes');
 
@@ -38,6 +40,7 @@ router.use(`${API_VERSION}/academic-years`, academicYearRoutes);
 router.use(`${API_VERSION}/classes`, classRoutes);
 router.use(`${API_VERSION}/sections`, sectionRoutes);
 router.use(`${API_VERSION}/subjects`, subjectRoutes);
+router.use(`${API_VERSION}/subjects/import`, subjectImportRoutes);
 router.use(`${API_VERSION}/class-subjects`, classSubjectRoutes);
 router.use(`${API_VERSION}/students`, studentRoutes);
 router.use(`${API_VERSION}/teachers`, teacherRoutes);
@@ -55,6 +58,7 @@ router.use(`${API_VERSION}/parents`, parentRoutes);
 router.use(`${API_VERSION}/notices`, noticeRoutes);
 router.use(`${API_VERSION}/fees`, feeRoutes);
 router.use(`${API_VERSION}/subject-components`, subjectComponentRoutes);
+router.use(`${API_VERSION}/programs`, programRoutes);
 // router.use(`${API_VERSION}/promotions`, promotionRoutes);
 
 // Root route
@@ -81,6 +85,7 @@ router.get("/", (req, res) => {
       notices: "/api/v1/notices",
       fees: "/api/v1/fees",
       subjectComponents: "/api/v1/subject-components",
+      programs: "/api/v1/programs",
       promotions: "/api/v1/promotions",
     },
   });

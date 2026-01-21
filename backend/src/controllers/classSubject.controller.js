@@ -1,5 +1,6 @@
 const prisma = require("../config/database");
 const { ApiError, ApiResponse, asyncHandler } = require("../utils");
+const { createSubjectAudit, isClassSubjectLocked } = require("../utils/subjectAudit");
 
 /**
  * @desc    Get subjects for a class in an academic year
@@ -25,6 +26,7 @@ const getClassSubjects = asyncHandler(async (req, res) => {
     where,
     include: {
       subject: true,
+      class: { select: { id: true, name: true, gradeLevel: true } },
       teacherSubjects: {
         include: {
           user: {
@@ -135,6 +137,14 @@ const assignSubjectToClass = asyncHandler(async (req, res) => {
     },
   });
 
+  // Audit: CREATE
+  await createSubjectAudit({
+    classSubjectId: classSubject.id,
+    action: 'CREATE',
+    newValue: classSubject,
+    userId: req.user.id,
+  });
+
   ApiResponse.created(
     res,
     classSubject,
@@ -174,6 +184,13 @@ const updateClassSubject = asyncHandler(async (req, res) => {
     throw ApiError.forbidden("Class subject does not belong to your school");
   }
 
+  // Check if locked
+  if (classSubject.isLocked) {
+    throw ApiError.forbidden(
+      "This subject is locked and cannot be modified. Exams or marks have been created."
+    );
+  }
+
   const tMarks =
     theoryMarks !== undefined
       ? parseInt(theoryMarks, 10)
@@ -196,6 +213,16 @@ const updateClassSubject = asyncHandler(async (req, res) => {
     );
   }
 
+  const oldValue = {
+    hasTheory: classSubject.hasTheory,
+    hasPractical: classSubject.hasPractical,
+    fullMarks: classSubject.fullMarks,
+    passMarks: classSubject.passMarks,
+    theoryMarks: classSubject.theoryMarks,
+    practicalMarks: classSubject.practicalMarks,
+    creditHours: classSubject.creditHours,
+  };
+
   const updated = await prisma.classSubject.update({
     where: { id: parseInt(id) },
     data: {
@@ -213,6 +240,23 @@ const updateClassSubject = asyncHandler(async (req, res) => {
     },
   });
 
+  // Audit: UPDATE
+  await createSubjectAudit({
+    classSubjectId: parseInt(id),
+    action: 'UPDATE',
+    oldValue,
+    newValue: {
+      hasTheory: updated.hasTheory,
+      hasPractical: updated.hasPractical,
+      fullMarks: updated.fullMarks,
+      passMarks: updated.passMarks,
+      theoryMarks: updated.theoryMarks,
+      practicalMarks: updated.practicalMarks,
+      creditHours: updated.creditHours,
+    },
+    userId: req.user.id,
+  });
+
   ApiResponse.success(res, updated, "Class subject updated successfully");
 });
 
@@ -226,10 +270,18 @@ const removeSubjectFromClass = asyncHandler(async (req, res) => {
 
   const classSubject = await prisma.classSubject.findUnique({
     where: { id: parseInt(id) },
+    include: { subject: true },
   });
 
   if (!classSubject) {
     throw ApiError.notFound("Class subject assignment not found");
+  }
+
+  // Check if locked
+  if (classSubject.isLocked) {
+    throw ApiError.forbidden(
+      "This subject is locked and cannot be deleted. Exams or marks have been created."
+    );
   }
 
   // Check if teacher assigned
@@ -252,6 +304,14 @@ const removeSubjectFromClass = asyncHandler(async (req, res) => {
     throw ApiError.badRequest("Cannot remove subject - exams are linked to it");
   }
 
+  // Audit: DELETE (before actual delete)
+  await createSubjectAudit({
+    classSubjectId: parseInt(id),
+    action: 'DELETE',
+    oldValue: classSubject,
+    userId: req.user.id,
+  });
+
   await prisma.classSubject.delete({
     where: { id: parseInt(id) },
   });
@@ -259,9 +319,27 @@ const removeSubjectFromClass = asyncHandler(async (req, res) => {
   ApiResponse.success(res, null, "Subject removed from class successfully");
 });
 
+/**
+ * @desc    Get audit log for a class subject
+ * @route   GET /api/v1/class-subjects/:id/audit
+ * @access  Private/Admin
+ */
+const getClassSubjectAudit = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const auditLogs = await prisma.subjectAudit.findMany({
+    where: { classSubjectId: parseInt(id) },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+  });
+
+  ApiResponse.success(res, auditLogs);
+});
+
 module.exports = {
   getClassSubjects,
   assignSubjectToClass,
   updateClassSubject,
   removeSubjectFromClass,
+  getClassSubjectAudit,
 };

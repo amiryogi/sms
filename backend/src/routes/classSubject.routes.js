@@ -12,5 +12,6 @@ router.get('/', classSubjectController.getClassSubjects);
 router.post('/', isAdmin, classSubjectRules, validate, classSubjectController.assignSubjectToClass);
 router.put('/:id', isAdmin, [idParamRule, ...classSubjectRules], validate, classSubjectController.updateClassSubject);
 router.delete('/:id', isAdmin, [idParamRule], validate, classSubjectController.removeSubjectFromClass);
+router.get('/:id/audit', isAdmin, [idParamRule], validate, classSubjectController.getClassSubjectAudit);
 
 module.exports = router;
