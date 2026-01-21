@@ -341,7 +341,8 @@ const MarksEntry = () => {
                     NEB Class (Grade 11-12)
                   </span>
                   <span style={{ color: "#78350f", fontSize: "0.9em" }}>
-                    Using NEB subject component structure with credit-weighted GPA
+                    Using NEB subject component structure with credit-weighted
+                    GPA
                   </span>
                 </div>
               )}
@@ -367,7 +368,8 @@ const MarksEntry = () => {
                     Theory: {theoryMax} marks
                     {isNEBClass && theoryComponent && (
                       <span style={{ marginLeft: "6px", opacity: 0.8 }}>
-                        ({theoryComponent.subjectCode} • {theoryComponent.creditHours} cr)
+                        ({theoryComponent.subjectCode} •{" "}
+                        {theoryComponent.creditHours} cr)
                       </span>
                     )}
                   </span>
@@ -377,7 +379,8 @@ const MarksEntry = () => {
                     Practical: {practicalMax} marks
                     {isNEBClass && practicalComponent && (
                       <span style={{ marginLeft: "6px", opacity: 0.8 }}>
-                        ({practicalComponent.subjectCode} • {practicalComponent.creditHours} cr)
+                        ({practicalComponent.subjectCode} •{" "}
+                        {practicalComponent.creditHours} cr)
                       </span>
                     )}
                   </span>
@@ -387,7 +390,6 @@ const MarksEntry = () => {
                     No evaluation configured
                   </span>
                 )}
-              </div>
               </div>
 
               <div className="marks-header">
