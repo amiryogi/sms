@@ -205,7 +205,7 @@ const createStudent = asyncHandler(async (req, res) => {
   const {
     email, password, firstName, lastName, phone,
     admissionNumber, dateOfBirth, gender, bloodGroup, address, emergencyContact, admissionDate,
-    classId, sectionId, academicYearId, rollNumber
+    classId, sectionId, academicYearId, rollNumber, programId, subjectIds
   } = req.body;
 
   // Check if user exists
@@ -262,7 +262,7 @@ const createStudent = asyncHandler(async (req, res) => {
       },
     });
 
-    await tx.studentClass.create({
+    const enrollment = await tx.studentClass.create({
       data: {
         studentId: newStudent.id,
         classId: parseInt(classId),
@@ -271,6 +271,24 @@ const createStudent = asyncHandler(async (req, res) => {
         rollNumber: rollNumber ? parseInt(rollNumber) : null,
       },
     });
+
+    if (programId) {
+      await tx.studentProgram.create({
+        data: {
+          studentClassId: enrollment.id,
+          programId: parseInt(programId),
+        }
+      });
+    }
+
+    if (subjectIds && Array.isArray(subjectIds) && subjectIds.length > 0) {
+      await tx.studentSubject.createMany({
+        data: subjectIds.map(sid => ({
+          studentClassId: enrollment.id,
+          classSubjectId: parseInt(sid)
+        }))
+      });
+    }
 
     return newStudent;
   });
@@ -334,7 +352,7 @@ const updateStudent = asyncHandler(async (req, res) => {
  */
 const enrollStudent = asyncHandler(async (req, res) => {
   const studentId = parseInt(req.params.id);
-  const { classId, sectionId, academicYearId, rollNumber } = req.body;
+  const { classId, sectionId, academicYearId, rollNumber, programId, subjectIds } = req.body;
 
   // Check if already enrolled in this year
   const existingEnrollment = await prisma.studentClass.findUnique({
@@ -359,14 +377,36 @@ const enrollStudent = asyncHandler(async (req, res) => {
     throw ApiError.conflict('Student is already enrolled in this academic year in a different class/section');
   }
 
-  const enrollment = await prisma.studentClass.create({
-    data: {
-      studentId,
-      classId: parseInt(classId),
-      sectionId: parseInt(sectionId),
-      academicYearId: parseInt(academicYearId),
-      rollNumber: rollNumber ? parseInt(rollNumber) : null,
-    },
+  const enrollment = await prisma.$transaction(async (tx) => {
+    const newEnrollment = await tx.studentClass.create({
+      data: {
+        studentId,
+        classId: parseInt(classId),
+        sectionId: parseInt(sectionId),
+        academicYearId: parseInt(academicYearId),
+        rollNumber: rollNumber ? parseInt(rollNumber) : null,
+      },
+    });
+
+    if (programId) {
+      await tx.studentProgram.create({
+        data: {
+          studentClassId: newEnrollment.id,
+          programId: parseInt(programId),
+        }
+      });
+    }
+
+    if (subjectIds && Array.isArray(subjectIds) && subjectIds.length > 0) {
+      await tx.studentSubject.createMany({
+        data: subjectIds.map(sid => ({
+          studentClassId: newEnrollment.id,
+          classSubjectId: parseInt(sid)
+        }))
+      });
+    }
+
+    return newEnrollment;
   });
 
   ApiResponse.created(res, enrollment, 'Student enrolled successfully');

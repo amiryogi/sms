@@ -291,6 +291,11 @@ const publishExam = asyncHandler(async (req, res) => {
 
   const exam = await prisma.exam.findFirst({
     where: { id: parseInt(id), schoolId: req.user.schoolId },
+    include: {
+      examSubjects: {
+        select: { classSubjectId: true }
+      }
+    }
   });
 
   if (!exam) {
@@ -304,11 +309,7 @@ const publishExam = asyncHandler(async (req, res) => {
   }
 
   // Check if exam has subjects linked
-  const subjectCount = await prisma.examSubject.count({
-    where: { examId: parseInt(id) },
-  });
-
-  if (subjectCount === 0) {
+  if (exam.examSubjects.length === 0) {
     throw ApiError.badRequest(
       "Cannot publish exam without any subjects. Please link classes/subjects first."
     );
@@ -321,6 +322,15 @@ const publishExam = asyncHandler(async (req, res) => {
       publishedAt: new Date(),
     },
   });
+
+  // Auto-lock all class subjects linked to this exam
+  const classSubjectIds = exam.examSubjects.map(es => es.classSubjectId);
+  if (classSubjectIds.length > 0) {
+    const { lockClassSubject } = require("../utils/subjectAudit");
+    for (const csId of classSubjectIds) {
+      await lockClassSubject(csId, req.user.id);
+    }
+  }
 
   ApiResponse.success(
     res,
