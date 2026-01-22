@@ -17,6 +17,12 @@ router.get('/teacher/exams', isTeacher, examResultController.getTeacherExams);
 // Get students for marks entry (Teacher, EXAM_OFFICER, Admin)
 router.get('/students', canEnterMarks, examResultController.getStudentsForMarksEntry);
 
+// Get students filtered by program for Grade 11-12 (Teacher, EXAM_OFFICER, Admin)
+router.get('/students-by-program', canEnterMarks, examResultController.getStudentsByProgram);
+
+// Get subjects assigned to a student from StudentSubject mapping (Grade 11-12)
+router.get('/student-subjects', canEnterMarks, examResultController.getStudentSubjects);
+
 // Get existing results for an exam subject (Teacher, EXAM_OFFICER, Admin)
 router.get('/exam-subjects/:examSubjectId',
     canEnterMarks,

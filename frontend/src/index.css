@@ -24,8 +24,8 @@
   --radius-md: 8px;
   --radius-sm: 4px;
   --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1),
-    0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-lg:
+    0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --glass: rgba(255, 255, 255, 0.7);
 }
 
@@ -33,7 +33,11 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    sans-serif;
 }
 
 body {
@@ -1036,7 +1040,10 @@ body {
 }
 
 .marks-header {
-  grid-template-columns: 1fr 120px 1fr;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  white-space: nowrap;
 }
 
 .attendance-list,
@@ -1057,7 +1064,110 @@ body {
 }
 
 .marks-row {
-  grid-template-columns: 1fr 120px 1fr;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Marks Entry Table - Column classes for alignment */
+.col-roll {
+  width: 50px;
+  min-width: 50px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.col-name {
+  flex: 1;
+  min-width: 150px;
+}
+
+.col-marks {
+  width: 90px;
+  min-width: 90px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.col-absent {
+  width: 70px;
+  min-width: 70px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.col-remarks {
+  flex: 1;
+  min-width: 100px;
+}
+
+.marks-input {
+  width: 90px !important;
+  min-width: 90px;
+  flex-shrink: 0;
+  text-align: center;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+}
+
+.marks-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.marks-input:disabled {
+  background: var(--bg-main);
+  color: var(--text-muted);
+}
+
+.marks-row .checkbox-inline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+}
+
+.remarks-input {
+  flex: 1;
+  min-width: 100px;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+}
+
+.remarks-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* Marks table responsive */
+@media (max-width: 768px) {
+  .marks-header,
+  .marks-row {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .marks-header > span:nth-child(2),
+  .marks-row > span:nth-child(2),
+  .marks-row .student-name {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .marks-input {
+    width: 70px !important;
+    min-width: 70px;
+  }
+
+  .remarks-input {
+    width: 100%;
+    min-width: unset;
+  }
 }
 
 .student-name {

@@ -1,123 +1,503 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { Select, Button } from "../../components/common/FormElements";
-import { Save, GraduationCap, AlertCircle } from "lucide-react";
+import { Button } from "../../components/common/FormElements";
+import {
+  Save,
+  GraduationCap,
+  Layers,
+  BookOpen,
+  Users,
+  AlertCircle,
+} from "lucide-react";
 import { examService } from "../../api/examService";
 import { teacherService } from "../../api/teacherService";
+import { programService } from "../../api/programService";
 
+/**
+ * Marks Entry Component - RBAC-Aware
+ *
+ * TWO DISTINCT FLOWS based on role:
+ *
+ * 1. TEACHER FLOW:
+ *    - Shows ONLY their assigned subjects (from teacher_subjects table)
+ *    - Exam → [Their Class-Section-Subject] → Students
+ *    - Cannot access subjects not assigned to them
+ *
+ * 2. EXAM_OFFICER/ADMIN FLOW:
+ *    - Can access ANY subject in the exam
+ *    - Exam → Class → Section → Subject → Program (Grade 11-12) → Students
+ */
 const MarksEntry = () => {
   const { user, hasRole } = useAuth();
+
+  // ==================== ROLE DETECTION ====================
+  const isTeacher = hasRole("TEACHER");
+  const isExamOfficer = hasRole("EXAM_OFFICER");
+  const isAdmin = hasRole("ADMIN") || hasRole("SUPER_ADMIN");
+
+  // TEACHER role uses their assignments; EXAM_OFFICER/ADMIN can access all
+  const useTeacherFlow = isTeacher && !isExamOfficer && !isAdmin;
+
+  // ==================== DATA STATES ====================
   const [exams, setExams] = useState([]);
-  const [teacherAssignments, setTeacherAssignments] = useState([]);
+  const [teacherAssignments, setTeacherAssignments] = useState([]); // For TEACHER
+  const [programs, setPrograms] = useState([]);
   const [marksData, setMarksData] = useState([]);
-  const [loading, setLoading] = useState(false);
+
+  // Loading states
+  const [loadingExams, setLoadingExams] = useState(true);
+  const [loadingAssignments, setLoadingAssignments] = useState(false);
+  const [loadingPrograms, setLoadingPrograms] = useState(false);
+  const [loadingStudents, setLoadingStudents] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // ==================== FILTER STATES ====================
+  // For TEACHER: examId + assignmentId (combined class-section-subject)
+  // For EXAM_OFFICER/ADMIN: examId + classId + sectionId + subjectId + programId
   const [filters, setFilters] = useState({
     examId: "",
-    classSubjectId: "",
+    // Teacher-specific
+    assignmentId: "", // Teacher's assignment ID (classSubjectId-sectionId)
+    // Exam Officer/Admin-specific
+    classId: "",
     sectionId: "",
+    subjectId: "", // examSubjectId
+    programId: "", // For Grade 11-12
   });
 
-  // Check if user is EXAM_OFFICER (not TEACHER or ADMIN)
-  const isExamOfficer =
-    hasRole("EXAM_OFFICER") && !hasRole("TEACHER") && !hasRole("ADMIN");
-  const isTeacher = hasRole("TEACHER");
-
+  // ==================== INITIAL DATA FETCH ====================
   useEffect(() => {
-    fetchInitialData();
-  }, []);
-
-  useEffect(() => {
-    if (filters.examId && filters.classSubjectId && filters.sectionId) {
-      fetchStudentsAndMarks();
+    fetchExams();
+    if (useTeacherFlow) {
+      fetchTeacherAssignments();
     }
-  }, [filters]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [useTeacherFlow]);
 
-  const fetchInitialData = async () => {
+  // Fetch programs when Grade 11-12 class is selected (EXAM_OFFICER/ADMIN flow)
+  useEffect(() => {
+    if (useTeacherFlow) return; // Teachers don't need this
+    if (!filters.examId || !filters.classId) return;
+
+    const exam = exams.find((e) => e.id?.toString() === filters.examId);
+    const classData = exam?.examSubjects?.find(
+      (es) => es.classSubject?.classId?.toString() === filters.classId,
+    )?.classSubject?.class;
+
+    if (classData && classData.gradeLevel >= 11) {
+      fetchPrograms(classData.id);
+    } else {
+      setPrograms([]);
+    }
+  }, [filters.classId, filters.examId, exams, useTeacherFlow]);
+
+  // Fetch students when filters are complete
+  useEffect(() => {
+    if (useTeacherFlow) {
+      // TEACHER: Need examId and assignmentId
+      if (!filters.examId || !filters.assignmentId) {
+        setMarksData([]);
+        return;
+      }
+      fetchStudentsForTeacher();
+    } else {
+      // EXAM_OFFICER/ADMIN: Need all filters
+      if (
+        !filters.examId ||
+        !filters.classId ||
+        !filters.sectionId ||
+        !filters.subjectId
+      ) {
+        setMarksData([]);
+        return;
+      }
+      // Check if NEB class needs program
+      const exam = exams.find((e) => e.id?.toString() === filters.examId);
+      const classData = exam?.examSubjects?.find(
+        (es) => es.classSubject?.classId?.toString() === filters.classId,
+      )?.classSubject?.class;
+      const isNEB = classData && classData.gradeLevel >= 11;
+
+      if (isNEB && !filters.programId) {
+        setMarksData([]);
+        return;
+      }
+      fetchStudentsForExamOfficer();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    filters.examId,
+    filters.assignmentId,
+    filters.classId,
+    filters.sectionId,
+    filters.subjectId,
+    filters.programId,
+    useTeacherFlow,
+    exams,
+  ]);
+
+  // ==================== API CALLS ====================
+  const fetchExams = async () => {
+    setLoadingExams(true);
     try {
-      // Use unified endpoint that works for all roles (Teacher, EXAM_OFFICER, Admin)
-      const examsRes = await examService.getExamsForMarksEntry();
-
-      // Filter out only PUBLISHED exams (backend should handle this, but safety first)
-      const publishedExams = (examsRes.data || []).filter(
+      const res = await examService.getExamsForMarksEntry();
+      const publishedExams = (res.data || []).filter(
         (e) => e.status === "PUBLISHED",
       );
       setExams(publishedExams);
-
-      // For TEACHER role, also fetch their assignments for filtering
-      // EXAM_OFFICER doesn't need assignments - they can access all subjects
-      if (isTeacher) {
-        const assignmentsRes = await teacherService.getTeacherAssignments({
-          userId: user?.id,
-        });
-        setTeacherAssignments(assignmentsRes.data || []);
-      }
     } catch (error) {
-      console.error("Error fetching initial data:", error);
+      console.error("Error fetching exams:", error);
+    } finally {
+      setLoadingExams(false);
     }
   };
 
-  const fetchStudentsAndMarks = async () => {
-    setLoading(true);
+  const fetchTeacherAssignments = async () => {
+    setLoadingAssignments(true);
     try {
-      // Find exam subject ID
+      const res = await teacherService.getTeacherAssignments({
+        userId: user?.id,
+      });
+      setTeacherAssignments(res.data || []);
+    } catch (error) {
+      console.error("Error fetching teacher assignments:", error);
+    } finally {
+      setLoadingAssignments(false);
+    }
+  };
+
+  const fetchPrograms = async (classId) => {
+    setLoadingPrograms(true);
+    try {
+      const res = await programService.getProgramsByClass(classId);
+      setPrograms(res.data || []);
+    } catch (error) {
+      console.error("Error fetching programs:", error);
+      setPrograms([]);
+    } finally {
+      setLoadingPrograms(false);
+    }
+  };
+
+  // TEACHER FLOW: Fetch students using their assignment
+  const fetchStudentsForTeacher = async () => {
+    setLoadingStudents(true);
+    try {
+      // Parse assignment: "classSubjectId-sectionId"
+      const [classSubjectId, sectionId] = filters.assignmentId.split("-");
+
+      // Find the examSubject that matches this classSubject
       const exam = exams.find((e) => e.id?.toString() === filters.examId);
       const examSubject = exam?.examSubjects?.find(
-        (es) => es.classSubjectId?.toString() === filters.classSubjectId,
+        (es) => es.classSubjectId?.toString() === classSubjectId,
       );
 
-      if (examSubject) {
-        // Get existing results or student list for entry
-        let marks = [];
+      if (!examSubject) {
+        console.error("No exam subject found for this assignment");
+        setMarksData([]);
+        setLoadingStudents(false);
+        return;
+      }
 
-        try {
-          // Try fetching existing results first
-          const resultsRes = await examService.getResultsBySubject(
-            examSubject.id,
-            filters.sectionId,
-          );
-          const { results } = resultsRes.data;
+      let marks = [];
 
-          if (results && results.length > 0) {
-            marks = results.map((r) => ({
-              studentId: r.student.id,
-              studentName: `${r.student.user?.firstName} ${r.student.user?.lastName}`,
-              marksObtained: r.isAbsent ? "" : r.marksObtained || "",
-              practicalMarks: r.isAbsent ? "" : r.practicalMarks || "",
-              isAbsent: r.isAbsent || false,
-              remarks: r.remarks || "",
-            }));
-          }
-        } catch (err) {
-          // If 404 or no results, we'll fetch student list next
-        }
+      // Try to fetch existing results first
+      try {
+        const resultsRes = await examService.getResultsBySubject(
+          examSubject.id,
+          sectionId,
+        );
+        const { results } = resultsRes.data;
 
-        // If no existing marks, fetch students for initial entry
-        if (marks.length === 0) {
-          const studentsRes = await examService.getStudentsForMarksEntry(
-            examSubject.id,
-            filters.sectionId,
-          );
-          const studentList = studentsRes.data?.students || [];
-
-          marks = studentList.map((s) => ({
-            studentId: s.studentId,
-            studentName: `${s.firstName} ${s.lastName}`,
-            marksObtained: "",
-            practicalMarks: "",
-            isAbsent: false,
-            remarks: "",
+        if (results && results.length > 0) {
+          marks = results.map((r) => ({
+            studentId: r.student.id,
+            studentClassId: r.studentClassId,
+            rollNumber: r.student.studentClasses?.[0]?.rollNumber || null,
+            studentName: `${r.student.user?.firstName} ${r.student.user?.lastName}`,
+            marksObtained: r.isAbsent ? "" : (r.marksObtained ?? ""),
+            practicalMarks: r.isAbsent ? "" : (r.practicalMarks ?? ""),
+            isAbsent: r.isAbsent || false,
+            remarks: r.remarks || "",
           }));
         }
-
-        setMarksData(marks);
+      } catch {
+        // No existing results
       }
+
+      // If no existing marks, fetch student list
+      if (marks.length === 0) {
+        // For teachers, use standard endpoint (backend validates their assignment)
+        const studentsRes = await examService.getStudentsForMarksEntry(
+          examSubject.id,
+          sectionId,
+        );
+        const studentList = studentsRes.data?.students || [];
+
+        marks = studentList.map((s) => ({
+          studentId: s.studentId,
+          studentClassId: s.studentClassId,
+          rollNumber: s.rollNumber,
+          studentName: `${s.firstName} ${s.lastName}`,
+          programName: s.programName || null,
+          marksObtained: "",
+          practicalMarks: "",
+          isAbsent: false,
+          remarks: "",
+        }));
+      }
+
+      marks.sort((a, b) => (a.rollNumber || 999) - (b.rollNumber || 999));
+      setMarksData(marks);
     } catch (error) {
-      console.error("Error fetching marks data:", error);
+      console.error("Error fetching students:", error);
       setMarksData([]);
     } finally {
-      setLoading(false);
+      setLoadingStudents(false);
     }
+  };
+
+  // EXAM_OFFICER/ADMIN FLOW: Fetch students with full filter control
+  const fetchStudentsForExamOfficer = async () => {
+    setLoadingStudents(true);
+    try {
+      const examSubjectId = filters.subjectId;
+      const sectionId = filters.sectionId;
+
+      // Check if NEB class
+      const exam = exams.find((e) => e.id?.toString() === filters.examId);
+      const classData = exam?.examSubjects?.find(
+        (es) => es.classSubject?.classId?.toString() === filters.classId,
+      )?.classSubject?.class;
+      const isNEB = classData && classData.gradeLevel >= 11;
+
+      let marks = [];
+
+      // Try to fetch existing results first
+      try {
+        const resultsRes = await examService.getResultsBySubject(
+          examSubjectId,
+          sectionId,
+        );
+        const { results } = resultsRes.data;
+
+        if (results && results.length > 0) {
+          marks = results.map((r) => ({
+            studentId: r.student.id,
+            studentClassId: r.studentClassId,
+            rollNumber: r.student.studentClasses?.[0]?.rollNumber || null,
+            studentName: `${r.student.user?.firstName} ${r.student.user?.lastName}`,
+            marksObtained: r.isAbsent ? "" : (r.marksObtained ?? ""),
+            practicalMarks: r.isAbsent ? "" : (r.practicalMarks ?? ""),
+            isAbsent: r.isAbsent || false,
+            remarks: r.remarks || "",
+          }));
+        }
+      } catch {
+        // No existing results
+      }
+
+      // If no existing marks, fetch student list
+      if (marks.length === 0) {
+        let studentsRes;
+
+        if (isNEB && filters.programId) {
+          studentsRes = await examService.getStudentsByProgram(
+            examSubjectId,
+            sectionId,
+            filters.programId,
+          );
+        } else {
+          studentsRes = await examService.getStudentsForMarksEntry(
+            examSubjectId,
+            sectionId,
+          );
+        }
+
+        const studentList = studentsRes.data?.students || [];
+
+        marks = studentList.map((s) => ({
+          studentId: s.studentId,
+          studentClassId: s.studentClassId,
+          rollNumber: s.rollNumber,
+          studentName: `${s.firstName} ${s.lastName}`,
+          programName: s.programName || null,
+          marksObtained: "",
+          practicalMarks: "",
+          isAbsent: false,
+          remarks: "",
+        }));
+      }
+
+      marks.sort((a, b) => (a.rollNumber || 999) - (b.rollNumber || 999));
+      setMarksData(marks);
+    } catch (error) {
+      console.error("Error fetching students:", error);
+      setMarksData([]);
+    } finally {
+      setLoadingStudents(false);
+    }
+  };
+
+  // ==================== DERIVED DATA ====================
+
+  // Selected exam object
+  const selectedExam = useMemo(() => {
+    return exams.find((e) => e.id?.toString() === filters.examId);
+  }, [exams, filters.examId]);
+
+  // TEACHER: Get assignments that match subjects in selected exam
+  const teacherAssignmentOptions = useMemo(() => {
+    if (!useTeacherFlow || !selectedExam?.examSubjects) return [];
+
+    // Get classSubjectIds from this exam (ensure numeric comparison)
+    const examClassSubjectIds = new Set(
+      selectedExam.examSubjects.map((es) => Number(es.classSubjectId)),
+    );
+
+    // Filter teacher's assignments to only those in this exam
+    return teacherAssignments
+      .filter((ta) => examClassSubjectIds.has(Number(ta.classSubjectId)))
+      .map((ta) => ({
+        value: `${ta.classSubjectId}-${ta.sectionId}`,
+        label: `${ta.classSubject?.class?.name} ${ta.section?.name} - ${ta.classSubject?.subject?.name}`,
+        classSubjectId: ta.classSubjectId,
+        sectionId: ta.sectionId,
+        className: ta.classSubject?.class?.name,
+        sectionName: ta.section?.name,
+        subjectName: ta.classSubject?.subject?.name,
+        gradeLevel: ta.classSubject?.class?.gradeLevel,
+      }));
+  }, [useTeacherFlow, selectedExam, teacherAssignments]);
+
+  // Get current exam subject info (for marks structure)
+  const currentExamSubject = useMemo(() => {
+    if (!selectedExam?.examSubjects) return null;
+
+    if (useTeacherFlow && filters.assignmentId) {
+      const [classSubjectId] = filters.assignmentId.split("-");
+      return selectedExam.examSubjects.find(
+        (es) => es.classSubjectId?.toString() === classSubjectId,
+      );
+    } else if (filters.subjectId) {
+      return selectedExam.examSubjects.find(
+        (es) => es.id?.toString() === filters.subjectId,
+      );
+    }
+    return null;
+  }, [selectedExam, filters.assignmentId, filters.subjectId, useTeacherFlow]);
+
+  // EXAM_OFFICER/ADMIN: Available classes from exam
+  const availableClasses = useMemo(() => {
+    if (useTeacherFlow || !selectedExam?.examSubjects) return [];
+
+    const classMap = new Map();
+    selectedExam.examSubjects.forEach((es) => {
+      const cls = es.classSubject?.class;
+      if (cls && !classMap.has(cls.id)) {
+        classMap.set(cls.id, {
+          id: cls.id,
+          name: cls.name,
+          gradeLevel: cls.gradeLevel,
+        });
+      }
+    });
+
+    return Array.from(classMap.values()).sort(
+      (a, b) => a.gradeLevel - b.gradeLevel,
+    );
+  }, [selectedExam, useTeacherFlow]);
+
+  // EXAM_OFFICER/ADMIN: Available sections for selected class
+  const availableSections = useMemo(() => {
+    if (useTeacherFlow || !selectedExam?.examSubjects || !filters.classId)
+      return [];
+
+    const sectionMap = new Map();
+    selectedExam.examSubjects.forEach((es) => {
+      if (es.classSubject?.classId?.toString() === filters.classId) {
+        (es.sections || []).forEach((sec) => {
+          if (!sectionMap.has(sec.id)) {
+            sectionMap.set(sec.id, { id: sec.id, name: sec.name });
+          }
+        });
+      }
+    });
+
+    return Array.from(sectionMap.values()).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+  }, [selectedExam, filters.classId, useTeacherFlow]);
+
+  // EXAM_OFFICER/ADMIN: Available subjects for selected class
+  const availableSubjects = useMemo(() => {
+    if (useTeacherFlow || !selectedExam?.examSubjects || !filters.classId)
+      return [];
+
+    return selectedExam.examSubjects
+      .filter((es) => es.classSubject?.classId?.toString() === filters.classId)
+      .map((es) => ({
+        examSubjectId: es.id,
+        subjectName: es.classSubject?.subject?.name,
+        hasPractical: es.hasPractical === true,
+        theoryFullMarks: es.theoryFullMarks || es.fullMarks || 100,
+        practicalFullMarks: es.practicalFullMarks || 0,
+      }))
+      .sort((a, b) => (a.subjectName || "").localeCompare(b.subjectName || ""));
+  }, [selectedExam, filters.classId, useTeacherFlow]);
+
+  // Check if current class is NEB (Grade 11-12)
+  const isNEBClass = useMemo(() => {
+    if (useTeacherFlow && filters.assignmentId) {
+      const assignment = teacherAssignmentOptions.find(
+        (a) => a.value === filters.assignmentId,
+      );
+      return assignment && assignment.gradeLevel >= 11;
+    } else if (!useTeacherFlow && filters.classId) {
+      const cls = availableClasses.find(
+        (c) => c.id?.toString() === filters.classId,
+      );
+      return cls && cls.gradeLevel >= 11;
+    }
+    return false;
+  }, [
+    useTeacherFlow,
+    filters.assignmentId,
+    filters.classId,
+    teacherAssignmentOptions,
+    availableClasses,
+  ]);
+
+  // Marks structure
+  const hasTheory = currentExamSubject?.hasTheory !== false;
+  const hasPractical = currentExamSubject?.hasPractical === true;
+  const theoryMax =
+    currentExamSubject?.theoryFullMarks || currentExamSubject?.fullMarks || 100;
+  const practicalMax = currentExamSubject?.practicalFullMarks || 0;
+
+  // ==================== HANDLERS ====================
+
+  const handleFilterChange = (field, value) => {
+    setFilters((prev) => {
+      const newFilters = { ...prev, [field]: value };
+
+      // Reset dependent fields
+      if (field === "examId") {
+        newFilters.assignmentId = "";
+        newFilters.classId = "";
+        newFilters.sectionId = "";
+        newFilters.subjectId = "";
+        newFilters.programId = "";
+      } else if (field === "classId") {
+        newFilters.sectionId = "";
+        newFilters.subjectId = "";
+        newFilters.programId = "";
+      } else if (field === "sectionId" || field === "subjectId") {
+        newFilters.programId = "";
+      }
+
+      return newFilters;
+    });
   };
 
   const updateMarks = (studentId, field, value) => {
@@ -131,20 +511,29 @@ const MarksEntry = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const exam = exams.find((e) => e.id?.toString() === filters.examId);
-      const examSubject = exam?.examSubjects?.find(
-        (es) => es.classSubjectId?.toString() === filters.classSubjectId,
-      );
+      // Determine examSubjectId based on flow
+      let examSubjectId, sectionId;
 
-      if (!examSubject) {
-        alert(
-          "Exam subject not found. Please ensure the exam includes this subject.",
+      if (useTeacherFlow) {
+        const [classSubjectId, secId] = filters.assignmentId.split("-");
+        sectionId = secId;
+        // Find examSubject from classSubjectId
+        const examSubject = selectedExam?.examSubjects?.find(
+          (es) => es.classSubjectId?.toString() === classSubjectId,
         );
-        return;
+        if (!examSubject) {
+          alert("Exam subject not found for your assignment.");
+          setSaving(false);
+          return;
+        }
+        examSubjectId = examSubject.id;
+      } else {
+        examSubjectId = parseInt(filters.subjectId);
+        sectionId = filters.sectionId;
       }
 
       const resultsToSave = marksData
-        .filter((m) => m.marksObtained !== "" || m.isAbsent) // Send only entered data
+        .filter((m) => m.marksObtained !== "" || m.isAbsent)
         .map((m) => ({
           studentId: m.studentId,
           marksObtained: m.isAbsent ? 0 : parseFloat(m.marksObtained) || 0,
@@ -160,10 +549,11 @@ const MarksEntry = () => {
       }
 
       await examService.saveResults({
-        examSubjectId: examSubject.id,
-        sectionId: parseInt(filters.sectionId),
+        examSubjectId,
+        sectionId: parseInt(sectionId),
         results: resultsToSave,
       });
+
       alert("Marks saved successfully!");
     } catch (error) {
       console.error("Error saving marks:", error);
@@ -173,90 +563,22 @@ const MarksEntry = () => {
     }
   };
 
-  const examOptions = exams.map((e) => ({
-    value: e.id.toString(),
-    label: e.name,
-  }));
+  // ==================== RENDER ====================
 
-  // Build class/subject/section options based on role
-  // TEACHER: Use their assignments
-  // EXAM_OFFICER/ADMIN: Use exam subjects directly from selected exam
-  const getClassSubjectSectionOptions = () => {
-    if (isTeacher && teacherAssignments.length > 0) {
-      // For teachers, filter by their assignments
-      return teacherAssignments.map((ta) => ({
-        value: `${ta.classSubjectId}-${ta.sectionId}`,
-        label: `${ta.classSubject?.class?.name} ${ta.section?.name} - ${ta.classSubject?.subject?.name}`,
-      }));
-    }
-
-    // For EXAM_OFFICER/ADMIN: Build options from the selected exam's subjects
-    if (!filters.examId) return [];
-
-    const selectedExamForOptions = exams.find(
-      (e) => e.id?.toString() === filters.examId,
+  // Check if user has any valid role for this page
+  if (!isTeacher && !isExamOfficer && !isAdmin) {
+    return (
+      <div className="page-container">
+        <div
+          className="card text-center"
+          style={{ padding: "2rem", color: "#dc2626" }}
+        >
+          <AlertCircle size={32} style={{ marginBottom: "0.5rem" }} />
+          <p>You do not have permission to access marks entry.</p>
+        </div>
+      </div>
     );
-    if (!selectedExamForOptions?.examSubjects) return [];
-
-    const options = [];
-    selectedExamForOptions.examSubjects.forEach((es) => {
-      // Get sections from the exam subject (backend provides assignedSectionIds or sections)
-      const sectionIds =
-        es.assignedSectionIds || es.sections?.map((s) => s.id) || [];
-      const sections = es.sections || [];
-
-      sectionIds.forEach((sectionId) => {
-        const section = sections.find((s) => s.id === sectionId);
-        const sectionName = section?.name || `Section ${sectionId}`;
-        options.push({
-          value: `${es.classSubjectId}-${sectionId}`,
-          label: `${es.classSubject?.class?.name} ${sectionName} - ${es.classSubject?.subject?.name}`,
-        });
-      });
-    });
-
-    return options;
-  };
-
-  const classSubjectSectionOptions = getClassSubjectSectionOptions();
-
-  const selectedExam = exams.find((e) => e.id?.toString() === filters.examId);
-  /* Find the specific exam subject to get max marks config */
-  const currentExamSubject = selectedExam?.examSubjects?.find(
-    (es) => es.classSubjectId?.toString() === filters.classSubjectId,
-  );
-
-  // Check if this is NEB class (Grade 11-12) with component data
-  const isNEBClass = currentExamSubject?.isNEBClass || false;
-  const nebComponents = currentExamSubject?.nebComponents || [];
-  const theoryComponent = nebComponents.find((c) => c.type === "THEORY");
-  const practicalComponent = nebComponents.find((c) => c.type === "PRACTICAL");
-
-  // Use ExamSubject flags as single source of truth for evaluation structure
-  // For NEB classes, use SubjectComponent data if available
-  const hasPractical =
-    isNEBClass && nebComponents.length > 0
-      ? !!practicalComponent
-      : currentExamSubject?.hasPractical === true ||
-        (currentExamSubject?.practicalFullMarks ?? 0) > 0;
-  const hasTheory =
-    isNEBClass && nebComponents.length > 0
-      ? !!theoryComponent
-      : currentExamSubject?.hasTheory !== false;
-
-  // For NEB classes, use SubjectComponent marks; otherwise use ExamSubject marks
-  const theoryMax =
-    isNEBClass && theoryComponent
-      ? theoryComponent.fullMarks
-      : hasTheory
-        ? currentExamSubject?.theoryFullMarks || 100
-        : 0;
-  const practicalMax =
-    isNEBClass && practicalComponent
-      ? practicalComponent.fullMarks
-      : hasPractical
-        ? currentExamSubject?.practicalFullMarks || 0
-        : 0;
+  }
 
   return (
     <div className="page-container">
@@ -264,145 +586,276 @@ const MarksEntry = () => {
         <div>
           <h1>Marks Entry</h1>
           <p className="text-muted">
-            {isExamOfficer
-              ? "Enter exam marks for any subject (Exam Officer)"
-              : "Enter exam marks for your assigned subjects"}
+            {useTeacherFlow
+              ? "Enter marks for your assigned subjects"
+              : "Enter exam marks for any subject (Exam Officer/Admin)"}
           </p>
         </div>
       </div>
 
+      {/* Filter Card */}
       <div className="card filter-card">
-        <div className="filter-row">
-          <Select
-            label="Exam"
-            name="examId"
-            options={examOptions}
-            value={filters.examId}
-            onChange={(e) =>
-              setFilters((prev) => ({
-                ...prev,
-                examId: e.target.value,
-                // Reset class/subject/section when exam changes (for EXAM_OFFICER)
-                classSubjectId: isExamOfficer ? "" : prev.classSubjectId,
-                sectionId: isExamOfficer ? "" : prev.sectionId,
-              }))
-            }
-            placeholder="Select Exam"
-          />
-          <div className="form-group">
-            <label>Class - Section - Subject</label>
+        <div
+          className="filter-row"
+          style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}
+        >
+          {/* 1. Exam Selection (Both flows) */}
+          <div className="form-group" style={{ minWidth: "200px", flex: 1 }}>
+            <label>
+              <BookOpen size={14} style={{ marginRight: "4px" }} />
+              Exam
+            </label>
             <select
-              value={
-                filters.classSubjectId
-                  ? `${filters.classSubjectId}-${filters.sectionId}`
-                  : ""
-              }
-              onChange={(e) => {
-                const [classSubjectId, sectionId] = e.target.value.split("-");
-                setFilters((prev) => ({ ...prev, classSubjectId, sectionId }));
-              }}
+              value={filters.examId}
+              onChange={(e) => handleFilterChange("examId", e.target.value)}
+              disabled={loadingExams}
             >
-              <option value="">Select...</option>
-              {classSubjectSectionOptions.map((opt, i) => (
-                <option key={i} value={opt.value}>
-                  {opt.label}
+              <option value="">
+                {loadingExams ? "Loading..." : "Select Exam"}
+              </option>
+              {exams.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.name}
                 </option>
               ))}
             </select>
           </div>
-        </div>
-      </div>
 
-      {filters.examId && filters.classSubjectId && (
-        <div className="card">
-          {loading ? (
-            <div className="text-center">Loading students...</div>
-          ) : marksData.length === 0 ? (
-            <div className="text-muted text-center">No students found.</div>
-          ) : (
+          {/* TEACHER FLOW: Single dropdown for their assignments */}
+          {useTeacherFlow && (
+            <div className="form-group" style={{ minWidth: "300px", flex: 2 }}>
+              <label>Your Class - Section - Subject</label>
+              <select
+                value={filters.assignmentId}
+                onChange={(e) =>
+                  handleFilterChange("assignmentId", e.target.value)
+                }
+                disabled={!filters.examId || loadingAssignments}
+              >
+                <option value="">
+                  {loadingAssignments ? "Loading..." : "Select your assignment"}
+                </option>
+                {teacherAssignmentOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              {filters.examId &&
+                teacherAssignmentOptions.length === 0 &&
+                !loadingAssignments && (
+                  <small
+                    style={{
+                      color: "#dc2626",
+                      marginTop: "4px",
+                      display: "block",
+                    }}
+                  >
+                    No subjects assigned to you for this exam
+                  </small>
+                )}
+            </div>
+          )}
+
+          {/* EXAM_OFFICER/ADMIN FLOW: Cascading dropdowns */}
+          {!useTeacherFlow && (
             <>
-              {/* NEB Info Banner for Grade 11-12 */}
-              {isNEBClass && nebComponents.length > 0 && (
-                <div
-                  className="neb-info"
-                  style={{
-                    background: "#fef3c7",
-                    border: "1px solid #fcd34d",
-                    borderRadius: "8px",
-                    padding: "0.75rem 1rem",
-                    marginBottom: "0.75rem",
-                    display: "flex",
-                    gap: "0.75rem",
-                    alignItems: "center",
-                  }}
+              {/* 2. Class Selection */}
+              <div
+                className="form-group"
+                style={{ minWidth: "150px", flex: 1 }}
+              >
+                <label>Class</label>
+                <select
+                  value={filters.classId}
+                  onChange={(e) =>
+                    handleFilterChange("classId", e.target.value)
+                  }
+                  disabled={!filters.examId || availableClasses.length === 0}
                 >
-                  <GraduationCap size={18} style={{ color: "#92400e" }} />
-                  <span style={{ fontWeight: 500, color: "#92400e" }}>
-                    NEB Class (Grade 11-12)
-                  </span>
-                  <span style={{ color: "#78350f", fontSize: "0.9em" }}>
-                    Using NEB subject component structure with credit-weighted
-                    GPA
-                  </span>
+                  <option value="">Select Class</option>
+                  {availableClasses.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} {c.gradeLevel >= 11 ? "(NEB)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 3. Section Selection */}
+              <div
+                className="form-group"
+                style={{ minWidth: "120px", flex: 1 }}
+              >
+                <label>Section</label>
+                <select
+                  value={filters.sectionId}
+                  onChange={(e) =>
+                    handleFilterChange("sectionId", e.target.value)
+                  }
+                  disabled={!filters.classId || availableSections.length === 0}
+                >
+                  <option value="">Select Section</option>
+                  {availableSections.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 4. Subject Selection */}
+              <div
+                className="form-group"
+                style={{ minWidth: "200px", flex: 1 }}
+              >
+                <label>Subject</label>
+                <select
+                  value={filters.subjectId}
+                  onChange={(e) =>
+                    handleFilterChange("subjectId", e.target.value)
+                  }
+                  disabled={!filters.classId || availableSubjects.length === 0}
+                >
+                  <option value="">Select Subject</option>
+                  {availableSubjects.map((s) => (
+                    <option key={s.examSubjectId} value={s.examSubjectId}>
+                      {s.subjectName} {s.hasPractical ? "(Th+Pr)" : "(Th)"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 5. Program Selection - Only for NEB */}
+              {isNEBClass && filters.subjectId && (
+                <div
+                  className="form-group"
+                  style={{ minWidth: "180px", flex: 1 }}
+                >
+                  <label>
+                    <Layers size={14} style={{ marginRight: "4px" }} />
+                    Program
+                  </label>
+                  <select
+                    value={filters.programId}
+                    onChange={(e) =>
+                      handleFilterChange("programId", e.target.value)
+                    }
+                    disabled={loadingPrograms}
+                  >
+                    <option value="">
+                      {loadingPrograms ? "Loading..." : "Select Program"}
+                    </option>
+                    {programs.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               )}
+            </>
+          )}
+        </div>
 
-              {/* Evaluation Structure Info Banner */}
-              <div
-                className="eval-info"
+        {/* NEB Info Banner */}
+        {isNEBClass && (
+          <div
+            style={{
+              marginTop: "1rem",
+              background: "#fef3c7",
+              border: "1px solid #fcd34d",
+              borderRadius: "8px",
+              padding: "0.75rem 1rem",
+              display: "flex",
+              gap: "0.5rem",
+              alignItems: "center",
+            }}
+          >
+            <GraduationCap size={18} style={{ color: "#92400e" }} />
+            <span style={{ color: "#92400e", fontSize: "0.9em" }}>
+              <strong>NEB Grade 11-12:</strong> Only students enrolled in this
+              specific subject will appear.
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Students & Marks Entry Card */}
+      {((useTeacherFlow && filters.assignmentId) ||
+        (!useTeacherFlow &&
+          filters.subjectId &&
+          (!isNEBClass || filters.programId))) && (
+        <div className="card">
+          {/* Subject Info Header */}
+          {currentExamSubject && (
+            <div
+              style={{
+                background: "#f0f9ff",
+                border: "1px solid #bae6fd",
+                borderRadius: "8px",
+                padding: "0.75rem 1rem",
+                marginBottom: "1rem",
+                display: "flex",
+                gap: "1rem",
+                alignItems: "center",
+                flexWrap: "wrap",
+              }}
+            >
+              <span style={{ fontWeight: 600 }}>
+                {currentExamSubject.classSubject?.subject?.name}
+              </span>
+              {hasTheory && (
+                <span className="badge badge-info">
+                  Theory: {theoryMax} marks
+                </span>
+              )}
+              {hasPractical && (
+                <span className="badge badge-success">
+                  Practical: {practicalMax} marks
+                </span>
+              )}
+              <span
                 style={{
-                  background: "#f0f9ff",
-                  border: "1px solid #bae6fd",
-                  borderRadius: "8px",
-                  padding: "0.75rem 1rem",
-                  marginBottom: "1rem",
-                  display: "flex",
-                  gap: "1rem",
-                  alignItems: "center",
-                  flexWrap: "wrap",
+                  marginLeft: "auto",
+                  color: "#6b7280",
+                  fontSize: "0.9em",
                 }}
               >
-                <span style={{ fontWeight: 500 }}>Evaluation Structure:</span>
-                {hasTheory && (
-                  <span className="badge badge-info">
-                    Theory: {theoryMax} marks
-                    {isNEBClass && theoryComponent && (
-                      <span style={{ marginLeft: "6px", opacity: 0.8 }}>
-                        ({theoryComponent.subjectCode} •{" "}
-                        {theoryComponent.creditHours} cr)
-                      </span>
-                    )}
-                  </span>
-                )}
-                {hasPractical && (
-                  <span className="badge badge-success">
-                    Practical: {practicalMax} marks
-                    {isNEBClass && practicalComponent && (
-                      <span style={{ marginLeft: "6px", opacity: 0.8 }}>
-                        ({practicalComponent.subjectCode} •{" "}
-                        {practicalComponent.creditHours} cr)
-                      </span>
-                    )}
-                  </span>
-                )}
-                {!hasTheory && !hasPractical && (
-                  <span className="badge badge-warning">
-                    No evaluation configured
-                  </span>
-                )}
+                <Users size={14} style={{ marginRight: "4px" }} />
+                {marksData.length} students
+              </span>
+            </div>
+          )}
+
+          {/* Loading/Empty States */}
+          {loadingStudents ? (
+            <div className="text-center" style={{ padding: "2rem" }}>
+              Loading students...
+            </div>
+          ) : marksData.length === 0 ? (
+            <div className="text-muted text-center" style={{ padding: "2rem" }}>
+              No students found for this selection.
+              {isNEBClass && " Ensure students are enrolled in this subject."}
+            </div>
+          ) : (
+            <>
+              {/* Marks Table Header */}
+              <div className="marks-header">
+                <span className="col-roll">Roll</span>
+                <span className="col-name">Student Name</span>
+                {hasTheory && <span className="col-marks">Theory</span>}
+                {hasPractical && <span className="col-marks">Practical</span>}
+                <span className="col-absent">Absent</span>
+                <span className="col-remarks">Remarks</span>
               </div>
 
-              <div className="marks-header">
-                <span>Student</span>
-                {hasTheory && <span>Theory (Max: {theoryMax})</span>}
-                {hasPractical && <span>Practical (Max: {practicalMax})</span>}
-                <span>Absent</span>
-                <span>Remarks</span>
-              </div>
+              {/* Marks List */}
               <div className="marks-list">
                 {marksData.map((record) => (
                   <div key={record.studentId} className="marks-row">
-                    <span className="student-name">{record.studentName}</span>
+                    <span className="col-roll">{record.rollNumber || "-"}</span>
+                    <span className="col-name">{record.studentName}</span>
                     {hasTheory && (
                       <input
                         type="number"
@@ -418,7 +871,7 @@ const MarksEntry = () => {
                         max={theoryMax}
                         className="marks-input"
                         disabled={record.isAbsent}
-                        placeholder="Theory"
+                        placeholder={`/${theoryMax}`}
                       />
                     )}
                     {hasPractical && (
@@ -436,10 +889,10 @@ const MarksEntry = () => {
                         max={practicalMax}
                         className="marks-input"
                         disabled={record.isAbsent}
-                        placeholder="Prac."
+                        placeholder={`/${practicalMax}`}
                       />
                     )}
-                    <label className="checkbox-inline">
+                    <label className="col-absent checkbox-inline">
                       <input
                         type="checkbox"
                         checked={record.isAbsent}
@@ -451,7 +904,7 @@ const MarksEntry = () => {
                           )
                         }
                       />{" "}
-                      Absent
+                      Abs
                     </label>
                     <input
                       type="text"
@@ -460,12 +913,14 @@ const MarksEntry = () => {
                         updateMarks(record.studentId, "remarks", e.target.value)
                       }
                       placeholder="Remarks"
-                      className="remarks-input"
+                      className="col-remarks remarks-input"
                     />
                   </div>
                 ))}
               </div>
-              <div className="marks-actions">
+
+              {/* Save Button */}
+              <div className="marks-actions" style={{ marginTop: "1rem" }}>
                 <Button icon={Save} loading={saving} onClick={handleSave}>
                   Save Marks
                 </Button>
@@ -474,6 +929,51 @@ const MarksEntry = () => {
           )}
         </div>
       )}
+
+      {/* Prompt messages */}
+      {filters.examId &&
+        useTeacherFlow &&
+        !filters.assignmentId &&
+        teacherAssignmentOptions.length > 0 && (
+          <div
+            className="card text-center"
+            style={{ padding: "2rem", color: "#6b7280" }}
+          >
+            <BookOpen
+              size={32}
+              style={{ marginBottom: "0.5rem", opacity: 0.5 }}
+            />
+            <p>Select your class-section-subject assignment to enter marks</p>
+          </div>
+        )}
+
+      {!useTeacherFlow && filters.examId && !filters.subjectId && (
+        <div
+          className="card text-center"
+          style={{ padding: "2rem", color: "#6b7280" }}
+        >
+          <BookOpen
+            size={32}
+            style={{ marginBottom: "0.5rem", opacity: 0.5 }}
+          />
+          <p>Select Class, Section, and Subject to begin marks entry</p>
+        </div>
+      )}
+
+      {!useTeacherFlow &&
+        isNEBClass &&
+        filters.subjectId &&
+        !filters.programId && (
+          <div
+            className="card text-center"
+            style={{ padding: "2rem", color: "#92400e", background: "#fef3c7" }}
+          >
+            <Layers size={32} style={{ marginBottom: "0.5rem" }} />
+            <p>
+              <strong>Select a Program</strong> to view students for Grade 11-12
+            </p>
+          </div>
+        )}
     </div>
   );
 };
