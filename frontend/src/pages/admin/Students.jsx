@@ -53,6 +53,7 @@ const Students = () => {
   const [programSubjects, setProgramSubjects] = useState([]); // Subjects from the selected program
   const [selectedSubjectIds, setSelectedSubjectIds] = useState(new Set());
   const [showProgramSelect, setShowProgramSelect] = useState(false);
+  const [selectedClassId, setSelectedClassId] = useState(null);
 
   const {
     register,
@@ -117,9 +118,11 @@ const Students = () => {
       setSections([]);
       setAvailablePrograms([]);
       setShowProgramSelect(false);
+      setSelectedClassId(null);
       return;
     }
-    
+
+    setSelectedClassId(classId);
     fetchSectionsForClass(classId);
 
     // 2. Check Grade Level for Programs
@@ -149,9 +152,15 @@ const Students = () => {
     try {
       const res = await programService.getProgram(programId);
       const subjects = res.data?.programSubjects || [];
-      setProgramSubjects(subjects);
+
+      // Filter subjects by selected class to avoid duplicates (e.g. showing both Grade 11 and 12 subjects)
+      const relevantSubjects = selectedClassId
+        ? subjects.filter(ps => ps.classSubject?.class?.id?.toString() === selectedClassId.toString())
+        : subjects;
+
+      setProgramSubjects(relevantSubjects);
       // Auto-select all by default
-      setSelectedSubjectIds(new Set(subjects.map(ps => ps.classSubjectId)));
+      setSelectedSubjectIds(new Set(relevantSubjects.map(ps => ps.classSubjectId)));
     } catch (err) {
       console.error("Error fetching program details:", err);
     }
@@ -218,6 +227,7 @@ const Students = () => {
     setAvailablePrograms([]);
     setProgramSubjects([]);
     setSelectedSubjectIds(new Set());
+    setSelectedClassId(null);
     reset();
   };
 
@@ -235,6 +245,7 @@ const Students = () => {
     setAvailablePrograms([]);
     setProgramSubjects([]);
     setSelectedSubjectIds(new Set());
+    setSelectedClassId(null);
   };
 
   const onSubmit = async (data) => {
@@ -567,7 +578,7 @@ const Students = () => {
                 />
               </FormRow>
 
-               {showProgramSelect && (
+              {showProgramSelect && (
                 <div className="form-group bg-gray-50 p-3 rounded mb-3 border">
                   <Select
                     label="Program / Faculty"
@@ -578,7 +589,7 @@ const Students = () => {
                     onChange={(e) => handleProgramChange(e.target.value)}
                     placeholder="Select Program"
                   />
-                  
+
                   {programSubjects.length > 0 && (
                     <div className="mt-3">
                       <label className="form-label mb-2 block">Assigned Subjects (Uncheck to remove)</label>
@@ -659,7 +670,7 @@ const Students = () => {
             required
           />
 
-           {showProgramSelect && (
+          {showProgramSelect && (
             <div className="form-group bg-gray-50 p-3 rounded mb-3 border">
               <Select
                 label="Program / Faculty"
@@ -670,7 +681,7 @@ const Students = () => {
                 onChange={(e) => handleProgramChange(e.target.value)}
                 placeholder="Select Program"
               />
-              
+
               {programSubjects.length > 0 && (
                 <div className="mt-3">
                   <label className="form-label mb-2 block">Assigned Subjects (Uncheck to remove)</label>

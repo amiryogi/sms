@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { Select, Button } from "../../components/common/FormElements";
-import { Award, Printer, RefreshCw, AlertCircle } from "lucide-react";
+import { Award, Printer, RefreshCw, AlertCircle, X } from "lucide-react";
 import { examService } from "../../api/examService";
 import { parentService } from "../../api/parentService";
+import NEBGradeSheet from "../../components/common/NEBGradeSheet";
+import NepalReportCard from "../../components/common/NepalReportCard";
 
 const Results = () => {
   const { user } = useAuth();
@@ -15,6 +17,14 @@ const Results = () => {
   const [loading, setLoading] = useState(false);
   const [loadingChildren, setLoadingChildren] = useState(true);
   const [error, setError] = useState(null);
+  const [showFullReportCard, setShowFullReportCard] = useState(false);
+
+  // Check if this is NEB class (Grade 11 or 12)
+  const isNEBClass = () => {
+    const className = reportCard?.student?.class || "";
+    const gradeLevel = reportCard?.student?.gradeLevel;
+    return gradeLevel >= 11 || className.includes("11") || className.includes("12");
+  };
 
   // Fetch children from dedicated endpoint
   const loadChildren = async () => {
@@ -173,6 +183,11 @@ const Results = () => {
               Print
             </Button>
           )}
+          {reportCard && (
+            <Button onClick={() => setShowFullReportCard(true)} variant="secondary">
+              View Full Grade Sheet
+            </Button>
+          )}
         </div>
       </div>
 
@@ -298,6 +313,23 @@ const Results = () => {
             </div>
           )}
         </div>
+      )}
+
+      {/* Full Report Card Modal - NEB or Standard */}
+      {showFullReportCard && reportCard && (
+        isNEBClass() ? (
+          <NEBGradeSheet
+            data={reportCard}
+            onClose={() => setShowFullReportCard(false)}
+            showActions={true}
+          />
+        ) : (
+          <NepalReportCard
+            data={reportCard}
+            onClose={() => setShowFullReportCard(false)}
+            showActions={true}
+          />
+        )
       )}
     </div>
   );
