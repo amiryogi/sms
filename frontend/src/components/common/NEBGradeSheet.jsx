@@ -187,8 +187,8 @@ const NEBGradeSheet = ({ data, onClose, showActions = true }) => {
                             </div>
                         </div>
                         <div className="info-row">
-                            <span className="label">IN THE FINAL EXAMINATION CONDUCTED IN</span>
-                            <span className="value bold">{examination?.yearBS || "2082"} B.S. ({examination?.yearAD || examination?.academicYear || "2025"} A.D.)</span>
+                            <span className="label">IN THE {examination?.name?.toUpperCase() || "FINAL EXAMINATION"} CONDUCTED IN</span>
+                            <span className="value bold">{examination?.yearBS || examination?.academicYearBS || "____"} B.S. ({examination?.yearAD || examination?.academicYear?.split("-")[0] || "____"} A.D.)</span>
                         </div>
                         <div className="info-row">
                             <span>ARE GIVEN BELOW.</span>
