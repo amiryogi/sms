@@ -96,6 +96,24 @@ export const examService = {
     return response.data;
   },
 
+  // Get students filtered by program for Grade 11-12 marks entry
+  getStudentsByProgram: async (examSubjectId, sectionId, programId) => {
+    const params = { examSubjectId, sectionId, programId };
+    const response = await apiClient.get("/exam-results/students-by-program", {
+      params,
+    });
+    return response.data;
+  },
+
+  // Get subjects assigned to a student from StudentSubject mapping
+  getStudentSubjects: async (studentClassId) => {
+    const params = { studentClassId };
+    const response = await apiClient.get("/exam-results/student-subjects", {
+      params,
+    });
+    return response.data;
+  },
+
   // Save/Update results
   saveResults: async (data) => {
     const response = await apiClient.post("/exam-results", data);
