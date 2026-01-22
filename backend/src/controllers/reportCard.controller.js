@@ -33,7 +33,7 @@ const buildSubjectResults = (examResults, isNEBClass = false) => {
     // Standard NEB ratio: Theory = 75% credits, Internal = 25% credits
     let theoryCreditHours = totalCreditHours;
     let internalCreditHours = 0;
-    
+
     if (isNEBClass && examSubject.hasPractical) {
       // NEB subjects with practical: typically 3.75 + 1.25 = 5 credits
       // Or 3.00 + 1.00 = 4 credits for some subjects
@@ -491,28 +491,35 @@ const getReportCard = asyncHandler(async (req, res) => {
   });
 
   // Convert student DOB to BS format
-  const dobBS = reportCard.student.dateOfBirth 
-    ? dateConverter.convertADToBS(reportCard.student.dateOfBirth) 
+  const dobBS = reportCard.student.dateOfBirth
+    ? dateConverter.convertADToBS(reportCard.student.dateOfBirth)
     : null;
   const dobAD = reportCard.student.dateOfBirth
     ? dateConverter.formatADDate(reportCard.student.dateOfBirth)
     : null;
 
   // Get academic year in BS (approximately AD year + 57)
-  const academicYearAD = reportCard.exam.academicYear?.name || '';
+  const academicYearAD = reportCard.exam.academicYear?.name || "";
   // Extract year from academicYear name (e.g., "2081-2082" or "2024-2025")
   const yearMatch = academicYearAD.match(/\d{4}/);
-  const academicYearBS = yearMatch ? dateConverter.getApproxBSYear(parseInt(yearMatch[0])) : null;
+  const academicYearBS = yearMatch
+    ? dateConverter.getApproxBSYear(parseInt(yearMatch[0]))
+    : null;
 
   // Build Nepal-style report card response
   const response = {
-    // School Information
+    // School Information (full branding for print)
     school: {
       name: school.name,
       address: school.address,
       phone: school.phone,
       email: school.email,
       logoUrl: school.logoUrl,
+      tagline: school.tagline,
+      website: school.website,
+      landlineNumber: school.landlineNumber,
+      principalName: school.principalName,
+      establishedYear: school.establishedYear,
     },
     // Examination Information
     examination: {
@@ -655,9 +662,11 @@ const getReportCardPdfData = asyncHandler(async (req, res) => {
     : null;
 
   // Get academic year in BS
-  const academicYearAD = reportCard.exam.academicYear?.name || '';
+  const academicYearAD = reportCard.exam.academicYear?.name || "";
   const yearMatch = academicYearAD.match(/\d{4}/);
-  const academicYearBS = yearMatch ? dateConverter.getApproxBSYear(parseInt(yearMatch[0])) : null;
+  const academicYearBS = yearMatch
+    ? dateConverter.getApproxBSYear(parseInt(yearMatch[0]))
+    : null;
 
   // Return formatted data for PDF generation
   ApiResponse.success(res, {

@@ -22,39 +22,40 @@ const ClassSubjects = React.lazy(() => import("./pages/admin/ClassSubjects"));
 const Exams = React.lazy(() => import("./pages/admin/Exams"));
 const NEBCurriculum = React.lazy(() => import("./pages/admin/NEBCurriculum"));
 const Programs = React.lazy(() => import("./pages/admin/Programs"));
-const TeacherAssignment = React.lazy(() =>
-  import("./pages/admin/TeacherAssignment")
+const TeacherAssignment = React.lazy(
+  () => import("./pages/admin/TeacherAssignment"),
 );
 const AdminParents = React.lazy(() => import("./pages/admin/Parents"));
 const AdminStudents = React.lazy(() => import("./pages/admin/Students"));
 const AdminTeachers = React.lazy(() => import("./pages/admin/Teachers"));
 const AdminReportCards = React.lazy(() => import("./pages/admin/ReportCards"));
 const AdminNotices = React.lazy(() => import("./pages/admin/Notices"));
+const SchoolSettings = React.lazy(() => import("./pages/admin/SchoolSettings"));
 const AdminFeeTypes = React.lazy(() => import("./pages/admin/FeeTypes"));
-const AdminFeeStructures = React.lazy(() =>
-  import("./pages/admin/FeeStructures")
+const AdminFeeStructures = React.lazy(
+  () => import("./pages/admin/FeeStructures"),
 );
 const AdminFeePayments = React.lazy(() => import("./pages/admin/FeePayments"));
 
 // Teacher Pages
 const TeacherDashboard = React.lazy(() => import("./pages/teacher/Dashboard"));
-const TeacherAttendance = React.lazy(() =>
-  import("./pages/teacher/Attendance")
+const TeacherAttendance = React.lazy(
+  () => import("./pages/teacher/Attendance"),
 );
-const TeacherAssignments = React.lazy(() =>
-  import("./pages/teacher/Assignments")
+const TeacherAssignments = React.lazy(
+  () => import("./pages/teacher/Assignments"),
 );
 const MarksEntry = React.lazy(() => import("./pages/teacher/MarksEntry"));
 const MyStudents = React.lazy(() => import("./pages/teacher/MyStudents"));
 
 // Student Pages
 const StudentDashboard = React.lazy(() => import("./pages/student/Dashboard"));
-const StudentAssignments = React.lazy(() =>
-  import("./pages/student/Assignments")
+const StudentAssignments = React.lazy(
+  () => import("./pages/student/Assignments"),
 );
 const StudentResults = React.lazy(() => import("./pages/student/Results"));
-const StudentReportCard = React.lazy(() =>
-  import("./pages/student/ReportCard")
+const StudentReportCard = React.lazy(
+  () => import("./pages/student/ReportCard"),
 );
 const StudentFees = React.lazy(() => import("./pages/student/Fees"));
 
@@ -126,6 +127,10 @@ function App() {
                 element={<AdminReportCards />}
               />
               <Route path="/admin/notices" element={<AdminNotices />} />
+              <Route
+                path="/admin/school-settings"
+                element={<SchoolSettings />}
+              />
               <Route path="/admin/fee-types" element={<AdminFeeTypes />} />
               <Route
                 path="/admin/fee-structures"
@@ -208,10 +213,19 @@ function App() {
                 </ProtectedRoute>
               }
             >
-              <Route path="/accountant/dashboard" element={<AdminFeePayments />} />
+              <Route
+                path="/accountant/dashboard"
+                element={<AdminFeePayments />}
+              />
               <Route path="/accountant/fee-types" element={<AdminFeeTypes />} />
-              <Route path="/accountant/fee-structures" element={<AdminFeeStructures />} />
-              <Route path="/accountant/fee-payments" element={<AdminFeePayments />} />
+              <Route
+                path="/accountant/fee-structures"
+                element={<AdminFeeStructures />}
+              />
+              <Route
+                path="/accountant/fee-payments"
+                element={<AdminFeePayments />}
+              />
               <Route path="/accountant/notices" element={<NoticesView />} />
             </Route>
 

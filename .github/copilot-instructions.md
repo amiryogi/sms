@@ -127,7 +127,68 @@ npm run seed                # Seed demo data
 npm run dev                 # Vite dev server on :5173
 ```
 
-**Default login:** admin@demoschool.edu.np / Admin@123 / School: DEMO001
+**Default login:** admin@svi.edu.np / password123 / School: DEMO001
+
+## NEB Grade 11-12 (Nepal Education Board)
+
+Grade 11-12 has special handling for NEB curriculum:
+
+### Data Model
+
+```
+Program (Science/Management) → ProgramSubject → ClassSubject → Subject
+                                                     ↓
+                                            SubjectComponent (THEORY/PRACTICAL)
+```
+
+### Key Differences from Grade 1-10
+
+- Subjects have separate **Theory** and **Practical** components with different codes/marks
+- Students enroll in **Programs** (Science, Management) not just classes
+- `ClassSubject.hasTheory` and `ClassSubject.hasPractical` control marks entry fields
+- `SubjectComponent` stores NEB subject codes (e.g., "0031" for English Theory)
+
+### Seed Scripts
+
+```bash
+# Run from backend/
+node prisma/seeds/seedNEBSubjects.js   # Import NEB subjects for Grade 11-12
+node prisma/seeds/seedPrograms.js      # Create Science/Management programs
+```
+
+## Marks Entry Flow
+
+For marks entry to work, these must be linked:
+
+```
+Exam (PUBLISHED) → ExamSubject → ClassSubject ← TeacherSubject (teacher assignment)
+                                      ↓
+                              StudentClass (enrolled students)
+```
+
+**Common issues:**
+
+- No published exams → Teachers see no exams
+- Teacher not assigned to ClassSubject → Empty assignment dropdown
+- ExamSubject references different ClassSubject than teacher assignment → No match
+
+## Frontend Styling
+
+Uses **vanilla CSS** in `frontend/src/index.css` with CSS variables. No Tailwind.
+
+### Key CSS Patterns
+
+```css
+/* Use CSS variables for theming */
+background: var(--primary);
+color: var(--text-muted);
+
+/* Use existing component classes */
+.card, .badge, .btn, .data-table, .form-group
+
+/* Column alignment with class names (not nth-child) */
+.col-roll, .col-name, .col-marks, .col-remarks
+```
 
 ## Adding a New Feature
 
@@ -138,3 +199,4 @@ npm run dev                 # Vite dev server on :5173
 5. Register route in `backend/src/routes/index.js`
 6. Create frontend service in `frontend/src/api/{feature}Service.js`
 7. Add pages under `frontend/src/pages/{role}/` with `ProtectedRoute`
+8. Add CSS to `frontend/src/index.css` using existing patterns

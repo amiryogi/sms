@@ -20,6 +20,10 @@ import {
   Bell,
   Banknote,
   Layers,
+  Building2,
+  Facebook,
+  Instagram,
+  Youtube,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -67,10 +71,10 @@ const DashboardLayout = () => {
           path: "/admin/class-subjects",
         },
         { title: "Exams", icon: ClipboardList, path: "/admin/exams" },
-        { 
-          title: "Programs / Faculties", 
-          icon: Layers, 
-          path: "/admin/programs" 
+        {
+          title: "Programs / Faculties",
+          icon: Layers,
+          path: "/admin/programs",
         },
         {
           title: "NEB Curriculum",
@@ -93,7 +97,12 @@ const DashboardLayout = () => {
           icon: Banknote,
           path: "/admin/fee-structures",
         },
-        { title: "Fee Payments", icon: Banknote, path: "/admin/fee-payments" }
+        { title: "Fee Payments", icon: Banknote, path: "/admin/fee-payments" },
+        {
+          title: "School Settings",
+          icon: Building2,
+          path: "/admin/school-settings",
+        },
       );
     }
 
@@ -120,7 +129,7 @@ const DashboardLayout = () => {
           path: "/teacher/attendance",
         },
         { title: "Assignments", icon: Calendar, path: "/teacher/assignments" },
-        { title: "Marks Entry", icon: BookOpenCheck, path: "/teacher/marks" }
+        { title: "Marks Entry", icon: BookOpenCheck, path: "/teacher/marks" },
       );
     }
 
@@ -136,7 +145,7 @@ const DashboardLayout = () => {
           title: "Notices",
           icon: Bell,
           path: "/teacher/notices",
-        }
+        },
       );
     }
 
@@ -155,7 +164,7 @@ const DashboardLayout = () => {
         { title: "Assignments", icon: Calendar, path: "/student/assignments" },
         { title: "Results", icon: Award, path: "/student/results" },
         { title: "Report Card", icon: FileText, path: "/student/report-card" },
-        { title: "Fees", icon: Banknote, path: "/student/fees" }
+        { title: "Fees", icon: Banknote, path: "/student/fees" },
       );
     }
 
@@ -177,7 +186,7 @@ const DashboardLayout = () => {
           path: "/parent/attendance",
         },
         { title: "Results", icon: Award, path: "/parent/results" },
-        { title: "Fees", icon: Banknote, path: "/parent/fees" }
+        { title: "Fees", icon: Banknote, path: "/parent/fees" },
       );
     }
 
@@ -208,7 +217,7 @@ const DashboardLayout = () => {
           title: "Notices",
           icon: Bell,
           path: "/accountant/notices",
-        }
+        },
       );
     }
 
@@ -218,6 +227,7 @@ const DashboardLayout = () => {
   const navItems = getNavItems();
 
   const avatarSrc = resolveAssetUrl(user?.avatarUrl);
+  const schoolLogoSrc = resolveAssetUrl(user?.school?.logoUrl);
 
   return (
     <div className="dashboard-container">
@@ -229,9 +239,24 @@ const DashboardLayout = () => {
       >
         <div className="sidebar-header">
           {sidebarOpen ? (
-            <span className="logo-text">K-12 SMS</span>
+            <div className="sidebar-brand">
+              {schoolLogoSrc ? (
+                <img
+                  src={schoolLogoSrc}
+                  alt="School Logo"
+                  className="sidebar-logo"
+                />
+              ) : (
+                <Building2 size={28} className="sidebar-logo-icon" />
+              )}
+              <span className="logo-text">
+                {user?.school?.name || "K-12 SMS"}
+              </span>
+            </div>
+          ) : schoolLogoSrc ? (
+            <img src={schoolLogoSrc} alt="Logo" className="sidebar-logo-sm" />
           ) : (
-            <LayoutDashboard size={24} />
+            <Building2 size={24} />
           )}
           <button
             className="toggle-btn"
@@ -286,6 +311,39 @@ const DashboardLayout = () => {
             Dashboard / {location.pathname.split("/").pop() || "Overview"}
           </div>
           <div className="top-bar-actions">
+            {/* Social Links */}
+            <div className="social-links">
+              {user?.school?.facebookUrl && (
+                <a
+                  href={user.school.facebookUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Facebook"
+                >
+                  <Facebook size={18} />
+                </a>
+              )}
+              {user?.school?.instagramUrl && (
+                <a
+                  href={user.school.instagramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Instagram"
+                >
+                  <Instagram size={18} />
+                </a>
+              )}
+              {user?.school?.youtubeUrl && (
+                <a
+                  href={user.school.youtubeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="YouTube"
+                >
+                  <Youtube size={18} />
+                </a>
+              )}
+            </div>
             <div className="school-pill">
               {user?.school?.name || "School Management System"}
             </div>
