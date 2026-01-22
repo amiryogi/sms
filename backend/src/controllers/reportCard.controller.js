@@ -4,6 +4,7 @@ const {
   ApiResponse,
   asyncHandler,
   gradeCalculator,
+  dateConverter,
 } = require("../utils");
 
 /**
@@ -419,7 +420,11 @@ const getReportCard = asyncHandler(async (req, res) => {
         },
       },
       student: {
-        include: {
+        select: {
+          id: true,
+          admissionNumber: true,
+          dateOfBirth: true,
+          gender: true,
           user: {
             select: { firstName: true, lastName: true, email: true },
           },
@@ -485,6 +490,20 @@ const getReportCard = asyncHandler(async (req, res) => {
     useCreditWeighting: isNEBClass,
   });
 
+  // Convert student DOB to BS format
+  const dobBS = reportCard.student.dateOfBirth 
+    ? dateConverter.convertADToBS(reportCard.student.dateOfBirth) 
+    : null;
+  const dobAD = reportCard.student.dateOfBirth
+    ? dateConverter.formatADDate(reportCard.student.dateOfBirth)
+    : null;
+
+  // Get academic year in BS (approximately AD year + 57)
+  const academicYearAD = reportCard.exam.academicYear?.name || '';
+  // Extract year from academicYear name (e.g., "2081-2082" or "2024-2025")
+  const yearMatch = academicYearAD.match(/\d{4}/);
+  const academicYearBS = yearMatch ? dateConverter.getApproxBSYear(parseInt(yearMatch[0])) : null;
+
   // Build Nepal-style report card response
   const response = {
     // School Information
@@ -500,6 +519,10 @@ const getReportCard = asyncHandler(async (req, res) => {
       name: reportCard.exam.name,
       type: reportCard.exam.examType,
       academicYear: reportCard.exam.academicYear.name,
+      academicYearBS: academicYearBS ? `${academicYearBS}` : null,
+      // Year for NEB grade sheet display
+      yearAD: yearMatch ? yearMatch[0] : new Date().getFullYear().toString(),
+      yearBS: academicYearBS ? academicYearBS.toString() : null,
       startDate: reportCard.exam.startDate,
       endDate: reportCard.exam.endDate,
     },
@@ -514,6 +537,10 @@ const getReportCard = asyncHandler(async (req, res) => {
       section: reportCard.studentClass.section.name,
       gradeLevel: reportCard.studentClass.class.gradeLevel,
       admissionNumber: reportCard.student.admissionNumber,
+      dateOfBirth: reportCard.student.dateOfBirth,
+      dobBS: dobBS?.formatted || null,
+      dobAD: dobAD,
+      gender: reportCard.student.gender,
     },
     // Subject-wise Results (Nepal format)
     subjects: subjectResults,
@@ -572,7 +599,11 @@ const getReportCardPdfData = asyncHandler(async (req, res) => {
     },
     include: {
       exam: { include: { academicYear: true } },
-      student: { include: { user: true } },
+      student: {
+        include: {
+          user: true,
+        },
+      },
       studentClass: { include: { class: true, section: true } },
     },
   });
@@ -588,6 +619,14 @@ const getReportCardPdfData = asyncHandler(async (req, res) => {
 
   const school = await prisma.school.findUnique({
     where: { id: req.user.schoolId },
+    select: {
+      id: true,
+      name: true,
+      address: true,
+      phone: true,
+      email: true,
+      logoUrl: true,
+    },
   });
 
   const examResults = await prisma.examResult.findMany({
@@ -607,16 +646,39 @@ const getReportCardPdfData = asyncHandler(async (req, res) => {
     useCreditWeighting: isNEBClass,
   });
 
+  // Convert student DOB to BS format for PDF
+  const dobBS = reportCard.student.dateOfBirth
+    ? dateConverter.convertADToBS(reportCard.student.dateOfBirth)
+    : null;
+  const dobAD = reportCard.student.dateOfBirth
+    ? dateConverter.formatADDate(reportCard.student.dateOfBirth)
+    : null;
+
+  // Get academic year in BS
+  const academicYearAD = reportCard.exam.academicYear?.name || '';
+  const yearMatch = academicYearAD.match(/\d{4}/);
+  const academicYearBS = yearMatch ? dateConverter.getApproxBSYear(parseInt(yearMatch[0])) : null;
+
   // Return formatted data for PDF generation
   ApiResponse.success(res, {
     school,
-    exam: reportCard.exam,
+    examination: {
+      name: reportCard.exam.name,
+      type: reportCard.exam.examType,
+      academicYear: reportCard.exam.academicYear.name,
+      yearAD: yearMatch ? yearMatch[0] : new Date().getFullYear().toString(),
+      yearBS: academicYearBS ? academicYearBS.toString() : null,
+    },
     student: {
       ...reportCard.student,
       user: reportCard.student.user,
+      name: `${reportCard.student.user.firstName} ${reportCard.student.user.lastName}`,
       class: reportCard.studentClass.class,
       section: reportCard.studentClass.section,
       rollNumber: reportCard.studentClass.rollNumber,
+      gradeLevel: reportCard.studentClass.class.gradeLevel,
+      dobBS: dobBS?.formatted || null,
+      dobAD: dobAD,
     },
     subjects: subjectResults,
     isNEBClass,

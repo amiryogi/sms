@@ -5,6 +5,7 @@ const queryHelpers = require("./queryHelpers");
 const gradeCalculator = require("./gradeCalculator");
 const nebGradeUtils = require("./nebGradeUtils");
 const subjectAudit = require("./subjectAudit");
+const dateConverter = require("./dateConverter");
 
 module.exports = {
   ApiError,
@@ -14,4 +15,5 @@ module.exports = {
   gradeCalculator,
   nebGradeUtils,
   subjectAudit,
+  dateConverter,
 };
