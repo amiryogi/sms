@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Select, Button } from "../../components/common/FormElements";
 import NepalReportCard from "../../components/common/NepalReportCard";
+import NEBGradeSheet from "../../components/common/NEBGradeSheet";
 import { reportCardService } from "../../api/reportCardService";
 import { examService } from "../../api/examService";
 import { academicService } from "../../api/academicService";
@@ -553,8 +554,8 @@ const ReportCards = () => {
                                       student.reportCard.classRank === 1
                                         ? "#eab308"
                                         : student.reportCard.classRank === 2
-                                        ? "#9ca3af"
-                                        : "#b45309",
+                                          ? "#9ca3af"
+                                          : "#b45309",
                                   }}
                                 />
                               )}
@@ -566,11 +567,10 @@ const ReportCards = () => {
                         </td>
                         <td style={{ padding: "0.75rem", textAlign: "center" }}>
                           <span
-                            className={`badge ${
-                              student.isPassed
+                            className={`badge ${student.isPassed
                                 ? "badge-success"
                                 : "badge-danger"
-                            }`}
+                              }`}
                             style={{ fontSize: "0.75rem" }}
                           >
                             {student.isPassed ? "PASSED" : "FAILED"}
@@ -658,11 +658,22 @@ const ReportCards = () => {
             </div>
           </div>
         ) : previewData ? (
-          <NepalReportCard
-            data={previewData}
-            onClose={closePreview}
-            showActions={true}
-          />
+          previewData.isNEBClass || 
+            previewData.student?.gradeLevel >= 11 ||
+            (previewData.student?.class &&
+              (previewData.student.class.includes("11") || previewData.student.class.includes("12"))) ? (
+            <NEBGradeSheet
+              data={previewData}
+              onClose={closePreview}
+              showActions={true}
+            />
+          ) : (
+            <NepalReportCard
+              data={previewData}
+              onClose={closePreview}
+              showActions={true}
+            />
+          )
         ) : null)}
 
       <style>{`

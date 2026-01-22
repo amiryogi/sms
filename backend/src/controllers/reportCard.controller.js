@@ -9,12 +9,14 @@ const {
 /**
  * Build detailed subject results with Nepal-style grading
  * @param {Array} examResults - Raw exam results from database
+ * @param {boolean} isNEBClass - Whether this is Grade 11/12 (NEB curriculum)
  * @returns {Array} Processed subject results with grades and GPAs
  */
-const buildSubjectResults = (examResults) => {
+const buildSubjectResults = (examResults, isNEBClass = false) => {
   return examResults.map((result) => {
     const examSubject = result.examSubject;
     const classSubject = examSubject.classSubject;
+    const totalCreditHours = parseFloat(classSubject.creditHours) || 4;
 
     // Calculate subject grade using Nepal rules
     const gradeResult = gradeCalculator.calculateSubjectGrade({
@@ -26,11 +28,31 @@ const buildSubjectResults = (examResults) => {
       isAbsent: result.isAbsent,
     });
 
+    // For NEB classes, calculate separate credit hours for theory and internal
+    // Standard NEB ratio: Theory = 75% credits, Internal = 25% credits
+    let theoryCreditHours = totalCreditHours;
+    let internalCreditHours = 0;
+    
+    if (isNEBClass && examSubject.hasPractical) {
+      // NEB subjects with practical: typically 3.75 + 1.25 = 5 credits
+      // Or 3.00 + 1.00 = 4 credits for some subjects
+      theoryCreditHours = Math.round(totalCreditHours * 0.75 * 100) / 100;
+      internalCreditHours = Math.round(totalCreditHours * 0.25 * 100) / 100;
+    } else if (isNEBClass) {
+      // Compulsory subjects without practical may have different splits
+      // E.g., Nepali: 2.25 + 0.75 = 3, English: 3.00 + 1.00 = 4
+      theoryCreditHours = Math.round(totalCreditHours * 0.75 * 100) / 100;
+      internalCreditHours = Math.round(totalCreditHours * 0.25 * 100) / 100;
+    }
+
     return {
       subjectId: classSubject.subject.id,
       subjectName: classSubject.subject.name,
       subjectCode: classSubject.subject.code,
-      creditHours: parseFloat(classSubject.creditHours) || 3,
+      creditHours: totalCreditHours,
+      // NEB-specific credit hour breakdown
+      theoryCreditHours,
+      internalCreditHours,
       hasTheory: examSubject.hasTheory,
       hasPractical: examSubject.hasPractical,
       // Theory details
@@ -39,7 +61,7 @@ const buildSubjectResults = (examResults) => {
       theoryPercentage: gradeResult.theoryPercentage,
       theoryGrade: gradeResult.theoryGrade,
       theoryGpa: gradeResult.theoryGpa,
-      // Practical details
+      // Practical/Internal details
       practicalMarks: gradeResult.practicalMarks,
       practicalFullMarks: gradeResult.practicalFullMarks,
       practicalPercentage: gradeResult.practicalPercentage,
@@ -163,7 +185,7 @@ const getReportCards = asyncHandler(async (req, res) => {
   // Build response with student data, results, and report card status
   const data = enrollments.map((enrollment) => {
     const rawResults = resultsByStudent[enrollment.studentId] || [];
-    const subjectResults = buildSubjectResults(rawResults);
+    const subjectResults = buildSubjectResults(rawResults, isNEBClass);
     const overallResult = gradeCalculator.calculateOverallGPA(subjectResults, {
       useCreditWeighting: isNEBClass,
     });
@@ -294,7 +316,7 @@ const generateReportCards = asyncHandler(async (req, res) => {
       if (studentResults.length === 0) continue;
 
       // Process with Nepal grading - use credit weighting for NEB classes
-      const subjectResults = buildSubjectResults(studentResults);
+      const subjectResults = buildSubjectResults(studentResults, isNEBClass);
       const overallResult = gradeCalculator.calculateOverallGPA(
         subjectResults,
         {
@@ -458,7 +480,7 @@ const getReportCard = asyncHandler(async (req, res) => {
 
   // Process with Nepal grading - use credit weighting for NEB classes (Grade 11-12)
   const isNEBClass = reportCard.studentClass.class.gradeLevel >= 11;
-  const subjectResults = buildSubjectResults(examResults);
+  const subjectResults = buildSubjectResults(examResults, isNEBClass);
   const overallResult = gradeCalculator.calculateOverallGPA(subjectResults, {
     useCreditWeighting: isNEBClass,
   });
@@ -580,7 +602,7 @@ const getReportCardPdfData = asyncHandler(async (req, res) => {
 
   // Use credit-weighted GPA for NEB classes (Grade 11-12)
   const isNEBClass = reportCard.studentClass.class.gradeLevel >= 11;
-  const subjectResults = buildSubjectResults(examResults);
+  const subjectResults = buildSubjectResults(examResults, isNEBClass);
   const overallResult = gradeCalculator.calculateOverallGPA(subjectResults, {
     useCreditWeighting: isNEBClass,
   });

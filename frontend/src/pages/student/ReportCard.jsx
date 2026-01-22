@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Select, Button } from '../../components/common/FormElements';
 import { Printer, Download, FileText, Award, Loader2 } from 'lucide-react';
 import NepalReportCard from '../../components/common/NepalReportCard';
+import NEBGradeSheet from '../../components/common/NEBGradeSheet';
 import { reportCardService } from '../../api/reportCardService';
 
 const ReportCard = () => {
@@ -15,6 +16,13 @@ const ReportCard = () => {
 
   // Get student ID from auth context
   const studentId = user?.student?.id;
+
+  // Check if this is NEB class (Grade 11 or 12)
+  const isNEBClass = () => {
+    const className = reportCardData?.student?.class || '';
+    const gradeLevel = reportCardData?.student?.gradeLevel || 0;
+    return gradeLevel >= 11 || className.includes('11') || className.includes('12');
+  };
 
   useEffect(() => {
     if (studentId) {
@@ -186,12 +194,19 @@ const ReportCard = () => {
         </div>
       )}
 
-      {/* Report Card Display */}
+      {/* Report Card Display - NEB format for Grade 11/12, Standard for others */}
       {selectedExam && !loading && reportCardData && (
-        <NepalReportCard
-          data={reportCardData}
-          showActions={false}
-        />
+        isNEBClass() ? (
+          <NEBGradeSheet
+            data={reportCardData}
+            showActions={false}
+          />
+        ) : (
+          <NepalReportCard
+            data={reportCardData}
+            showActions={false}
+          />
+        )
       )}
 
       {/* Error State */}
