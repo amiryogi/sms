@@ -92,14 +92,24 @@ const NepalReportCard = ({ data, onClose, showActions = true }) => {
             </div>
             <div className="school-info">
               <h1 className="school-name">{school?.name || "School Name"}</h1>
+              {school?.tagline && (
+                <p className="school-tagline">{school.tagline}</p>
+              )}
               <p className="school-address">
                 {school?.address || "School Address"}
               </p>
               <p className="school-contact">
-                {school?.phone && `Phone: ${school.phone}`}
-                {school?.phone && school?.email && " | "}
+                {school?.landlineNumber && `Tel: ${school.landlineNumber}`}
+                {school?.landlineNumber && school?.phone && " | "}
+                {school?.phone && `Mobile: ${school.phone}`}
+                {(school?.landlineNumber || school?.phone) &&
+                  school?.email &&
+                  " | "}
                 {school?.email && `Email: ${school.email}`}
               </p>
+              {school?.website && (
+                <p className="school-website">Website: {school.website}</p>
+              )}
             </div>
             <div className="school-logo right-logo">
               {/* Optional: Second logo or Nepal emblem */}
@@ -534,10 +544,23 @@ const NepalReportCard = ({ data, onClose, showActions = true }) => {
           color: #4a5568;
         }
 
+        .school-tagline {
+          font-size: 10pt;
+          font-style: italic;
+          color: #4a5568;
+          margin: 3px 0;
+        }
+
         .school-contact {
           font-size: 9pt;
           color: #718096;
           margin: 0;
+        }
+
+        .school-website {
+          font-size: 9pt;
+          color: #3182ce;
+          margin: 2px 0 0;
         }
 
         /* Report Title */

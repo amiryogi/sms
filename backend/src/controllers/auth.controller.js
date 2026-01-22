@@ -51,7 +51,7 @@ const generateTokens = (userId) => {
   const refreshToken = jwt.sign(
     { userId, tokenId: uuidv4() },
     config.jwt.refreshSecret,
-    { expiresIn: config.jwt.refreshExpiresIn }
+    { expiresIn: config.jwt.refreshExpiresIn },
   );
 
   return { accessToken, refreshToken };
@@ -165,7 +165,7 @@ const login = asyncHandler(async (req, res) => {
   // Check if user is active
   if (user.status !== "active") {
     throw ApiError.unauthorized(
-      "Account is not active. Please contact administrator."
+      "Account is not active. Please contact administrator.",
     );
   }
 
@@ -174,7 +174,7 @@ const login = asyncHandler(async (req, res) => {
 
   // Store refresh token in database (hashed, with metadata)
   const expiresAt = new Date(
-    Date.now() + parseExpiresIn(config.jwt.refreshExpiresIn)
+    Date.now() + parseExpiresIn(config.jwt.refreshExpiresIn),
   );
   const hashedToken = hashRefreshToken(refreshToken);
   const { userAgent, ipAddress } = extractTokenMetadata(req);
@@ -221,7 +221,20 @@ const login = asyncHandler(async (req, res) => {
         roles,
         permissions,
         school: {
+          id: user.school.id,
+          name: user.school.name,
           code: user.school.code,
+          logoUrl: user.school.logoUrl,
+          bannerUrl: user.school.bannerUrl,
+          tagline: user.school.tagline,
+          address: user.school.address,
+          phone: user.school.phone,
+          email: user.school.email,
+          website: user.school.website,
+          landlineNumber: user.school.landlineNumber,
+          facebookUrl: user.school.facebookUrl,
+          instagramUrl: user.school.instagramUrl,
+          youtubeUrl: user.school.youtubeUrl,
         },
         student: user.student
           ? {
@@ -235,7 +248,7 @@ const login = asyncHandler(async (req, res) => {
       accessToken,
       refreshToken,
     },
-    "Login successful"
+    "Login successful",
   );
 });
 
@@ -310,7 +323,7 @@ const register = asyncHandler(async (req, res) => {
 
   // Store refresh token (hashed) with metadata
   const expiresAt = new Date(
-    Date.now() + parseExpiresIn(config.jwt.refreshExpiresIn)
+    Date.now() + parseExpiresIn(config.jwt.refreshExpiresIn),
   );
   const hashedToken = hashRefreshToken(refreshToken);
   const { userAgent, ipAddress } = extractTokenMetadata(req);
@@ -337,12 +350,13 @@ const register = asyncHandler(async (req, res) => {
           id: school.id,
           name: school.name,
           code: school.code,
+          logoUrl: school.logoUrl,
         },
       },
       accessToken,
       refreshToken,
     },
-    "Registration successful"
+    "Registration successful",
   );
 });
 
@@ -381,11 +395,11 @@ const refreshToken = asyncHandler(async (req, res) => {
 
   // Generate new tokens
   const { accessToken, refreshToken: newRefreshToken } = generateTokens(
-    decoded.userId
+    decoded.userId,
   );
   const hashedNewToken = hashRefreshToken(newRefreshToken);
   const expiresAt = new Date(
-    Date.now() + parseExpiresIn(config.jwt.refreshExpiresIn)
+    Date.now() + parseExpiresIn(config.jwt.refreshExpiresIn),
   );
   const { userAgent, ipAddress } = extractTokenMetadata(req);
 
@@ -416,7 +430,7 @@ const refreshToken = asyncHandler(async (req, res) => {
       accessToken,
       refreshToken: newRefreshToken,
     },
-    "Token refreshed successfully"
+    "Token refreshed successfully",
   );
 });
 
@@ -533,6 +547,17 @@ const getMe = asyncHandler(async (req, res) => {
       id: user.school.id,
       name: user.school.name,
       code: user.school.code,
+      logoUrl: user.school.logoUrl,
+      bannerUrl: user.school.bannerUrl,
+      tagline: user.school.tagline,
+      address: user.school.address,
+      phone: user.school.phone,
+      email: user.school.email,
+      website: user.school.website,
+      landlineNumber: user.school.landlineNumber,
+      facebookUrl: user.school.facebookUrl,
+      instagramUrl: user.school.instagramUrl,
+      youtubeUrl: user.school.youtubeUrl,
     },
     student: user.student
       ? {
@@ -562,7 +587,7 @@ const changePassword = asyncHandler(async (req, res) => {
   // Verify current password
   const isPasswordValid = await bcrypt.compare(
     currentPassword,
-    user.passwordHash
+    user.passwordHash,
   );
 
   if (!isPasswordValid) {
@@ -586,7 +611,7 @@ const changePassword = asyncHandler(async (req, res) => {
   ApiResponse.success(
     res,
     null,
-    "Password changed successfully. Please login again."
+    "Password changed successfully. Please login again.",
   );
 });
 
