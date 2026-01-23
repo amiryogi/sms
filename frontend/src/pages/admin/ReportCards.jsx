@@ -16,6 +16,7 @@ import {
 import { Select, Button } from "../../components/common/FormElements";
 import NepalReportCard from "../../components/common/NepalReportCard";
 import NEBGradeSheet from "../../components/common/NEBGradeSheet";
+import BulkReportCardPrint from "../../components/common/BulkReportCardPrint";
 import { reportCardService } from "../../api/reportCardService";
 import { examService } from "../../api/examService";
 import { academicService } from "../../api/academicService";
@@ -41,6 +42,11 @@ const ReportCards = () => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Bulk print state
+  const [bulkPrintOpen, setBulkPrintOpen] = useState(false);
+  const [bulkPrintData, setBulkPrintData] = useState(null);
+  const [bulkPrintLoading, setBulkPrintLoading] = useState(false);
 
   // Fetch initial data
   useEffect(() => {
@@ -206,6 +212,36 @@ const ReportCards = () => {
   const closePreview = () => {
     setPreviewOpen(false);
     setPreviewData(null);
+  };
+
+  // Bulk print all report cards for the class
+  const handleBulkPrint = async () => {
+    if (!selectedExam || !selectedClass || !selectedSection) return;
+
+    setBulkPrintLoading(true);
+    setBulkPrintOpen(true);
+
+    try {
+      const response = await reportCardService.getBulkReportCards(
+        selectedExam,
+        selectedClass,
+        selectedSection
+      );
+      setBulkPrintData(response.data);
+    } catch (error) {
+      console.error("Error fetching bulk report cards:", error);
+      alert(
+        error.response?.data?.message || "Error loading report cards for printing"
+      );
+      setBulkPrintOpen(false);
+    } finally {
+      setBulkPrintLoading(false);
+    }
+  };
+
+  const closeBulkPrint = () => {
+    setBulkPrintOpen(false);
+    setBulkPrintData(null);
   };
 
   const examOptions = exams.map((e) => ({
@@ -396,6 +432,21 @@ const ReportCards = () => {
                     <EyeOff size={16} />
                   )}
                   Unpublish All
+                </Button>
+              )}
+
+              {allGenerated && (
+                <Button
+                  variant="primary"
+                  onClick={handleBulkPrint}
+                  disabled={bulkPrintLoading}
+                >
+                  {bulkPrintLoading ? (
+                    <Loader2 className="spin" size={16} />
+                  ) : (
+                    <Printer size={16} />
+                  )}
+                  Print All
                 </Button>
               )}
             </div>
@@ -675,6 +726,15 @@ const ReportCards = () => {
             />
           )
         ) : null)}
+
+      {/* Bulk Print Modal */}
+      {bulkPrintOpen && (
+        <BulkReportCardPrint
+          data={bulkPrintData}
+          onClose={closeBulkPrint}
+          loading={bulkPrintLoading}
+        />
+      )}
 
       <style>{`
         .stat-item {

@@ -62,6 +62,8 @@ const assignSubjectToClass = asyncHandler(async (req, res) => {
     practicalMarks,
     hasTheory,
     hasPractical,
+    theoryCreditHours,
+    practicalCreditHours,
   } = req.body;
 
   // Ensure class, subject, and academic year belong to the same school
@@ -131,6 +133,8 @@ const assignSubjectToClass = asyncHandler(async (req, res) => {
       theoryMarks: tMarks,
       practicalMarks: pMarks,
       creditHours: creditHours || 3.0,
+      theoryCreditHours: theoryCreditHours !== undefined ? parseFloat(theoryCreditHours) : null,
+      practicalCreditHours: practicalCreditHours !== undefined ? parseFloat(practicalCreditHours) : null,
     },
     include: {
       subject: true,
@@ -167,6 +171,8 @@ const updateClassSubject = asyncHandler(async (req, res) => {
     practicalMarks,
     hasTheory,
     hasPractical,
+    theoryCreditHours,
+    practicalCreditHours,
   } = req.body;
 
   const classSubject = await prisma.classSubject.findUnique({
@@ -221,6 +227,8 @@ const updateClassSubject = asyncHandler(async (req, res) => {
     theoryMarks: classSubject.theoryMarks,
     practicalMarks: classSubject.practicalMarks,
     creditHours: classSubject.creditHours,
+    theoryCreditHours: classSubject.theoryCreditHours,
+    practicalCreditHours: classSubject.practicalCreditHours,
   };
 
   const updated = await prisma.classSubject.update({
@@ -234,6 +242,8 @@ const updateClassSubject = asyncHandler(async (req, res) => {
       theoryMarks: tMarks,
       practicalMarks: pMarks,
       creditHours: creditHours || classSubject.creditHours,
+      theoryCreditHours: theoryCreditHours !== undefined ? parseFloat(theoryCreditHours) : classSubject.theoryCreditHours,
+      practicalCreditHours: practicalCreditHours !== undefined ? parseFloat(practicalCreditHours) : classSubject.practicalCreditHours,
     },
     include: {
       subject: true,
@@ -253,6 +263,8 @@ const updateClassSubject = asyncHandler(async (req, res) => {
       theoryMarks: updated.theoryMarks,
       practicalMarks: updated.practicalMarks,
       creditHours: updated.creditHours,
+      theoryCreditHours: updated.theoryCreditHours,
+      practicalCreditHours: updated.practicalCreditHours,
     },
     userId: req.user.id,
   });

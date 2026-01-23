@@ -88,6 +88,8 @@ const ClassSubjects = () => {
       theoryMarks: 100,
       practicalMarks: 0,
       creditHours: 3.0,
+      theoryCreditHours: 0,
+      practicalCreditHours: 0,
     });
     setModalOpen(true);
   };
@@ -103,6 +105,8 @@ const ClassSubjects = () => {
       theoryMarks: row.theoryMarks,
       practicalMarks: row.practicalMarks,
       creditHours: row.creditHours,
+      theoryCreditHours: row.theoryCreditHours || 0,
+      practicalCreditHours: row.practicalCreditHours || 0,
     });
     setModalOpen(true);
   };
@@ -157,6 +161,8 @@ const ClassSubjects = () => {
         theoryMarks: theory,
         practicalMarks: practical,
         creditHours: credits,
+        theoryCreditHours: parseFloat(data.theoryCreditHours || 0),
+        practicalCreditHours: parseFloat(data.practicalCreditHours || 0),
       };
 
       if (editing) {
@@ -234,7 +240,19 @@ const ClassSubjects = () => {
         </div>
       ),
     },
-    { header: "Credit Hours", accessor: "creditHours" },
+    { 
+      header: "Credit Hours", 
+      render: (row) => (
+        <div>
+          <span>{row.creditHours}</span>
+          {(row.theoryCreditHours > 0 || row.practicalCreditHours > 0) && (
+            <div className="text-muted" style={{ fontSize: '0.8em' }}>
+              TH: {row.theoryCreditHours || 0} | IN: {row.practicalCreditHours || 0}
+            </div>
+          )}
+        </div>
+      )
+    },
     {
       header: "Status",
       width: "80px",
@@ -451,13 +469,33 @@ const ClassSubjects = () => {
             />
           </div>
           <Input
-            label="Credit Hours"
+            label="Total Credit Hours"
             name="creditHours"
             type="number"
             step="0.1"
             defaultValue={3.0}
             register={register}
           />
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Theory Credit Hours (TH)"
+              name="theoryCreditHours"
+              type="number"
+              step="0.01"
+              defaultValue={0}
+              register={register}
+              helper="Credit hours for Theory component (for Grade Sheet)"
+            />
+            <Input
+              label="Practical Credit Hours (IN)"
+              name="practicalCreditHours"
+              type="number"
+              step="0.01"
+              defaultValue={0}
+              register={register}
+              helper="Credit hours for Internal/Practical component"
+            />
+          </div>
           <div className="modal-actions">
             <Button type="button" variant="secondary" onClick={closeModal}>
               Cancel

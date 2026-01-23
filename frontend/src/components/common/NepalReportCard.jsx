@@ -8,26 +8,21 @@ import { Printer, Download, X } from "lucide-react";
  * Features:
  * - Official school header with logo
  * - Student information section
- * - Subject-wise marks with theory/practical breakdown
+ * - Subject-wise marks with theory/practical breakdown (Grade 1-10)
  * - Nepal GPA grading system (A+ to NG)
  * - Grade reference table
  * - Signature sections
+ * - Plain black/white print-friendly design
  */
 
-// Grade colors for visual display
-const getGradeColor = (grade) => {
-  const colors = {
-    "A+": { bg: "#dcfce7", text: "#166534" },
-    A: { bg: "#d1fae5", text: "#065f46" },
-    "B+": { bg: "#dbeafe", text: "#1e40af" },
-    B: { bg: "#e0e7ff", text: "#3730a3" },
-    "C+": { bg: "#fef3c7", text: "#92400e" },
-    C: { bg: "#fef9c3", text: "#854d0e" },
-    D: { bg: "#fed7aa", text: "#9a3412" },
-    NG: { bg: "#fee2e2", text: "#991b1b" },
-    AB: { bg: "#f3f4f6", text: "#6b7280" },
-  };
-  return colors[grade] || colors["NG"];
+// Resolve asset URLs (handles relative backend paths)
+const resolveAssetUrl = (url) => {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  const base = import.meta.env.VITE_API_URL
+    ? import.meta.env.VITE_API_URL.replace(/\/api\/v1$/, "")
+    : window.location.origin;
+  return `${base}/${url.replace(/^\\?/, "").replace(/^\//, "").replace(/\\/g, "/")}`;
 };
 
 // Format date for display
@@ -41,12 +36,32 @@ const formatDate = (dateString) => {
   });
 };
 
+// Get remark text based on grade
+const getRemarkText = (grade) => {
+  const remarks = {
+    'A+': 'OUTSTANDING',
+    'A': 'EXCELLENT',
+    'B+': 'VERY GOOD',
+    'B': 'GOOD',
+    'C+': 'SATISFACTORY',
+    'C': 'ACCEPTABLE',
+    'D': 'PARTIALLY ACCEPTABLE',
+    'NG': 'NOT GRADED'
+  };
+  return remarks[grade] || '';
+};
+
 const NepalReportCard = ({ data, onClose, showActions = true }) => {
   const reportRef = useRef(null);
 
   if (!data) return null;
 
   const { school, examination, student, subjects, summary, remarks } = data;
+
+  // Calculate total credit hours from subjects
+  const totalCreditHours = subjects?.reduce((acc, s) => 
+    acc + (parseFloat(s.theoryCreditHours) || 0) + (parseFloat(s.internalCreditHours) || 0), 0
+  ) || 0;
 
   const handlePrint = () => {
     window.print();
@@ -82,8 +97,8 @@ const NepalReportCard = ({ data, onClose, showActions = true }) => {
           {/* Header Section */}
           <header className="report-header">
             <div className="school-logo">
-              {school?.logoUrl ? (
-                <img src={school.logoUrl} alt="School Logo" />
+              {(school?.logoUrl || school?.bannerUrl) ? (
+                <img src={resolveAssetUrl(school.logoUrl || school.bannerUrl)} alt="School Logo" crossOrigin="anonymous" />
               ) : (
                 <div className="logo-placeholder">
                   <span>🏫</span>
@@ -156,153 +171,98 @@ const NepalReportCard = ({ data, onClose, showActions = true }) => {
             </div>
           </section>
 
-          {/* Marks Table */}
+          {/* Marks Table - Row-based format (TH/IN as separate rows) */}
           <section className="marks-section">
             <table className="marks-table">
               <thead>
                 <tr>
-                  <th rowSpan="2" className="sn-col">
-                    S.N.
-                  </th>
-                  <th rowSpan="2" className="subject-col">
-                    Subject
-                  </th>
-                  <th colSpan="2" className="theory-header">
-                    Theory
-                  </th>
-                  <th colSpan="2" className="practical-header">
-                    Practical
-                  </th>
-                  <th rowSpan="2" className="total-col">
-                    Total
-                  </th>
-                  <th rowSpan="2" className="grade-col">
-                    Grade
-                  </th>
-                  <th rowSpan="2" className="gpa-col">
-                    GPA
-                  </th>
-                  <th rowSpan="2" className="remarks-col">
-                    Remarks
-                  </th>
-                </tr>
-                <tr>
-                  <th className="marks-sub">Marks</th>
-                  <th className="marks-sub">Grade</th>
-                  <th className="marks-sub">Marks</th>
-                  <th className="marks-sub">Grade</th>
+                  <th className="sn-col">S.N</th>
+                  <th className="subject-col">SUBJECTS</th>
+                  <th className="ch-col">CREDIT HOUR<br/>(CH)</th>
+                  <th className="gp-col">GRADE POINT<br/>(GP)</th>
+                  <th className="grade-col">GRADE</th>
+                  <th className="fg-col">FINAL GRADE<br/>(FG)</th>
+                  <th className="remarks-col">REMARKS</th>
                 </tr>
               </thead>
               <tbody>
                 {subjects?.map((subject, index) => {
-                  const gradeColor = getGradeColor(subject.finalGrade);
+                  const remarkText = getRemarkText(subject.finalGrade);
                   return (
-                    <tr key={subject.subjectId || index}>
-                      <td className="center">{index + 1}</td>
-                      <td className="subject-name">{subject.subjectName}</td>
-                      <td className="center">
-                        {subject.isAbsent
-                          ? "AB"
-                          : `${subject.theoryMarks}/${subject.theoryFullMarks}`}
-                      </td>
-                      <td className="center">
-                        <span
-                          className="grade-badge small"
-                          style={{
-                            backgroundColor: getGradeColor(subject.theoryGrade)
-                              .bg,
-                            color: getGradeColor(subject.theoryGrade).text,
-                          }}
-                        >
-                          {subject.theoryGrade}
-                        </span>
-                      </td>
-                      <td className="center">
-                        {subject.hasPractical
-                          ? subject.isAbsent
-                            ? "AB"
-                            : `${subject.practicalMarks}/${subject.practicalFullMarks}`
-                          : "—"}
-                      </td>
-                      <td className="center">
-                        {subject.hasPractical ? (
-                          <span
-                            className="grade-badge small"
-                            style={{
-                              backgroundColor: getGradeColor(
-                                subject.practicalGrade,
-                              ).bg,
-                              color: getGradeColor(subject.practicalGrade).text,
-                            }}
-                          >
-                            {subject.practicalGrade}
-                          </span>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="center bold">
-                        {subject.isAbsent
-                          ? "AB"
-                          : `${subject.totalMarks}/${subject.totalFullMarks}`}
-                      </td>
-                      <td className="center">
-                        <span
-                          className="grade-badge"
-                          style={{
-                            backgroundColor: gradeColor.bg,
-                            color: gradeColor.text,
-                          }}
-                        >
-                          {subject.finalGrade}
-                        </span>
-                      </td>
-                      <td className="center bold">
-                        {subject.finalGpa?.toFixed(2)}
-                      </td>
-                      <td className="center small-text">
-                        {subject.isPassed ? (
-                          <span className="text-success">✓</span>
-                        ) : (
-                          <span className="text-danger">
-                            {subject.remark || "Failed"}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
+                    <React.Fragment key={subject.subjectId || index}>
+                      {/* Theory Row */}
+                      <tr className="theory-row">
+                        <td rowSpan={subject.hasPractical ? 2 : 1} className="center sn-cell">
+                          {index + 1}
+                        </td>
+                        <td className="subject-name">
+                          {subject.subjectName} (TH)
+                        </td>
+                        <td className="center">
+                          {subject.theoryCreditHours || "—"}
+                        </td>
+                        <td className="center">
+                          {subject.isAbsent ? "AB" : (subject.theoryGpa?.toFixed(1) || "—")}
+                        </td>
+                        <td className="center">
+                          {subject.isAbsent ? "AB" : (subject.theoryGrade || "—")}
+                        </td>
+                        <td rowSpan={subject.hasPractical ? 2 : 1} className="center bold fg-cell">
+                          {subject.isAbsent ? "AB" : subject.finalGrade}
+                        </td>
+                        <td rowSpan={subject.hasPractical ? 2 : 1} className="center remarks-cell">
+                          {subject.isAbsent ? "ABSENT" : remarkText}
+                        </td>
+                      </tr>
+                      {/* Internal/Practical Row */}
+                      {subject.hasPractical && (
+                        <tr className="internal-row">
+                          <td className="subject-name">
+                            {subject.subjectName} (IN)
+                          </td>
+                          <td className="center">
+                            {subject.internalCreditHours || "—"}
+                          </td>
+                          <td className="center">
+                            {subject.isAbsent ? "AB" : (subject.practicalGpa?.toFixed(1) || "—")}
+                          </td>
+                          <td className="center">
+                            {subject.isAbsent ? "AB" : (subject.practicalGrade || "—")}
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>
               <tfoot>
                 <tr className="total-row">
                   <td colSpan="2" className="right bold">
-                    Grand Total:
-                  </td>
-                  <td colSpan="4" className="center bold">
-                    {summary?.totalMarks?.toFixed(1)} /{" "}
-                    {summary?.totalFullMarks}
+                    TOTAL
                   </td>
                   <td className="center bold">
-                    {summary?.percentage?.toFixed(2)}%
+                    {totalCreditHours.toFixed(2)}
                   </td>
-                  <td className="center">
-                    <span
-                      className="grade-badge large"
-                      style={{
-                        backgroundColor: getGradeColor(summary?.grade).bg,
-                        color: getGradeColor(summary?.grade).text,
-                      }}
-                    >
-                      {summary?.grade}
-                    </span>
+                  <td colSpan="4" className="center bold">
+                    GRADE POINT AVERAGE (GPA): {summary?.gpa?.toFixed(2)}
                   </td>
-                  <td className="center bold large">
-                    {summary?.gpa?.toFixed(2)}
-                  </td>
-                  <td></td>
                 </tr>
               </tfoot>
             </table>
+          </section>
+
+          {/* Attendance & Remarks Row */}
+          <section className="attendance-section">
+            <div className="attendance-grid">
+              <div className="attendance-item">
+                <span className="label">ATTENDANCE:</span>
+                <span className="value">{summary?.attendancePresent || "—"} / {summary?.attendanceTotal || "—"}</span>
+              </div>
+              <div className="attendance-item">
+                <span className="label">REMARKS:</span>
+                <span className="value">{getRemarkText(summary?.grade) || "—"}</span>
+              </div>
+            </div>
           </section>
 
           {/* Summary Section */}
@@ -314,13 +274,13 @@ const NepalReportCard = ({ data, onClose, showActions = true }) => {
               </div>
               <div className="summary-item">
                 <span className="label">Subjects Passed:</span>
-                <span className="value text-success">
+                <span className="value">
                   {summary?.passedSubjects || 0}
                 </span>
               </div>
               <div className="summary-item">
                 <span className="label">Subjects Failed:</span>
-                <span className="value text-danger">
+                <span className="value">
                   {summary?.failedSubjects || 0}
                 </span>
               </div>
@@ -354,11 +314,7 @@ const NepalReportCard = ({ data, onClose, showActions = true }) => {
               </div>
               <div className="summary-item highlight">
                 <span className="label">Result:</span>
-                <span
-                  className={`value large ${
-                    summary?.isPassed ? "text-success" : "text-danger"
-                  }`}
-                >
+                <span className="value large">
                   {summary?.resultStatus ||
                     (summary?.isPassed ? "PASSED" : "FAILED")}
                 </span>
@@ -389,30 +345,30 @@ const NepalReportCard = ({ data, onClose, showActions = true }) => {
             <div className="signature-grid">
               <div className="signature-item">
                 <div className="signature-line"></div>
-                <span className="signature-label">Class Teacher</span>
+                <span className="signature-label">CLASS TEACHER</span>
               </div>
               <div className="signature-item">
                 <div className="signature-line"></div>
-                <span className="signature-label">Exam Controller</span>
+                <span className="signature-label">EXAM CO-ORDINATOR</span>
               </div>
               <div className="signature-item">
                 <div className="signature-line"></div>
-                <span className="signature-label">Principal</span>
+                <span className="signature-label">PRINCIPAL</span>
               </div>
             </div>
             <div className="issue-date">
-              <span>Date of Issue: _______________</span>
+              <span>Date of Issue: {examination?.academicYearBS ? `${examination.academicYearBS}` : "_______________"}</span>
             </div>
           </section>
 
           {/* Footer */}
           <footer className="report-footer">
-            <p className="note">
-              Note: This is a computer-generated report card. No signature
-              required for internal use.
-            </p>
-            <p className="generated-date">
-              Generated on: {formatDate(new Date().toISOString())}
+            <p className="contact-info">
+              {school?.landlineNumber && `Ph: ${school.landlineNumber}`}
+              {school?.landlineNumber && school?.phone && ", "}
+              {school?.phone && school.phone}
+              {(school?.landlineNumber || school?.phone) && school?.email && ", "}
+              {school?.email && `Email: ${school.email}`}
             </p>
           </footer>
         </div>
@@ -520,8 +476,8 @@ const NepalReportCard = ({ data, onClose, showActions = true }) => {
           align-items: center;
           justify-content: center;
           font-size: 40px;
-          background: #f3f4f6;
-          border-radius: 8px;
+          background: #fff;
+          border: 1px solid #000;
         }
 
         .school-info {
@@ -534,32 +490,32 @@ const NepalReportCard = ({ data, onClose, showActions = true }) => {
           font-size: 22pt;
           font-weight: bold;
           margin: 0;
-          color: #1e3a5f;
+          color: #000;
           text-transform: uppercase;
         }
 
         .school-address {
           font-size: 10pt;
           margin: 5px 0;
-          color: #4a5568;
+          color: #000;
         }
 
         .school-tagline {
           font-size: 10pt;
           font-style: italic;
-          color: #4a5568;
+          color: #000;
           margin: 3px 0;
         }
 
         .school-contact {
           font-size: 9pt;
-          color: #718096;
+          color: #000;
           margin: 0;
         }
 
         .school-website {
           font-size: 9pt;
-          color: #3182ce;
+          color: #000;
           margin: 2px 0 0;
         }
 
@@ -568,9 +524,9 @@ const NepalReportCard = ({ data, onClose, showActions = true }) => {
           text-align: center;
           margin: 15px 0;
           padding: 10px;
-          background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
-          color: white;
-          border-radius: 4px;
+          background: #fff;
+          color: #000;
+          border: 1px solid #000;
         }
 
         .report-title h2 {
@@ -595,9 +551,9 @@ const NepalReportCard = ({ data, onClose, showActions = true }) => {
         .student-info-section {
           margin: 15px 0;
           padding: 10px;
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
-          border-radius: 4px;
+          background: #fff;
+          border: 1px solid #000;
+          border-radius: 0;
         }
 
         .info-grid {
@@ -613,14 +569,14 @@ const NepalReportCard = ({ data, onClose, showActions = true }) => {
 
         .info-item .label {
           font-size: 9pt;
-          color: #64748b;
+          color: #000;
           font-weight: 600;
         }
 
         .info-item .value {
           font-size: 11pt;
           font-weight: bold;
-          color: #1e293b;
+          color: #000;
         }
 
         /* Marks Table */
@@ -636,41 +592,33 @@ const NepalReportCard = ({ data, onClose, showActions = true }) => {
 
         .marks-table th,
         .marks-table td {
-          border: 1px solid #cbd5e1;
+          border: 1px solid #000;
           padding: 6px 4px;
         }
 
         .marks-table thead th {
-          background: #1e3a5f;
-          color: white;
+          background: #fff;
+          color: #000;
           font-weight: bold;
           text-align: center;
+          vertical-align: middle;
         }
 
-        .marks-table .theory-header {
-          background: #2563eb;
-        }
+        .marks-table .sn-col { width: 40px; }
+        .marks-table .subject-col { width: auto; }
+        .marks-table .ch-col { width: 80px; }
+        .marks-table .gp-col { width: 80px; }
+        .marks-table .grade-col { width: 60px; }
+        .marks-table .fg-col { width: 80px; }
+        .marks-table .remarks-col { width: 100px; }
 
-        .marks-table .practical-header {
-          background: #7c3aed;
-        }
-
-        .marks-table .marks-sub {
-          font-size: 8pt;
-          background: #e2e8f0;
-          color: #1e293b;
-        }
-
-        .marks-table tbody tr:nth-child(even) {
-          background: #f8fafc;
-        }
-
-        .marks-table tbody tr:hover {
-          background: #f1f5f9;
+        .marks-table tbody tr {
+          background: #fff;
         }
 
         .marks-table .center {
           text-align: center;
+          vertical-align: middle;
         }
 
         .marks-table .right {
@@ -683,14 +631,33 @@ const NepalReportCard = ({ data, onClose, showActions = true }) => {
 
         .marks-table .subject-name {
           font-weight: 500;
+          padding-left: 8px;
         }
 
-        .marks-table .small-text {
+        .marks-table .sn-cell {
+          vertical-align: middle;
+        }
+
+        .marks-table .fg-cell {
+          font-weight: bold;
+          vertical-align: middle;
+        }
+
+        .marks-table .remarks-cell {
           font-size: 8pt;
+          vertical-align: middle;
+        }
+
+        .marks-table .theory-row td {
+          border-bottom: none;
+        }
+
+        .marks-table .internal-row td {
+          border-top: none;
         }
 
         .marks-table tfoot .total-row {
-          background: #f1f5f9;
+          background: #fff;
           font-weight: bold;
         }
 
@@ -698,22 +665,42 @@ const NepalReportCard = ({ data, onClose, showActions = true }) => {
           padding: 8px 4px;
         }
 
-        /* Grade Badge */
+        /* Attendance Section */
+        .attendance-section {
+          margin: 10px 0;
+          padding: 8px;
+          border: 1px solid #000;
+        }
+
+        .attendance-grid {
+          display: flex;
+          justify-content: space-between;
+        }
+
+        .attendance-item {
+          display: flex;
+          gap: 8px;
+        }
+
+        .attendance-item .label {
+          font-weight: bold;
+        }
+
+        .attendance-item .value {
+          font-weight: bold;
+        }
+
+        /* Grade text - plain styling */
         .grade-badge {
-          display: inline-block;
-          padding: 2px 8px;
-          border-radius: 4px;
           font-weight: bold;
           font-size: 9pt;
         }
 
         .grade-badge.small {
-          padding: 1px 4px;
           font-size: 8pt;
         }
 
         .grade-badge.large {
-          padding: 4px 12px;
           font-size: 11pt;
         }
 
@@ -721,9 +708,9 @@ const NepalReportCard = ({ data, onClose, showActions = true }) => {
         .summary-section {
           margin: 15px 0;
           padding: 10px;
-          background: #f0f9ff;
-          border: 1px solid #bae6fd;
-          border-radius: 4px;
+          background: #fff;
+          border: 1px solid #000;
+          border-radius: 0;
         }
 
         .summary-grid {
@@ -740,14 +727,14 @@ const NepalReportCard = ({ data, onClose, showActions = true }) => {
         .summary-item .label {
           display: block;
           font-size: 8pt;
-          color: #64748b;
+          color: #000;
         }
 
         .summary-item .value {
           display: block;
           font-size: 12pt;
           font-weight: bold;
-          color: #1e293b;
+          color: #000;
         }
 
         .summary-item .value.large {
@@ -756,17 +743,16 @@ const NepalReportCard = ({ data, onClose, showActions = true }) => {
 
         .summary-item.highlight {
           background: white;
-          border-radius: 4px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          border: 1px solid #000;
         }
 
         /* Remarks Section */
         .remarks-section {
           margin: 15px 0;
           padding: 10px;
-          background: #fffbeb;
-          border: 1px solid #fde68a;
-          border-radius: 4px;
+          background: #fff;
+          border: 1px solid #000;
+          border-radius: 0;
         }
 
         .remark-item {
@@ -779,7 +765,7 @@ const NepalReportCard = ({ data, onClose, showActions = true }) => {
 
         .remark-item .label {
           font-weight: bold;
-          color: #92400e;
+          color: #000;
         }
 
         /* Signature Section */
@@ -820,10 +806,10 @@ const NepalReportCard = ({ data, onClose, showActions = true }) => {
         .report-footer {
           margin-top: 20px;
           padding-top: 10px;
-          border-top: 1px solid #e2e8f0;
+          border-top: 1px solid #000;
           text-align: center;
           font-size: 8pt;
-          color: #94a3b8;
+          color: #000;
         }
 
         .report-footer .note {
@@ -834,10 +820,6 @@ const NepalReportCard = ({ data, onClose, showActions = true }) => {
         .report-footer .generated-date {
           margin: 5px 0 0;
         }
-
-        /* Text Colors */
-        .text-success { color: #16a34a; }
-        .text-danger { color: #dc2626; }
 
         /* Print Styles */
         @media print {
