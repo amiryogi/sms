@@ -88,4 +88,11 @@ router.get(
   reportCardController.getReportCardPdfData
 );
 
+// Bulk get all report cards for a class/section (for printing)
+router.get(
+  "/bulk/:examId/:classId/:sectionId",
+  isAdmin,
+  reportCardController.getBulkReportCards
+);
+
 module.exports = router;

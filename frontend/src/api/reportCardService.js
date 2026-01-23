@@ -93,4 +93,17 @@ export const reportCardService = {
     });
     return response.data;
   },
+
+  /**
+   * Get all report cards for a class/section (for bulk printing)
+   * @param {number} examId
+   * @param {number} classId
+   * @param {number} sectionId
+   */
+  getBulkReportCards: async (examId, classId, sectionId) => {
+    const response = await apiClient.get(
+      `/report-cards/bulk/${examId}/${classId}/${sectionId}`
+    );
+    return response.data;
+  },
 };
