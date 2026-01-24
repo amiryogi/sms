@@ -48,7 +48,7 @@ const NEB_SUBJECT_CODES = {
 };
 
 // NEB Credit Hours based on subject type
-const getCreditHours = (subjectName, isCompulsory) => {
+const getCreditHours = (subjectName) => {
   // Compulsory subjects: Theory 2.25-3.75, Internal 0.75-1.25
   // Elective subjects: Theory 3.75, Internal 1.25
   const normalizedName = subjectName?.toLowerCase() || "";
@@ -139,18 +139,26 @@ const NEBGradeSheet = ({ data, onClose, showActions = true }) => {
         finalGrade: subj.finalGrade || "NG",
         hasPractical: subj.hasPractical !== false,
         isAbsent: subj.isAbsent,
+        // Obtained marks for new column
+        theoryMarksObtained:
+          subj.theoryMarks ?? subj.theoryMarksObtained ?? "—",
+        internalMarksObtained:
+          subj.practicalMarks ??
+          subj.internalMarks ??
+          subj.internalMarksObtained ??
+          "—",
       });
     });
   }
 
-  // Calculate total credit hours
-  const totalCreditHours = groupedSubjects.reduce(
+  // Calculate total credit hours (for reference, used in footer if needed)
+  const _totalCreditHours = groupedSubjects.reduce(
     (sum, subj) => sum + subj.theoryCreditHours + subj.internalCreditHours,
     0,
   );
 
-  // Format grade level display
-  const getGradeDisplay = (level) => {
+  // Format grade level display (for future use)
+  const _getGradeDisplay = (level) => {
     const num = parseInt(level);
     if (num === 11) return "XI";
     if (num === 12) return "XII";
@@ -271,6 +279,11 @@ const NEBGradeSheet = ({ data, onClose, showActions = true }) => {
                     CODE
                   </th>
                   <th className="subject-col">SUBJECTS</th>
+                  <th className="marks-col">
+                    OBTAINED
+                    <br />
+                    MARKS
+                  </th>
                   <th className="ch-col">
                     CREDIT
                     <br />
@@ -303,6 +316,9 @@ const NEBGradeSheet = ({ data, onClose, showActions = true }) => {
                     <tr className="theory-row">
                       <td className="center bold">{subj.theoryCode}</td>
                       <td className="bold">{subj.subjectName} (Th)</td>
+                      <td className="center">
+                        {subj.isAbsent ? "AB" : subj.theoryMarksObtained}
+                      </td>
                       <td className="center bold">
                         {subj.theoryCreditHours.toFixed(2)}
                       </td>
@@ -323,6 +339,9 @@ const NEBGradeSheet = ({ data, onClose, showActions = true }) => {
                     <tr className="internal-row">
                       <td className="center bold">{subj.internalCode}</td>
                       <td className="bold">{subj.subjectName} (In)</td>
+                      <td className="center">
+                        {subj.isAbsent ? "AB" : subj.internalMarksObtained}
+                      </td>
                       <td className="center bold">
                         {subj.internalCreditHours.toFixed(2)}
                       </td>
@@ -340,7 +359,7 @@ const NEBGradeSheet = ({ data, onClose, showActions = true }) => {
               </tbody>
               <tfoot>
                 <tr className="gpa-row">
-                  <td colSpan="5" className="right bold">
+                  <td colSpan="6" className="right bold">
                     Grade Point Average (GPA)
                   </td>
                   <td className="center bold gpa-value">
@@ -686,13 +705,14 @@ const NEBGradeSheet = ({ data, onClose, showActions = true }) => {
           vertical-align: middle;
         }
 
-        .neb-table .code-col { width: 80px; }
-        .neb-table .subject-col { width: 200px; text-align: left; }
-        .neb-table .ch-col { width: 70px; }
-        .neb-table .gp-col { width: 70px; }
-        .neb-table .grade-col { width: 60px; }
-        .neb-table .final-col { width: 70px; }
-        .neb-table .remarks-col { width: 80px; }
+        .neb-table .code-col { width: 70px; }
+        .neb-table .subject-col { width: 160px; text-align: left; }
+        .neb-table .marks-col { width: 60px; }
+        .neb-table .ch-col { width: 60px; }
+        .neb-table .gp-col { width: 60px; }
+        .neb-table .grade-col { width: 55px; }
+        .neb-table .final-col { width: 60px; }
+        .neb-table .remarks-col { width: 70px; }
 
         .neb-table .center { text-align: center; }
         .neb-table .right { text-align: right; padding-right: 1rem; }
@@ -773,29 +793,248 @@ const NEBGradeSheet = ({ data, onClose, showActions = true }) => {
           padding-left: 7rem;
         }
 
-        /* Print Styles */
+        /* Print Styles - Comprehensive A4 Optimization */
         @media print {
-          .no-print { display: none !important; }
+          /* Hide non-printable elements */
+          .no-print,
+          .neb-actions {
+            display: none !important;
+          }
+
+          /* Remove overlay styling */
           .neb-grade-overlay {
             position: static;
             background: none;
             padding: 0;
+            overflow: visible;
           }
+
+          .neb-container {
+            display: block;
+          }
+
+          /* A4 Page Setup */
           .neb-a4 {
-            box-shadow: none;
-            padding: 10mm 15mm;
             width: 100%;
             min-height: auto;
+            box-shadow: none;
+            padding: 8mm 12mm;
+            margin: 0;
+            page-break-after: always;
+            page-break-inside: avoid;
           }
+
+          /* Prevent blank last page */
+          .neb-a4:last-child {
+            page-break-after: auto;
+          }
+
+          /* Header - Optimized for print */
+          .report-header {
+            border-bottom: 2px solid #000;
+            padding-bottom: 6px;
+            margin-bottom: 8px;
+          }
+
+          /* Logo sizing for print - smaller for better fit */
+          .school-logo {
+            width: 55px;
+            height: 55px;
+          }
+
+          .school-logo.right-logo {
+            width: 55px;
+            height: 55px;
+          }
+
+          .logo-placeholder {
+            width: 55px;
+            height: 55px;
+            font-size: 32px;
+          }
+
+          /* Font size reductions for print */
+          .school-name {
+            font-size: 19pt;
+          }
+
+          .school-tagline {
+            font-size: 9pt;
+          }
+
+          .school-address {
+            font-size: 9pt;
+            margin: 3px 0;
+          }
+
+          .school-contact {
+            font-size: 8pt;
+          }
+
+          .school-website {
+            font-size: 8pt;
+          }
+
+          /* Report Title - Print optimized */
+          .report-title {
+            margin: 8px 0;
+            padding: 6px;
+            border: 2px solid #000;
+          }
+
+          .report-title h2 {
+            font-size: 14pt;
+            letter-spacing: 1px;
+          }
+
+          .report-title h3 {
+            font-size: 11pt;
+            margin: 3px 0 0;
+          }
+
+          .academic-year {
+            font-size: 9pt;
+            margin: 3px 0 0;
+          }
+
+          /* Student Info Section - Print */
+          .student-info-section {
+            margin: 8px 0;
+            padding: 6px 8px;
+            border: 1.5px solid #000;
+          }
+
+          .info-grid {
+            gap: 6px;
+          }
+
+          .info-item .label {
+            font-size: 8pt;
+          }
+
+          .info-item .value {
+            font-size: 10pt;
+          }
+
+          /* Table - Print optimized */
+          .neb-table-section {
+            margin: 8px 0;
+            page-break-inside: avoid;
+          }
+
+          .neb-table {
+            font-size: 10pt;
+            border: 2px solid #000;
+          }
+
           .neb-table th,
           .neb-table td {
-            border: 1px solid #000 !important;
+            border: 1.5px solid #000 !important;
+            padding: 4px 6px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
           }
+
+          .neb-table th {
+            font-size: 9pt;
+            padding: 3px 4px;
+          }
+
+          .neb-table .code-col { width: 60px; }
+          .neb-table .subject-col { width: auto; min-width: 130px; }
+          .neb-table .marks-col { width: 50px; }
+          .neb-table .ch-col { width: 50px; }
+          .neb-table .gp-col { width: 50px; }
+          .neb-table .grade-col { width: 45px; }
+          .neb-table .final-col { width: 50px; }
+          .neb-table .remarks-col { width: 60px; }
+
+          /* Keep Theory + Internal rows together (same subject) */
+          .neb-table tbody tr.theory-row {
+            page-break-inside: avoid;
+            page-break-after: avoid;
+          }
+
+          .neb-table tbody tr.internal-row {
+            page-break-inside: avoid;
+            page-break-before: avoid;
+          }
+
+          /* GPA row should not break */
+          .neb-table .gpa-row {
+            page-break-inside: avoid;
+            page-break-before: avoid;
+          }
+
+          .neb-table .gpa-row td {
+            padding: 5px 6px;
+            border-top: 2px solid #000 !important;
+          }
+
+          .neb-table .gpa-value {
+            font-size: 12pt;
+          }
+
+          .neb-table .theory-row td,
+          .neb-table .internal-row td {
+            padding: 3px 5px;
+          }
+
+          /* Signature Section - Print with fixed spacing */
+          .neb-signature {
+            margin-top: 15mm;
+            font-size: 11pt;
+            page-break-inside: avoid;
+            page-break-before: avoid;
+          }
+
+          .neb-signature .signature-left p {
+            margin: 0.3rem 0;
+          }
+
+          .neb-signature .signature-gap {
+            margin-top: 1rem !important;
+          }
+
+          .neb-signature .signature-right {
+            margin-top: 0.3rem;
+          }
+
+          .neb-signature .dotted {
+            letter-spacing: 0.5px;
+          }
+
+          /* Footer - Print optimized */
+          .neb-footer {
+            margin-top: 12mm;
+            font-size: 10pt;
+            page-break-inside: avoid;
+            page-break-before: avoid;
+          }
+
+          .neb-footer p {
+            margin: 2px 0;
+          }
+
+          .neb-footer .indent {
+            padding-left: 5rem;
+          }
+
+          /* Page setup */
           @page {
-            size: A4;
-            margin: 10mm;
+            size: A4 portrait;
+            margin: 8mm 10mm;
+          }
+
+          /* Ensure all text is black for print */
+          * {
+            color: #000 !important;
+          }
+
+          /* Force background colors and borders to print */
+          body {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
         }
       `}</style>

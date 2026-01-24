@@ -17,6 +17,7 @@ import { Select, Button } from "../../components/common/FormElements";
 import NepalReportCard from "../../components/common/NepalReportCard";
 import NEBGradeSheet from "../../components/common/NEBGradeSheet";
 import BulkReportCardPrint from "../../components/common/BulkReportCardPrint";
+import NEBBulkReportCardPrint from "../../components/common/NEBBulkReportCardPrint";
 import { reportCardService } from "../../api/reportCardService";
 import { examService } from "../../api/examService";
 import { academicService } from "../../api/academicService";
@@ -726,14 +727,27 @@ const ReportCards = () => {
           )
         ) : null)}
 
-      {/* Bulk Print Modal */}
-      {bulkPrintOpen && (
-        <BulkReportCardPrint
-          data={bulkPrintData}
-          onClose={closeBulkPrint}
-          loading={bulkPrintLoading}
-        />
-      )}
+      {/* Bulk Print Modal - Conditionally render NEB or standard format */}
+      {bulkPrintOpen &&
+        (bulkPrintLoading ? (
+          <BulkReportCardPrint
+            data={bulkPrintData}
+            onClose={closeBulkPrint}
+            loading={true}
+          />
+        ) : bulkPrintData?.reportCards?.[0]?.isNEBClass ? (
+          <NEBBulkReportCardPrint
+            data={bulkPrintData}
+            onClose={closeBulkPrint}
+            loading={false}
+          />
+        ) : (
+          <BulkReportCardPrint
+            data={bulkPrintData}
+            onClose={closeBulkPrint}
+            loading={false}
+          />
+        ))}
 
       <style>{`
         .stat-item {
