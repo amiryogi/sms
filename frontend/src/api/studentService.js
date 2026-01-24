@@ -10,6 +10,11 @@ export const studentService = {
     const response = await apiClient.get(`/students/${id}`);
     return response.data;
   },
+  // Alias for better readability/compatibility
+  getStudentById: async (id) => {
+    const response = await apiClient.get(`/students/${id}`);
+    return response.data;
+  },
   
   createStudent: async (data) => {
     const response = await apiClient.post('/students', data);

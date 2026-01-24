@@ -8,271 +8,393 @@ import { Printer, Download, X } from "lucide-react";
  * - Subject codes, Credit Hours, Grade Points
  * - Final Grade spanning both component rows
  * - B.S./A.D. date formatting
- * 
+ *
  * Based on official NEB Grade Sheet format from Nepal Education Board
  */
 
-// NEB Subject codes mapping (official NEB codes)
+// Resolve asset URLs (handles relative backend paths)
+const resolveAssetUrl = (url) => {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  const base = import.meta.env.VITE_API_URL
+    ? import.meta.env.VITE_API_URL.replace(/\/api\/v1$/, "")
+    : window.location.origin;
+  return `${base}/${url.replace(/^\\?/, "").replace(/^\//, "").replace(/\\/g, "/")}`;
+};
+
+// NEB Subject codes mapping (official NEB codes) - FALLBACK ONLY
+// The backend API should provide theorySubjectCode/practicalSubjectCode from SubjectComponent table
+// This mapping is only used if the API doesn't provide codes
 const NEB_SUBJECT_CODES = {
-    "Compulsory Nepali": { theory: "0011", internal: "0012" },
-    "Comp. Nepali": { theory: "0011", internal: "0012" },
-    "Nepali": { theory: "0011", internal: "0012" },
-    "Compulsory English": { theory: "0031", internal: "0032" },
-    "Comp. English": { theory: "0031", internal: "0032" },
-    "English": { theory: "0031", internal: "0032" },
-    "Compulsory Mathematics": { theory: "0071", internal: "0072" },
-    "Comp. Mathematics": { theory: "0071", internal: "0072" },
-    "Mathematics": { theory: "0071", internal: "0072" },
-    "Physics": { theory: "1011", internal: "1012" },
-    "Chemistry": { theory: "3011", internal: "3012" },
-    "Biology": { theory: "2011", internal: "2012" },
-    "Computer Science": { theory: "4011", internal: "4012" },
-    "Accountancy": { theory: "5011", internal: "5012" },
-    "Economics": { theory: "5021", internal: "5022" },
-    "Business Studies": { theory: "5031", internal: "5032" },
-    "Social Studies": { theory: "0051", internal: "0052" },
+  "Compulsory Nepali": { theory: "0011", internal: "0012" },
+  "Comp. Nepali": { theory: "0011", internal: "0012" },
+  Nepali: { theory: "0011", internal: "0012" },
+  "Compulsory English": { theory: "0031", internal: "0032" },
+  "Comp. English": { theory: "0031", internal: "0032" },
+  English: { theory: "0031", internal: "0032" },
+  "Compulsory Mathematics": { theory: "0071", internal: "0072" },
+  "Comp. Mathematics": { theory: "0071", internal: "0072" },
+  Mathematics: { theory: "0071", internal: "0072" },
+  Physics: { theory: "1011", internal: "1012" },
+  Chemistry: { theory: "3011", internal: "3012" },
+  Biology: { theory: "1031", internal: "1032" },
+  "Computer Science": { theory: "4271", internal: "4272" },
+  Accountancy: { theory: "5011", internal: "5012" },
+  Economics: { theory: "3031", internal: "3032" },
+  "Business Studies": { theory: "2151", internal: "2152" },
+  "Social Studies": { theory: "0051", internal: "0052" },
+  "Social Studies & Life Skills": { theory: "0051", internal: "0052" },
+  "Hotel Management": { theory: "4391", internal: "4392" },
 };
 
 // NEB Credit Hours based on subject type
 const getCreditHours = (subjectName, isCompulsory) => {
-    // Compulsory subjects: Theory 2.25-3.75, Internal 0.75-1.25
-    // Elective subjects: Theory 3.75, Internal 1.25
-    const normalizedName = subjectName?.toLowerCase() || "";
-    
-    if (normalizedName.includes("nepali") || normalizedName.includes("comp. nepali")) {
-        return { theory: 2.25, internal: 0.75 };
-    }
-    if (normalizedName.includes("english") || normalizedName.includes("comp. english")) {
-        return { theory: 3.00, internal: 1.00 };
-    }
-    if (normalizedName.includes("mathematics") || normalizedName.includes("comp. math")) {
-        return { theory: 3.75, internal: 1.25 };
-    }
-    // Elective science/commerce subjects
+  // Compulsory subjects: Theory 2.25-3.75, Internal 0.75-1.25
+  // Elective subjects: Theory 3.75, Internal 1.25
+  const normalizedName = subjectName?.toLowerCase() || "";
+
+  if (
+    normalizedName.includes("nepali") ||
+    normalizedName.includes("comp. nepali")
+  ) {
+    return { theory: 2.25, internal: 0.75 };
+  }
+  if (
+    normalizedName.includes("english") ||
+    normalizedName.includes("comp. english")
+  ) {
+    return { theory: 3.0, internal: 1.0 };
+  }
+  if (
+    normalizedName.includes("mathematics") ||
+    normalizedName.includes("comp. math")
+  ) {
     return { theory: 3.75, internal: 1.25 };
+  }
+  // Elective science/commerce subjects
+  return { theory: 3.75, internal: 1.25 };
 };
 
 // Get subject codes from NEB mapping or generate based on subject
 const getSubjectCodes = (subjectName, subjectCode) => {
-    // Check if exact match exists in mapping
-    for (const [key, codes] of Object.entries(NEB_SUBJECT_CODES)) {
-        if (subjectName?.toLowerCase().includes(key.toLowerCase())) {
-            return codes;
-        }
+  // Check if exact match exists in mapping
+  for (const [key, codes] of Object.entries(NEB_SUBJECT_CODES)) {
+    if (subjectName?.toLowerCase().includes(key.toLowerCase())) {
+      return codes;
     }
-    // Fallback: use provided code or generate
-    const baseCode = subjectCode || "9999";
-    const numericCode = parseInt(baseCode.replace(/\D/g, "")) || 9999;
-    return {
-        theory: String(numericCode).padStart(4, "0"),
-        internal: String(numericCode + 1).padStart(4, "0"),
-    };
+  }
+  // Fallback: use provided code or generate
+  const baseCode = subjectCode || "9999";
+  const numericCode = parseInt(baseCode.replace(/\D/g, "")) || 9999;
+  return {
+    theory: String(numericCode).padStart(4, "0"),
+    internal: String(numericCode + 1).padStart(4, "0"),
+  };
 };
 
 const NEBGradeSheet = ({ data, onClose, showActions = true }) => {
-    const reportRef = useRef(null);
+  const reportRef = useRef(null);
 
-    if (!data) return null;
+  if (!data) return null;
 
-    const { school, examination, student, subjects, summary } = data;
+  const { school, examination, student, subjects, summary } = data;
 
-    const handlePrint = () => {
-        window.print();
-    };
+  const handlePrint = () => {
+    window.print();
+  };
 
-    // Group subjects with their components (Theory + Internal/Practical)
-    // Following exact NEB format from the template
-    const groupedSubjects = [];
-    if (subjects) {
-        subjects.forEach((subj) => {
-            const codes = getSubjectCodes(subj.subjectName, subj.subjectCode);
-            const credits = getCreditHours(subj.subjectName);
-            
-            // Use actual credit hours if provided, otherwise use calculated
-            const theoryCH = subj.theoryCreditHours || subj.creditHours * 0.75 || credits.theory;
-            const internalCH = subj.internalCreditHours || subj.creditHours * 0.25 || credits.internal;
-            
-            groupedSubjects.push({
-                subjectName: subj.subjectName,
-                theoryCode: subj.theoryCode || codes.theory,
-                internalCode: subj.internalCode || codes.internal,
-                theoryCreditHours: parseFloat(theoryCH) || credits.theory,
-                internalCreditHours: parseFloat(internalCH) || credits.internal,
-                theoryGradePoint: parseFloat(subj.theoryGpa) || 0,
-                internalGradePoint: parseFloat(subj.practicalGpa) || 0,
-                theoryGrade: subj.theoryGrade || "NG",
-                internalGrade: subj.practicalGrade || subj.internalGrade || "NG",
-                finalGrade: subj.finalGrade || "NG",
-                hasPractical: subj.hasPractical !== false,
-                isAbsent: subj.isAbsent,
-            });
-        });
-    }
+  // Group subjects with their components (Theory + Internal/Practical)
+  // Following exact NEB format from the template
+  const groupedSubjects = [];
+  if (subjects) {
+    subjects.forEach((subj) => {
+      // IMPORTANT: Use theorySubjectCode/practicalSubjectCode from backend API
+      // These contain the correct NEB codes from SubjectComponent table
+      // Only fall back to hardcoded mapping if API doesn't provide codes
+      const codes = getSubjectCodes(subj.subjectName, subj.subjectCode);
+      const credits = getCreditHours(subj.subjectName);
 
-    // Calculate total credit hours
-    const totalCreditHours = groupedSubjects.reduce(
-        (sum, subj) => sum + subj.theoryCreditHours + subj.internalCreditHours,
-        0
-    );
+      // Use actual credit hours if provided, otherwise use calculated
+      const theoryCH =
+        subj.theoryCreditHours || subj.creditHours * 0.75 || credits.theory;
+      const internalCH =
+        subj.internalCreditHours || subj.creditHours * 0.25 || credits.internal;
 
-    // Format grade level display
-    const getGradeDisplay = (level) => {
-        const num = parseInt(level);
-        if (num === 11) return "XI";
-        if (num === 12) return "XII";
-        return level || "XI";
-    };
+      groupedSubjects.push({
+        subjectName: subj.subjectName,
+        // Priority: API theorySubjectCode > API subjectCode > hardcoded mapping
+        theoryCode:
+          subj.theorySubjectCode ||
+          subj.theoryCode ||
+          subj.subjectCode ||
+          codes.theory,
+        internalCode:
+          subj.practicalSubjectCode || subj.internalCode || codes.internal,
+        theoryCreditHours: parseFloat(theoryCH) || credits.theory,
+        internalCreditHours: parseFloat(internalCH) || credits.internal,
+        theoryGradePoint: parseFloat(subj.theoryGpa) || 0,
+        internalGradePoint: parseFloat(subj.practicalGpa) || 0,
+        theoryGrade: subj.theoryGrade || "NG",
+        internalGrade: subj.practicalGrade || subj.internalGrade || "NG",
+        finalGrade: subj.finalGrade || "NG",
+        hasPractical: subj.hasPractical !== false,
+        isAbsent: subj.isAbsent,
+      });
+    });
+  }
 
-    return (
-        <div className="neb-grade-overlay">
-            {/* Action Buttons */}
-            {showActions && (
-                <div className="neb-actions no-print">
-                    <button className="btn btn-primary" onClick={handlePrint}>
-                        <Printer size={18} /> Print
-                    </button>
-                    <button className="btn btn-secondary" onClick={handlePrint}>
-                        <Download size={18} /> Download PDF
-                    </button>
-                    {onClose && (
-                        <button className="btn btn-outline" onClick={onClose}>
-                            <X size={18} /> Close
-                        </button>
-                    )}
+  // Calculate total credit hours
+  const totalCreditHours = groupedSubjects.reduce(
+    (sum, subj) => sum + subj.theoryCreditHours + subj.internalCreditHours,
+    0,
+  );
+
+  // Format grade level display
+  const getGradeDisplay = (level) => {
+    const num = parseInt(level);
+    if (num === 11) return "XI";
+    if (num === 12) return "XII";
+    return level || "XI";
+  };
+
+  return (
+    <div className="neb-grade-overlay">
+      {/* Action Buttons */}
+      {showActions && (
+        <div className="neb-actions no-print">
+          <button className="btn btn-primary" onClick={handlePrint}>
+            <Printer size={18} /> Print
+          </button>
+          <button className="btn btn-secondary" onClick={handlePrint}>
+            <Download size={18} /> Download PDF
+          </button>
+          {onClose && (
+            <button className="btn btn-outline" onClick={onClose}>
+              <X size={18} /> Close
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Grade Sheet - A4 Format */}
+      <div className="neb-container" ref={reportRef}>
+        <div className="neb-a4">
+          {/* Header Section - Same as Grade 1-10 Report Card */}
+          <header className="report-header">
+            <div className="school-logo">
+              {school?.logoUrl || school?.bannerUrl ? (
+                <img
+                  src={resolveAssetUrl(school.logoUrl || school.bannerUrl)}
+                  alt="School Logo"
+                  crossOrigin="anonymous"
+                />
+              ) : (
+                <div className="logo-placeholder">
+                  <span>🏫</span>
                 </div>
-            )}
-
-            {/* Grade Sheet - A4 Format */}
-            <div className="neb-container" ref={reportRef}>
-                <div className="neb-a4">
-                    {/* Header */}
-                    <header className="neb-header">
-                        <div className="neb-logo">
-                            {school?.logoUrl ? (
-                                <img src={school.logoUrl} alt="Logo" />
-                            ) : (
-                                <div className="logo-placeholder">🏫</div>
-                            )}
-                        </div>
-                        <div className="neb-school-info">
-                            <h1>{school?.name || "School Name"}</h1>
-                            <p className="location">{school?.address || "Location"}</p>
-                            <h2 className="title">GRADE-SHEET</h2>
-                        </div>
-                    </header>
-
-                    {/* Student Info - NEB Format */}
-                    <section className="neb-student-info">
-                        <div className="info-row">
-                            <span className="label">THE GRADE(S) SECURED BY:</span>
-                            <span className="value bold">{student?.name?.toUpperCase() || "STUDENT NAME"}</span>
-                        </div>
-                        <div className="info-row">
-                            <span className="label">DATE OF BIRTH:</span>
-                            <span className="value bold">
-                                {student?.dobBS || "____/__/____"} B.S. &nbsp;&nbsp;( {student?.dobAD || student?.dateOfBirth?.split("T")[0] || "____/__/____"} A.D. )
-                            </span>
-                        </div>
-                        <div className="info-row three-col">
-                            <div>
-                                <span className="label">REGISTRATION NO.</span>
-                                <span className="value bold">{student?.registrationNumber || student?.admissionNumber || "____________"}</span>
-                            </div>
-                            <div>
-                                <span className="label">SYMBOL NO.</span>
-                                <span className="value bold">{student?.symbolNumber || student?.rollNumber || "________"}</span>
-                            </div>
-                            <div>
-                                <span className="value bold">GRADE {getGradeDisplay(student?.gradeLevel || student?.class)}</span>
-                            </div>
-                        </div>
-                        <div className="info-row">
-                            <span className="label">IN THE {examination?.name?.toUpperCase() || "FINAL EXAMINATION"} CONDUCTED IN</span>
-                            <span className="value bold">{examination?.yearBS || examination?.academicYearBS || "____"} B.S. ({examination?.yearAD || examination?.academicYear?.split("-")[0] || "____"} A.D.)</span>
-                        </div>
-                        <div className="info-row">
-                            <span>ARE GIVEN BELOW.</span>
-                        </div>
-                    </section>
-
-                    {/* Marks Table - Exact NEB Format */}
-                    <section className="neb-table-section">
-                        <table className="neb-table">
-                            <thead>
-                                <tr>
-                                    <th className="code-col">SUBJECT<br />CODE</th>
-                                    <th className="subject-col">SUBJECTS</th>
-                                    <th className="ch-col">CREDIT<br />HOURS<br />(CH)</th>
-                                    <th className="gp-col">GRADE<br />POINT<br />(GP)</th>
-                                    <th className="grade-col">GRADE</th>
-                                    <th className="final-col">FINAL<br />GRADE<br />(FG)</th>
-                                    <th className="remarks-col">REMARKS</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {groupedSubjects.map((subj, idx) => (
-                                    <React.Fragment key={idx}>
-                                        {/* Theory Row */}
-                                        <tr className="theory-row">
-                                            <td className="center bold">{subj.theoryCode}</td>
-                                            <td className="bold">{subj.subjectName} (Th)</td>
-                                            <td className="center bold">{subj.theoryCreditHours.toFixed(2)}</td>
-                                            <td className="center bold">{subj.isAbsent ? "AB" : subj.theoryGradePoint.toFixed(1)}</td>
-                                            <td className="center bold">{subj.isAbsent ? "AB" : subj.theoryGrade}</td>
-                                            <td className="center bold final-grade" rowSpan="2">
-                                                {subj.finalGrade}
-                                            </td>
-                                            <td rowSpan="2"></td>
-                                        </tr>
-                                        {/* Internal/Practical Row */}
-                                        <tr className="internal-row">
-                                            <td className="center bold">{subj.internalCode}</td>
-                                            <td className="bold">{subj.subjectName} (In)</td>
-                                            <td className="center bold">{subj.internalCreditHours.toFixed(2)}</td>
-                                            <td className="center bold">{subj.isAbsent ? "AB" : subj.internalGradePoint.toFixed(1)}</td>
-                                            <td className="center bold">{subj.isAbsent ? "AB" : subj.internalGrade}</td>
-                                        </tr>
-                                    </React.Fragment>
-                                ))}
-                            </tbody>
-                            <tfoot>
-                                <tr className="gpa-row">
-                                    <td colSpan="5" className="right bold">Grade Point Average (GPA)</td>
-                                    <td className="center bold gpa-value">{summary?.gpa?.toFixed(2) || "0.00"}</td>
-                                    <td></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </section>
-
-                    {/* Signature Section - NEB Format */}
-                    <section className="neb-signature">
-                        <div className="signature-left">
-                            <p>PREPARED BY:-..................................................</p>
-                            <p className="signature-gap">CHECKED BY:-..................................................</p>
-                            <p className="signature-gap">
-                                DATE OF ISSUE:- <span className="bold">{examination?.issueDateBS || "____-__-__"} B.S.</span>
-                            </p>
-                        </div>
-                        <div className="signature-right">
-                            <p className="dotted">........................................</p>
-                            <p className="bold campus-chief-name">{school?.principalName || "CAMPUS CHIEF NAME"}</p>
-                            <p className="title-label">CAMPUS CHIEF</p>
-                        </div>
-                    </section>
-
-                    {/* Footer Notes - NEB Format */}
-                    <footer className="neb-footer">
-                        <p><strong>Note :</strong> 1 Credit Hour is equal to 32 working hours.</p>
-                        <p>IN (Internal) : Project work, Practical, Presentation, Community Work, Presentation,</p>
-                        <p className="indent">Terminal Examinations</p>
-                        <p>TH (Theory): Written External Examination</p>
-                    </footer>
-                </div>
+              )}
             </div>
+            <div className="school-info">
+              <h1 className="school-name">{school?.name || "School Name"}</h1>
+              {school?.tagline && (
+                <p className="school-tagline">{school.tagline}</p>
+              )}
+              <p className="school-address">
+                {school?.address || "School Address"}
+              </p>
+              <p className="school-contact">
+                {school?.landlineNumber && `Tel: ${school.landlineNumber}`}
+                {school?.landlineNumber && school?.phone && " | "}
+                {school?.phone && `Mobile: ${school.phone}`}
+                {(school?.landlineNumber || school?.phone) &&
+                  school?.email &&
+                  " | "}
+                {school?.email && `Email: ${school.email}`}
+              </p>
+              {school?.website && (
+                <p className="school-website">Website: {school.website}</p>
+              )}
+            </div>
+            <div className="school-logo right-logo">
+              {/* Optional: Second logo or Nepal emblem */}
+              <div className="logo-placeholder nepal-emblem">
+                <span>🇳🇵</span>
+              </div>
+            </div>
+          </header>
 
-            {/* Styles - NEB Official Format */}
-            <style>{`
+          {/* Report Title */}
+          <div className="report-title">
+            <h2>GRADE SHEET / REPORT CARD</h2>
+            <h3>{examination?.name || "Examination"}</h3>
+            <p className="academic-year">
+              Academic Year: {examination?.academicYear || "N/A"}
+            </p>
+          </div>
+
+          {/* Student Information - Same as Grade 1-10 Report Card */}
+          <section className="student-info-section">
+            <div className="info-grid">
+              <div className="info-item">
+                <span className="label">Student Name:</span>
+                <span className="value">{student?.name || "N/A"}</span>
+              </div>
+              <div className="info-item">
+                <span className="label">Roll No:</span>
+                <span className="value">{student?.rollNumber || "N/A"}</span>
+              </div>
+              <div className="info-item">
+                <span className="label">Class:</span>
+                <span className="value">{student?.class || "N/A"}</span>
+              </div>
+              <div className="info-item">
+                <span className="label">Section:</span>
+                <span className="value">{student?.section || "N/A"}</span>
+              </div>
+              {student?.admissionNumber && (
+                <div className="info-item">
+                  <span className="label">Admission No:</span>
+                  <span className="value">{student.admissionNumber}</span>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Marks Table - Exact NEB Format */}
+          <section className="neb-table-section">
+            <table className="neb-table">
+              <thead>
+                <tr>
+                  <th className="code-col">
+                    SUBJECT
+                    <br />
+                    CODE
+                  </th>
+                  <th className="subject-col">SUBJECTS</th>
+                  <th className="ch-col">
+                    CREDIT
+                    <br />
+                    HOURS
+                    <br />
+                    (CH)
+                  </th>
+                  <th className="gp-col">
+                    GRADE
+                    <br />
+                    POINT
+                    <br />
+                    (GP)
+                  </th>
+                  <th className="grade-col">GRADE</th>
+                  <th className="final-col">
+                    FINAL
+                    <br />
+                    GRADE
+                    <br />
+                    (FG)
+                  </th>
+                  <th className="remarks-col">REMARKS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {groupedSubjects.map((subj, idx) => (
+                  <React.Fragment key={idx}>
+                    {/* Theory Row */}
+                    <tr className="theory-row">
+                      <td className="center bold">{subj.theoryCode}</td>
+                      <td className="bold">{subj.subjectName} (Th)</td>
+                      <td className="center bold">
+                        {subj.theoryCreditHours.toFixed(2)}
+                      </td>
+                      <td className="center bold">
+                        {subj.isAbsent
+                          ? "AB"
+                          : subj.theoryGradePoint.toFixed(1)}
+                      </td>
+                      <td className="center bold">
+                        {subj.isAbsent ? "AB" : subj.theoryGrade}
+                      </td>
+                      <td className="center bold final-grade" rowSpan="2">
+                        {subj.finalGrade}
+                      </td>
+                      <td rowSpan="2"></td>
+                    </tr>
+                    {/* Internal/Practical Row */}
+                    <tr className="internal-row">
+                      <td className="center bold">{subj.internalCode}</td>
+                      <td className="bold">{subj.subjectName} (In)</td>
+                      <td className="center bold">
+                        {subj.internalCreditHours.toFixed(2)}
+                      </td>
+                      <td className="center bold">
+                        {subj.isAbsent
+                          ? "AB"
+                          : subj.internalGradePoint.toFixed(1)}
+                      </td>
+                      <td className="center bold">
+                        {subj.isAbsent ? "AB" : subj.internalGrade}
+                      </td>
+                    </tr>
+                  </React.Fragment>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="gpa-row">
+                  <td colSpan="5" className="right bold">
+                    Grade Point Average (GPA)
+                  </td>
+                  <td className="center bold gpa-value">
+                    {summary?.gpa?.toFixed(2) || "0.00"}
+                  </td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </section>
+
+          {/* Signature Section - NEB Format */}
+          <section className="neb-signature">
+            <div className="signature-left">
+              <p>
+                PREPARED BY:-..................................................
+              </p>
+              <p className="signature-gap">
+                CHECKED BY:-..................................................
+              </p>
+              <p className="signature-gap">
+                DATE OF ISSUE:-{" "}
+                <span className="bold">
+                  {examination?.issueDateBS || "____-__-__"} B.S.
+                </span>
+              </p>
+            </div>
+            <div className="signature-right">
+              <p className="dotted">........................................</p>
+              <p className="bold campus-chief-name">
+                {school?.principalName || "CAMPUS CHIEF NAME"}
+              </p>
+              <p className="title-label">CAMPUS CHIEF</p>
+            </div>
+          </section>
+
+          {/* Footer Notes - NEB Format */}
+          <footer className="neb-footer">
+            <p>
+              <strong>Note :</strong> 1 Credit Hour is equal to 32 working
+              hours.
+            </p>
+            <p>
+              IN (Internal) : Project work, Practical, Presentation, Community
+              Work, Presentation,
+            </p>
+            <p className="indent">Terminal Examinations</p>
+            <p>TH (Theory): Written External Examination</p>
+          </footer>
+        </div>
+      </div>
+
+      {/* Styles - NEB Official Format */}
+      <style>{`
         .neb-grade-overlay {
           position: fixed;
           top: 0;
@@ -326,7 +448,131 @@ const NEBGradeSheet = ({ data, onClose, showActions = true }) => {
           box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         }
 
-        /* Header - Centered */
+        /* Header - Same as Grade 1-10 */
+        .report-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          border-bottom: 3px double #1a1a1a;
+          padding-bottom: 10px;
+          margin-bottom: 15px;
+        }
+
+        .school-logo {
+          width: 70px;
+          height: 70px;
+          flex-shrink: 0;
+        }
+
+        .school-logo img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+
+        .school-logo.right-logo {
+          width: 70px;
+          height: 70px;
+        }
+
+        .school-info {
+          text-align: center;
+          flex: 1;
+          padding: 0 20px;
+        }
+
+        .school-name {
+          font-size: 22pt;
+          font-weight: bold;
+          margin: 0;
+          color: #000;
+          text-transform: uppercase;
+        }
+
+        .school-tagline {
+          font-size: 10pt;
+          font-style: italic;
+          color: #000;
+          margin: 3px 0;
+        }
+
+        .school-address {
+          font-size: 10pt;
+          margin: 5px 0;
+          color: #000;
+        }
+
+        .school-contact {
+          font-size: 9pt;
+          color: #000;
+          margin: 0;
+        }
+
+        .school-website {
+          font-size: 9pt;
+          color: #000;
+          margin: 2px 0 0;
+        }
+
+        /* Report Title */
+        .report-title {
+          text-align: center;
+          margin: 15px 0;
+          padding: 10px;
+          background: #fff;
+          color: #000;
+          border: 1px solid #000;
+        }
+
+        .report-title h2 {
+          margin: 0;
+          font-size: 16pt;
+          letter-spacing: 2px;
+        }
+
+        .report-title h3 {
+          margin: 5px 0 0;
+          font-size: 12pt;
+          font-weight: normal;
+        }
+
+        .academic-year {
+          margin: 5px 0 0;
+          font-size: 10pt;
+        }
+
+        /* Student Info Section */
+        .student-info-section {
+          margin: 15px 0;
+          padding: 10px;
+          background: #fff;
+          border: 1px solid #000;
+        }
+
+        .info-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 10px;
+        }
+
+        .info-item {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .info-item .label {
+          font-size: 9pt;
+          color: #000;
+          font-weight: 600;
+        }
+
+        .info-item .value {
+          font-size: 11pt;
+          font-weight: bold;
+          color: #000;
+        }
+
+        /* Header - Centered (legacy) */
         .neb-header {
           text-align: center;
           margin-bottom: 0.5rem;
@@ -348,10 +594,17 @@ const NEBGradeSheet = ({ data, onClose, showActions = true }) => {
         .logo-placeholder {
           width: 70px;
           height: 70px;
-          font-size: 50px;
+          font-size: 40px;
           display: flex;
           align-items: center;
           justify-content: center;
+          background: #fff;
+          border: 1px solid #000;
+        }
+
+        .logo-placeholder.nepal-emblem {
+          border: none;
+          background: transparent;
         }
 
         .neb-school-info h1 {
@@ -546,8 +799,8 @@ const NEBGradeSheet = ({ data, onClose, showActions = true }) => {
           }
         }
       `}</style>
-        </div>
-    );
+    </div>
+  );
 };
 
 export default NEBGradeSheet;

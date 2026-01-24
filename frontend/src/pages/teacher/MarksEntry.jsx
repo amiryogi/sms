@@ -199,9 +199,27 @@ const MarksEntry = () => {
         return;
       }
 
-      let marks = [];
+      // ALWAYS fetch full student list first (authoritative source)
+      const studentsRes = await examService.getStudentsForMarksEntry(
+        examSubject.id,
+        sectionId,
+      );
+      const studentList = studentsRes.data?.students || [];
 
-      // Try to fetch existing results first
+      // Build initial marks data from student list
+      let marks = studentList.map((s) => ({
+        studentId: s.studentId,
+        studentClassId: s.studentClassId,
+        rollNumber: s.rollNumber,
+        studentName: `${s.firstName} ${s.lastName}`,
+        programName: s.programName || null,
+        marksObtained: "",
+        practicalMarks: "",
+        isAbsent: false,
+        remarks: "",
+      }));
+
+      // Merge existing results (if any) to preserve entered marks
       try {
         const resultsRes = await examService.getResultsBySubject(
           examSubject.id,
@@ -210,41 +228,28 @@ const MarksEntry = () => {
         const { results } = resultsRes.data;
 
         if (results && results.length > 0) {
-          marks = results.map((r) => ({
-            studentId: r.student.id,
-            studentClassId: r.studentClassId,
-            rollNumber: r.student.studentClasses?.[0]?.rollNumber || null,
-            studentName: `${r.student.user?.firstName} ${r.student.user?.lastName}`,
-            marksObtained: r.isAbsent ? "" : (r.marksObtained ?? ""),
-            practicalMarks: r.isAbsent ? "" : (r.practicalMarks ?? ""),
-            isAbsent: r.isAbsent || false,
-            remarks: r.remarks || "",
-          }));
+          const resultsMap = new Map(results.map((r) => [r.student.id, r]));
+
+          marks = marks.map((m) => {
+            const existing = resultsMap.get(m.studentId);
+            if (existing) {
+              return {
+                ...m,
+                marksObtained: existing.isAbsent
+                  ? ""
+                  : (existing.marksObtained ?? ""),
+                practicalMarks: existing.isAbsent
+                  ? ""
+                  : (existing.practicalMarks ?? ""),
+                isAbsent: existing.isAbsent || false,
+                remarks: existing.remarks || "",
+              };
+            }
+            return m;
+          });
         }
       } catch {
-        // No existing results
-      }
-
-      // If no existing marks, fetch student list
-      if (marks.length === 0) {
-        // For teachers, use standard endpoint (backend validates their assignment)
-        const studentsRes = await examService.getStudentsForMarksEntry(
-          examSubject.id,
-          sectionId,
-        );
-        const studentList = studentsRes.data?.students || [];
-
-        marks = studentList.map((s) => ({
-          studentId: s.studentId,
-          studentClassId: s.studentClassId,
-          rollNumber: s.rollNumber,
-          studentName: `${s.firstName} ${s.lastName}`,
-          programName: s.programName || null,
-          marksObtained: "",
-          practicalMarks: "",
-          isAbsent: false,
-          remarks: "",
-        }));
+        // No existing results - keep empty marks
       }
 
       marks.sort((a, b) => (a.rollNumber || 999) - (b.rollNumber || 999));
@@ -271,9 +276,36 @@ const MarksEntry = () => {
       )?.classSubject?.class;
       const isNEB = classData && classData.gradeLevel >= 11;
 
-      let marks = [];
+      // ALWAYS fetch full student list first (authoritative source)
+      let studentsRes;
+      if (isNEB && filters.programId) {
+        studentsRes = await examService.getStudentsByProgram(
+          examSubjectId,
+          sectionId,
+          filters.programId,
+        );
+      } else {
+        studentsRes = await examService.getStudentsForMarksEntry(
+          examSubjectId,
+          sectionId,
+        );
+      }
+      const studentList = studentsRes.data?.students || [];
 
-      // Try to fetch existing results first
+      // Build initial marks data from student list
+      let marks = studentList.map((s) => ({
+        studentId: s.studentId,
+        studentClassId: s.studentClassId,
+        rollNumber: s.rollNumber,
+        studentName: `${s.firstName} ${s.lastName}`,
+        programName: s.programName || null,
+        marksObtained: "",
+        practicalMarks: "",
+        isAbsent: false,
+        remarks: "",
+      }));
+
+      // Merge existing results (if any) to preserve entered marks
       try {
         const resultsRes = await examService.getResultsBySubject(
           examSubjectId,
@@ -282,51 +314,28 @@ const MarksEntry = () => {
         const { results } = resultsRes.data;
 
         if (results && results.length > 0) {
-          marks = results.map((r) => ({
-            studentId: r.student.id,
-            studentClassId: r.studentClassId,
-            rollNumber: r.student.studentClasses?.[0]?.rollNumber || null,
-            studentName: `${r.student.user?.firstName} ${r.student.user?.lastName}`,
-            marksObtained: r.isAbsent ? "" : (r.marksObtained ?? ""),
-            practicalMarks: r.isAbsent ? "" : (r.practicalMarks ?? ""),
-            isAbsent: r.isAbsent || false,
-            remarks: r.remarks || "",
-          }));
+          const resultsMap = new Map(results.map((r) => [r.student.id, r]));
+
+          marks = marks.map((m) => {
+            const existing = resultsMap.get(m.studentId);
+            if (existing) {
+              return {
+                ...m,
+                marksObtained: existing.isAbsent
+                  ? ""
+                  : (existing.marksObtained ?? ""),
+                practicalMarks: existing.isAbsent
+                  ? ""
+                  : (existing.practicalMarks ?? ""),
+                isAbsent: existing.isAbsent || false,
+                remarks: existing.remarks || "",
+              };
+            }
+            return m;
+          });
         }
       } catch {
-        // No existing results
-      }
-
-      // If no existing marks, fetch student list
-      if (marks.length === 0) {
-        let studentsRes;
-
-        if (isNEB && filters.programId) {
-          studentsRes = await examService.getStudentsByProgram(
-            examSubjectId,
-            sectionId,
-            filters.programId,
-          );
-        } else {
-          studentsRes = await examService.getStudentsForMarksEntry(
-            examSubjectId,
-            sectionId,
-          );
-        }
-
-        const studentList = studentsRes.data?.students || [];
-
-        marks = studentList.map((s) => ({
-          studentId: s.studentId,
-          studentClassId: s.studentClassId,
-          rollNumber: s.rollNumber,
-          studentName: `${s.firstName} ${s.lastName}`,
-          programName: s.programName || null,
-          marksObtained: "",
-          practicalMarks: "",
-          isAbsent: false,
-          remarks: "",
-        }));
+        // No existing results - keep empty marks
       }
 
       marks.sort((a, b) => (a.rollNumber || 999) - (b.rollNumber || 999));
