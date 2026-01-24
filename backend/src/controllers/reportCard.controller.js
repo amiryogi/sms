@@ -11,9 +11,14 @@ const {
  * Build detailed subject results with Nepal-style grading
  * @param {Array} examResults - Raw exam results from database
  * @param {boolean} isNEBClass - Whether this is Grade 11/12 (NEB curriculum)
+ * @param {Map} subjectComponentsMap - Map of subjectId -> {THEORY: component, PRACTICAL: component}
  * @returns {Array} Processed subject results with grades and GPAs
  */
-const buildSubjectResults = (examResults, isNEBClass = false) => {
+const buildSubjectResults = (
+  examResults,
+  isNEBClass = false,
+  subjectComponentsMap = null,
+) => {
   return examResults.map((result) => {
     const examSubject = result.examSubject;
     const classSubject = examSubject.classSubject;
@@ -33,25 +38,49 @@ const buildSubjectResults = (examResults, isNEBClass = false) => {
     let theoryCreditHours = 0;
     let internalCreditHours = 0;
 
+    // For NEB classes, get theory/practical codes from SubjectComponent
+    let theorySubjectCode = null;
+    let practicalSubjectCode = null;
+
     if (isNEBClass) {
       // For NEB classes (Grade 11-12), use calculated 75/25 split or SubjectComponent
       theoryCreditHours = Math.round(totalCreditHours * 0.75 * 100) / 100;
       internalCreditHours = Math.round(totalCreditHours * 0.25 * 100) / 100;
+
+      // Get NEB-specific subject codes from SubjectComponent
+      if (subjectComponentsMap) {
+        const components = subjectComponentsMap.get(classSubject.subject.id);
+        if (components) {
+          theorySubjectCode = components.THEORY?.subjectCode || null;
+          practicalSubjectCode = components.PRACTICAL?.subjectCode || null;
+        }
+      }
     } else {
       // For Grade 1-10, read from ClassSubject database fields
       theoryCreditHours = parseFloat(classSubject.theoryCreditHours) || 0;
       internalCreditHours = parseFloat(classSubject.practicalCreditHours) || 0;
-      
+
       // Fallback: if not set in DB, use total credit hours for theory only
       if (theoryCreditHours === 0 && internalCreditHours === 0) {
         theoryCreditHours = totalCreditHours;
       }
     }
 
+    // Determine subject code to use:
+    // - NEB: Use theorySubjectCode from SubjectComponent (e.g., "4271")
+    // - Non-NEB: Use Subject.code
+    const subjectCode =
+      isNEBClass && theorySubjectCode
+        ? theorySubjectCode
+        : classSubject.subject.code;
+
     return {
       subjectId: classSubject.subject.id,
       subjectName: classSubject.subject.name,
-      subjectCode: classSubject.subject.code,
+      subjectCode,
+      // NEB-specific: separate theory and practical codes
+      theorySubjectCode: isNEBClass ? theorySubjectCode : null,
+      practicalSubjectCode: isNEBClass ? practicalSubjectCode : null,
       creditHours: totalCreditHours,
       // Credit hour breakdown (from DB for Grade 1-10, calculated for NEB)
       theoryCreditHours,
@@ -136,6 +165,9 @@ const getReportCards = asyncHandler(async (req, res) => {
     select: { id: true, name: true },
   });
 
+  // Check if this is NEB class (Grade 11 or 12) for subject filtering
+  const isNEBClass = classInfo.gradeLevel >= 11;
+
   // Get all students in this class/section for this academic year
   const enrollments = await prisma.studentClass.findMany({
     where: {
@@ -155,16 +187,46 @@ const getReportCards = asyncHandler(async (req, res) => {
       },
       class: true,
       section: true,
+      // Include student's enrolled subjects for Grade 11-12 filtering
+      studentSubjects: isNEBClass
+        ? {
+            where: { status: "ACTIVE" },
+            include: {
+              classSubject: { select: { id: true } },
+            },
+          }
+        : false,
     },
     orderBy: { rollNumber: "asc" },
   });
 
   // Get all exam results for these students
   const studentIds = enrollments.map((e) => e.studentId);
+
+  // For Grade 11-12, collect all enrolled classSubjectIds across all students
+  let enrolledClassSubjectIds = null;
+  if (isNEBClass) {
+    const allEnrolledSubjects = new Set();
+    enrollments.forEach((enrollment) => {
+      (enrollment.studentSubjects || []).forEach((ss) => {
+        allEnrolledSubjects.add(ss.classSubject.id);
+      });
+    });
+    enrolledClassSubjectIds = Array.from(allEnrolledSubjects);
+  }
+
   const examResults = await prisma.examResult.findMany({
     where: {
       studentId: { in: studentIds },
-      examSubject: { examId: parseInt(examId) },
+      examSubject: {
+        examId: parseInt(examId),
+        // For Grade 11-12, only include subjects that students are enrolled in
+        ...(isNEBClass &&
+          enrolledClassSubjectIds &&
+          enrolledClassSubjectIds.length > 0 && {
+            classSubjectId: { in: enrolledClassSubjectIds },
+          }),
+      },
     },
     include: {
       examSubject: {
@@ -175,20 +237,64 @@ const getReportCards = asyncHandler(async (req, res) => {
     },
   });
 
-  // Group results by student and process with Nepal grading
+  // Group results by student and filter by enrolled subjects for Grade 11-12
   const resultsByStudent = {};
-  examResults.forEach((r) => {
-    if (!resultsByStudent[r.studentId]) resultsByStudent[r.studentId] = [];
-    resultsByStudent[r.studentId].push(r);
+
+  enrollments.forEach((enrollment) => {
+    // Get student's enrolled subject IDs for filtering (Grade 11-12 only)
+    const enrolledSubjectIds = isNEBClass
+      ? new Set(
+          (enrollment.studentSubjects || []).map((ss) => ss.classSubject.id),
+        )
+      : null;
+
+    // Filter exam results for this student
+    const studentResults = examResults.filter((r) => {
+      if (r.studentId !== enrollment.studentId) return false;
+
+      // For Grade 11-12, only include results for enrolled subjects
+      if (isNEBClass && enrolledSubjectIds) {
+        return enrolledSubjectIds.has(r.examSubject.classSubjectId);
+      }
+
+      return true;
+    });
+
+    resultsByStudent[enrollment.studentId] = studentResults;
   });
 
-  // Check if this is NEB class (Grade 11 or 12) for credit-weighted GPA
-  const isNEBClass = classInfo.gradeLevel >= 11;
+  // For NEB classes, fetch SubjectComponents to get proper NEB subject codes
+  let subjectComponentsMap = null;
+  if (isNEBClass && examResults.length > 0) {
+    const subjectIds = [
+      ...new Set(examResults.map((r) => r.examSubject.classSubject.subject.id)),
+    ];
+
+    const subjectComponents = await prisma.subjectComponent.findMany({
+      where: {
+        subjectId: { in: subjectIds },
+        classId: parseInt(classId),
+      },
+    });
+
+    // Build a map: subjectId -> { THEORY: component, PRACTICAL: component }
+    subjectComponentsMap = new Map();
+    subjectComponents.forEach((sc) => {
+      if (!subjectComponentsMap.has(sc.subjectId)) {
+        subjectComponentsMap.set(sc.subjectId, {});
+      }
+      subjectComponentsMap.get(sc.subjectId)[sc.type] = sc;
+    });
+  }
 
   // Build response with student data, results, and report card status
   const data = enrollments.map((enrollment) => {
     const rawResults = resultsByStudent[enrollment.studentId] || [];
-    const subjectResults = buildSubjectResults(rawResults, isNEBClass);
+    const subjectResults = buildSubjectResults(
+      rawResults,
+      isNEBClass,
+      subjectComponentsMap,
+    );
     const overallResult = gradeCalculator.calculateOverallGPA(subjectResults, {
       useCreditWeighting: isNEBClass,
     });
@@ -295,6 +401,35 @@ const generateReportCards = asyncHandler(async (req, res) => {
     throw ApiError.notFound("No students found in this section");
   }
 
+  // For NEB classes, fetch SubjectComponents to get proper NEB subject codes
+  let subjectComponentsMap = null;
+  if (isNEBClass) {
+    // Get all subjects for this class
+    const classSubjects = await prisma.classSubject.findMany({
+      where: { classId: parseInt(classId) },
+      select: { subjectId: true },
+    });
+    const subjectIds = classSubjects.map((cs) => cs.subjectId);
+
+    if (subjectIds.length > 0) {
+      const subjectComponents = await prisma.subjectComponent.findMany({
+        where: {
+          subjectId: { in: subjectIds },
+          classId: parseInt(classId),
+        },
+      });
+
+      // Build a map: subjectId -> { THEORY: component, PRACTICAL: component }
+      subjectComponentsMap = new Map();
+      subjectComponents.forEach((sc) => {
+        if (!subjectComponentsMap.has(sc.subjectId)) {
+          subjectComponentsMap.set(sc.subjectId, {});
+        }
+        subjectComponentsMap.get(sc.subjectId)[sc.type] = sc;
+      });
+    }
+  }
+
   // Process each student and generate report cards
   const reportCards = await prisma.$transaction(async (tx) => {
     const results = [];
@@ -319,7 +454,11 @@ const generateReportCards = asyncHandler(async (req, res) => {
       if (studentResults.length === 0) continue;
 
       // Process with Nepal grading - use credit weighting for NEB classes
-      const subjectResults = buildSubjectResults(studentResults, isNEBClass);
+      const subjectResults = buildSubjectResults(
+        studentResults,
+        isNEBClass,
+        subjectComponentsMap,
+      );
       const overallResult = gradeCalculator.calculateOverallGPA(
         subjectResults,
         {
@@ -463,11 +602,35 @@ const getReportCard = asyncHandler(async (req, res) => {
     },
   });
 
+  // Check if this is NEB class (Grade 11 or 12) for subject filtering
+  const isNEBClass = reportCard.studentClass.class.gradeLevel >= 11;
+
+  // For Grade 11-12, get student's enrolled subjects
+  let enrolledClassSubjectIds = null;
+  if (isNEBClass) {
+    const studentSubjects = await prisma.studentSubject.findMany({
+      where: {
+        studentClassId: reportCard.studentClassId,
+        status: "ACTIVE",
+      },
+      select: { classSubjectId: true },
+    });
+    enrolledClassSubjectIds = studentSubjects.map((ss) => ss.classSubjectId);
+  }
+
   // Get subject-wise results with Nepal grading
   const examResults = await prisma.examResult.findMany({
     where: {
       studentId,
-      examSubject: { examId },
+      examSubject: {
+        examId,
+        // For Grade 11-12, only include subjects student is enrolled in
+        ...(isNEBClass &&
+          enrolledClassSubjectIds &&
+          enrolledClassSubjectIds.length > 0 && {
+            classSubjectId: { in: enrolledClassSubjectIds },
+          }),
+      },
     },
     include: {
       examSubject: {
@@ -485,9 +648,37 @@ const getReportCard = asyncHandler(async (req, res) => {
     },
   });
 
+  // For NEB classes, fetch SubjectComponents to get proper NEB subject codes
+  let subjectComponentsMap = null;
+  if (isNEBClass && examResults.length > 0) {
+    const subjectIds = [
+      ...new Set(examResults.map((r) => r.examSubject.classSubject.subject.id)),
+    ];
+    const classId = reportCard.studentClass.class.id;
+
+    const subjectComponents = await prisma.subjectComponent.findMany({
+      where: {
+        subjectId: { in: subjectIds },
+        classId,
+      },
+    });
+
+    // Build a map: subjectId -> { THEORY: component, PRACTICAL: component }
+    subjectComponentsMap = new Map();
+    subjectComponents.forEach((sc) => {
+      if (!subjectComponentsMap.has(sc.subjectId)) {
+        subjectComponentsMap.set(sc.subjectId, {});
+      }
+      subjectComponentsMap.get(sc.subjectId)[sc.type] = sc;
+    });
+  }
+
   // Process with Nepal grading - use credit weighting for NEB classes (Grade 11-12)
-  const isNEBClass = reportCard.studentClass.class.gradeLevel >= 11;
-  const subjectResults = buildSubjectResults(examResults, isNEBClass);
+  const subjectResults = buildSubjectResults(
+    examResults,
+    isNEBClass,
+    subjectComponentsMap,
+  );
   const overallResult = gradeCalculator.calculateOverallGPA(subjectResults, {
     useCreditWeighting: isNEBClass,
   });
@@ -650,7 +841,37 @@ const getReportCardPdfData = asyncHandler(async (req, res) => {
 
   // Use credit-weighted GPA for NEB classes (Grade 11-12)
   const isNEBClass = reportCard.studentClass.class.gradeLevel >= 11;
-  const subjectResults = buildSubjectResults(examResults, isNEBClass);
+
+  // For NEB classes, fetch SubjectComponents to get proper NEB subject codes
+  let subjectComponentsMap = null;
+  if (isNEBClass && examResults.length > 0) {
+    const subjectIds = [
+      ...new Set(examResults.map((r) => r.examSubject.classSubject.subject.id)),
+    ];
+    const classId = reportCard.studentClass.class.id;
+
+    const subjectComponents = await prisma.subjectComponent.findMany({
+      where: {
+        subjectId: { in: subjectIds },
+        classId,
+      },
+    });
+
+    // Build a map: subjectId -> { THEORY: component, PRACTICAL: component }
+    subjectComponentsMap = new Map();
+    subjectComponents.forEach((sc) => {
+      if (!subjectComponentsMap.has(sc.subjectId)) {
+        subjectComponentsMap.set(sc.subjectId, {});
+      }
+      subjectComponentsMap.get(sc.subjectId)[sc.type] = sc;
+    });
+  }
+
+  const subjectResults = buildSubjectResults(
+    examResults,
+    isNEBClass,
+    subjectComponentsMap,
+  );
   const overallResult = gradeCalculator.calculateOverallGPA(subjectResults, {
     useCreditWeighting: isNEBClass,
   });
@@ -913,10 +1134,41 @@ const getBulkReportCards = asyncHandler(async (req, res) => {
   });
 
   if (reportCards.length === 0) {
-    throw ApiError.notFound("No report cards found. Please generate them first.");
+    throw ApiError.notFound(
+      "No report cards found. Please generate them first.",
+    );
   }
 
   const isNEBClass = classInfo.gradeLevel >= 11;
+
+  // For NEB classes, fetch SubjectComponents to get proper NEB subject codes
+  let subjectComponentsMap = null;
+  if (isNEBClass) {
+    // Get all subjects for this class
+    const classSubjects = await prisma.classSubject.findMany({
+      where: { classId: parseInt(classId) },
+      select: { subjectId: true },
+    });
+    const subjectIds = classSubjects.map((cs) => cs.subjectId);
+
+    if (subjectIds.length > 0) {
+      const subjectComponents = await prisma.subjectComponent.findMany({
+        where: {
+          subjectId: { in: subjectIds },
+          classId: parseInt(classId),
+        },
+      });
+
+      // Build a map: subjectId -> { THEORY: component, PRACTICAL: component }
+      subjectComponentsMap = new Map();
+      subjectComponents.forEach((sc) => {
+        if (!subjectComponentsMap.has(sc.subjectId)) {
+          subjectComponentsMap.set(sc.subjectId, {});
+        }
+        subjectComponentsMap.get(sc.subjectId)[sc.type] = sc;
+      });
+    }
+  }
 
   // Get academic year in BS
   const academicYearAD = exam.academicYear?.name || "";
@@ -950,10 +1202,17 @@ const getBulkReportCards = asyncHandler(async (req, res) => {
         },
       });
 
-      const subjectResults = buildSubjectResults(examResults, isNEBClass);
-      const overallResult = gradeCalculator.calculateOverallGPA(subjectResults, {
-        useCreditWeighting: isNEBClass,
-      });
+      const subjectResults = buildSubjectResults(
+        examResults,
+        isNEBClass,
+        subjectComponentsMap,
+      );
+      const overallResult = gradeCalculator.calculateOverallGPA(
+        subjectResults,
+        {
+          useCreditWeighting: isNEBClass,
+        },
+      );
 
       // Convert student DOB to BS format
       const dobBS = reportCard.student.dateOfBirth
@@ -981,7 +1240,9 @@ const getBulkReportCards = asyncHandler(async (req, res) => {
           type: exam.examType,
           academicYear: exam.academicYear.name,
           academicYearBS: academicYearBS ? `${academicYearBS}` : null,
-          yearAD: yearMatch ? yearMatch[0] : new Date().getFullYear().toString(),
+          yearAD: yearMatch
+            ? yearMatch[0]
+            : new Date().getFullYear().toString(),
           yearBS: academicYearBS ? academicYearBS.toString() : null,
           startDate: exam.startDate,
           endDate: exam.endDate,
@@ -1005,7 +1266,10 @@ const getBulkReportCards = asyncHandler(async (req, res) => {
         isNEBClass,
         summary: {
           totalMarks: subjectResults.reduce((sum, s) => sum + s.totalMarks, 0),
-          totalFullMarks: subjectResults.reduce((sum, s) => sum + s.totalFullMarks, 0),
+          totalFullMarks: subjectResults.reduce(
+            (sum, s) => sum + s.totalFullMarks,
+            0,
+          ),
           percentage: overallResult.averagePercentage,
           gpa: overallResult.gpa,
           grade: overallResult.grade,
@@ -1028,7 +1292,7 @@ const getBulkReportCards = asyncHandler(async (req, res) => {
         },
         gradeReference: gradeCalculator.GRADE_THRESHOLDS,
       };
-    })
+    }),
   );
 
   ApiResponse.success(res, {

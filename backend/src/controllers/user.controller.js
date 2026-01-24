@@ -146,7 +146,7 @@ const getUser = asyncHandler(async (req, res) => {
  * @access  Private/Admin
  */
 const createUser = asyncHandler(async (req, res) => {
-  const { email, password, firstName, lastName, phone, roleIds = [], role, status = 'active' } = req.body;
+  const { email, password, firstName, lastName, phone, roleIds = [], role, status = 'active', avatarUrl } = req.body;
 
   // Check if neither roleIds nor role is provided
   if (!role && (!roleIds || roleIds.length === 0)) {
@@ -209,6 +209,7 @@ const createUser = asyncHandler(async (req, res) => {
       lastName,
       phone,
       status,
+      avatarUrl, // Save avatarUrl
       userRoles: {
         create: finalRoleIds.map((roleId) => ({
           roleId,
@@ -230,6 +231,7 @@ const createUser = asyncHandler(async (req, res) => {
     firstName: user.firstName,
     lastName: user.lastName,
     phone: user.phone,
+    avatarUrl: user.avatarUrl, // Return avatarUrl
     status: user.status,
     roles: user.userRoles.map((ur) => ur.role.name),
     createdAt: user.createdAt,

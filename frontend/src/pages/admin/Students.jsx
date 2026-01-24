@@ -173,22 +173,86 @@ const Students = () => {
     setSelectedSubjectIds(newSet);
   };
 
-  const openModal = (student = null) => {
+  const openModal = async (student = null) => {
     setEditingStudent(student);
     if (student) {
-      reset({
-        firstName: student.firstName,
-        lastName: student.lastName,
-        email: student.email,
-        phone: student.phone || "",
-        admissionNumber: student.admissionNumber,
-        dateOfBirth: student.dateOfBirth?.split("T")[0],
-        gender: student.gender,
-        bloodGroup: student.bloodGroup || "",
-        address: student.address || "",
-        emergencyContact: student.emergencyContact || "",
-      });
-      setAvatarUrl(student.avatarUrl || "");
+      // Fetch full student details to get program/subjects
+      try {
+        const res = await studentService.getStudentById(student.id);
+        const fullStudent = res.data;
+        
+        const resetData = {
+          firstName: fullStudent.firstName || fullStudent.user?.firstName,
+          lastName: fullStudent.lastName || fullStudent.user?.lastName,
+          email: fullStudent.email || fullStudent.user?.email,
+          phone: fullStudent.phone || fullStudent.user?.phone || "",
+          admissionNumber: fullStudent.admissionNumber,
+          dateOfBirth: fullStudent.dateOfBirth?.split("T")[0],
+          gender: fullStudent.gender,
+          bloodGroup: fullStudent.bloodGroup || "",
+          address: fullStudent.address || "",
+          emergencyContact: fullStudent.emergencyContact || "",
+          // Enrollment fields (for tracking, though mostly read-only/hidden in update unless changed)
+          programId: fullStudent.program?.id?.toString() || "", 
+        };
+        reset(resetData);
+        
+        setAvatarUrl(fullStudent.avatarUrl || fullStudent.user?.avatarUrl || "");
+        
+        // Populate enrollment context
+        if (fullStudent.class) {
+          const classId = fullStudent.class.id.toString();
+          const yearId = fullStudent.academicYear?.id?.toString();
+          
+          setSelectedClassId(classId);
+          
+          // Trigger fetch programs if Grade 11+
+          if (fullStudent.class.gradeLevel >= 11) {
+            setShowProgramSelect(true);
+            try {
+              const progRes = await programService.getProgramsByClass(classId, yearId);
+              const availProgs = progRes.data || [];
+              setAvailablePrograms(availProgs);
+              
+              // If student has a program, load its subjects
+              if (fullStudent.program?.id) {
+                const progDetails = await programService.getProgram(fullStudent.program.id);
+                const allSubjects = progDetails.data?.programSubjects || [];
+                const classSubjects = allSubjects.filter(
+                   ps => ps.classSubject?.class?.id?.toString() === classId
+                );
+                setProgramSubjects(classSubjects);
+                
+                // Set selected subjects
+                if (fullStudent.subjects && fullStudent.subjects.length > 0) {
+                  const subIds = new Set(fullStudent.subjects.map(s => s.id));
+                  setSelectedSubjectIds(subIds);
+                } else {
+                   // Default to all if none explicitly stored (migration case)
+                  setSelectedSubjectIds(new Set(classSubjects.map(ps => ps.classSubjectId)));
+                }
+              }
+            } catch (err) {
+              console.error("Error loading program details for edit:", err);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching student details:", err);
+        // Fallback to basic data if fetch fails
+        reset({
+          firstName: student.firstName,
+          lastName: student.lastName,
+          email: student.email,
+          phone: student.phone || "",
+          admissionNumber: student.admissionNumber,
+          dateOfBirth: student.dateOfBirth?.split("T")[0],
+          gender: student.gender,
+          bloodGroup: student.bloodGroup || "",
+          address: student.address || "",
+          emergencyContact: student.emergencyContact || "",
+        });
+      }
     } else {
       reset({
         firstName: "",
@@ -577,39 +641,62 @@ const Students = () => {
                   required
                 />
               </FormRow>
+            </>
+          )}
 
-              {showProgramSelect && (
-                <div className="form-group bg-gray-50 p-3 rounded mb-3 border">
-                  <Select
-                    label="Program / Faculty"
-                    name="programId"
-                    options={availablePrograms.map(p => ({ value: p.id.toString(), label: p.name }))}
-                    register={register}
-                    required
-                    onChange={(e) => handleProgramChange(e.target.value)}
-                    placeholder="Select Program"
-                  />
+          {/* Program & Subject Selection (Editable for Admin even in Edit Mode) */}
+          {(showProgramSelect || (editingStudent && availablePrograms.length > 0)) && (
+            <div className="form-group bg-gray-50 p-4 rounded mb-4 border border-gray-200">
+              <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                 Program & Subjects
+                 {editingStudent && <span className="text-xs font-normal text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">Admin Only</span>}
+              </h4>
+              
+              <Select
+                label="Program / Faculty"
+                name="programId"
+                options={availablePrograms.map(p => ({ value: p.id.toString(), label: p.name }))}
+                register={register}
+                required={!editingStudent} // Required for new students, optional for update (unless changing)
+                onChange={(e) => handleProgramChange(e.target.value)}
+                placeholder="Select Program"
+              />
 
-                  {programSubjects.length > 0 && (
-                    <div className="mt-3">
-                      <label className="form-label mb-2 block">Assigned Subjects (Uncheck to remove)</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {programSubjects.map(ps => (
-                          <label key={ps.classSubjectId} className="flex items-center gap-2 text-sm bg-white p-2 rounded border cursor-pointer hover:bg-blue-50">
-                            <input
-                              type="checkbox"
-                              checked={selectedSubjectIds.has(ps.classSubjectId)}
-                              onChange={() => toggleSubject(ps.classSubjectId)}
-                            />
-                            <span>{ps.classSubject?.subject?.name}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+              {programSubjects.length > 0 && (
+                <div className="mt-4">
+                  <label className="form-label mb-2 block text-sm font-medium text-gray-700">
+                    Assigned Subjects
+                    <span className="text-muted font-normal ml-2 text-xs">(Click to toggle)</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {programSubjects.map(ps => {
+                      const isSelected = selectedSubjectIds.has(ps.classSubjectId);
+                      return (
+                        <div
+                          key={ps.classSubjectId}
+                          onClick={() => toggleSubject(ps.classSubjectId)}
+                          className={`toggle-item ${isSelected ? "active" : ""}`}
+                        >
+                          <div className="toggle-content">
+                             <div className="toggle-switch">
+                               <div className="toggle-knob"></div>
+                             </div>
+                             <div className="toggle-info">
+                               <span className="toggle-title">
+                                 {ps.classSubject?.subject?.name}
+                               </span>
+                               <span className="toggle-meta">
+                                 {ps.classSubject?.subject?.code} {ps.isOptional ? '(Opt)' : '(Comp)'}
+                               </span>
+                             </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
-            </>
+            </div>
           )}
           <div className="modal-actions">
             <Button type="button" variant="secondary" onClick={closeModal}>

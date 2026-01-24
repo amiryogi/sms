@@ -194,10 +194,20 @@ const getStudent = asyncHandler(async (req, res) => {
   const enrollment = student.studentClasses[0];
   const formattedStudent = {
     ...student,
+    firstName: student.user.firstName,
+    lastName: student.user.lastName,
+    email: student.user.email,
+    phone: student.user.phone || student.phone, // hierarchy: user phone > student phone
+    avatarUrl: student.user.avatarUrl,
     class: enrollment?.class,
     section: enrollment?.section,
     rollNumber: enrollment?.rollNumber,
     academicYear: enrollment?.academicYear,
+    // Include program and subjects for editing (flattened)
+    // Note: Student might have multiple subjects, so we map them
+    program: enrollment?.studentProgram?.program,
+    subjects: enrollment?.studentSubjects?.map(ss => ss.classSubject),
+    studentClassId: enrollment?.id
   };
 
   ApiResponse.success(res, formattedStudent);
@@ -277,6 +287,11 @@ const createStudent = asyncHandler(async (req, res) => {
         academicYearId: parseInt(academicYearId),
         rollNumber: rollNumber ? parseInt(rollNumber) : null,
       },
+      include: {
+        // Include relations to return confirming data
+        class: true,
+        section: true,
+      }
     });
 
     if (programId) {
@@ -297,14 +312,27 @@ const createStudent = asyncHandler(async (req, res) => {
       });
     }
 
-    return newStudent;
+    return {
+      ...newStudent,
+      avatarUrl: user.avatarUrl, // ensure avatarUrl is returned
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        avatarUrl: user.avatarUrl
+      },
+      class: enrollment.class,
+      section: enrollment.section,
+      rollNumber: enrollment.rollNumber
+    };
   });
 
   ApiResponse.created(res, student, 'Student created and enrolled successfully');
 });
 
 /**
- * @desc    Update student profile
+ * @desc    Update student profile and enrollment (Admin only for enrollment)
  * @route   PUT /api/v1/students/:id
  * @access  Private/Admin or Owner
  */
@@ -312,32 +340,47 @@ const updateStudent = asyncHandler(async (req, res) => {
   const studentId = parseInt(req.params.id);
   const {
     firstName, lastName, phone, avatarUrl,
-    dateOfBirth, gender, bloodGroup, address, emergencyContact, status
+    dateOfBirth, gender, bloodGroup, address, emergencyContact, status,
+    // Enrollment updates (ADMIN only)
+    programId, subjectIds
   } = req.body;
 
   const student = await prisma.student.findUnique({
     where: { id: studentId },
-    include: { user: true },
+    include: { 
+      user: true,
+      studentClasses: {
+        orderBy: { academicYear: { startDate: 'desc' } },
+        take: 1
+      }
+    },
   });
 
   if (!student || student.user.schoolId !== req.user.schoolId) {
     throw ApiError.notFound('Student not found');
   }
 
-  // Logic for Admin vs Owner check if needed (already handled by middleware but good to be safe)
-  
-  await prisma.$transaction([
-    prisma.user.update({
+  // RBAC: Only ADMIN can update program/subjects
+  const isAdmin = req.user.roles.includes('ADMIN') || req.user.roles.includes('SUPER_ADMIN');
+  if ((programId !== undefined || subjectIds !== undefined) && !isAdmin) {
+     throw ApiError.forbidden('Only Admins can update student program and subjects');
+  }
+
+  await prisma.$transaction(async (tx) => {
+    // 1. Update User Profile
+    await tx.user.update({
       where: { id: student.userId },
       data: {
         ...(firstName && { firstName }),
         ...(lastName && { lastName }),
         ...(phone !== undefined && { phone }),
         ...(avatarUrl !== undefined && { avatarUrl }),
-        ...(status && req.user.roles.includes('ADMIN') && { status }),
+        ...(status && isAdmin && { status }), // Only Admin can change status
       },
-    }),
-    prisma.student.update({
+    });
+
+    // 2. Update Student Profile
+    await tx.student.update({
       where: { id: studentId },
       data: {
         ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
@@ -346,8 +389,51 @@ const updateStudent = asyncHandler(async (req, res) => {
         ...(address !== undefined && { address }),
         ...(emergencyContact !== undefined && { emergencyContact }),
       },
-    }),
-  ]);
+    });
+
+    // 3. Update Enrollment (Program/Subjects) - ADMIN ONLY
+    if (isAdmin && (programId !== undefined || subjectIds !== undefined)) {
+      const currentEnrollment = student.studentClasses[0];
+      if (currentEnrollment) {
+        
+        // Update Program
+        if (programId !== undefined) {
+           // Remove existing program (if any)
+           await tx.studentProgram.deleteMany({
+             where: { studentClassId: currentEnrollment.id }
+           });
+           
+           if (programId) {
+             await tx.studentProgram.create({
+               data: {
+                 studentClassId: currentEnrollment.id,
+                 programId: parseInt(programId)
+               }
+             });
+           }
+        }
+
+        // Update Subjects
+        if (subjectIds !== undefined && Array.isArray(subjectIds)) {
+           // Remove existing subjects
+           await tx.studentSubject.deleteMany({
+             where: { studentClassId: currentEnrollment.id }
+           });
+
+           // Add new subjects
+           if (subjectIds.length > 0) {
+             await tx.studentSubject.createMany({
+               data: subjectIds.map(sid => ({
+                 studentClassId: currentEnrollment.id,
+                 classSubjectId: parseInt(sid),
+                 status: 'ACTIVE'
+               }))
+             });
+           }
+        }
+      }
+    }
+  });
 
   ApiResponse.success(res, null, 'Student profile updated successfully');
 });

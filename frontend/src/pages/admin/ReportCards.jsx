@@ -72,7 +72,7 @@ const ReportCards = () => {
       ]);
 
       const eligibleExams = (examsRes.data || []).filter(
-        (e) => e.status === "PUBLISHED" || e.status === "LOCKED"
+        (e) => e.status === "PUBLISHED" || e.status === "LOCKED",
       );
       setExams(eligibleExams);
       setClasses(classesRes.data || []);
@@ -93,7 +93,7 @@ const ReportCards = () => {
       const response = await reportCardService.getReportCards(
         selectedExam,
         selectedClass,
-        selectedSection
+        selectedSection,
       );
       setReportData(response.data);
     } catch (error) {
@@ -109,7 +109,7 @@ const ReportCards = () => {
 
     if (
       !confirm(
-        "Generate/recalculate report cards for all students in this section? This will calculate totals, grades, GPA, and ranks using Nepal grading system."
+        "Generate/recalculate report cards for all students in this section? This will calculate totals, grades, GPA, and ranks using Nepal grading system.",
       )
     )
       return;
@@ -119,7 +119,7 @@ const ReportCards = () => {
       await reportCardService.generateReportCards(
         selectedExam,
         selectedClass,
-        selectedSection
+        selectedSection,
       );
       alert("Report cards generated successfully with Nepal GPA grading!");
       fetchReportCards();
@@ -136,7 +136,7 @@ const ReportCards = () => {
 
     if (
       !confirm(
-        "Publish report cards? Students and parents will be able to view and download them."
+        "Publish report cards? Students and parents will be able to view and download them.",
       )
     )
       return;
@@ -146,7 +146,7 @@ const ReportCards = () => {
       await reportCardService.publishReportCards(
         selectedExam,
         selectedClass,
-        selectedSection
+        selectedSection,
       );
       alert("Report cards published successfully!");
       fetchReportCards();
@@ -163,7 +163,7 @@ const ReportCards = () => {
 
     if (
       !confirm(
-        "Unpublish report cards? Students and parents will no longer see them."
+        "Unpublish report cards? Students and parents will no longer see them.",
       )
     )
       return;
@@ -173,7 +173,7 @@ const ReportCards = () => {
       await reportCardService.unpublishReportCards(
         selectedExam,
         selectedClass,
-        selectedSection
+        selectedSection,
       );
       alert("Report cards unpublished.");
       fetchReportCards();
@@ -195,13 +195,13 @@ const ReportCards = () => {
     try {
       const response = await reportCardService.getReportCard(
         studentId,
-        selectedExam
+        selectedExam,
       );
       setPreviewData(response.data);
     } catch (error) {
       console.error("Error fetching report card:", error);
       alert(
-        error.response?.data?.message || "Error loading report card preview"
+        error.response?.data?.message || "Error loading report card preview",
       );
       setPreviewOpen(false);
     } finally {
@@ -225,13 +225,14 @@ const ReportCards = () => {
       const response = await reportCardService.getBulkReportCards(
         selectedExam,
         selectedClass,
-        selectedSection
+        selectedSection,
       );
       setBulkPrintData(response.data);
     } catch (error) {
       console.error("Error fetching bulk report cards:", error);
       alert(
-        error.response?.data?.message || "Error loading report cards for printing"
+        error.response?.data?.message ||
+          "Error loading report cards for printing",
       );
       setBulkPrintOpen(false);
     } finally {
@@ -618,10 +619,11 @@ const ReportCards = () => {
                         </td>
                         <td style={{ padding: "0.75rem", textAlign: "center" }}>
                           <span
-                            className={`badge ${student.isPassed
+                            className={`badge ${
+                              student.isPassed
                                 ? "badge-success"
                                 : "badge-danger"
-                              }`}
+                            }`}
                             style={{ fontSize: "0.75rem" }}
                           >
                             {student.isPassed ? "PASSED" : "FAILED"}
@@ -709,10 +711,7 @@ const ReportCards = () => {
             </div>
           </div>
         ) : previewData ? (
-          previewData.isNEBClass || 
-            previewData.student?.gradeLevel >= 11 ||
-            (previewData.student?.class &&
-              (previewData.student.class.includes("11") || previewData.student.class.includes("12"))) ? (
+          previewData.isNEBClass ? (
             <NEBGradeSheet
               data={previewData}
               onClose={closePreview}

@@ -19,13 +19,6 @@ const Results = () => {
   const [error, setError] = useState(null);
   const [showFullReportCard, setShowFullReportCard] = useState(false);
 
-  // Check if this is NEB class (Grade 11 or 12)
-  const isNEBClass = () => {
-    const className = reportCard?.student?.class || "";
-    const gradeLevel = reportCard?.student?.gradeLevel;
-    return gradeLevel >= 11 || className.includes("11") || className.includes("12");
-  };
-
   // Fetch children from dedicated endpoint
   const loadChildren = async () => {
     setLoadingChildren(true);
@@ -66,7 +59,7 @@ const Results = () => {
     try {
       // Fetch exams that have PUBLISHED report cards for this student
       const response = await examService.getStudentPublishedExams(
-        selectedChild.id
+        selectedChild.id,
       );
       setExams(response.data || []);
     } catch (error) {
@@ -81,7 +74,7 @@ const Results = () => {
       // Use studentId from the child object
       const response = await examService.getReportCard(
         selectedChild.id,
-        selectedExam
+        selectedExam,
       );
       setReportCard(response.data);
     } catch (error) {
@@ -184,7 +177,10 @@ const Results = () => {
             </Button>
           )}
           {reportCard && (
-            <Button onClick={() => setShowFullReportCard(true)} variant="secondary">
+            <Button
+              onClick={() => setShowFullReportCard(true)}
+              variant="secondary"
+            >
               View Full Grade Sheet
             </Button>
           )}
@@ -315,9 +311,10 @@ const Results = () => {
         </div>
       )}
 
-      {/* Full Report Card Modal - NEB or Standard */}
-      {showFullReportCard && reportCard && (
-        isNEBClass() ? (
+      {/* Full Report Card Modal - Backend determines format via isNEBClass flag */}
+      {showFullReportCard &&
+        reportCard &&
+        (reportCard.isNEBClass ? (
           <NEBGradeSheet
             data={reportCard}
             onClose={() => setShowFullReportCard(false)}
@@ -329,8 +326,7 @@ const Results = () => {
             onClose={() => setShowFullReportCard(false)}
             showActions={true}
           />
-        )
-      )}
+        ))}
     </div>
   );
 };

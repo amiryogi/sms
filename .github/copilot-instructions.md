@@ -200,3 +200,146 @@ color: var(--text-muted);
 6. Create frontend service in `frontend/src/api/{feature}Service.js`
 7. Add pages under `frontend/src/pages/{role}/` with `ProtectedRoute`
 8. Add CSS to `frontend/src/index.css` using existing patterns
+
+---
+
+## Subject Enrollment Rules
+
+### Grades 1–10:
+
+- Subjects are class-wide
+- All students in a class take all ClassSubjects
+- DO NOT use StudentSubject
+
+Grades 11–12 (NEB +2):
+
+- Subjects are student-specific
+- ClassSubject defines POSSIBLE subjects
+- ProgramSubject defines DEFAULT subjects per program
+- StudentSubject defines ACTUAL subjects a student is taking
+
+---
+
+## ❗ CRITICAL RULE — NO FRONTEND NEB DETECTION
+
+**Context:**
+
+This project is a K-12 School Management System for Nepal with NEB Grade 11–12 (+2) support.
+
+The backend is the single source of truth for:
+
+Grade level
+
+NEB vs non-NEB behavior
+
+Subject enrollment rules
+
+The frontend must never infer academic rules.
+
+❗ CRITICAL RULE — NO FRONTEND GUESSING
+❌ FORBIDDEN (DO NOT GENERATE OR KEEP)
+
+Copilot MUST NOT:
+
+Detect NEB classes using:
+
+gradeLevel >= 11
+
+class.includes("11") / class.includes("12")
+
+class name strings (XI, XII, Science-11, etc.)
+**Examples of INVALID logic:**
+
+```js
+❌ student.gradeLevel >= 11
+❌ className.includes("11")
+❌ className.includes("12")
+❌ classData?.gradeLevel >= 11
+❌ if (gradeLevel === 11 || gradeLevel === 12)
+❌ const isNEB = gradeLevel >= 11 || className.includes('11')
+```
+
+Examples of invalid logic:
+
+### ✅ REQUIRED FRONTEND CONTRACT
+
+**The backend API response MUST provide:**
+
+```js
+{
+  isNEBClass: boolean; // This value is authoritative
+}
+```
+
+### ✅ ONLY VALID NEB CHECK (MANDATORY)
+
+**Copilot MUST generate frontend logic that checks ONLY:**
+
+```js
+✅ data.isNEBClass === true
+✅ reportCardData.isNEBClass
+✅ exam.isNEBClass
+```
+
+### 🖥️ Rendering Rule
+
+When deciding which report card / marksheet / UI to render:
+
+```jsx
+reportCardData.isNEBClass ? (
+  <NEBGradeSheet data={reportCardData} />
+) : (
+  <NepalReportCard data={reportCardData} />
+);
+```
+
+**Nothing else is allowed.**
+data.isNEBClass
+? <NEBGradeSheet />
+: <NepalReportCard />
+
+Nothing else is allowed.
+
+🎓 Academic Reason (DO NOT VIOLATE)
+
+Grades 1–10 → class-wide subjects (ClassSubject)
+
+Grades 11–12 → student-specific subjects (StudentSubject)
+
+Frontend cannot determine this safely
+
+Wrong detection causes:
+
+incorrect subjects
+
+wrong GPA
+
+invalid NEB reports
+
+silent data corruption
+
+🔒 Enforcement Mindset
+
+If isNEBClass is missing:
+
+Fail fast
+
+Do NOT guess
+
+Do NOT auto-infer
+
+🧠 Golden Rule
+
+Frontend renders. Backend decides. Names lie. Flags don’t.
+
+Copilot Output Quality Bar
+
+Copilot should:
+
+Remove heuristic NEB detection
+
+Simplify conditions
+
+Trust backend flags only
+
+Keep frontend logic dumb and predictable
