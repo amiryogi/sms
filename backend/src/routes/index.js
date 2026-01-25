@@ -29,8 +29,7 @@ const programRoutes = require("./program.routes");
 const subjectImportRoutes = require("./subjectImport.routes");
 const schoolRoutes = require("./school.routes");
 const publicRoutes = require("./public.routes");
-// These will be created in subsequent steps
-// const promotionRoutes = require('./promotion.routes');
+const promotionRoutes = require('./promotion.routes');
 
 // API Version prefix
 const API_VERSION = "/v1";
@@ -63,7 +62,7 @@ router.use(`${API_VERSION}/subject-components`, subjectComponentRoutes);
 router.use(`${API_VERSION}/programs`, programRoutes);
 router.use(`${API_VERSION}/school`, schoolRoutes);
 router.use(`${API_VERSION}/public`, publicRoutes);
-// router.use(`${API_VERSION}/promotions`, promotionRoutes);
+router.use(`${API_VERSION}/promotions`, promotionRoutes);
 
 // Root route
 router.get("/", (req, res) => {

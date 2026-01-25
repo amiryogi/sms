@@ -36,6 +36,7 @@ const AdminFeeStructures = React.lazy(
   () => import("./pages/admin/FeeStructures"),
 );
 const AdminFeePayments = React.lazy(() => import("./pages/admin/FeePayments"));
+const AdminPromotions = React.lazy(() => import("./pages/admin/Promotions"));
 
 // Teacher Pages
 const TeacherDashboard = React.lazy(() => import("./pages/teacher/Dashboard"));
@@ -139,6 +140,10 @@ function App() {
               <Route
                 path="/admin/fee-payments"
                 element={<AdminFeePayments />}
+              />
+              <Route
+                path="/admin/promotions"
+                element={<AdminPromotions />}
               />
             </Route>
 
