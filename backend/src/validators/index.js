@@ -9,6 +9,7 @@ const parentValidators = require("./parent.validators");
 const noticeValidators = require("./notice.validators");
 const feeValidators = require("./fee.validators");
 const programValidators = require("./program.validators");
+const promotionValidators = require("./promotion.validators");
 
 module.exports = {
   ...commonValidators,
@@ -22,4 +23,5 @@ module.exports = {
   ...noticeValidators,
   ...feeValidators,
   ...programValidators,
+  ...promotionValidators,
 };

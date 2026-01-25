@@ -21,6 +21,7 @@ import {
   Banknote,
   Layers,
   Building2,
+  ArrowUpRight,
   Facebook,
   Instagram,
   Youtube,
@@ -98,6 +99,7 @@ const DashboardLayout = () => {
           path: "/admin/fee-structures",
         },
         { title: "Fee Payments", icon: Banknote, path: "/admin/fee-payments" },
+        { title: "Promotions", icon: ArrowUpRight, path: "/admin/promotions" },
         {
           title: "School Settings",
           icon: Building2,

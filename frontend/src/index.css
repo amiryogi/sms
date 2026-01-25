@@ -1781,3 +1781,118 @@ body {
   font-size: 0.75rem;
   color: var(--text-muted);
 }
+
+/* Promotions Page Styles */
+.promotions-page .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.promotions-page .page-header h1 {
+  margin: 0;
+}
+
+.promotions-page .stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.promotions-page .stat-icon.bg-success {
+  background: var(--success);
+}
+
+.promotions-page .stat-icon.bg-warning {
+  background: var(--warning);
+}
+
+.promotions-page .stat-icon.bg-info {
+  background: var(--info);
+}
+
+.promotions-page .stat-icon.bg-primary {
+  background: var(--primary);
+}
+
+.promotions-page .stat-label {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.promotions-page .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.promotions-page .card-header h3 {
+  margin: 0;
+}
+
+.promotions-page .header-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.promotions-page .card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border);
+  background: var(--bg-main);
+}
+
+.promotions-page .selection-summary {
+  font-size: 0.875rem;
+}
+
+.promotions-page .row-disabled {
+  opacity: 0.5;
+  background: var(--bg-main);
+}
+
+.promotions-page .btn-group {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.promotions-page .pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.promotions-page .text-warning {
+  color: var(--warning);
+  margin-top: 1rem;
+}
+
+.promotions-page .modal-body ul {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.promotions-page .modal-body li {
+  margin-bottom: 0.5rem;
+}
+
+.promotions-page .modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  margin-top: 1rem;
+}
