@@ -149,3 +149,46 @@ cd backend && npx prisma migrate deploy && npx prisma generate
 Run `migrate deploy` after every pull — if someone added a migration, this
 applies it. If the schema changed in a way that confuses your local data, the
 fastest reset is `npm run seed -- --clean`.
+
+## Syncing the database
+
+**Never commit a database dump.** A dump of a live school database contains
+student and parent names, email addresses and bcrypt password hashes, and this
+repository is public. The repo root is gitignored for `*.sql` to make that
+mistake harder.
+
+Pick whichever matches the data you have:
+
+### While the data is seeded demo data — don't sync
+
+There is nothing to carry. `npx prisma migrate deploy && npm run seed` rebuilds
+an identical database in seconds on any machine and any supported MySQL
+version. This is the default and needs no setup.
+
+### Once you have real data — dump to cloud storage
+
+```bash
+# before leaving
+"C:\Program Files\MySQL\MySQL Server <version>\bin\mysqldump.exe" -u sms -p \
+  --single-transaction --routines school_management > "%USERPROFILE%\OneDrive\sms-backup.sql"
+
+# after arriving
+"C:\Program Files\MySQL\MySQL Server <version>\bin\mysql.exe" -u sms -p \
+  school_management < "%USERPROFILE%\OneDrive\sms-backup.sql"
+```
+
+OneDrive, Google Drive or a USB stick — anywhere outside the repository.
+
+One portability note: this database uses `utf8mb4_unicode_ci`, which restores
+cleanly into MySQL 8.0 and newer. If a future machine creates the database with
+a newer default collation (`utf8mb4_0900_ai_ci` or later), dumps stop being
+backward compatible — so keep creating the database with the explicit
+`CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci` from section 3.
+
+### Best once the data matters — one shared database
+
+Point every machine at the same hosted MySQL (Railway, Aiven and PlanetScale
+all have usable free tiers). Each machine keeps its own `.env`, with the same
+`DATABASE_URL`. No dumps, no drift, no question about which copy is newer, and
+it is how the system would run for a real school. The trade-off is needing
+internet to work and slower queries than localhost.

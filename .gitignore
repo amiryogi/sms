@@ -12,6 +12,14 @@ node_modules/
 !.env.example
 !.env.*.example
 
+# Database dumps at the repo root. A dump of a live school database contains
+# student and parent names, email addresses and bcrypt password hashes, and this
+# repository is public. Keep backups in cloud storage or on a USB stick instead
+# -- see "Syncing the database" in docs/SETUP-NEW-MACHINE.md.
+# Scoped to the root so backend/prisma/migrations/**/migration.sql and
+# database/schema.sql stay tracked.
+/*.sql
+
 # Build output
 dist/
 dist-ssr/
