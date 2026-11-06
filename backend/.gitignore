@@ -1,10 +1,12 @@
 # Dependencies
 node_modules/
 
-# Environment files
-# .env
-.env.local
-.env.production
+# Environment files — real secrets live here, never commit them
+.env
+.env.*
+!.env.example
+# frontend/.env is covered by the root .gitignore (gitignore patterns cannot
+# reach outside their own directory, so it cannot be listed here).
 
 # Logs
 logs/
@@ -33,4 +35,5 @@ build/
 coverage/
 
 # Prisma
-prisma/migrations/
+# NOTE: prisma/migrations/ is intentionally TRACKED — migrations are the
+# schema history and must be in version control. Do not re-add it here.

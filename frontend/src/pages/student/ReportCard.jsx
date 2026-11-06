@@ -3,7 +3,6 @@ import { useAuth } from "../../context/AuthContext";
 import { Select, Button } from "../../components/common/FormElements";
 import { Printer, Download, FileText, Award, Loader2 } from "lucide-react";
 import NepalReportCard from "../../components/common/NepalReportCard";
-import NEBGradeSheet from "../../components/common/NEBGradeSheet";
 import { reportCardService } from "../../api/reportCardService";
 
 const ReportCard = () => {
@@ -259,15 +258,10 @@ const ReportCard = () => {
         </div>
       )}
 
-      {/* Report Card Display - Backend determines NEB format via isNEBClass flag */}
-      {selectedExam &&
-        !loading &&
-        reportCardData &&
-        (reportCardData.isNEBClass ? (
-          <NEBGradeSheet data={reportCardData} showActions={false} />
-        ) : (
-          <NepalReportCard data={reportCardData} showActions={false} />
-        ))}
+      {/* Report Card Display */}
+      {selectedExam && !loading && reportCardData && (
+        <NepalReportCard data={reportCardData} showActions={false} />
+      )}
 
       {/* Error State */}
       {selectedExam && !loading && !reportCardData && (

@@ -1,6 +1,6 @@
 # Copilot Instructions
 
-K-12 School Management System for Nepal. Node.js/Express backend, React SPA frontend, Prisma ORM with MySQL.
+K-10 (Kindergarten to Grade 10) School Management System for Nepal. Node.js/Express backend, React SPA frontend, Prisma ORM with MySQL.
 
 ## Critical Rules
 
@@ -129,33 +129,6 @@ npm run dev                 # Vite dev server on :5173
 
 **Default login:** admin@svi.edu.np / password123 / School: DEMO001
 
-## NEB Grade 11-12 (Nepal Education Board)
-
-Grade 11-12 has special handling for NEB curriculum:
-
-### Data Model
-
-```
-Program (Science/Management) → ProgramSubject → ClassSubject → Subject
-                                                     ↓
-                                            SubjectComponent (THEORY/PRACTICAL)
-```
-
-### Key Differences from Grade 1-10
-
-- Subjects have separate **Theory** and **Practical** components with different codes/marks
-- Students enroll in **Programs** (Science, Management) not just classes
-- `ClassSubject.hasTheory` and `ClassSubject.hasPractical` control marks entry fields
-- `SubjectComponent` stores NEB subject codes (e.g., "0031" for English Theory)
-
-### Seed Scripts
-
-```bash
-# Run from backend/
-node prisma/seeds/seedNEBSubjects.js   # Import NEB subjects for Grade 11-12
-node prisma/seeds/seedPrograms.js      # Create Science/Management programs
-```
-
 ## Marks Entry Flow
 
 For marks entry to work, these must be linked:
@@ -205,141 +178,31 @@ color: var(--text-muted);
 
 ## Subject Enrollment Rules
 
-### Grades 1–10:
-
-- Subjects are class-wide
-- All students in a class take all ClassSubjects
-- DO NOT use StudentSubject
-
-Grades 11–12 (NEB +2):
-
-- Subjects are student-specific
-- ClassSubject defines POSSIBLE subjects
-- ProgramSubject defines DEFAULT subjects per program
-- StudentSubject defines ACTUAL subjects a student is taking
+- Subjects are **class-wide**. `ClassSubject` *is* the enrollment.
+- All students in a class take every `ClassSubject` of that class.
+- There are no per-student subject rows. Do not reintroduce them.
 
 ---
 
-## ❗ CRITICAL RULE — NO FRONTEND NEB DETECTION
+## Rule — the frontend never infers academic rules
 
-**Context:**
+The backend is the single source of truth for grade level, subject enrollment and
+grading. The frontend renders what the API returns; it must not derive academic
+behaviour from class names or grade numbers.
 
-This project is a K-12 School Management System for Nepal with NEB Grade 11–12 (+2) support.
-
-The backend is the single source of truth for:
-
-Grade level
-
-NEB vs non-NEB behavior
-
-Subject enrollment rules
-
-The frontend must never infer academic rules.
-
-❗ CRITICAL RULE — NO FRONTEND GUESSING
-❌ FORBIDDEN (DO NOT GENERATE OR KEEP)
-
-Copilot MUST NOT:
-
-Detect NEB classes using:
-
-gradeLevel >= 11
-
-class.includes("11") / class.includes("12")
-
-class name strings (XI, XII, Science-11, etc.)
-**Examples of INVALID logic:**
+**Forbidden:**
 
 ```js
-❌ student.gradeLevel >= 11
-❌ className.includes("11")
-❌ className.includes("12")
-❌ classData?.gradeLevel >= 11
-❌ if (gradeLevel === 11 || gradeLevel === 12)
-❌ const isNEB = gradeLevel >= 11 || className.includes('11')
+❌ className.includes("10")
+❌ classData?.gradeLevel >= 9
+❌ parsing a grade out of a class name
 ```
 
-Examples of invalid logic:
+**Required:** the API returns the booleans (`hasTheory`, `hasPractical`,
+`isPublished`, …) and the frontend reads them.
 
-### ✅ REQUIRED FRONTEND CONTRACT
+Grades and GPA come from `backend/src/utils/gradeCalculator.js` (the NEB A+/4.0
+… NG scale used across K-10). Never reimplement a grade table in a controller
+or a component.
 
-**The backend API response MUST provide:**
-
-```js
-{
-  isNEBClass: boolean; // This value is authoritative
-}
-```
-
-### ✅ ONLY VALID NEB CHECK (MANDATORY)
-
-**Copilot MUST generate frontend logic that checks ONLY:**
-
-```js
-✅ data.isNEBClass === true
-✅ reportCardData.isNEBClass
-✅ exam.isNEBClass
-```
-
-### 🖥️ Rendering Rule
-
-When deciding which report card / marksheet / UI to render:
-
-```jsx
-reportCardData.isNEBClass ? (
-  <NEBGradeSheet data={reportCardData} />
-) : (
-  <NepalReportCard data={reportCardData} />
-);
-```
-
-**Nothing else is allowed.**
-data.isNEBClass
-? <NEBGradeSheet />
-: <NepalReportCard />
-
-Nothing else is allowed.
-
-🎓 Academic Reason (DO NOT VIOLATE)
-
-Grades 1–10 → class-wide subjects (ClassSubject)
-
-Grades 11–12 → student-specific subjects (StudentSubject)
-
-Frontend cannot determine this safely
-
-Wrong detection causes:
-
-incorrect subjects
-
-wrong GPA
-
-invalid NEB reports
-
-silent data corruption
-
-🔒 Enforcement Mindset
-
-If isNEBClass is missing:
-
-Fail fast
-
-Do NOT guess
-
-Do NOT auto-infer
-
-🧠 Golden Rule
-
-Frontend renders. Backend decides. Names lie. Flags don’t.
-
-Copilot Output Quality Bar
-
-Copilot should:
-
-Remove heuristic NEB detection
-
-Simplify conditions
-
-Trust backend flags only
-
-Keep frontend logic dumb and predictable
+**Golden rule:** Frontend renders. Backend decides. Names lie. Flags don’t.

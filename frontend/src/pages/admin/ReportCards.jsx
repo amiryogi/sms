@@ -15,9 +15,7 @@ import {
 } from "lucide-react";
 import { Select, Button } from "../../components/common/FormElements";
 import NepalReportCard from "../../components/common/NepalReportCard";
-import NEBGradeSheet from "../../components/common/NEBGradeSheet";
 import BulkReportCardPrint from "../../components/common/BulkReportCardPrint";
-import NEBBulkReportCardPrint from "../../components/common/NEBBulkReportCardPrint";
 import { reportCardService } from "../../api/reportCardService";
 import { examService } from "../../api/examService";
 import { academicService } from "../../api/academicService";
@@ -712,42 +710,21 @@ const ReportCards = () => {
             </div>
           </div>
         ) : previewData ? (
-          previewData.isNEBClass ? (
-            <NEBGradeSheet
-              data={previewData}
-              onClose={closePreview}
-              showActions={true}
-            />
-          ) : (
-            <NepalReportCard
-              data={previewData}
-              onClose={closePreview}
-              showActions={true}
-            />
-          )
+          <NepalReportCard
+            data={previewData}
+            onClose={closePreview}
+            showActions={true}
+          />
         ) : null)}
 
-      {/* Bulk Print Modal - Conditionally render NEB or standard format */}
-      {bulkPrintOpen &&
-        (bulkPrintLoading ? (
-          <BulkReportCardPrint
-            data={bulkPrintData}
-            onClose={closeBulkPrint}
-            loading={true}
-          />
-        ) : bulkPrintData?.reportCards?.[0]?.isNEBClass ? (
-          <NEBBulkReportCardPrint
-            data={bulkPrintData}
-            onClose={closeBulkPrint}
-            loading={false}
-          />
-        ) : (
-          <BulkReportCardPrint
-            data={bulkPrintData}
-            onClose={closeBulkPrint}
-            loading={false}
-          />
-        ))}
+      {/* Bulk Print Modal */}
+      {bulkPrintOpen && (
+        <BulkReportCardPrint
+          data={bulkPrintData}
+          onClose={closeBulkPrint}
+          loading={bulkPrintLoading}
+        />
+      )}
 
       <style>{`
         .stat-item {

@@ -33,6 +33,11 @@ const {
   loadParentContext,
   loadUserContext,
 } = require('./context.middleware');
+const {
+  loginLimiter,
+  refreshLimiter,
+  apiLimiter,
+} = require('./rateLimit.middleware');
 
 module.exports = {
   // Error handling
@@ -77,5 +82,10 @@ module.exports = {
   loadStudentContext,
   loadParentContext,
   loadUserContext,
+
+  // Rate limiting
+  loginLimiter,
+  refreshLimiter,
+  apiLimiter,
 };
 

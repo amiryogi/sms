@@ -19,7 +19,6 @@ import {
   FileText,
   Bell,
   Banknote,
-  Layers,
   Building2,
   ArrowUpRight,
   Facebook,
@@ -72,16 +71,6 @@ const DashboardLayout = () => {
           path: "/admin/class-subjects",
         },
         { title: "Exams", icon: ClipboardList, path: "/admin/exams" },
-        {
-          title: "Programs / Faculties",
-          icon: Layers,
-          path: "/admin/programs",
-        },
-        {
-          title: "NEB Curriculum",
-          icon: GraduationCap,
-          path: "/admin/neb-curriculum",
-        },
         { title: "Report Cards", icon: Award, path: "/admin/report-cards" },
         {
           title: "Teacher Assignment",
@@ -188,6 +177,11 @@ const DashboardLayout = () => {
           path: "/parent/attendance",
         },
         { title: "Results", icon: Award, path: "/parent/results" },
+        {
+          title: "Report Card",
+          icon: FileText,
+          path: "/parent/report-card",
+        },
         { title: "Fees", icon: Banknote, path: "/parent/fees" },
       );
     }

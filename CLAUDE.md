@@ -1,0 +1,279 @@
+# CLAUDE.md — K‑10 School Management System (Nepal)
+
+Guidance for Claude Code working in this repo. Read this first, then
+`backend/prisma/schema.prisma` before touching any data logic.
+
+---
+
+## 1. What this project is
+
+A single-school management system for a Nepali school covering **Kindergarten
+through Grade 10**. The architecture is multi-school *ready* (every core table
+has `school_id`) but only one school is seeded and used.
+
+| Layer    | Stack                                                                  |
+| -------- | ---------------------------------------------------------------------- |
+| Backend  | Node.js ≥18, Express 4, Prisma 5.22, MySQL 8, JWT (access + refresh)    |
+| Frontend | React 19 + Vite 7, React Router 7, Axios, react-hook-form, lucide-react |
+| Styling  | **Vanilla CSS** with CSS variables in `frontend/src/index.css`. No Tailwind, no CSS-in-JS |
+| Dates    | AD stored in DB; BS (Bikram Sambat) rendered via `backend/src/utils/dateConverter.js` |
+
+Repo layout:
+
+```
+backend/            Express API + Prisma
+  prisma/schema.prisma      ~1200 lines, 35 models — the source of truth
+  prisma/seed.js            roles, permissions, demo school, classes, students
+  prisma/seeds/             extra seeders + Excel import/export
+  src/{routes,controllers,services,middleware,validators,utils,config}
+frontend/src/{api,pages,components,layouts,context}
+.github/                    feature specs written before implementation (read these)
+database/schema.sql         raw SQL mirror of the Prisma schema
+*.sql (root)                ad-hoc MySQL dumps from the author's machine
+```
+
+---
+
+## 2. Commands
+
+```bash
+# backend/  (port 5000)
+npm run dev              # nodemon
+npm run prisma:generate  # after ANY schema.prisma edit
+npm run prisma:push      # push schema without a migration  <- what this project mostly uses
+npm run prisma:migrate   # create a real migration (see section 8 caveat)
+npm run prisma:studio    # DB browser
+npm run seed             # node prisma/seed.js — wipes + reseeds demo data
+npm run lint
+
+# frontend/  (port 5173)
+npm run dev
+npm run build
+npm run lint
+```
+
+Health check: `GET http://localhost:5000/health`. API root: `GET /api/v1`.
+Frontend reads `VITE_API_URL` (`frontend/.env`), default `http://localhost:5000/api/v1`.
+
+Demo logins (after seed, password `password123`):
+`admin@svi.edu.np`, `admin@demo-school.edu.np`, `teacher@demo-school.edu.np`,
+`student@demo-school.edu.np`, `parent@demo-school.edu.np`. School code `DEMO001`.
+
+**There is no test suite.** Jest is a devDependency but no `*.test.js` exists.
+Verification today means running both servers and clicking through, or using the
+ad-hoc diagnostic scripts in `backend/` (`check_data.js`,
+`diagnose_marks_entry.js`, `validate_subject_enrollment.js`). If you add tests,
+put them under `backend/src/**/__tests__/` and say so — don't silently change
+what `npm test` means.
+
+---
+
+## 3. Request flow and non-negotiable patterns
+
+```
+Route -> authenticate -> requireRole/authorize -> ownership middleware -> validate -> controller -> prisma
+```
+
+**The backend is the only security boundary.** Frontend role checks are UX only.
+
+### Controller
+
+```js
+const listThings = asyncHandler(async (req, res) => {
+  const { page, limit, skip } = parsePagination(req.query);
+  const where = { schoolId: req.user.schoolId, academicYearId };  // ALWAYS both
+  const [data, total] = await Promise.all([
+    prisma.thing.findMany({ where, skip, take: limit }),
+    prisma.thing.count({ where }),
+  ]);
+  return ApiResponse.paginated(res, data, { page, limit, total });
+});
+```
+
+- Errors: `throw ApiError.notFound('Student not found')` / `.badRequest` / `.forbidden` / `.unauthorized`. Never hand-roll `res.status(...).json(...)`.
+- Responses: `ApiResponse.success | created | paginated | noContent | error`. Success shape is always `{ success, message, data }`.
+- Wrap every async controller in `asyncHandler` — the global error middleware depends on it.
+- Validation: `express-validator` rule arrays in `backend/src/validators/`, applied before the controller via the `validate` middleware.
+
+### Route
+
+```js
+router.get('/', authenticate, requireRole('ADMIN', 'TEACHER'), controller.list);
+router.get('/:id', authenticate, idParamRule, validate, isOwnStudent, controller.get);
+router.post('/', authenticate, isAdmin, studentRules, validate, controller.create);
+```
+
+Register new routers in `backend/src/routes/index.js` under the `/v1` prefix.
+
+### Frontend service
+
+Every call goes through `frontend/src/api/apiClient.js` (JWT attach + 401
+refresh-and-retry). One service file per domain:
+
+```js
+export const studentService = {
+  getAll: (params) => apiClient.get('/students', { params }),
+  getById: (id) => apiClient.get(`/students/${id}`),
+};
+```
+
+No `fetch`, no bare `axios`, no business logic in components, no API calls from
+a component without going through a service.
+
+---
+
+## 4. Hard invariants
+
+1. **`schoolId` on every query.** Omitting it is a cross-school data leak. Use `req.user.schoolId`, never a client-supplied value.
+2. **`academicYearId` scopes almost everything.** `ClassSubject`, `StudentClass`, `TeacherSubject`, `Exam`, `FeeStructure` and `Promotion` are all year-scoped. A query without it will mix years.
+3. **Students link to classes only via `StudentClass`** (`studentId + classId + sectionId + academicYearId`). Teachers link only via `TeacherSubject` (`userId + classSubjectId + sectionId + academicYearId`).
+4. **Subjects are class-wide (K–10).** `ClassSubject` *is* the enrollment. Do not introduce per-student subject rows for these grades.
+5. **`ExamSubject` is a snapshot.** `hasTheory`, `hasPractical`, `fullMarks`, `passMarks`, `theoryFullMarks`, `practicalFullMarks` are copied from `ClassSubject` when the exam is created. Later `ClassSubject` edits must **not** retroactively change an existing exam — that would rewrite the basis of already-entered marks.
+6. **Exam lifecycle:** `DRAFT -> PUBLISHED -> LOCKED`. Marks may only be entered or edited while `PUBLISHED`; teachers only see `PUBLISHED` exams; unlock moves `LOCKED -> PUBLISHED`.
+7. **Results reach students/parents only when published.** `ReportCard.isPublished` gates report cards; exam status gates raw marks.
+8. **Grades come from `backend/src/utils/gradeCalculator.js`** (NEB scale: A+ 90 / 4.0 … D 35 / 1.6, NG below 35). Never reimplement a grade table in a controller or a component.
+9. **Never trust names, only flags.** No `className.includes('10')`, no grade-level string parsing in the frontend. The backend decides academic rules and returns booleans; the frontend renders them.
+10. **MySQL reserved words:** `rank` is mapped as `classRank` -> `class_rank`. Watch for similar collisions when adding columns.
+
+---
+
+## 5. RBAC
+
+```
+User -> UserRole -> Role -> RolePermission -> Permission
+```
+
+`req.user` carries `{ id, schoolId, roles: string[], permissions: string[] }`.
+
+| Role           | Scope                                            |
+| -------------- | ------------------------------------------------ |
+| `SUPER_ADMIN`  | Cross-school (modelled, barely used)             |
+| `ADMIN`        | Everything within their school                   |
+| `TEACHER`      | Only their `TeacherSubject` assignments          |
+| `EXAM_OFFICER` | Marks entry for any subject; no finance          |
+| `ACCOUNTANT`   | Fees only                                        |
+| `STUDENT`      | Own records (`isOwnStudent`)                     |
+| `PARENT`       | Linked children only (via `StudentParent`)       |
+
+Permission names use **dot notation** and must match `backend/prisma/seed.js`
+exactly: `student.list`, `attendance.view_class`, `result.enter`,
+`report_card.generate`, `fee.record_payment`, and so on. A permission string
+that isn't in the seed silently denies everyone — the project already hit this
+(`attendance:view` vs `attendance.view_all`, see `AUDIT_REPORT.md`). **When you
+add a permission, add it to `seed.js` and to the role mapping in the same
+change.**
+
+Middleware: `authorize(...perms)` (ANY match), `requireRole(...roles)` (ANY
+match), `isAdmin`, `isTeacher`, `isStudent`, plus `isOwnStudent`,
+`isAssignedTeacher`, `canAccessAttendance` in `ownership.middleware.js`.
+
+---
+
+## 6. Feature state
+
+**Working:** auth + refresh tokens; RBAC; academic years / classes / sections /
+subjects / class-subjects; student, teacher and parent CRUD; teacher
+assignment; attendance; exams with DRAFT/PUBLISHED/LOCKED; marks entry (theory
++ practical); results; report cards including bulk A4 print
+(`NepalReportCard.jsx`, `BulkReportCardPrint.jsx`); assignments, submissions
+and grading; notices (global / role / class targeting); fees (types,
+structures, payments); promotions; school branding settings; subject Excel
+import.
+
+**Partial or rough:**
+- Report card layout is still being matched to the reference sheet — see `REPORT_CARD_IMPLEMENTATION_PLAN.md` with `gradesheetdemo.jpg`, `template.jpg`, `template_HTML.html`.
+- No admin-facing attendance report page (the API exists).
+- Dashboards are stat cards only; no charts or trends.
+
+**Not built:** timetable/routine, library, transport, hostel, SMS/email
+notifications, payroll, certificates and transfer certificates, audit-log UI,
+multi-school admin UI, any automated tests.
+
+**Divergence from `.github/backend-rules.md`:** that file prescribes
+Routes -> Controllers -> **Services** -> Prisma, but only `notice.service.js`
+and `parent.service.js` exist; every other controller calls Prisma directly.
+Follow the dominant pattern (controller -> Prisma) for small work, and extract a
+service when logic is shared or a controller action grows past roughly 150
+lines. Don't refactor all 30 controllers to add services unless asked.
+
+---
+
+## 7. Scope: K–10 only — Grade 11–12 (NEB +2) has been removed
+
+The removal planned here was **executed** (owner-confirmed). Grade 11–12 /
+NEB "+2" support is gone from the code: the `Program` / `ProgramSubject` /
+`StudentProgram` / `StudentSubject` / `SubjectComponent` models and the
+`ComponentType` / `StudentSubjectStatus` enums are out of `schema.prisma`; the
+`/programs` and `/subject-components` routers, their controllers and validators,
+`utils/nebGradeUtils.js` and the `/exam-results/student-subjects` and
+`/exam-results/students-by-program` endpoints are deleted; every `isNEBClass`
+branch in `reportCard.controller.js` and `examResult.controller.js` was collapsed
+to the single K–10 path (class-wide `ClassSubject`, unweighted GPA, no separate
+theory/practical subject codes); the NEB pages, components and services are gone
+from the frontend, as are the NEB seeders, the `Grade 11` / `Grade 12` seed
+classes and the dead NEB specs under `.github/`.
+
+**What was deliberately kept:**
+
+- `ClassSubject.hasTheory/hasPractical/theoryMarks/practicalMarks`,
+  `ExamSubject.hasTheory/hasPractical/theoryFullMarks/practicalFullMarks` and
+  `ExamResult.practicalMarks`. K–10 subjects legitimately have practical
+  components (`Subject.hasPractical`) — they just don't get separate NEB codes.
+- `backend/src/utils/gradeCalculator.js`. The name mentions NEB because that is
+  the national grade *scale* (A+ 90 / 4.0 … NG below 35) used for K–10 too.
+  Its `useCreditWeighting` option now has no callers; K–10 GPA is unweighted.
+- `ClassSubject.creditHours/theoryCreditHours/practicalCreditHours` columns and
+  the per-subject credit-hour fields in report-card responses.
+
+**Outstanding:** the schema edit is in the working tree but **no migration has
+been applied**. Dropping `programs`, `program_subjects`, `student_programs`,
+`student_subjects` and `subject_components` destroys rows, so take a
+`mysqldump` first, then run from `backend/`:
+
+```bash
+npx prisma migrate dev --name drop_neb_grade_11_12
+```
+
+A recorded migration, not `db push`. After it lands, reseed
+(`npm run seed -- --clean`) and click through marks entry → report card for a
+Grade 10 class.
+
+`backend/prisma/seeds/comprehensiveSeed.js` was left in place — it is an
+alternative full seeder, not an NEB-import script — but it still writes to the
+five dropped tables and will therefore fail after the migration. It is not
+wired into any npm script (`npm run seed` uses `prisma/seed.js`). Strip its
+11–12 half or delete it.
+
+## 8. Known issues, not yet fixed
+
+1. **`backend/.env` is committed to git**, and the `.env` rule is commented out in `backend/.gitignore`. A real `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET` and a Cloudinary secret are in history. Rotate the secrets, `git rm --cached backend/.env frontend/.env`, uncomment the ignore rule. There is also no root `.gitignore`. The file's first line (`here is my .env file`) is stray text, not a variable.
+2. **`backend/prisma/migrations/` is gitignored** while four migration folders exist locally and untracked. Schema changes therefore travel by `prisma db push` plus raw `.sql` dumps, so environments drift. Decide one way: track migrations (preferred) or declare `db push` official and delete the orphan folders.
+3. **Five MySQL dumps sit in the repo** (`almostfinaldbfromhome.sql`, `dbfileaftersclsetting.sql`, `smsfromscl.sql`, `SQL_Scl_GradeSheet_1_23.sql`, plus `database/schema.sql`). They are snapshots of the author's machine, not a schema source. `schema.prisma` wins; treat the dumps as read-only history.
+4. **JWT config falls back to `'default-secret-change-in-production'`** when `JWT_SECRET` is unset (`src/config/index.js`). It should fail fast in production instead.
+5. **No rate limiting** on `/auth/login` or `/auth/refresh-token`.
+6. `localStorage.clear()` on refresh failure in `apiClient.js` wipes unrelated keys.
+7. CORS origins are hardcoded to localhost 3000/5173/5174 plus `FRONTEND_URL`.
+8. `uploads/` is served statically by the backend; Cloudinary is wired but optional.
+
+---
+
+## 9. Frontend-specific rules
+
+- **Vanilla CSS only.** Add styles to `frontend/src/index.css` using the existing variables (`var(--primary)`, `var(--text-muted)`) and classes (`.card`, `.btn`, `.badge`, `.data-table`, `.form-group`). The print components keep a local `<style>` block for A4 output — that is deliberate; follow it for print work.
+- Table columns are targeted by semantic class (`.col-roll`, `.col-name`, `.col-marks`, `.col-remarks`), **not** `nth-child`.
+- Pages are lazy-loaded in `App.jsx` and wrapped in `ProtectedRoute roles={[...]}`. A new page needs three things: the lazy import, a `<Route>` inside the right role block, and a sidebar entry in `DashboardLayout.jsx`.
+- Use `<Link>` / `<NavLink>` for internal navigation, never `<a href>`, and `useLocation()` rather than `window.location.pathname`.
+- **No academic inference in the frontend.** The `gradeLevel >= 11` heuristics that used to live in `admin/Programs.jsx`, `admin/Students.jsx` and `teacher/MarksEntry.jsx` are gone with the section 7 removal. Don't add new ones: the backend returns the flags, the frontend renders them.
+
+---
+
+## 10. Adding a feature
+
+1. Read `schema.prisma` and reuse existing tables. Propose schema changes before writing them — do not redefine `Student`, `Class`, `Section`, `Subject` or `Exam`.
+2. Check `.github/` for an existing spec (`exam/`, `fee/`, `subjects/`, `task-playbook.md`). Most modules were specced before being built.
+3. Backend first: validator -> controller -> route (with middleware) -> register in `routes/index.js`.
+4. Secure it: `schoolId` filter, `academicYearId` scope, role/permission check, and seed the new permission.
+5. Frontend last: service in `api/`, page under `pages/{role}/`, route plus sidebar entry, CSS in `index.css`.
+6. Verify by running both servers against seeded data, and state plainly what you did and did not verify.
+
+Never ship frontend without the backend behind it. Never bypass RBAC.
