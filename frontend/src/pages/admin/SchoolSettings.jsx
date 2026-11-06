@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { schoolService } from "../../api/schoolService";
+import { resolveAssetUrl } from "../../utils/assets";
 import {
   Building2,
   Save,
@@ -21,14 +22,6 @@ import {
   ExternalLink,
 } from "lucide-react";
 
-const resolveAssetUrl = (url) => {
-  if (!url) return "";
-  if (url.startsWith("http")) return url;
-  const base = import.meta.env.VITE_API_URL
-    ? import.meta.env.VITE_API_URL.replace(/\/api\/v1$/, "")
-    : window.location.origin;
-  return `${base}/${url.replace(/^\\?/, "").replace(/^\//, "").replace(/\\/g, "/")}`;
-};
 
 const SchoolSettings = () => {
   const { refreshUser } = useAuth();

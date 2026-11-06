@@ -19,6 +19,7 @@ import BulkReportCardPrint from "../../components/common/BulkReportCardPrint";
 import { reportCardService } from "../../api/reportCardService";
 import { examService } from "../../api/examService";
 import { academicService } from "../../api/academicService";
+import { gpaColor as getGpaColor } from "../../utils/grades";
 
 const ReportCards = () => {
   // Filter state
@@ -267,15 +268,6 @@ const ReportCards = () => {
   const allPublished =
     students.length > 0 && students.every((s) => s.reportCard?.isPublished);
   const somePublished = students.some((s) => s.reportCard?.isPublished);
-
-  // GPA color helper
-  const getGpaColor = (gpa) => {
-    if (gpa >= 3.6) return { bg: "#dcfce7", text: "#166534" };
-    if (gpa >= 2.8) return { bg: "#dbeafe", text: "#1e40af" };
-    if (gpa >= 2.0) return { bg: "#fef3c7", text: "#92400e" };
-    if (gpa >= 1.6) return { bg: "#fed7aa", text: "#9a3412" };
-    return { bg: "#fee2e2", text: "#991b1b" };
-  };
 
   return (
     <div className="page-container">

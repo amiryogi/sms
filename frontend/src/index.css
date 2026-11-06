@@ -1381,34 +1381,14 @@ body {
   font-size: 0.75rem;
 }
 
-.grade-pill.grade-a\+ {
-  background: #22c55e;
-  color: white;
-}
-.grade-pill.grade-a {
-  background: #4ade80;
-  color: white;
-}
-.grade-pill.grade-b\+ {
-  background: #facc15;
-  color: #1e1e1e;
-}
-.grade-pill.grade-b {
-  background: #fbbf24;
-  color: #1e1e1e;
-}
-.grade-pill.grade-c {
-  background: #fb923c;
-  color: white;
-}
-.grade-pill.grade-d {
-  background: #f87171;
-  color: white;
-}
-.grade-pill.grade-f {
-  background: #ef4444;
-  color: white;
-}
+/*
+ * Grade pill colours are applied inline from `gradeColor()` in
+ * src/utils/grades.js, not from per-letter classes. Hardcoded selectors could
+ * only ever cover one fixed scale: the previous set had no `.grade-c\+` and no
+ * `.grade-ng`, so those two rendered unstyled, and it carried a `.grade-f` for a
+ * grade the NEB scale does not contain. A school-defined scale can use any
+ * letters, so the colour has to come from the band data.
+ */
 
 /* Report Card */
 .report-card {

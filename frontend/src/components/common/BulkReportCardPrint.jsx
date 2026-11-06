@@ -1,5 +1,6 @@
 import React, { useRef } from "react";
 import { Printer, X, Loader2 } from "lucide-react";
+import ReportSheet from "./reportcard/ReportSheet";
 
 /**
  * Bulk Report Card Print Component
@@ -17,30 +18,7 @@ import { Printer, X, Loader2 } from "lucide-react";
 const MAX_SUBJECTS_NORMAL = 10; // Normal mode supports up to 10 subjects comfortably
 const MAX_SUBJECTS_COMPACT = 16; // Compact mode can fit up to 16 subjects
 
-// Resolve asset URLs (handles relative backend paths)
-const resolveAssetUrl = (url) => {
-  if (!url) return "";
-  if (url.startsWith("http")) return url;
-  const base = import.meta.env.VITE_API_URL
-    ? import.meta.env.VITE_API_URL.replace(/\/api\/v1$/, "")
-    : window.location.origin;
-  return `${base}/${url.replace(/^\\?/, "").replace(/^\//, "").replace(/\\/g, "/")}`;
-};
-
 // Get remark text based on grade
-const getRemarkText = (grade) => {
-  const remarks = {
-    "A+": "OUTSTANDING",
-    A: "EXCELLENT",
-    "B+": "VERY GOOD",
-    B: "GOOD",
-    "C+": "SATISFACTORY",
-    C: "ACCEPTABLE",
-    D: "PARTIALLY ACCEPTABLE",
-    NG: "NOT GRADED",
-  };
-  return remarks[grade] || "";
-};
 
 const BulkReportCardPrint = ({ data, onClose, loading = false }) => {
   const printRef = useRef(null);
@@ -849,205 +827,21 @@ const BulkReportCardPrint = ({ data, onClose, loading = false }) => {
  * @param {Object} data - Report card data
  * @param {boolean} compactMode - Whether to use compact styling for many subjects
  */
+/**
+ * One printed page. The sheet itself lives in ReportSheet; this wrapper only
+ * owns the logo-fallback state and selects the bulk layout variant.
+ */
 const SingleReportCard = ({ data, compactMode = false }) => {
   const [logoError, setLogoError] = React.useState(false);
 
-  if (!data) return null;
-
-  const { school, examination, student, subjects, summary } = data;
-
-  // Calculate total credit hours
-  const totalCreditHours =
-    subjects?.reduce(
-      (acc, s) =>
-        acc +
-        (parseFloat(s.theoryCreditHours) || 0) +
-        (parseFloat(s.internalCreditHours) || 0),
-      0,
-    ) || 0;
-
   return (
-    <div className={`report-a4 ${compactMode ? "compact" : ""}`}>
-      {/* Header */}
-      <header className="report-header">
-        {school?.logoUrl && !logoError ? (
-          <img
-            src={resolveAssetUrl(school.logoUrl)}
-            alt="School Logo"
-            className="school-logo"
-            onError={() => setLogoError(true)}
-          />
-        ) : (
-          <div className="logo-placeholder">🏫</div>
-        )}
-        <h1 className="school-name">{school?.name || "School Name"}</h1>
-        <p className="school-address">{school?.address || ""}</p>
-        <p className="exam-title">{examination?.name || "GRADE SHEET"}</p>
-      </header>
-
-      {/* Student Info */}
-      <section className="student-info">
-        <div className="info-grid">
-          <div className="info-item">
-            <span className="label">Name:</span>
-            <span>{student?.name || "N/A"}</span>
-          </div>
-          <div className="info-item">
-            <span className="label">Roll No:</span>
-            <span>{student?.rollNumber || "N/A"}</span>
-          </div>
-          <div className="info-item">
-            <span className="label">Class:</span>
-            <span>{student?.class || "N/A"}</span>
-          </div>
-          <div className="info-item">
-            <span className="label">Section:</span>
-            <span>{student?.section || "N/A"}</span>
-          </div>
-        </div>
-      </section>
-
-      {/* Marks Table */}
-      <table className="marks-table">
-        <thead>
-          <tr>
-            <th className="sn-col">S.N</th>
-            <th className="subject-col">SUBJECTS</th>
-            <th className="ch-col">
-              CREDIT HOUR
-              <br />
-              (CH)
-            </th>
-            <th className="gp-col">
-              GRADE POINT
-              <br />
-              (GP)
-            </th>
-            <th className="grade-col">GRADE</th>
-            <th className="fg-col">
-              FINAL GRADE
-              <br />
-              (FG)
-            </th>
-            <th className="remarks-col">REMARKS</th>
-          </tr>
-        </thead>
-        {subjects?.map((subject, index) => {
-          const remarkText = getRemarkText(subject.finalGrade);
-          return (
-            // Wrap each subject's rows in tbody for page-break control
-            // This keeps Theory + Internal rows together
-            <tbody key={subject.subjectId || index} className="subject-group">
-              {/* Theory Row */}
-              <tr className="theory-row">
-                <td
-                  rowSpan={subject.hasPractical ? 2 : 1}
-                  className="center sn-cell"
-                >
-                  {index + 1}
-                </td>
-                <td className="subject-name">{subject.subjectName} (TH)</td>
-                <td className="center">{subject.theoryCreditHours || "—"}</td>
-                <td className="center">
-                  {subject.isAbsent
-                    ? "AB"
-                    : subject.theoryGpa?.toFixed(1) || "—"}
-                </td>
-                <td className="center">
-                  {subject.isAbsent ? "AB" : subject.theoryGrade || "—"}
-                </td>
-                <td
-                  rowSpan={subject.hasPractical ? 2 : 1}
-                  className="center bold fg-cell"
-                >
-                  {subject.isAbsent ? "AB" : subject.finalGrade}
-                </td>
-                <td
-                  rowSpan={subject.hasPractical ? 2 : 1}
-                  className="center remarks-cell"
-                >
-                  {subject.isAbsent ? "ABSENT" : remarkText}
-                </td>
-              </tr>
-              {/* Internal/Practical Row */}
-              {subject.hasPractical && (
-                <tr className="internal-row">
-                  <td className="subject-name">{subject.subjectName} (IN)</td>
-                  <td className="center">
-                    {subject.internalCreditHours || "—"}
-                  </td>
-                  <td className="center">
-                    {subject.isAbsent
-                      ? "AB"
-                      : subject.practicalGpa?.toFixed(1) || "—"}
-                  </td>
-                  <td className="center">
-                    {subject.isAbsent ? "AB" : subject.practicalGrade || "—"}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          );
-        })}
-        <tfoot>
-          <tr>
-            <td colSpan="2" className="center bold">
-              TOTAL
-            </td>
-            <td className="center bold">{totalCreditHours.toFixed(2)}</td>
-            <td colSpan="4" className="center bold">
-              GRADE POINT AVERAGE (GPA): {summary?.gpa?.toFixed(2)}
-            </td>
-          </tr>
-        </tfoot>
-      </table>
-
-      {/* Attendance & Result */}
-      <div className="attendance-row">
-        <div className="item">
-          <span className="label">RESULT:</span>
-          <span>{summary?.isPassed ? "PASSED" : "FAILED"}</span>
-        </div>
-        <div className="item">
-          <span className="label">CLASS RANK:</span>
-          <span>{summary?.classRank || "—"}</span>
-        </div>
-        <div className="item">
-          <span className="label">REMARKS:</span>
-          <span>{getRemarkText(summary?.grade) || "—"}</span>
-        </div>
-      </div>
-
-      {/* Signature Section */}
-      <section className="signature-section">
-        <div className="signature-grid">
-          <div className="signature-item">
-            <div className="signature-line"></div>
-            <span className="signature-label">CLASS TEACHER</span>
-          </div>
-          <div className="signature-item">
-            <div className="signature-line"></div>
-            <span className="signature-label">EXAM CO-ORDINATOR</span>
-          </div>
-          <div className="signature-item">
-            <div className="signature-line"></div>
-            <span className="signature-label">PRINCIPAL</span>
-          </div>
-        </div>
-        <div className="issue-date">
-          Date of Issue: {examination?.academicYearBS || "_______________"}
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="report-footer">
-        {school?.landlineNumber && `Ph: ${school.landlineNumber}`}
-        {school?.landlineNumber && school?.phone && ", "}
-        {school?.phone && school.phone}
-        {(school?.landlineNumber || school?.phone) && school?.email && " | "}
-        {school?.email && `Email: ${school.email}`}
-      </footer>
-    </div>
+    <ReportSheet
+      data={data}
+      variant="bulk"
+      compact={compactMode}
+      logoError={logoError}
+      onLogoError={() => setLogoError(true)}
+    />
   );
 };
 
