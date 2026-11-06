@@ -16,19 +16,19 @@
 // Grade thresholds based on Nepal NEB system
 const GRADE_THRESHOLDS = [
   { min: 90, max: 100, grade: "A+", gpa: 4.0, description: "Outstanding" },
-  { min: 80, max: 89.99, grade: "A", gpa: 3.6, description: "Excellent" },
-  { min: 70, max: 79.99, grade: "B+", gpa: 3.2, description: "Very Good" },
-  { min: 60, max: 69.99, grade: "B", gpa: 2.8, description: "Good" },
-  { min: 50, max: 59.99, grade: "C+", gpa: 2.4, description: "Satisfactory" },
-  { min: 40, max: 49.99, grade: "C", gpa: 2.0, description: "Acceptable" },
+  { min: 80, max: 90, grade: "A", gpa: 3.6, description: "Excellent" },
+  { min: 70, max: 80, grade: "B+", gpa: 3.2, description: "Very Good" },
+  { min: 60, max: 70, grade: "B", gpa: 2.8, description: "Good" },
+  { min: 50, max: 60, grade: "C+", gpa: 2.4, description: "Satisfactory" },
+  { min: 40, max: 50, grade: "C", gpa: 2.0, description: "Acceptable" },
   {
     min: 35,
-    max: 39.99,
+    max: 40,
     grade: "D",
     gpa: 1.6,
     description: "Partially Acceptable",
   },
-  { min: 0, max: 34.99, grade: "NG", gpa: 0.0, description: "Not Graded" },
+  { min: 0, max: 35, grade: "NG", gpa: 0.0, description: "Not Graded" },
 ];
 
 /**

@@ -1,12 +1,12 @@
 // =====================================================
-// K-12 SCHOOL MANAGEMENT SYSTEM - PRISMA SCHEMA
+// K-10 SCHOOL MANAGEMENT SYSTEM - PRISMA SCHEMA
 // MySQL 8.0+ | Prisma 5.x
 // =====================================================
 // 
 // This schema supports:
 // - Single-school initially, expandable to multi-school
 // - Full RBAC (Roles, Permissions, RolePermissions, UserRoles)
-// - All K-12 academic management features
+// - All K-10 academic management features
 // - JWT authentication with refresh tokens
 //
 // =====================================================
@@ -114,18 +114,6 @@ enum PaymentStatus {
   paid
 }
 
-// NEB (Nepal Education Board) component types for Grade 11-12
-enum ComponentType {
-  THEORY
-  PRACTICAL
-}
-
-// Student subject enrollment status (Grade 11-12)
-enum StudentSubjectStatus {
-  ACTIVE
-  DROPPED
-}
-
 // Subject audit action types
 enum SubjectAuditAction {
   CREATE
@@ -180,7 +168,6 @@ model School {
   feeTypes       FeeType[]
   feeStructures  FeeStructure[]
   feePayments    FeePayment[]
-  programs       Program[]
 
   @@index([code])
   @@index([isActive])
@@ -356,7 +343,6 @@ model AcademicYear {
   promotionsTo       Promotion[]         @relation("ToYear")
   noticeClassTargets NoticeClassTarget[]
   feeStructures      FeeStructure[]
-  programs           Program[]
 
   @@unique([schoolId, name])
   @@index([schoolId])
@@ -387,7 +373,6 @@ model Class {
   promotionsTo       Promotion[]         @relation("ToClass")
   noticeClassTargets NoticeClassTarget[]
   feeStructures      FeeStructure[]
-  subjectComponents  SubjectComponent[]  // NEB Grade 11-12 components
 
   @@unique([schoolId, name])
   @@index([schoolId])
@@ -437,41 +422,11 @@ model Subject {
   // Relations
   school            School             @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   classSubjects     ClassSubject[]
-  subjectComponents SubjectComponent[] // NEB Grade 11-12 components
 
   @@unique([schoolId, code])
   @@index([schoolId])
   @@index([code])
   @@map("subjects")
-}
-
-// =====================================================
-// SUBJECT_COMPONENTS (NEB Grade 11-12 Only)
-// =====================================================
-
-/// NEB-compliant subject components for Grade 11-12
-/// Theory and Practical are SEPARATE assessment components
-/// Each component has its own subject code, marks, and credit hours
-model SubjectComponent {
-  id          Int           @id @default(autoincrement())
-  subjectId   Int           @map("subject_id")
-  classId     Int           @map("class_id")
-  type        ComponentType
-  subjectCode String        @map("subject_code") @db.VarChar(20)
-  fullMarks   Int           @map("full_marks")
-  passMarks   Int           @map("pass_marks")
-  creditHours Float         @map("credit_hours")
-  createdAt   DateTime      @default(now()) @map("created_at")
-  updatedAt   DateTime      @updatedAt @map("updated_at")
-
-  // Relations
-  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
-
-  @@unique([classId, subjectId, type])
-  @@index([subjectId])
-  @@index([classId])
-  @@map("subject_components")
 }
 
 // =====================================================
@@ -503,8 +458,6 @@ model ClassSubject {
   subject         Subject          @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   teacherSubjects  TeacherSubject[]
   examSubjects     ExamSubject[]
-  programSubjects  ProgramSubject[]
-  studentSubjects  StudentSubject[]
 
   @@unique([classId, academicYearId, subjectId])
   @@index([classId])
@@ -611,8 +564,6 @@ model StudentClass {
   examResults  ExamResult[]
   submissions     Submission[]
   feePayments     FeePayment[]
-  studentProgram  StudentProgram?
-  studentSubjects StudentSubject[]
 
   @@unique([studentId, academicYearId])
   @@index([studentId])
@@ -1200,88 +1151,6 @@ model FeePayment {
   @@index([paymentDate])
   @@index([recordedByUserId])
   @@map("fee_payments")
-}
-
-// =====================================================
-// PROGRAMS (NEB +2 Faculty Grouping - Grade 11-12 Only)
-// =====================================================
-
-/// Program/Faculty grouping for Grade 11-12 (Science, Management, Humanities)
-/// Used for subject grouping, student assignment, and reporting
-model Program {
-  id             Int      @id @default(autoincrement())
-  schoolId       Int      @map("school_id")
-  academicYearId Int      @map("academic_year_id")
-  name           String   @db.VarChar(100) // Science, Management, Humanities, etc.
-  description    String?  @db.Text
-  isActive       Boolean  @default(true) @map("is_active")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  school          School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  academicYear    AcademicYear     @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
-  programSubjects ProgramSubject[]
-  studentPrograms StudentProgram[]
-
-  @@unique([schoolId, academicYearId, name])
-  @@index([schoolId])
-  @@index([academicYearId])
-  @@index([isActive])
-  @@map("programs")
-}
-
-/// Links subjects to programs - defines which subjects belong to a program
-model ProgramSubject {
-  id             Int      @id @default(autoincrement())
-  programId      Int      @map("program_id")
-  classSubjectId Int      @map("class_subject_id")
-  isCompulsory   Boolean  @default(true) @map("is_compulsory")
-  createdAt      DateTime @default(now()) @map("created_at")
-
-  // Relations
-  program      Program      @relation(fields: [programId], references: [id], onDelete: Cascade)
-  classSubject ClassSubject @relation(fields: [classSubjectId], references: [id], onDelete: Cascade)
-
-  @@unique([programId, classSubjectId])
-  @@index([programId])
-  @@index([classSubjectId])
-  @@map("program_subjects")
-}
-
-/// Assigns students to programs - one program per student enrollment
-model StudentProgram {
-  id             Int      @id @default(autoincrement())
-  studentClassId Int      @unique @map("student_class_id")
-  programId      Int      @map("program_id")
-  assignedAt     DateTime @default(now()) @map("assigned_at")
-  createdAt      DateTime @default(now()) @map("created_at")
-
-  // Relations
-  studentClass StudentClass @relation(fields: [studentClassId], references: [id], onDelete: Cascade)
-  program      Program      @relation(fields: [programId], references: [id], onDelete: Cascade)
-
-  @@index([studentClassId])
-  @@index([programId])
-  @@map("student_programs")
-}
-
-/// Specific subjects a student is taking (e.g. for Grade 11/12 overrides)
-model StudentSubject {
-  id             Int      @id @default(autoincrement())
-  studentClassId Int                  @map("student_class_id")
-  classSubjectId Int                  @map("class_subject_id")
-  status         StudentSubjectStatus @default(ACTIVE)
-  createdAt      DateTime             @default(now()) @map("created_at")
-
-  // Relations
-  studentClass StudentClass @relation(fields: [studentClassId], references: [id], onDelete: Cascade)
-  classSubject ClassSubject @relation(fields: [classSubjectId], references: [id], onDelete: Cascade)
-
-  @@unique([studentClassId, classSubjectId])
-  @@index([studentClassId])
-  @@index([classSubjectId])
-  @@map("student_subjects")
 }
 
 // =====================================================

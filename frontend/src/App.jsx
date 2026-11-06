@@ -20,8 +20,6 @@ const Sections = React.lazy(() => import("./pages/admin/Sections"));
 const Subjects = React.lazy(() => import("./pages/admin/Subjects"));
 const ClassSubjects = React.lazy(() => import("./pages/admin/ClassSubjects"));
 const Exams = React.lazy(() => import("./pages/admin/Exams"));
-const NEBCurriculum = React.lazy(() => import("./pages/admin/NEBCurriculum"));
-const Programs = React.lazy(() => import("./pages/admin/Programs"));
 const TeacherAssignment = React.lazy(
   () => import("./pages/admin/TeacherAssignment"),
 );
@@ -114,8 +112,6 @@ function App() {
               <Route path="/admin/subjects" element={<Subjects />} />
               <Route path="/admin/class-subjects" element={<ClassSubjects />} />
               <Route path="/admin/exams" element={<Exams />} />
-              <Route path="/admin/neb-curriculum" element={<NEBCurriculum />} />
-              <Route path="/admin/programs" element={<Programs />} />
               <Route
                 path="/admin/teacher-assignment"
                 element={<TeacherAssignment />}

@@ -1,16 +1,49 @@
+const env = process.env.NODE_ENV || 'development';
+const isProduction = env === 'production';
+
+// Dev-only fallbacks. In production a missing secret is a hard startup failure:
+// booting with a guessable signing key means anyone can mint valid tokens.
+const DEV_JWT_SECRET = 'default-secret-change-in-production';
+const DEV_JWT_REFRESH_SECRET = 'default-refresh-secret';
+
+/**
+ * Resolve a JWT signing secret.
+ * @param {string} name   env var name, for the error message
+ * @param {string|undefined} value  the env var value
+ * @param {string} devFallback  fallback used outside production
+ */
+function requireSecret(name, value, devFallback) {
+  if (value && value.trim()) return value;
+
+  if (isProduction) {
+    throw new Error(
+      `[config] ${name} is not set. Refusing to start in production with a ` +
+        'default signing secret — any attacker knowing it could forge tokens. ' +
+        `Set ${name} in the environment (e.g. backend/.env) to a strong random ` +
+        'value: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
+    );
+  }
+
+  return devFallback;
+}
+
 module.exports = {
   // JWT Configuration
   jwt: {
-    secret: process.env.JWT_SECRET || 'default-secret-change-in-production',
+    secret: requireSecret('JWT_SECRET', process.env.JWT_SECRET, DEV_JWT_SECRET),
     expiresIn: process.env.JWT_EXPIRES_IN || '1d',
-    refreshSecret: process.env.JWT_REFRESH_SECRET || 'default-refresh-secret',
+    refreshSecret: requireSecret(
+      'JWT_REFRESH_SECRET',
+      process.env.JWT_REFRESH_SECRET,
+      DEV_JWT_REFRESH_SECRET
+    ),
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },
 
   // Server Configuration
   server: {
     port: parseInt(process.env.PORT, 10) || 5000,
-    env: process.env.NODE_ENV || 'development',
+    env,
   },
 
   // File Upload Configuration

@@ -3,7 +3,12 @@ const { body } = require('express-validator');
 const router = express.Router();
 
 const authController = require('../controllers/auth.controller');
-const { validate, authenticate } = require('../middleware');
+const {
+  validate,
+  authenticate,
+  loginLimiter,
+  refreshLimiter,
+} = require('../middleware');
 
 // Validation rules
 const loginValidation = [
@@ -66,9 +71,17 @@ const changePasswordValidation = [
 ];
 
 // Routes
-router.post('/login', loginValidation, validate, authController.login);
+// Rate limiters run BEFORE the validators so a throttled request is rejected
+// without paying for validation, a DB lookup or a bcrypt comparison.
+router.post('/login', loginLimiter, loginValidation, validate, authController.login);
 router.post('/register', registerValidation, validate, authController.register);
-router.post('/refresh-token', refreshTokenValidation, validate, authController.refreshToken);
+router.post(
+  '/refresh-token',
+  refreshLimiter,
+  refreshTokenValidation,
+  validate,
+  authController.refreshToken
+);
 router.post('/logout', authenticate, authController.logout);
 router.get('/me', authenticate, authController.getMe);
 router.put('/change-password', authenticate, changePasswordValidation, validate, authController.changePassword);

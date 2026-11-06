@@ -24,8 +24,6 @@ const parentAdminRoutes = require("./parentAdmin.routes");
 const parentRoutes = require("./parent.routes");
 const noticeRoutes = require("./notice.routes");
 const feeRoutes = require("./fee.routes");
-const subjectComponentRoutes = require("./subjectComponent.routes");
-const programRoutes = require("./program.routes");
 const subjectImportRoutes = require("./subjectImport.routes");
 const schoolRoutes = require("./school.routes");
 const publicRoutes = require("./public.routes");
@@ -58,8 +56,6 @@ router.use(`${API_VERSION}/admin/parents`, parentAdminRoutes);
 router.use(`${API_VERSION}/parents`, parentRoutes);
 router.use(`${API_VERSION}/notices`, noticeRoutes);
 router.use(`${API_VERSION}/fees`, feeRoutes);
-router.use(`${API_VERSION}/subject-components`, subjectComponentRoutes);
-router.use(`${API_VERSION}/programs`, programRoutes);
 router.use(`${API_VERSION}/school`, schoolRoutes);
 router.use(`${API_VERSION}/public`, publicRoutes);
 router.use(`${API_VERSION}/promotions`, promotionRoutes);
@@ -87,8 +83,6 @@ router.get("/", (req, res) => {
       assignments: "/api/v1/assignments",
       notices: "/api/v1/notices",
       fees: "/api/v1/fees",
-      subjectComponents: "/api/v1/subject-components",
-      programs: "/api/v1/programs",
       school: "/api/v1/school",
       public: "/api/v1/public",
       promotions: "/api/v1/promotions",

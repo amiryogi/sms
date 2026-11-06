@@ -203,10 +203,6 @@ const getStudent = asyncHandler(async (req, res) => {
     section: enrollment?.section,
     rollNumber: enrollment?.rollNumber,
     academicYear: enrollment?.academicYear,
-    // Include program and subjects for editing (flattened)
-    // Note: Student might have multiple subjects, so we map them
-    program: enrollment?.studentProgram?.program,
-    subjects: enrollment?.studentSubjects?.map(ss => ss.classSubject),
     studentClassId: enrollment?.id
   };
 
@@ -222,7 +218,7 @@ const createStudent = asyncHandler(async (req, res) => {
   const {
     email, password, firstName, lastName, phone,
     admissionNumber, dateOfBirth, gender, bloodGroup, address, emergencyContact, admissionDate,
-    classId, sectionId, academicYearId, rollNumber, programId, subjectIds
+    classId, sectionId, academicYearId, rollNumber
   } = req.body;
 
   // Check if user exists
@@ -294,24 +290,6 @@ const createStudent = asyncHandler(async (req, res) => {
       }
     });
 
-    if (programId) {
-      await tx.studentProgram.create({
-        data: {
-          studentClassId: enrollment.id,
-          programId: parseInt(programId),
-        }
-      });
-    }
-
-    if (subjectIds && Array.isArray(subjectIds) && subjectIds.length > 0) {
-      await tx.studentSubject.createMany({
-        data: subjectIds.map(sid => ({
-          studentClassId: enrollment.id,
-          classSubjectId: parseInt(sid)
-        }))
-      });
-    }
-
     return {
       ...newStudent,
       avatarUrl: user.avatarUrl, // ensure avatarUrl is returned
@@ -340,9 +318,7 @@ const updateStudent = asyncHandler(async (req, res) => {
   const studentId = parseInt(req.params.id);
   const {
     firstName, lastName, phone, avatarUrl,
-    dateOfBirth, gender, bloodGroup, address, emergencyContact, status,
-    // Enrollment updates (ADMIN only)
-    programId, subjectIds
+    dateOfBirth, gender, bloodGroup, address, emergencyContact, status
   } = req.body;
 
   const student = await prisma.student.findUnique({
@@ -360,11 +336,7 @@ const updateStudent = asyncHandler(async (req, res) => {
     throw ApiError.notFound('Student not found');
   }
 
-  // RBAC: Only ADMIN can update program/subjects
   const isAdmin = req.user.roles.includes('ADMIN') || req.user.roles.includes('SUPER_ADMIN');
-  if ((programId !== undefined || subjectIds !== undefined) && !isAdmin) {
-     throw ApiError.forbidden('Only Admins can update student program and subjects');
-  }
 
   await prisma.$transaction(async (tx) => {
     // 1. Update User Profile
@@ -390,49 +362,6 @@ const updateStudent = asyncHandler(async (req, res) => {
         ...(emergencyContact !== undefined && { emergencyContact }),
       },
     });
-
-    // 3. Update Enrollment (Program/Subjects) - ADMIN ONLY
-    if (isAdmin && (programId !== undefined || subjectIds !== undefined)) {
-      const currentEnrollment = student.studentClasses[0];
-      if (currentEnrollment) {
-        
-        // Update Program
-        if (programId !== undefined) {
-           // Remove existing program (if any)
-           await tx.studentProgram.deleteMany({
-             where: { studentClassId: currentEnrollment.id }
-           });
-           
-           if (programId) {
-             await tx.studentProgram.create({
-               data: {
-                 studentClassId: currentEnrollment.id,
-                 programId: parseInt(programId)
-               }
-             });
-           }
-        }
-
-        // Update Subjects
-        if (subjectIds !== undefined && Array.isArray(subjectIds)) {
-           // Remove existing subjects
-           await tx.studentSubject.deleteMany({
-             where: { studentClassId: currentEnrollment.id }
-           });
-
-           // Add new subjects
-           if (subjectIds.length > 0) {
-             await tx.studentSubject.createMany({
-               data: subjectIds.map(sid => ({
-                 studentClassId: currentEnrollment.id,
-                 classSubjectId: parseInt(sid),
-                 status: 'ACTIVE'
-               }))
-             });
-           }
-        }
-      }
-    }
   });
 
   ApiResponse.success(res, null, 'Student profile updated successfully');
@@ -445,7 +374,7 @@ const updateStudent = asyncHandler(async (req, res) => {
  */
 const enrollStudent = asyncHandler(async (req, res) => {
   const studentId = parseInt(req.params.id);
-  const { classId, sectionId, academicYearId, rollNumber, programId, subjectIds } = req.body;
+  const { classId, sectionId, academicYearId, rollNumber } = req.body;
 
   // Check if already enrolled in this year
   const existingEnrollment = await prisma.studentClass.findUnique({
@@ -470,36 +399,14 @@ const enrollStudent = asyncHandler(async (req, res) => {
     throw ApiError.conflict('Student is already enrolled in this academic year in a different class/section');
   }
 
-  const enrollment = await prisma.$transaction(async (tx) => {
-    const newEnrollment = await tx.studentClass.create({
-      data: {
-        studentId,
-        classId: parseInt(classId),
-        sectionId: parseInt(sectionId),
-        academicYearId: parseInt(academicYearId),
-        rollNumber: rollNumber ? parseInt(rollNumber) : null,
-      },
-    });
-
-    if (programId) {
-      await tx.studentProgram.create({
-        data: {
-          studentClassId: newEnrollment.id,
-          programId: parseInt(programId),
-        }
-      });
-    }
-
-    if (subjectIds && Array.isArray(subjectIds) && subjectIds.length > 0) {
-      await tx.studentSubject.createMany({
-        data: subjectIds.map(sid => ({
-          studentClassId: newEnrollment.id,
-          classSubjectId: parseInt(sid)
-        }))
-      });
-    }
-
-    return newEnrollment;
+  const enrollment = await prisma.studentClass.create({
+    data: {
+      studentId,
+      classId: parseInt(classId),
+      sectionId: parseInt(sectionId),
+      academicYearId: parseInt(academicYearId),
+      rollNumber: rollNumber ? parseInt(rollNumber) : null,
+    },
   });
 
   ApiResponse.created(res, enrollment, 'Student enrolled successfully');

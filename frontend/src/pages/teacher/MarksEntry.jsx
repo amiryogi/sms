@@ -1,17 +1,9 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { Button } from "../../components/common/FormElements";
-import {
-  Save,
-  GraduationCap,
-  Layers,
-  BookOpen,
-  Users,
-  AlertCircle,
-} from "lucide-react";
+import { Save, BookOpen, Users, AlertCircle } from "lucide-react";
 import { examService } from "../../api/examService";
 import { teacherService } from "../../api/teacherService";
-import { programService } from "../../api/programService";
 
 /**
  * Marks Entry Component - RBAC-Aware
@@ -25,7 +17,7 @@ import { programService } from "../../api/programService";
  *
  * 2. EXAM_OFFICER/ADMIN FLOW:
  *    - Can access ANY subject in the exam
- *    - Exam → Class → Section → Subject → Program (Grade 11-12) → Students
+ *    - Exam → Class → Section → Subject → Students
  */
 const MarksEntry = () => {
   const { user, hasRole } = useAuth();
@@ -41,19 +33,17 @@ const MarksEntry = () => {
   // ==================== DATA STATES ====================
   const [exams, setExams] = useState([]);
   const [teacherAssignments, setTeacherAssignments] = useState([]); // For TEACHER
-  const [programs, setPrograms] = useState([]);
   const [marksData, setMarksData] = useState([]);
 
   // Loading states
   const [loadingExams, setLoadingExams] = useState(true);
   const [loadingAssignments, setLoadingAssignments] = useState(false);
-  const [loadingPrograms, setLoadingPrograms] = useState(false);
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // ==================== FILTER STATES ====================
   // For TEACHER: examId + assignmentId (combined class-section-subject)
-  // For EXAM_OFFICER/ADMIN: examId + classId + sectionId + subjectId + programId
+  // For EXAM_OFFICER/ADMIN: examId + classId + sectionId + subjectId
   const [filters, setFilters] = useState({
     examId: "",
     // Teacher-specific
@@ -62,7 +52,6 @@ const MarksEntry = () => {
     classId: "",
     sectionId: "",
     subjectId: "", // examSubjectId
-    programId: "", // For Grade 11-12
   });
 
   // ==================== INITIAL DATA FETCH ====================
@@ -73,23 +62,6 @@ const MarksEntry = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [useTeacherFlow]);
-
-  // Fetch programs when Grade 11-12 class is selected (EXAM_OFFICER/ADMIN flow)
-  useEffect(() => {
-    if (useTeacherFlow) return; // Teachers don't need this
-    if (!filters.examId || !filters.classId) return;
-
-    const exam = exams.find((e) => e.id?.toString() === filters.examId);
-    const classData = exam?.examSubjects?.find(
-      (es) => es.classSubject?.classId?.toString() === filters.classId,
-    )?.classSubject?.class;
-
-    if (classData && classData.gradeLevel >= 11) {
-      fetchPrograms(classData.id);
-    } else {
-      setPrograms([]);
-    }
-  }, [filters.classId, filters.examId, exams, useTeacherFlow]);
 
   // Fetch students when filters are complete
   useEffect(() => {
@@ -111,17 +83,6 @@ const MarksEntry = () => {
         setMarksData([]);
         return;
       }
-      // Check if NEB class needs program
-      const exam = exams.find((e) => e.id?.toString() === filters.examId);
-      const classData = exam?.examSubjects?.find(
-        (es) => es.classSubject?.classId?.toString() === filters.classId,
-      )?.classSubject?.class;
-      const isNEB = classData && classData.gradeLevel >= 11;
-
-      if (isNEB && !filters.programId) {
-        setMarksData([]);
-        return;
-      }
       fetchStudentsForExamOfficer();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -131,7 +92,6 @@ const MarksEntry = () => {
     filters.classId,
     filters.sectionId,
     filters.subjectId,
-    filters.programId,
     useTeacherFlow,
     exams,
   ]);
@@ -163,19 +123,6 @@ const MarksEntry = () => {
       console.error("Error fetching teacher assignments:", error);
     } finally {
       setLoadingAssignments(false);
-    }
-  };
-
-  const fetchPrograms = async (classId) => {
-    setLoadingPrograms(true);
-    try {
-      const res = await programService.getProgramsByClass(classId);
-      setPrograms(res.data || []);
-    } catch (error) {
-      console.error("Error fetching programs:", error);
-      setPrograms([]);
-    } finally {
-      setLoadingPrograms(false);
     }
   };
 
@@ -212,7 +159,6 @@ const MarksEntry = () => {
         studentClassId: s.studentClassId,
         rollNumber: s.rollNumber,
         studentName: `${s.firstName} ${s.lastName}`,
-        programName: s.programName || null,
         marksObtained: "",
         practicalMarks: "",
         isAbsent: false,
@@ -269,27 +215,11 @@ const MarksEntry = () => {
       const examSubjectId = filters.subjectId;
       const sectionId = filters.sectionId;
 
-      // Check if NEB class
-      const exam = exams.find((e) => e.id?.toString() === filters.examId);
-      const classData = exam?.examSubjects?.find(
-        (es) => es.classSubject?.classId?.toString() === filters.classId,
-      )?.classSubject?.class;
-      const isNEB = classData && classData.gradeLevel >= 11;
-
       // ALWAYS fetch full student list first (authoritative source)
-      let studentsRes;
-      if (isNEB && filters.programId) {
-        studentsRes = await examService.getStudentsByProgram(
-          examSubjectId,
-          sectionId,
-          filters.programId,
-        );
-      } else {
-        studentsRes = await examService.getStudentsForMarksEntry(
-          examSubjectId,
-          sectionId,
-        );
-      }
+      const studentsRes = await examService.getStudentsForMarksEntry(
+        examSubjectId,
+        sectionId,
+      );
       const studentList = studentsRes.data?.students || [];
 
       // Build initial marks data from student list
@@ -298,7 +228,6 @@ const MarksEntry = () => {
         studentClassId: s.studentClassId,
         rollNumber: s.rollNumber,
         studentName: `${s.firstName} ${s.lastName}`,
-        programName: s.programName || null,
         marksObtained: "",
         practicalMarks: "",
         isAbsent: false,
@@ -375,7 +304,6 @@ const MarksEntry = () => {
         className: ta.classSubject?.class?.name,
         sectionName: ta.section?.name,
         subjectName: ta.classSubject?.subject?.name,
-        gradeLevel: ta.classSubject?.class?.gradeLevel,
       }));
   }, [useTeacherFlow, selectedExam, teacherAssignments]);
 
@@ -455,28 +383,6 @@ const MarksEntry = () => {
       .sort((a, b) => (a.subjectName || "").localeCompare(b.subjectName || ""));
   }, [selectedExam, filters.classId, useTeacherFlow]);
 
-  // Check if current class is NEB (Grade 11-12)
-  const isNEBClass = useMemo(() => {
-    if (useTeacherFlow && filters.assignmentId) {
-      const assignment = teacherAssignmentOptions.find(
-        (a) => a.value === filters.assignmentId,
-      );
-      return assignment && assignment.gradeLevel >= 11;
-    } else if (!useTeacherFlow && filters.classId) {
-      const cls = availableClasses.find(
-        (c) => c.id?.toString() === filters.classId,
-      );
-      return cls && cls.gradeLevel >= 11;
-    }
-    return false;
-  }, [
-    useTeacherFlow,
-    filters.assignmentId,
-    filters.classId,
-    teacherAssignmentOptions,
-    availableClasses,
-  ]);
-
   // Marks structure
   const hasTheory = currentExamSubject?.hasTheory !== false;
   const hasPractical = currentExamSubject?.hasPractical === true;
@@ -496,13 +402,9 @@ const MarksEntry = () => {
         newFilters.classId = "";
         newFilters.sectionId = "";
         newFilters.subjectId = "";
-        newFilters.programId = "";
       } else if (field === "classId") {
         newFilters.sectionId = "";
         newFilters.subjectId = "";
-        newFilters.programId = "";
-      } else if (field === "sectionId" || field === "subjectId") {
-        newFilters.programId = "";
       }
 
       return newFilters;
@@ -685,7 +587,7 @@ const MarksEntry = () => {
                   <option value="">Select Class</option>
                   {availableClasses.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name} {c.gradeLevel >= 11 ? "(NEB)" : ""}
+                      {c.name}
                     </option>
                   ))}
                 </select>
@@ -734,67 +636,14 @@ const MarksEntry = () => {
                   ))}
                 </select>
               </div>
-
-              {/* 5. Program Selection - Only for NEB */}
-              {isNEBClass && filters.subjectId && (
-                <div
-                  className="form-group"
-                  style={{ minWidth: "180px", flex: 1 }}
-                >
-                  <label>
-                    <Layers size={14} style={{ marginRight: "4px" }} />
-                    Program
-                  </label>
-                  <select
-                    value={filters.programId}
-                    onChange={(e) =>
-                      handleFilterChange("programId", e.target.value)
-                    }
-                    disabled={loadingPrograms}
-                  >
-                    <option value="">
-                      {loadingPrograms ? "Loading..." : "Select Program"}
-                    </option>
-                    {programs.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
             </>
           )}
         </div>
-
-        {/* NEB Info Banner */}
-        {isNEBClass && (
-          <div
-            style={{
-              marginTop: "1rem",
-              background: "#fef3c7",
-              border: "1px solid #fcd34d",
-              borderRadius: "8px",
-              padding: "0.75rem 1rem",
-              display: "flex",
-              gap: "0.5rem",
-              alignItems: "center",
-            }}
-          >
-            <GraduationCap size={18} style={{ color: "#92400e" }} />
-            <span style={{ color: "#92400e", fontSize: "0.9em" }}>
-              <strong>NEB Grade 11-12:</strong> Only students enrolled in this
-              specific subject will appear.
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Students & Marks Entry Card */}
       {((useTeacherFlow && filters.assignmentId) ||
-        (!useTeacherFlow &&
-          filters.subjectId &&
-          (!isNEBClass || filters.programId))) && (
+        (!useTeacherFlow && filters.subjectId)) && (
         <div className="card">
           {/* Subject Info Header */}
           {currentExamSubject && (
@@ -845,7 +694,6 @@ const MarksEntry = () => {
           ) : marksData.length === 0 ? (
             <div className="text-muted text-center" style={{ padding: "2rem" }}>
               No students found for this selection.
-              {isNEBClass && " Ensure students are enrolled in this subject."}
             </div>
           ) : (
             <>
@@ -968,21 +816,6 @@ const MarksEntry = () => {
           <p>Select Class, Section, and Subject to begin marks entry</p>
         </div>
       )}
-
-      {!useTeacherFlow &&
-        isNEBClass &&
-        filters.subjectId &&
-        !filters.programId && (
-          <div
-            className="card text-center"
-            style={{ padding: "2rem", color: "#92400e", background: "#fef3c7" }}
-          >
-            <Layers size={32} style={{ marginBottom: "0.5rem" }} />
-            <p>
-              <strong>Select a Program</strong> to view students for Grade 11-12
-            </p>
-          </div>
-        )}
     </div>
   );
 };

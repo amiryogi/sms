@@ -93,27 +93,10 @@ const getExamsForMarksEntry = asyncHandler(async (req, res) => {
               select: { id: true, name: true },
             });
 
-            // Check if NEB class (Grade 11-12) and fetch components
-            const gradeLevel = es.classSubject.class.gradeLevel;
-            const isNEBClass = gradeLevel >= 11;
-            let nebComponents = null;
-
-            if (isNEBClass) {
-              nebComponents = await prisma.subjectComponent.findMany({
-                where: {
-                  classId: es.classSubject.classId,
-                  subjectId: es.classSubject.subjectId,
-                },
-                orderBy: { type: "asc" },
-              });
-            }
-
             return {
               ...es,
               assignedSectionIds: sections.map((s) => s.id),
               sections: sections,
-              isNEBClass,
-              nebComponents: nebComponents || [],
             };
           }),
         ),
@@ -190,41 +173,16 @@ const getExamsForMarksEntry = asyncHandler(async (req, res) => {
     },
   });
 
-  // Map exams with sections and NEB info
-  const examsWithSections = await Promise.all(
-    exams.map(async (exam) => ({
-      ...exam,
-      examSubjects: await Promise.all(
-        exam.examSubjects.map(async (es) => {
-          const assignedSections = teacherSubjects
-            .filter((ts) => ts.classSubjectId === es.classSubjectId)
-            .map((ts) => ts.sectionId);
-
-          // Check if NEB class (Grade 11-12) and fetch components
-          const gradeLevel = es.classSubject.class.gradeLevel;
-          const isNEBClass = gradeLevel >= 11;
-          let nebComponents = null;
-
-          if (isNEBClass) {
-            nebComponents = await prisma.subjectComponent.findMany({
-              where: {
-                classId: es.classSubject.classId,
-                subjectId: es.classSubject.subjectId,
-              },
-              orderBy: { type: "asc" },
-            });
-          }
-
-          return {
-            ...es,
-            assignedSectionIds: assignedSections,
-            isNEBClass,
-            nebComponents: nebComponents || [],
-          };
-        }),
-      ),
+  // Map exams with their assigned sections
+  const examsWithSections = exams.map((exam) => ({
+    ...exam,
+    examSubjects: exam.examSubjects.map((es) => ({
+      ...es,
+      assignedSectionIds: teacherSubjects
+        .filter((ts) => ts.classSubjectId === es.classSubjectId)
+        .map((ts) => ts.sectionId),
     })),
-  );
+  }));
 
   ApiResponse.success(res, examsWithSections);
 });
@@ -368,22 +326,6 @@ const getResultsByExamSubject = asyncHandler(async (req, res) => {
     throw ApiError.forbidden("Exam subject does not belong to your school");
   }
 
-  // Check if this is NEB class (Grade 11 or 12) and get SubjectComponents
-  const gradeLevel = examSubject.classSubject.class.gradeLevel;
-  const isNEBClass = gradeLevel >= 11;
-  let nebComponents = null;
-
-  if (isNEBClass) {
-    // Fetch NEB subject components for this subject/class combination
-    nebComponents = await prisma.subjectComponent.findMany({
-      where: {
-        classId: examSubject.classSubject.classId,
-        subjectId: examSubject.classSubject.subjectId,
-      },
-      orderBy: { type: "asc" }, // THEORY first, then PRACTICAL
-    });
-  }
-
   // TEACHER: Verify teacher is assigned to this subject
   // EXAM_OFFICER/ADMIN: Skip assignment check
   if (!isExamOfficerOrAdmin) {
@@ -444,9 +386,6 @@ const getResultsByExamSubject = asyncHandler(async (req, res) => {
   ApiResponse.success(res, {
     examSubject,
     results,
-    // NEB-specific info for Grade 11-12
-    isNEBClass,
-    nebComponents: nebComponents || [],
   });
 });
 
@@ -510,10 +449,6 @@ const saveResults = asyncHandler(async (req, res) => {
   // 4. Validate students belong to correct class/section
   const studentIds = results.map((r) => parseInt(r.studentId));
 
-  // Check if this is NEB class (Grade 11-12) - requires student_subject validation
-  const gradeLevel = examSubject.classSubject.class?.gradeLevel;
-  const isNEBClass = gradeLevel >= 11;
-
   const validStudents = await prisma.studentClass.findMany({
     where: {
       studentId: { in: studentIds },
@@ -530,42 +465,9 @@ const saveResults = asyncHandler(async (req, res) => {
     validStudents.map((vs) => [vs.studentId, vs.id]),
   );
 
-  // For Grade 11-12: MUST validate subject enrollment via student_subject table
-  // This prevents marks being entered for subjects not assigned to the student
-  let validStudentIds;
-  if (isNEBClass) {
-    const studentClassIds = validStudents.map((vs) => vs.id);
-
-    // Get students who are explicitly enrolled in this subject
-    const enrolledStudents = await prisma.studentSubject.findMany({
-      where: {
-        studentClassId: { in: studentClassIds },
-        classSubjectId: examSubject.classSubjectId,
-        status: "ACTIVE",
-      },
-      select: {
-        studentClass: { select: { studentId: true } },
-      },
-    });
-
-    validStudentIds = new Set(
-      enrolledStudents.map((es) => es.studentClass.studentId),
-    );
-
-    // Check for rejected students and provide helpful error
-    const rejectedStudents = studentIds.filter(
-      (sid) => !validStudentIds.has(sid) && studentClassMap.has(sid),
-    );
-    if (rejectedStudents.length > 0) {
-      throw ApiError.badRequest(
-        `Grade 11-12 validation failed: Students [${rejectedStudents.join(", ")}] are not enrolled in subject "${examSubject.classSubject.subject.name}". ` +
-          `Marks can only be entered for subjects explicitly assigned to each student.`,
-      );
-    }
-  } else {
-    // Grade 1-10: All students in class/section can have marks for all class subjects
-    validStudentIds = new Set(validStudents.map((vs) => vs.studentId));
-  }
+  // Subjects are class-wide (K-10): every active student in the class/section
+  // may receive marks for any subject of that class.
+  const validStudentIds = new Set(validStudents.map((vs) => vs.studentId));
 
   // Filter to only valid students
   const validResults = results.filter((r) =>
@@ -574,9 +476,7 @@ const saveResults = asyncHandler(async (req, res) => {
 
   if (validResults.length === 0) {
     throw ApiError.badRequest(
-      isNEBClass
-        ? "No valid students found. For Grade 11-12, students must be enrolled in this specific subject via StudentSubject mapping."
-        : "No valid students found. Students must be enrolled in the correct class/section.",
+      "No valid students found. Students must be enrolled in the correct class/section.",
     );
   }
 
@@ -737,11 +637,7 @@ const getStudentsForMarksEntry = asyncHandler(async (req, res) => {
     }
   }
 
-  // Check if this is NEB class (Grade 11-12)
-  const gradeLevel = examSubject.classSubject.class.gradeLevel;
-  const isNEBClass = gradeLevel >= 11;
-
-  // Get students in this class/section
+  // Get students in this class/section (subjects are class-wide for K-10)
   const studentClasses = await prisma.studentClass.findMany({
     where: {
       classId: examSubject.classSubject.classId,
@@ -749,15 +645,6 @@ const getStudentsForMarksEntry = asyncHandler(async (req, res) => {
       academicYearId: examSubject.exam.academicYearId,
       status: "active",
       schoolId: req.user.schoolId,
-      // For Grade 11-12: Only include students who have this subject in student_subject
-      ...(isNEBClass && {
-        studentSubjects: {
-          some: {
-            classSubjectId: examSubject.classSubjectId,
-            status: "ACTIVE",
-          },
-        },
-      }),
     },
     include: {
       student: {
@@ -770,11 +657,6 @@ const getStudentsForMarksEntry = asyncHandler(async (req, res) => {
           },
         },
       },
-      studentProgram: isNEBClass
-        ? {
-            include: { program: true },
-          }
-        : false,
     },
     orderBy: { rollNumber: "asc" },
   });
@@ -786,229 +668,12 @@ const getStudentsForMarksEntry = asyncHandler(async (req, res) => {
     rollNumber: sc.rollNumber,
     firstName: sc.student.user.firstName,
     lastName: sc.student.user.lastName,
-    programName: sc.studentProgram?.program?.name || null,
     existingResult: sc.student.examResults[0] || null,
   }));
 
   ApiResponse.success(res, {
     examSubject,
     students,
-    isNEBClass,
-  });
-});
-
-/**
- * @desc    Get students for marks entry filtered by program (Grade 11-12 only)
- * @route   GET /api/v1/exam-results/students-by-program
- * @access  Private/Teacher, EXAM_OFFICER, Admin
- */
-const getStudentsByProgram = asyncHandler(async (req, res) => {
-  const { examSubjectId, sectionId, programId } = req.query;
-  const userId = req.user.id;
-  const isExamOfficerOrAdmin = canBypassTeacherCheck(req.user);
-
-  if (!examSubjectId || !sectionId || !programId) {
-    throw ApiError.badRequest(
-      "examSubjectId, sectionId, and programId are required",
-    );
-  }
-
-  // Validate exam subject
-  const examSubject = await prisma.examSubject.findUnique({
-    where: { id: parseInt(examSubjectId) },
-    include: {
-      exam: true,
-      classSubject: {
-        include: { class: true, subject: true },
-      },
-    },
-  });
-
-  if (!examSubject) {
-    throw ApiError.notFound("Exam subject not found");
-  }
-
-  if (examSubject.exam.schoolId !== req.user.schoolId) {
-    throw ApiError.forbidden("Exam subject does not belong to your school");
-  }
-
-  // Validate class is Grade 11 or 12
-  const gradeLevel = examSubject.classSubject.class.gradeLevel;
-  if (gradeLevel < 11) {
-    throw ApiError.badRequest(
-      "Program-based student filtering is only available for Grade 11-12",
-    );
-  }
-
-  // Validate program exists
-  const program = await prisma.program.findFirst({
-    where: {
-      id: parseInt(programId),
-      schoolId: req.user.schoolId,
-    },
-  });
-
-  if (!program) {
-    throw ApiError.notFound("Program not found");
-  }
-
-  // TEACHER: Verify teacher assignment
-  if (!isExamOfficerOrAdmin) {
-    const teacherAssignment = await prisma.teacherSubject.findFirst({
-      where: {
-        userId,
-        classSubjectId: examSubject.classSubjectId,
-        sectionId: parseInt(sectionId),
-      },
-    });
-
-    if (!teacherAssignment) {
-      throw ApiError.forbidden("You are not assigned to this subject/section");
-    }
-  }
-
-  // Get students enrolled in this class/section AND in the specified program
-  // CRITICAL FIX: Also filter by student_subject enrollment for the specific subject
-  // This ensures only students who are enrolled in THIS subject appear
-  const studentClasses = await prisma.studentClass.findMany({
-    where: {
-      classId: examSubject.classSubject.classId,
-      sectionId: parseInt(sectionId),
-      academicYearId: examSubject.exam.academicYearId,
-      status: "active",
-      schoolId: req.user.schoolId,
-      // Filter by program through StudentProgram
-      studentProgram: {
-        programId: parseInt(programId),
-      },
-      // CRITICAL: Filter by subject enrollment via StudentSubject
-      // This is the fix for the bug where Science + Management subjects appeared together
-      studentSubjects: {
-        some: {
-          classSubjectId: examSubject.classSubjectId,
-          status: "ACTIVE",
-        },
-      },
-    },
-    include: {
-      student: {
-        include: {
-          user: {
-            select: { id: true, firstName: true, lastName: true },
-          },
-          examResults: {
-            where: { examSubjectId: parseInt(examSubjectId) },
-          },
-        },
-      },
-      studentProgram: {
-        include: { program: true },
-      },
-    },
-    orderBy: { rollNumber: "asc" },
-  });
-
-  // Transform data
-  const students = studentClasses.map((sc) => ({
-    studentId: sc.student.id,
-    studentClassId: sc.id,
-    rollNumber: sc.rollNumber,
-    firstName: sc.student.user.firstName,
-    lastName: sc.student.user.lastName,
-    programName: sc.studentProgram?.program?.name || null,
-    existingResult: sc.student.examResults[0] || null,
-  }));
-
-  ApiResponse.success(res, {
-    examSubject,
-    program,
-    students,
-    isNEBClass: true,
-  });
-});
-
-/**
- * @desc    Get subjects assigned to a student from StudentSubject table
- * @route   GET /api/v1/exam-results/student-subjects
- * @access  Private/Teacher, EXAM_OFFICER, Admin
- */
-const getStudentSubjects = asyncHandler(async (req, res) => {
-  const { studentClassId } = req.query;
-  const isExamOfficerOrAdmin = canBypassTeacherCheck(req.user);
-
-  if (!studentClassId) {
-    throw ApiError.badRequest("studentClassId is required");
-  }
-
-  // Get student class record
-  const studentClass = await prisma.studentClass.findUnique({
-    where: { id: parseInt(studentClassId) },
-    include: {
-      class: true,
-      student: true,
-    },
-  });
-
-  if (!studentClass) {
-    throw ApiError.notFound("Student class record not found");
-  }
-
-  if (studentClass.schoolId !== req.user.schoolId) {
-    throw ApiError.forbidden("Record does not belong to your school");
-  }
-
-  // Fetch subjects ONLY from StudentSubject table
-  const studentSubjects = await prisma.studentSubject.findMany({
-    where: {
-      studentClassId: parseInt(studentClassId),
-      status: "ACTIVE",
-    },
-    include: {
-      classSubject: {
-        include: {
-          subject: true,
-          class: true,
-          // Get subject components for NEB classes
-          subjectComponents: {
-            orderBy: { type: "asc" },
-          },
-        },
-      },
-    },
-  });
-
-  // Transform to include all needed metadata
-  const subjects = studentSubjects.map((ss) => {
-    const cs = ss.classSubject;
-    const components = cs.subjectComponents || [];
-    const theoryComponent = components.find((c) => c.type === "THEORY");
-    const practicalComponent = components.find((c) => c.type === "PRACTICAL");
-
-    return {
-      studentSubjectId: ss.id,
-      classSubjectId: cs.id,
-      subjectId: cs.subjectId,
-      subjectName: cs.subject.name,
-      subjectCode: theoryComponent?.subjectCode || cs.subject.code || null,
-      componentType: components.length > 0 ? "SPLIT" : "UNIFIED",
-      hasTheory: !!theoryComponent || components.length === 0,
-      hasPractical: !!practicalComponent,
-      theoryFullMarks: theoryComponent?.fullMarks || cs.fullMarks || 100,
-      practicalFullMarks: practicalComponent?.fullMarks || 0,
-      theoryPassMarks: theoryComponent?.passMarks || cs.passMarks || 0,
-      practicalPassMarks: practicalComponent?.passMarks || 0,
-      creditHours:
-        (theoryComponent?.creditHours || 0) +
-        (practicalComponent?.creditHours || 0),
-      theoryCredits: theoryComponent?.creditHours || 0,
-      practicalCredits: practicalComponent?.creditHours || 0,
-    };
-  });
-
-  ApiResponse.success(res, {
-    studentClassId: parseInt(studentClassId),
-    gradeLevel: studentClass.class.gradeLevel,
-    subjects,
   });
 });
 
@@ -1018,6 +683,4 @@ module.exports = {
   getResultsByExamSubject,
   saveResults,
   getStudentsForMarksEntry,
-  getStudentsByProgram,
-  getStudentSubjects,
 };

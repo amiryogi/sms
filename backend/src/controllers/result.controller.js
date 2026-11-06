@@ -1,5 +1,10 @@
 const prisma = require("../config/database");
-const { ApiError, ApiResponse, asyncHandler } = require("../utils");
+const {
+  ApiError,
+  ApiResponse,
+  asyncHandler,
+  gradeCalculator,
+} = require("../utils");
 
 /**
  * @desc    Get results for an exam subject (for teachers to enter marks)
@@ -268,19 +273,19 @@ const saveResults = asyncHandler(async (req, res) => {
           }`
         );
       }
-      // Logic for grading can be added here
-      const totalMarks = theoryObtained + practicalObtained;
-      let grade = null;
-
-      // Simple grading logic example (can be customized per school)
-      const percentage = (totalMarks / examSubject.fullMarks) * 100;
-      if (percentage >= 90) grade = "A+";
-      else if (percentage >= 80) grade = "A";
-      else if (percentage >= 70) grade = "B+";
-      else if (percentage >= 60) grade = "B";
-      else if (percentage >= 50) grade = "C+";
-      else if (percentage >= 40) grade = "C";
-      else grade = "F";
+      // Grade via the shared calculator so the stored grade is identical to the
+      // one the report card renders for these marks (CLAUDE.md invariant #8).
+      // It applies the NEB per-component rule: failing theory or practical
+      // below the pass mark makes the whole subject NG.
+      const { finalGrade: grade } = gradeCalculator.calculateSubjectGrade({
+        theoryMarks: theoryObtained,
+        theoryFullMarks:
+          examSubject.theoryFullMarks || examSubject.fullMarks || 100,
+        practicalMarks: practicalObtained,
+        practicalFullMarks: examSubject.practicalFullMarks || 0,
+        hasPractical: Boolean(examSubject.hasPractical),
+        isAbsent: Boolean(res.isAbsent),
+      });
 
       const result = await tx.examResult.upsert({
         where: {

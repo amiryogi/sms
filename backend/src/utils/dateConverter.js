@@ -101,8 +101,8 @@ const BS_YEAR_DATA = {
 };
 
 // Reference date: 1944-01-01 AD = 2000-09-18 BS
-const REFERENCE_AD = new Date(1944, 0, 1); // Jan 1, 1944
-const REFERENCE_BS = { year: 2000, month: 9, day: 18 };
+const REFERENCE_AD = new Date(Date.UTC(1944, 0, 1)); // Jan 1, 1944 AD (UTC midnight)
+const REFERENCE_BS = { year: 2000, month: 9, day: 17 }; // = Poush 17, 2000 BS
 
 /**
  * Get total days in a BS year
@@ -138,9 +138,20 @@ const convertADToBS = (adDate) => {
   const date = new Date(adDate);
   if (isNaN(date.getTime())) return null;
 
+  // Resolve the intended calendar day, then express it as UTC midnight so the
+  // result never depends on the server timezone.
+  const isDateOnly =
+    date.getUTCHours() === 0 &&
+    date.getUTCMinutes() === 0 &&
+    date.getUTCSeconds() === 0 &&
+    date.getUTCMilliseconds() === 0;
+  const dayUTC = isDateOnly
+    ? Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+    : Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+
   // Calculate days difference from reference date
-  const diffTime = date.getTime() - REFERENCE_AD.getTime();
-  let totalDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  const diffTime = dayUTC - REFERENCE_AD.getTime();
+  let totalDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
   let bsYear = REFERENCE_BS.year;
   let bsMonth = REFERENCE_BS.month;

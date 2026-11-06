@@ -27,8 +27,6 @@ async function cleanupDatabase() {
     
     // Student related
     "submissions",
-    "student_subjects",
-    "student_programs",
     "fee_payments",
     "report_cards",
     "attendance",
@@ -40,10 +38,7 @@ async function cleanupDatabase() {
     "teacher_subjects",
     
     // Academic structure (middle tier)
-    "subject_components",
     "class_subjects",
-    "program_subjects",
-    "programs",
     "fee_structures",
     "fee_types",
     "notices",
@@ -253,79 +248,7 @@ const basicSubjects = [
   { name: "Moral Education", code: "MORAL", description: "Moral Science and Values" },
 ];
 
-// NEB subjects for Grade 11-12 (from subjects11_12.xlsx)
-// Each subject has separate THEORY and PRACTICAL components with NEB codes
-const nebSubjectsData = [
-  // Grade 11 Compulsory
-  { id: 1, name: "Compulsory English", theoryCode: "0031", practicalCode: "0032", theoryFullMarks: 75, practicalFullMarks: 25, theoryCreditHours: 3, practicalCreditHours: 1, totalCreditHours: 4, classLevel: 11, faculty: "Compulsory", isCompulsory: true },
-  { id: 2, name: "Compulsory Nepali", theoryCode: "0011", practicalCode: "0012", theoryFullMarks: 75, practicalFullMarks: 25, theoryCreditHours: 3, practicalCreditHours: 1, totalCreditHours: 4, classLevel: 11, faculty: "Compulsory", isCompulsory: true },
-  // Grade 11 Science
-  { id: 3, name: "Physics", theoryCode: "1011", practicalCode: "1012", theoryFullMarks: 75, practicalFullMarks: 25, theoryCreditHours: 4, practicalCreditHours: 1, totalCreditHours: 5, classLevel: 11, faculty: "Science", isCompulsory: false },
-  { id: 4, name: "Chemistry", theoryCode: "1021", practicalCode: "1022", theoryFullMarks: 75, practicalFullMarks: 25, theoryCreditHours: 4, practicalCreditHours: 1, totalCreditHours: 5, classLevel: 11, faculty: "Science", isCompulsory: false },
-  { id: 5, name: "Biology", theoryCode: "1031", practicalCode: "1032", theoryFullMarks: 75, practicalFullMarks: 25, theoryCreditHours: 4, practicalCreditHours: 1, totalCreditHours: 5, classLevel: 11, faculty: "Science", isCompulsory: false },
-  { id: 6, name: "Mathematics", theoryCode: "1041", practicalCode: null, theoryFullMarks: 100, practicalFullMarks: 0, theoryCreditHours: 5, practicalCreditHours: 0, totalCreditHours: 5, classLevel: 11, faculty: "Science", isCompulsory: false },
-  { id: 7, name: "Computer Science", theoryCode: "4161", practicalCode: "4162", theoryFullMarks: 75, practicalFullMarks: 25, theoryCreditHours: 4, practicalCreditHours: 1, totalCreditHours: 5, classLevel: 11, faculty: "OptionalForScienceManagement", isCompulsory: false },
-  // Grade 11 Management
-  { id: 8, name: "Accountancy", theoryCode: "2011", practicalCode: null, theoryFullMarks: 100, practicalFullMarks: 0, theoryCreditHours: 5, practicalCreditHours: 0, totalCreditHours: 5, classLevel: 11, faculty: "Management", isCompulsory: false },
-  { id: 9, name: "Economics", theoryCode: "2021", practicalCode: null, theoryFullMarks: 100, practicalFullMarks: 0, theoryCreditHours: 5, practicalCreditHours: 0, totalCreditHours: 5, classLevel: 11, faculty: "Management", isCompulsory: false },
-  { id: 10, name: "Business Studies", theoryCode: "2031", practicalCode: null, theoryFullMarks: 100, practicalFullMarks: 0, theoryCreditHours: 5, practicalCreditHours: 0, totalCreditHours: 5, classLevel: 11, faculty: "Management", isCompulsory: false },
-  { id: 11, name: "Hotel Management", theoryCode: "2171", practicalCode: "2172", theoryFullMarks: 75, practicalFullMarks: 25, theoryCreditHours: 4, practicalCreditHours: 1, totalCreditHours: 5, classLevel: 11, faculty: "Management", isCompulsory: false },
-  { id: 12, name: "Social Studies", theoryCode: "4011", practicalCode: null, theoryFullMarks: 100, practicalFullMarks: 0, theoryCreditHours: 5, practicalCreditHours: 0, totalCreditHours: 5, classLevel: 11, faculty: "OptionalForScienceManagement", isCompulsory: false },
-  // Grade 12 Compulsory
-  { id: 13, name: "Compulsory English", theoryCode: "0033", practicalCode: "0034", theoryFullMarks: 75, practicalFullMarks: 25, theoryCreditHours: 3, practicalCreditHours: 1, totalCreditHours: 4, classLevel: 12, faculty: "Compulsory", isCompulsory: true },
-  { id: 14, name: "Compulsory Nepali", theoryCode: "0013", practicalCode: "0014", theoryFullMarks: 75, practicalFullMarks: 25, theoryCreditHours: 3, practicalCreditHours: 1, totalCreditHours: 4, classLevel: 12, faculty: "Compulsory", isCompulsory: true },
-  // Grade 12 Science
-  { id: 15, name: "Physics", theoryCode: "1013", practicalCode: "1014", theoryFullMarks: 75, practicalFullMarks: 25, theoryCreditHours: 4, practicalCreditHours: 1, totalCreditHours: 5, classLevel: 12, faculty: "Science", isCompulsory: false },
-  { id: 16, name: "Chemistry", theoryCode: "1023", practicalCode: "1024", theoryFullMarks: 75, practicalFullMarks: 25, theoryCreditHours: 4, practicalCreditHours: 1, totalCreditHours: 5, classLevel: 12, faculty: "Science", isCompulsory: false },
-  { id: 17, name: "Biology", theoryCode: "1033", practicalCode: "1034", theoryFullMarks: 75, practicalFullMarks: 25, theoryCreditHours: 4, practicalCreditHours: 1, totalCreditHours: 5, classLevel: 12, faculty: "Science", isCompulsory: false },
-  { id: 18, name: "Mathematics", theoryCode: "1043", practicalCode: null, theoryFullMarks: 100, practicalFullMarks: 0, theoryCreditHours: 5, practicalCreditHours: 0, totalCreditHours: 5, classLevel: 12, faculty: "Science", isCompulsory: false },
-  { id: 19, name: "Computer Science", theoryCode: "4163", practicalCode: "4164", theoryFullMarks: 75, practicalFullMarks: 25, theoryCreditHours: 4, practicalCreditHours: 1, totalCreditHours: 5, classLevel: 12, faculty: "OptionalForScienceManagement", isCompulsory: false },
-  // Grade 12 Management
-  { id: 20, name: "Accountancy", theoryCode: "2013", practicalCode: null, theoryFullMarks: 100, practicalFullMarks: 0, theoryCreditHours: 5, practicalCreditHours: 0, totalCreditHours: 5, classLevel: 12, faculty: "Management", isCompulsory: false },
-  { id: 21, name: "Economics", theoryCode: "2023", practicalCode: null, theoryFullMarks: 100, practicalFullMarks: 0, theoryCreditHours: 5, practicalCreditHours: 0, totalCreditHours: 5, classLevel: 12, faculty: "Management", isCompulsory: false },
-  { id: 22, name: "Business Studies", theoryCode: "2033", practicalCode: null, theoryFullMarks: 100, practicalFullMarks: 0, theoryCreditHours: 5, practicalCreditHours: 0, totalCreditHours: 5, classLevel: 12, faculty: "Management", isCompulsory: false },
-  { id: 23, name: "Hotel Management", theoryCode: "2173", practicalCode: "2174", theoryFullMarks: 75, practicalFullMarks: 25, theoryCreditHours: 4, practicalCreditHours: 1, totalCreditHours: 5, classLevel: 12, faculty: "Management", isCompulsory: false },
-  { id: 24, name: "Social Studies", theoryCode: "4013", practicalCode: null, theoryFullMarks: 100, practicalFullMarks: 0, theoryCreditHours: 5, practicalCreditHours: 0, totalCreditHours: 5, classLevel: 12, faculty: "OptionalForScienceManagement", isCompulsory: false },
-];
-
-// Generate unique subject codes for Grade 11-12
-function getNEBSubjectCode(name, classLevel) {
-  const codeMap = {
-    "Compulsory English": "C.ENG",
-    "Compulsory Nepali": "C.NEP",
-    "Physics": "PHY",
-    "Chemistry": "CHEM",
-    "Biology": "BIO",
-    "Mathematics": "MATH",
-    "Computer Science": "CS",
-    "Accountancy": "ACC",
-    "Economics": "ECO",
-    "Business Studies": "BUS",
-    "Hotel Management": "HM",
-    "Social Studies": "SOC11",
-  };
-  return `${codeMap[name] || name.substring(0, 4).toUpperCase()}-${classLevel}`;
-}
-
-// Backward-compatible nebSubjects array for existing code
-const nebSubjects = nebSubjectsData.map((s) => ({
-  name: s.name,
-  code: getNEBSubjectCode(s.name, s.classLevel),
-  creditHours: s.totalCreditHours,
-  hasTheory: true,
-  hasPractical: s.practicalCode !== null,
-  classLevel: s.classLevel,
-  faculty: s.faculty,
-  theoryCode: s.theoryCode,
-  practicalCode: s.practicalCode,
-  theoryFullMarks: s.theoryFullMarks,
-  practicalFullMarks: s.practicalFullMarks,
-  theoryCreditHours: s.theoryCreditHours,
-  practicalCreditHours: s.practicalCreditHours,
-  isCompulsory: s.isCompulsory,
-}));
-
-// Demo classes (Grade 1-12)
+// Demo classes (Grade 1-10)
 const classes = [
   { name: "Grade 1", gradeLevel: 1, displayOrder: 1 },
   { name: "Grade 2", gradeLevel: 2, displayOrder: 2 },
@@ -337,8 +260,6 @@ const classes = [
   { name: "Grade 8", gradeLevel: 8, displayOrder: 8 },
   { name: "Grade 9", gradeLevel: 9, displayOrder: 9 },
   { name: "Grade 10", gradeLevel: 10, displayOrder: 10 },
-  { name: "Grade 11", gradeLevel: 11, displayOrder: 11 },
-  { name: "Grade 12", gradeLevel: 12, displayOrder: 12 },
 ];
 
 // Demo sections
@@ -510,10 +431,9 @@ async function main() {
   }
   console.log(`   ✓ Created ${createdClasses.length} classes\n`);
 
-  // 8. Create Subjects (Basic + NEB)
+  // 8. Create Subjects
   console.log("📖 Creating subjects...");
   const createdSubjects = [];
-  const nebSubjectMap = {}; // Map to track NEB subjects by code
   
   // Basic subjects for all grades
   for (const subject of basicSubjects) {
@@ -525,243 +445,47 @@ async function main() {
     createdSubjects.push(created);
   }
   
-  // NEB subjects for Grade 11-12 (unique by code)
-  const uniqueNebSubjects = [];
-  const seenCodes = new Set();
-  for (const subject of nebSubjects) {
-    if (!seenCodes.has(subject.code)) {
-      seenCodes.add(subject.code);
-      uniqueNebSubjects.push(subject);
-    }
-  }
-  
-  for (const subject of uniqueNebSubjects) {
-    const created = await prisma.subject.upsert({
-      where: { schoolId_code: { schoolId: school.id, code: subject.code } },
-      update: {},
-      create: { 
-        name: subject.name,
-        code: subject.code,
-        creditHours: subject.creditHours,
-        schoolId: school.id,
-      },
-    });
-    createdSubjects.push(created);
-    nebSubjectMap[subject.code] = { dbSubject: created, nebData: subject };
-  }
-  console.log(`   ✓ Created ${createdSubjects.length} subjects (${uniqueNebSubjects.length} NEB subjects)\n`);
+  console.log(`   ✓ Created ${createdSubjects.length} subjects\n`);
 
-  // 9. Assign Subjects to Classes + Create SubjectComponents for NEB
+  // 9. Assign Subjects to Classes
   console.log("🔗 Assigning subjects to classes...");
   const coreSubjectCodes = ["ENG", "MATH", "SCI", "SOC", "NEP", "CS", "HPE"];
   
   let classSubjectCount = 0;
-  let subjectComponentCount = 0;
   const createdClassSubjects = {};
   
   for (const cls of createdClasses) {
     createdClassSubjects[cls.id] = [];
     
-    if (cls.gradeLevel <= 10) {
-      // Basic subjects for Grade 1-10
-      for (const subject of createdSubjects.filter(s => coreSubjectCodes.includes(s.code))) {
-        const cs = await prisma.classSubject.upsert({
-          where: {
-            classId_academicYearId_subjectId: {
-              classId: cls.id,
-              academicYearId: academicYear.id,
-              subjectId: subject.id,
-            },
-          },
-          update: {},
-          create: {
+    for (const subject of createdSubjects.filter(s => coreSubjectCodes.includes(s.code))) {
+      const cs = await prisma.classSubject.upsert({
+        where: {
+          classId_academicYearId_subjectId: {
             classId: cls.id,
             academicYearId: academicYear.id,
             subjectId: subject.id,
-            fullMarks: 100,
-            passMarks: 40,
-            hasTheory: true,
-            hasPractical: subject.code === "CS" || subject.code === "SCI",
-            theoryMarks: subject.code === "CS" || subject.code === "SCI" ? 75 : 100,
-            practicalMarks: subject.code === "CS" || subject.code === "SCI" ? 25 : 0,
           },
-        });
-        createdClassSubjects[cls.id].push(cs);
-        classSubjectCount++;
-      }
-    } else {
-      // NEB subjects for Grade 11-12
-      // Get subjects for this specific grade level
-      const gradeNebSubjects = nebSubjects.filter(n => n.classLevel === cls.gradeLevel);
-      
-      for (const nebData of gradeNebSubjects) {
-        const dbSubject = createdSubjects.find(s => s.code === nebData.code);
-        if (!dbSubject) continue;
-        
-        const cs = await prisma.classSubject.upsert({
-          where: {
-            classId_academicYearId_subjectId: {
-              classId: cls.id,
-              academicYearId: academicYear.id,
-              subjectId: dbSubject.id,
-            },
-          },
-          update: {},
-          create: {
-            classId: cls.id,
-            academicYearId: academicYear.id,
-            subjectId: dbSubject.id,
-            fullMarks: nebData.theoryFullMarks + nebData.practicalFullMarks,
-            passMarks: Math.ceil((nebData.theoryFullMarks + nebData.practicalFullMarks) * 0.35), // 35% pass mark
-            creditHours: nebData.creditHours,
-            hasTheory: true,
-            hasPractical: nebData.hasPractical,
-            theoryMarks: nebData.theoryFullMarks,
-            practicalMarks: nebData.practicalFullMarks,
-          },
-        });
-        createdClassSubjects[cls.id].push(cs);
-        classSubjectCount++;
-        
-        // Create SubjectComponents for NEB subjects (THEORY and PRACTICAL)
-        // Theory component - always exists for NEB
-        await prisma.subjectComponent.upsert({
-          where: {
-            classId_subjectId_type: {
-              classId: cls.id,
-              subjectId: dbSubject.id,
-              type: "THEORY",
-            },
-          },
-          update: {},
-          create: {
-            classId: cls.id,
-            subjectId: dbSubject.id,
-            type: "THEORY",
-            subjectCode: nebData.theoryCode,
-            fullMarks: nebData.theoryFullMarks,
-            passMarks: Math.ceil(nebData.theoryFullMarks * 0.35),
-            creditHours: nebData.theoryCreditHours,
-          },
-        });
-        subjectComponentCount++;
-        
-        // Practical component - only if subject has practical
-        if (nebData.hasPractical && nebData.practicalCode) {
-          await prisma.subjectComponent.upsert({
-            where: {
-              classId_subjectId_type: {
-                classId: cls.id,
-                subjectId: dbSubject.id,
-                type: "PRACTICAL",
-              },
-            },
-            update: {},
-            create: {
-              classId: cls.id,
-              subjectId: dbSubject.id,
-              type: "PRACTICAL",
-              subjectCode: nebData.practicalCode,
-              fullMarks: nebData.practicalFullMarks,
-              passMarks: Math.ceil(nebData.practicalFullMarks * 0.35),
-              creditHours: nebData.practicalCreditHours,
-            },
-          });
-          subjectComponentCount++;
-        }
-      }
-    }
-  }
-  console.log(`   ✓ Created ${classSubjectCount} class-subject assignments`);
-  console.log(`   ✓ Created ${subjectComponentCount} NEB subject components (Theory/Practical)\n`);
-
-  // 10. Create Programs for Grade 11-12 (Science, Management)
-  console.log("🎓 Creating NEB Programs (Science, Management)...");
-  const grade11 = createdClasses.find(c => c.gradeLevel === 11);
-  const grade12 = createdClasses.find(c => c.gradeLevel === 12);
-  
-  const scienceProgram = await prisma.program.upsert({
-    where: { 
-      schoolId_academicYearId_name: { 
-        schoolId: school.id, 
-        academicYearId: academicYear.id,
-        name: "Science" 
-      } 
-    },
-    update: {},
-    create: {
-      schoolId: school.id,
-      academicYearId: academicYear.id,
-      name: "Science",
-      description: "NEB Science Faculty - Physics, Chemistry, Biology, Mathematics",
-    },
-  });
-  
-  const managementProgram = await prisma.program.upsert({
-    where: { 
-      schoolId_academicYearId_name: { 
-        schoolId: school.id, 
-        academicYearId: academicYear.id,
-        name: "Management" 
-      } 
-    },
-    update: {},
-    create: {
-      schoolId: school.id,
-      academicYearId: academicYear.id,
-      name: "Management",
-      description: "NEB Management Faculty - Accountancy, Economics, Business Studies",
-    },
-  });
-  console.log(`   ✓ Created programs: Science, Management`);
-  
-  // Link ClassSubjects to programs (for Grade 11-12)
-  const scienceSubjectNames = ["Physics", "Chemistry", "Biology", "Mathematics", "Computer Science"];
-  const managementSubjectNames = ["Accountancy", "Economics", "Business Studies", "Hotel Management"];
-  const compulsorySubjectNames = ["Compulsory English", "Compulsory Nepali"];
-  
-  let programSubjectCount = 0;
-  
-  // Get all Grade 11-12 class subjects
-  const nebClassSubjects = [];
-  for (const cls of [grade11, grade12]) {
-    if (createdClassSubjects[cls.id]) {
-      nebClassSubjects.push(...createdClassSubjects[cls.id]);
-    }
-  }
-  
-  for (const classSubject of nebClassSubjects) {
-    // Find the subject name for this classSubject
-    const subject = createdSubjects.find(s => s.id === classSubject.subjectId);
-    if (!subject) continue;
-    
-    const isScience = scienceSubjectNames.includes(subject.name);
-    const isManagement = managementSubjectNames.includes(subject.name);
-    const isCompulsory = compulsorySubjectNames.includes(subject.name);
-    
-    // Science program subjects
-    if (isScience || isCompulsory) {
-      await prisma.programSubject.upsert({
-        where: { programId_classSubjectId: { programId: scienceProgram.id, classSubjectId: classSubject.id } },
+        },
         update: {},
-        create: { programId: scienceProgram.id, classSubjectId: classSubject.id, isCompulsory: isCompulsory },
+        create: {
+          classId: cls.id,
+          academicYearId: academicYear.id,
+          subjectId: subject.id,
+          fullMarks: 100,
+          passMarks: 40,
+          hasTheory: true,
+          hasPractical: subject.code === "CS" || subject.code === "SCI",
+          theoryMarks: subject.code === "CS" || subject.code === "SCI" ? 75 : 100,
+          practicalMarks: subject.code === "CS" || subject.code === "SCI" ? 25 : 0,
+        },
       });
-      programSubjectCount++;
-    }
-    
-    // Management program subjects
-    if (isManagement || isCompulsory) {
-      await prisma.programSubject.upsert({
-        where: { programId_classSubjectId: { programId: managementProgram.id, classSubjectId: classSubject.id } },
-        update: {},
-        create: { programId: managementProgram.id, classSubjectId: classSubject.id, isCompulsory: isCompulsory },
-      });
-      programSubjectCount++;
+      createdClassSubjects[cls.id].push(cs);
+      classSubjectCount++;
     }
   }
-  console.log(`   ✓ Linked ${programSubjectCount} class-subjects to programs\n`);
+  console.log(`   ✓ Created ${classSubjectCount} class-subject assignments\n`);
 
-  // 11. Create Demo Users
+  // 10. Create Demo Users
   console.log("👤 Creating demo users...");
   const passwordHash = await bcrypt.hash("password123", 10);
   const adminRole = await prisma.role.findUnique({ where: { name: "ADMIN" } });
@@ -880,10 +604,8 @@ async function main() {
     const subject = createdSubjects.find(s => s.code === teacher.subjectCode);
     if (!subject) continue;
     
-    // Assign to grades 8, 9, 10 for basic subjects
-    const targetGrades = teacher.subjectCode.includes("11") || ["PHY", "CHEM", "BIO"].includes(teacher.subjectCode) 
-      ? [11, 12] 
-      : [8, 9, 10];
+    // Assign to grades 8, 9, 10
+    const targetGrades = [8, 9, 10];
     
     for (const gradeLevel of targetGrades) {
       const cls = createdClasses.find(c => c.gradeLevel === gradeLevel);
@@ -924,23 +646,18 @@ async function main() {
   }
   console.log(`   ✓ Created ${teacherAssignmentCount} teacher-subject assignments\n`);
 
-  // 12. Create Students (5 per section for grades 9, 10, 11)
+  // 12. Create Students (5 per section for grades 9, 10)
   console.log("👨‍🎓 Creating students...");
   const createdStudents = [];
   let studentIndex = 1;
   
-  for (const cls of createdClasses.filter(c => [9, 10, 11].includes(c.gradeLevel))) {
+  for (const cls of createdClasses.filter(c => [9, 10].includes(c.gradeLevel))) {
     for (const section of createdSections) {
       for (let i = 1; i <= 5; i++) {
         const gender = i % 2 === 0 ? "female" : "male";
         const firstName = getRandomElement(firstNames[gender]);
         const lastName = getRandomElement(lastNames);
         const email = `student${studentIndex}@svi.edu.np`;
-        
-        // For Grade 11: alternate between Science and Management programs
-        const programId = cls.gradeLevel === 11 
-          ? (i % 2 === 0 ? managementProgram.id : scienceProgram.id)
-          : null;
         
         const studentUser = await prisma.user.upsert({
           where: { email_schoolId: { email, schoolId: school.id } },
@@ -998,24 +715,12 @@ async function main() {
           },
         });
         
-        // For Grade 11 students, create StudentProgram record
-        if (programId) {
-          await prisma.studentProgram.upsert({
-            where: { studentClassId: studentClass.id },
-            update: {},
-            create: {
-              studentClassId: studentClass.id,
-              programId: programId,
-            },
-          });
-        }
-        
-        createdStudents.push({ student, studentClass, user: studentUser, cls, section, programId });
+        createdStudents.push({ student, studentClass, user: studentUser, cls, section });
         studentIndex++;
       }
     }
   }
-  console.log(`   ✓ Created ${createdStudents.length} students (Grade 11: Science & Management programs)\n`);
+  console.log(`   ✓ Created ${createdStudents.length} students\n`);
 
   // 13. Create Parents and Link to Students
   console.log("👨‍👩‍👧 Creating parents...");
@@ -1129,7 +834,7 @@ async function main() {
   let examSubjectCount = 0;
   
   for (const exam of [firstTermExam, midTermExam]) {
-    for (const cls of createdClasses.filter(c => [9, 10, 11].includes(c.gradeLevel))) {
+    for (const cls of createdClasses.filter(c => [9, 10].includes(c.gradeLevel))) {
       const classSubjects = createdClassSubjects[cls.id] || [];
       
       for (const cs of classSubjects) {
@@ -1148,8 +853,8 @@ async function main() {
             passMarks: cs.passMarks,
             hasTheory: cs.hasTheory,
             hasPractical: cs.hasPractical,
-            theoryFullMarks: cs.theoryFullMarks || 100,
-            practicalFullMarks: cs.practicalFullMarks || 0,
+            theoryFullMarks: cs.theoryMarks || 100,
+            practicalFullMarks: cs.practicalMarks || 0,
           },
         });
         examSubjectCount++;
@@ -1366,15 +1071,12 @@ async function main() {
   console.log("   │ Parents (30)   │ parent.stu2024xxxx@svi.edu.np                 │");
   console.log("   └─────────────────────────────────────────────────────────────────┘");
   console.log("\n📊 Data Summary:");
-  console.log(`   • ${createdClasses.length} Classes (Grade 1-12)`);
+  console.log(`   • ${createdClasses.length} Classes (Grade 1-10)`);
   console.log(`   • ${createdSections.length} Sections (A, B)`);
-  console.log(`   • ${createdSubjects.length} Subjects (Basic + NEB)`);
+  console.log(`   • ${createdSubjects.length} Subjects`);
   console.log(`   • ${classSubjectCount} Class-Subject assignments`);
-  console.log(`   • ${subjectComponentCount} NEB Subject Components (Theory/Practical)`);
-  console.log(`   • 2 NEB Programs (Science, Management)`);
-  console.log(`   • ${programSubjectCount} Program-Subject links`);
   console.log(`   • ${teacherAssignmentCount} Teacher assignments`);
-  console.log(`   • ${createdStudents.length} Students (Grade 9, 10, 11)`);
+  console.log(`   • ${createdStudents.length} Students (Grade 9, 10)`);
   console.log(`   • 3 Exams (First Term, Mid-Term, Final)`);
   console.log(`   • ${resultCount} Exam results`);
   console.log(`   • ${createdFeeTypes.length} Fee types`);

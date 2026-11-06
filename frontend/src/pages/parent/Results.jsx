@@ -4,7 +4,6 @@ import { Select, Button } from "../../components/common/FormElements";
 import { Award, Printer, RefreshCw, AlertCircle, X } from "lucide-react";
 import { examService } from "../../api/examService";
 import { parentService } from "../../api/parentService";
-import NEBGradeSheet from "../../components/common/NEBGradeSheet";
 import NepalReportCard from "../../components/common/NepalReportCard";
 
 const Results = () => {
@@ -311,22 +310,14 @@ const Results = () => {
         </div>
       )}
 
-      {/* Full Report Card Modal - Backend determines format via isNEBClass flag */}
-      {showFullReportCard &&
-        reportCard &&
-        (reportCard.isNEBClass ? (
-          <NEBGradeSheet
-            data={reportCard}
-            onClose={() => setShowFullReportCard(false)}
-            showActions={true}
-          />
-        ) : (
-          <NepalReportCard
-            data={reportCard}
-            onClose={() => setShowFullReportCard(false)}
-            showActions={true}
-          />
-        ))}
+      {/* Full Report Card Modal */}
+      {showFullReportCard && reportCard && (
+        <NepalReportCard
+          data={reportCard}
+          onClose={() => setShowFullReportCard(false)}
+          showActions={true}
+        />
+      )}
     </div>
   );
 };
