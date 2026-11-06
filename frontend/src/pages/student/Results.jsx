@@ -3,6 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { Select } from "../../components/common/FormElements";
 import { Award, TrendingUp } from "lucide-react";
 import { examService } from "../../api/examService";
+import { gradeColor, gradeForPercentage } from "../../utils/grades";
 
 const Results = () => {
   const { user } = useAuth();
@@ -54,30 +55,20 @@ const Results = () => {
     }
   };
 
+  // Theory + practical, against the exam snapshot's full marks.
+  const subjectMarks = (r) => ({
+    obtained: Number(r.marksObtained || 0) + Number(r.practicalMarks || 0),
+    max: Number(r.examSubject?.fullMarks || 0),
+  });
+
   const calculateTotal = () => {
-    const obtained = results.reduce(
-      (sum, r) => sum + (r.marksObtained || 0),
-      0
-    );
-    const max = results.reduce(
-      (sum, r) => sum + (r.examSubject?.maxMarks || 0),
-      0
-    );
+    const obtained = results.reduce((sum, r) => sum + subjectMarks(r).obtained, 0);
+    const max = results.reduce((sum, r) => sum + subjectMarks(r).max, 0);
     const percentage = max > 0 ? ((obtained / max) * 100).toFixed(2) : 0;
     return { obtained, max, percentage };
   };
 
   const totals = calculateTotal();
-
-  const getGrade = (percentage) => {
-    if (percentage >= 90) return "A+";
-    if (percentage >= 80) return "A";
-    if (percentage >= 70) return "B+";
-    if (percentage >= 60) return "B";
-    if (percentage >= 50) return "C";
-    if (percentage >= 40) return "D";
-    return "F";
-  };
 
   // Exams from getStudentPublishedExams have examId, examName, etc.
   const examOptions = exams.map((e) => ({
@@ -134,7 +125,7 @@ const Results = () => {
                 </div>
                 <div className="summary-card grade-card">
                   <div className="grade-badge">
-                    {getGrade(totals.percentage)}
+                    {gradeForPercentage(totals.percentage)}
                   </div>
                   <span className="summary-label">Grade</span>
                 </div>
@@ -152,28 +143,27 @@ const Results = () => {
                 </thead>
                 <tbody>
                   {results.map((result) => {
-                    const pct = result.examSubject?.maxMarks
-                      ? (
-                          (result.marksObtained / result.examSubject.maxMarks) *
-                          100
-                        ).toFixed(1)
-                      : 0;
+                    const { obtained, max } = subjectMarks(result);
+                    const pct = max > 0 ? ((obtained / max) * 100).toFixed(1) : null;
+                    const grade = result.isAbsent
+                      ? "AB"
+                      : result.grade || gradeForPercentage(pct);
+                    const pill = gradeColor(grade);
                     return (
                       <tr key={result.id}>
                         <td>
                           {result.examSubject?.classSubject?.subject?.name ||
                             "Subject"}
                         </td>
-                        <td>{result.marksObtained}</td>
-                        <td>{result.examSubject?.maxMarks}</td>
-                        <td>{pct}%</td>
+                        <td>{result.isAbsent ? "AB" : obtained}</td>
+                        <td>{max || "—"}</td>
+                        <td>{pct === null ? "—" : `${pct}%`}</td>
                         <td>
                           <span
-                            className={`grade-pill grade-${getGrade(
-                              pct
-                            ).toLowerCase()}`}
+                            className="grade-pill"
+                            style={{ background: pill.bg, color: pill.text }}
                           >
-                            {getGrade(pct)}
+                            {grade}
                           </span>
                         </td>
                       </tr>

@@ -3,6 +3,14 @@
 Guidance for Claude Code working in this repo. Read this first, then
 `backend/prisma/schema.prisma` before touching any data logic.
 
+> **Resuming work, or on a new machine?**
+> - [docs/STATUS.md](docs/STATUS.md) — what is done, what to do next, open decisions.
+>   Update it when you stop work; it is the handover between machines and sessions.
+> - [docs/SETUP-NEW-MACHINE.md](docs/SETUP-NEW-MACHINE.md) — clone to running in ~10 minutes.
+>   The database does not travel between machines; it is rebuilt from the committed
+>   migration plus `npm run seed`.
+> - [docs/plans/](docs/plans/) — approved implementation plans in progress.
+
 ---
 
 ## 1. What this project is
@@ -59,12 +67,17 @@ Demo logins (after seed, password `password123`):
 `admin@svi.edu.np`, `admin@demo-school.edu.np`, `teacher@demo-school.edu.np`,
 `student@demo-school.edu.np`, `parent@demo-school.edu.np`. School code `DEMO001`.
 
-**There is no test suite.** Jest is a devDependency but no `*.test.js` exists.
-Verification today means running both servers and clicking through, or using the
-ad-hoc diagnostic scripts in `backend/` (`check_data.js`,
-`diagnose_marks_entry.js`, `validate_subject_enrollment.js`). If you add tests,
-put them under `backend/src/**/__tests__/` and say so — don't silently change
-what `npm test` means.
+**Tests:** `npm test` (Jest) runs 244 unit tests over the pure utilities in
+`backend/src/utils/__tests__/` — grade calculation, BS date conversion,
+pagination and the response helpers. They need no database, so they run
+anywhere. A handful are marked `test.failing`: those pin **known, unfixed** bugs
+and flip the suite red the moment someone fixes the source without removing the
+marker. Do not delete a marker to silence it.
+
+There are **no integration tests** yet; nothing exercises a controller, a route
+or the database. Verifying those still means running both servers and clicking
+through, or using the ad-hoc scripts in `backend/` (`check_data.js`,
+`diagnose_marks_entry.js`) and `backend/scripts/audit-exam-grades.js`.
 
 ---
 

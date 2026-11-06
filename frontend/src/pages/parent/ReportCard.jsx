@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import NepalReportCard from "../../components/common/NepalReportCard";
 import { reportCardService } from "../../api/reportCardService";
+import { gpaColor as getGpaColor } from "../../utils/grades";
 import { parentService } from "../../api/parentService";
 
 const ParentReportCard = () => {
@@ -125,16 +126,6 @@ const ParentReportCard = () => {
   const selectedExamInfo = publishedExams.find(
     (e) => e.examId.toString() === selectedExam
   );
-
-  // GPA color helper
-  const getGpaColor = (gpa) => {
-    if (!gpa) return { bg: "#f3f4f6", text: "#6b7280" };
-    if (gpa >= 3.6) return { bg: "#dcfce7", text: "#166534" };
-    if (gpa >= 2.8) return { bg: "#dbeafe", text: "#1e40af" };
-    if (gpa >= 2.0) return { bg: "#fef3c7", text: "#92400e" };
-    if (gpa >= 1.6) return { bg: "#fed7aa", text: "#9a3412" };
-    return { bg: "#fee2e2", text: "#991b1b" };
-  };
 
   if (loadingChildren) {
     return (
