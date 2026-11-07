@@ -273,10 +273,17 @@ const updateUser = asyncHandler(async (req, res) => {
       id: userId,
       schoolId: req.user.schoolId,
     },
+    include: { userRoles: { include: { role: true } } },
   });
 
   if (!user) {
     throw ApiError.notFound('User not found');
+  }
+
+  // A school admin can't change or deactivate a super admin's account.
+  const targetIsSuperAdmin = user.userRoles.some((ur) => ur.role.name === 'SUPER_ADMIN');
+  if (targetIsSuperAdmin && userId !== req.user.id && !req.user.roles.includes('SUPER_ADMIN')) {
+    throw ApiError.forbidden('Only super admins can change a super admin account');
   }
 
   // Non-admins can only update their own profile (basic fields)

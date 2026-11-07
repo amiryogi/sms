@@ -202,6 +202,9 @@ const roles = [
   { name: "ACCOUNTANT", description: "Accountant - Manages fee collection and billing" },
   { name: "STUDENT", description: "Student" },
   { name: "PARENT", description: "Parent/Guardian" },
+  // Last, so the ids of the roles above don't change on existing databases.
+  // Everything ADMIN can do, plus managing admins and other super admins.
+  { name: "SUPER_ADMIN", description: "Super Administrator - full access, manages admins" },
 ];
 
 // Role-permission mappings
@@ -355,6 +358,7 @@ async function main() {
 
   // 3. Assign Permissions to Roles
   console.log("🔗 Assigning permissions to roles...");
+  rolePermissions.SUPER_ADMIN = permissions.map((perm) => perm.name);
   for (const [roleName, permissionNames] of Object.entries(rolePermissions)) {
     const role = await prisma.role.findUnique({ where: { name: roleName } });
     if (!role) continue;
@@ -559,6 +563,28 @@ async function main() {
     create: { userId: adminUser.id, roleId: adminRole.id },
   });
   console.log(`   ✓ Admin: admin@svi.edu.np`);
+
+  // Super Admin: everything an admin can do, plus managing admins and super
+  // admins. School admins cannot edit, deactivate or delete this account.
+  const superAdminRole = await prisma.role.findUnique({ where: { name: "SUPER_ADMIN" } });
+  const superAdminUser = await prisma.user.upsert({
+    where: { email_schoolId: { email: "superadmin@svi.edu.np", schoolId: school.id } },
+    update: {},
+    create: {
+      schoolId: school.id,
+      email: "superadmin@svi.edu.np",
+      passwordHash,
+      firstName: "Super",
+      lastName: "Admin",
+      status: "active",
+    },
+  });
+  await prisma.userRole.upsert({
+    where: { userId_roleId: { userId: superAdminUser.id, roleId: superAdminRole.id } },
+    update: {},
+    create: { userId: superAdminUser.id, roleId: superAdminRole.id },
+  });
+  console.log(`   ✓ Super admin: superadmin@svi.edu.np`);
 
   // Create 8 Teachers
   const teachers = [];
@@ -1169,6 +1195,7 @@ async function main() {
   console.log("   ┌─────────────────────────────────────────────────────────────────┐");
   console.log("   │ Role           │ Email                                         │");
   console.log("   ├─────────────────────────────────────────────────────────────────┤");
+  console.log("   │ Super Admin    │ superadmin@svi.edu.np                         │");
   console.log("   │ Admin          │ admin@svi.edu.np                              │");
   console.log("   │ Teachers (8)   │ teacher1@svi.edu.np ... teacher8@svi.edu.np   │");
   console.log("   │ Exam Officer   │ examofficer@svi.edu.np                        │");

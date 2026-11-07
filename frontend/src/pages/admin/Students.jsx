@@ -26,7 +26,12 @@ const resolveAssetUrl = (url) => {
     .replace(/\\/g, "/")}`;
 };
 
-const Students = () => {
+/**
+ * Admin student management. With `readOnly` (exam officers and accountants,
+ * route /staff/students) it is a directory: no add, edit or enroll, and the
+ * details form opens with every field disabled. The backend enforces the same.
+ */
+const Students = ({ readOnly = false }) => {
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
@@ -307,7 +312,19 @@ const Students = () => {
     {
       header: "Actions",
       width: "150px",
-      render: (row) => (
+      render: (row) =>
+        readOnly ? (
+          <div className="action-buttons">
+            <button
+              className="btn-icon"
+              onClick={() => openModal(row)}
+              title="View"
+              aria-label="View student"
+            >
+              <Eye size={16} />
+            </button>
+          </div>
+        ) : (
         <div className="action-buttons">
           <button
             className="btn-icon"
@@ -324,7 +341,7 @@ const Students = () => {
             <UserPlus size={16} />
           </button>
         </div>
-      ),
+        ),
     },
   ];
 
@@ -346,7 +363,11 @@ const Students = () => {
       <div className="page-header">
         <div>
           <h1>Students</h1>
-          <p className="text-muted">Manage student records and enrollments</p>
+          <p className="text-muted">
+            {readOnly
+              ? "Student directory (view only)"
+              : "Manage student records and enrollments"}
+          </p>
         </div>
       </div>
 
@@ -361,9 +382,11 @@ const Students = () => {
           onSearchChange={setSearch}
           emptyMessage="No students found"
           actions={
-            <Button icon={Plus} onClick={() => openModal()}>
-              Add Student
-            </Button>
+            readOnly ? null : (
+              <Button icon={Plus} onClick={() => openModal()}>
+                Add Student
+              </Button>
+            )
           }
         />
       </div>
@@ -372,10 +395,17 @@ const Students = () => {
       <Modal
         isOpen={modalOpen}
         onClose={closeModal}
-        title={editingStudent ? "Edit Student" : "Add Student"}
+        title={
+          readOnly
+            ? "Student Details"
+            : editingStudent
+              ? "Edit Student"
+              : "Add Student"
+        }
         size="lg"
       >
         <form onSubmit={handleSubmit(onSubmit)}>
+          <fieldset disabled={readOnly} className="plain-fieldset">
           <FormRow>
             <Input
               label="First Name"
@@ -524,13 +554,17 @@ const Students = () => {
             </>
           )}
 
+          </fieldset>
+
           <div className="modal-actions">
             <Button type="button" variant="secondary" onClick={closeModal}>
-              Cancel
+              {readOnly ? "Close" : "Cancel"}
             </Button>
-            <Button type="submit" loading={submitting}>
-              {editingStudent ? "Update" : "Create"}
-            </Button>
+            {!readOnly && (
+              <Button type="submit" loading={submitting}>
+                {editingStudent ? "Update" : "Create"}
+              </Button>
+            )}
           </div>
         </form>
       </Modal>

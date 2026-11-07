@@ -143,6 +143,11 @@ const DashboardLayout = () => {
           path: "/teacher/marks",
         },
         {
+          title: "Students",
+          icon: GraduationCap,
+          path: "/staff/students",
+        },
+        {
           title: "Notices",
           icon: Bell,
           path: "/teacher/notices",
@@ -218,6 +223,11 @@ const DashboardLayout = () => {
           title: "Fee Payments",
           icon: Banknote,
           path: "/accountant/fee-payments",
+        },
+        {
+          title: "Students",
+          icon: GraduationCap,
+          path: "/staff/students",
         },
         {
           title: "Notices",

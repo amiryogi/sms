@@ -7,8 +7,8 @@ const { studentRules, updateStudentRules, enrollmentRules, idParamRule, paginati
 
 router.use(authenticate);
 
-// List students (Admin/Teacher only)
-router.get('/', requireRole('ADMIN', 'TEACHER'), paginationRules, validate, studentController.getStudents);
+// List students (Admin, Teacher; Exam Officer and Accountant read-only)
+router.get('/', requireRole('ADMIN', 'TEACHER', 'EXAM_OFFICER', 'ACCOUNTANT'), paginationRules, validate, studentController.getStudents);
 
 // Get single student (Admin/Teacher or Owner/Parent)
 router.get('/:id', [idParamRule], validate, isOwnStudent, studentController.getStudent);
