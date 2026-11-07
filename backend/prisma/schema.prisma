@@ -732,6 +732,9 @@ model Exam {
   createdBy      Int         @map("created_by")
   startDate      DateTime?   @map("start_date") @db.Date
   endDate        DateTime?   @map("end_date") @db.Date
+  /// School days from the academic year start to this exam's end, entered by
+  /// the admin. The "70" in "Attendance 61/70" (utils/reportCardAttendance.js).
+  workingDays    Int?        @map("working_days")
   publishedAt    DateTime?   @map("published_at")
   createdAt      DateTime    @default(now()) @map("created_at")
   updatedAt      DateTime    @updatedAt @map("updated_at")
@@ -846,6 +849,11 @@ model ReportCard {
   /// The grade scale this card was generated with. Null = built-in NEB 8-band
   /// (cards generated before grade scales existed, or a school with none set up).
   gradeScaleId     Int?      @map("grade_scale_id")
+  /// Attendance frozen at generation (utils/reportCardAttendance.js). Null on
+  /// cards generated before attendance was printed.
+  daysPresent      Int?      @map("days_present")
+  daysLate         Int?      @map("days_late")
+  totalWorkingDays Int?      @map("total_working_days")
 
   // Relations
   student      Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)

@@ -5,22 +5,24 @@ between machines and between sessions.
 
 New machine? Start with [SETUP-NEW-MACHINE.md](SETUP-NEW-MACHINE.md).
 
-**Branch:** phases 2 and 3 are on `report-card-config`, not yet merged to
-`main`. Merge (or `git push -u origin report-card-config`) before switching
-machines, or the other machine will not have them.
+**All four phases of [plans/configurable-report-card.md](plans/configurable-report-card.md)
+are done** and on `main`.
 
 ---
 
 ## Do this next
 
-**1. Phase 4 — attendance on the report card.** One decision first (see
-"Decisions waiting on you"): where the *total working days* number comes from.
-
-**2. Optional: hold a printed Performance Report against `marksheetformat1.jpeg`.**
+**1. Optional: hold a printed Performance Report against `marksheetformat1.jpeg`.**
 School Settings → Report Card Layout → "Performance Report" → Save, then print
 from Report Cards. Upload the school logo in School Settings first; the samples
 have it top-left. Set the principal's name there too — it prints above
-"Principal".
+"Principal". To print attendance, tick "Attendance" in the layout and enter
+the exam's working days on the Report Cards page, then Regenerate.
+
+**2. Pick the next piece of work** from "Decisions waiting on you" and "Known
+issues" below — the report-card plan is finished.
+
+Phase 4 (report-card attendance) — see "What is done" for what was verified.
 
 Phase 3 (report-card layout) is **verified** (2026-11-07):
 
@@ -52,17 +54,15 @@ spilled its footer onto a second page; the student/parent print kept the
 on-screen drop shadow. Overlays are now portalled to `<body>` and
 `reportcard/usePrintIsolation.js` hides `#root` while printing.
 
-Attendance prints `— / —` until Phase 4.
-
 **On any new machine: apply the migrations and reseed.** No `GRANT` needed —
 `migrate deploy` uses no shadow database. Stop the backend before
 `prisma generate`, or Windows refuses to replace the engine file (EPERM).
 
 ```
 cd backend
-npx prisma migrate deploy     # grade_scales + report_card_config
+npx prisma migrate deploy     # grade_scales, report_card_config, report_card_attendance
 npx prisma generate
-npm run seed -- --clean       # seeds both grade-scale presets, NEB 8-band as default
+npm run seed -- --clean       # grade-scale presets (NEB default) and first-term attendance
 ```
 
 **Optional: click through Phase 2 yourself.**
@@ -125,6 +125,30 @@ exactly (35 models). `npx prisma migrate status` reports up to date.
 - Two earlier bugs fixed and guarded by tests: grade bands had 0.01-wide gaps
   that printed `NG` for students who had passed everything, and every Bikram
   Sambat date was one day late.
+
+### Report card work (phase 4: attendance) — verified
+Verified 2026-11-07 against the reseeded database: 19 API checks (admin-only
+endpoint, validation, generate freezes 58 present + 2 late of 65 — matching the
+raw attendance rows exactly — late on/off without regenerating, outdated-card
+warning, student sees it once published), the Report Cards working-days box in
+the browser, and a printed Performance Report showing `ATTENDANCE 60/65` on one
+A4 page.
+- Total working days are entered by the admin per exam (`Exam.workingDays`),
+  on the Report Cards page, in any exam status (`PUT /exams/:id/working-days`).
+- Generate counts each student's `present` and `late` days from the academic
+  year start to the exam's last day (one `groupBy` per section) and freezes
+  `daysPresent`, `daysLate` and `totalWorkingDays` on the report card.
+  Migration `20261107180000_report_card_attendance`.
+- Printed present = present + late when the layout's "Late counts as present"
+  is on (default), so that setting works without regenerating.
+- The Report Cards page shows the BS date range being counted and warns when
+  generated cards carry an older working-day number.
+- Cards generated before this print `— / —` until regenerated.
+- `utils/reportCardAttendance.js`, 25 unit tests.
+- The seed now creates attendance for every school day of the first term
+  (Saturday off) and sets that exam's working days, so demo cards print real
+  numbers. Its old "last 5 days" attendance is still created too, for the
+  attendance pages.
 
 ### Report card work (phase 3: layout) — verified
 - `School.reportCardConfig` (JSON; null = the original NEB sheet, so nothing
@@ -192,7 +216,7 @@ exactly (35 models). `npx prisma migrate status` reports up to date.
 | **8 copies of `resolveAssetUrl`** | `utils/assets.js` is now the canonical one; 3 call sites converted. Eight more remain in unrelated pages — left alone to keep the report-card diff focused. |
 | **Which grade scale is SVI's default?** | The seed makes NEB 8-band the default so nothing changes until someone chooses. The sample marksheets say SVI uses the legacy 9-band scale for internal exams. If so, switch it in School Settings. That is one click, and already-generated cards are unaffected until regenerated. |
 | **Does SVI fail anyone on the legacy scale?** | The preset treats every band, including E (below 20%), as passing, with no component pass mark. That matches the samples and the 2072–2077 letter-grade system, but the samples never show a failing student. If SVI does fail students below some mark, set a pass % and untick "Passing" on the bands below it. |
-| **Phase 4: where do "total working days" come from?** | `61/70` on fmt1 needs a total the attendance table can't give: an unmarked day looks the same as a holiday. Suggested: the admin enters working days per exam, and the report card stores days present / working days when generated (like rank and GPA already are). Alternative: count distinct days on which any attendance was marked for the class. |
+| **Attendance window for later terms** | Days present are counted from the academic-year start to the exam's end, so a second-term card is cumulative (it matches fmt1, a first-term sheet). If SVI prints per-term attendance on later terms, add an optional "count from" date per exam. Enter working days for the same window. |
 | **`ClassSubject.passMarks` vs the scale** | `passMarks` (default 40) is only displayed; it has never decided pass/fail. The grade scale's pass % (35 on NEB) does. Left as it is. Either drop `passMarks` from the UI, or derive it from the scale. |
 | **Stored `ExamResult.grade` after a scale change** | Report cards recompute from marks, but the per-subject grade stored at marks entry keeps the old scale's letter until the marks are saved again. `node scripts/audit-exam-grades.js --apply` regrades them on the current default. |
 

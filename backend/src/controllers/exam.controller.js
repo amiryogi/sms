@@ -499,8 +499,32 @@ const deleteExamSubject = asyncHandler(async (req, res) => {
   );
 });
 
+/**
+ * @desc    Set the school days counted for report-card attendance ("61/70")
+ * @route   PUT /api/v1/exams/:id/working-days   body: { workingDays: 70 | null }
+ * @access  Private/Admin
+ * Any exam status: it changes no marks. Report cards pick it up when they are
+ * next generated.
+ */
+const setWorkingDays = asyncHandler(async (req, res) => {
+  const exam = await prisma.exam.findFirst({
+    where: { id: parseInt(req.params.id), schoolId: req.user.schoolId },
+    select: { id: true },
+  });
+  if (!exam) throw ApiError.notFound("Exam not found");
+
+  const updated = await prisma.exam.update({
+    where: { id: exam.id },
+    data: { workingDays: req.body.workingDays },
+    select: { id: true, name: true, workingDays: true },
+  });
+
+  ApiResponse.success(res, updated, "Working days saved");
+});
+
 module.exports = {
   getExams,
+  setWorkingDays,
   getExam,
   createExam,
   updateExam,

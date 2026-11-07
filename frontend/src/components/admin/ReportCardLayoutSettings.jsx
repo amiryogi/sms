@@ -63,7 +63,12 @@ const SELECTS = {
 };
 
 const CHECKBOXES = [
-  ["showAttendance", "Attendance", "Prints — / — until attendance totals are added."],
+  [
+    "showAttendance",
+    "Attendance",
+    "Days present / working days. Set working days per exam on the Report Cards page.",
+  ],
+  ["countLateAsPresent", "Late counts as present"],
   ["showPercentage", "Percentage"],
   ["showRank", "Class rank"],
   ["showResult", "Pass / fail result"],

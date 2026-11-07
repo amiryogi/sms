@@ -67,9 +67,9 @@ Demo logins (after seed, password `password123`):
 `admin@svi.edu.np`, `admin@demo-school.edu.np`, `teacher@demo-school.edu.np`,
 `student@demo-school.edu.np`, `parent@demo-school.edu.np`. School code `DEMO001`.
 
-**Tests:** `npm test` (Jest) runs 321 unit tests over the pure utilities in
+**Tests:** `npm test` (Jest) runs 346 unit tests over the pure utilities in
 `backend/src/utils/__tests__/` — grade calculation, grade scales, report-card
-layouts, BS date conversion, pagination and the response helpers — plus the grade-scale service
+layouts and attendance, BS date conversion, pagination and the response helpers — plus the grade-scale service
 in `backend/src/services/__tests__/` (Prisma mocked). They need no database, so they run
 anywhere. A handful are marked `test.failing`: those pin **known, unfixed** bugs
 and flip the suite red the moment someone fixes the source without removing the
@@ -203,8 +203,14 @@ in every report-card payload as `layout`. Two templates: `nebGradeSheet`
 layout change goes through `normalizeLayout`/`validateLayout`; the frontend only
 renders the flags. Plan: `docs/plans/configurable-report-card.md`.
 
+**Report-card attendance** ("61/70"): the admin sets `Exam.workingDays` on the
+Report Cards page (`PUT /exams/:id/working-days`, any exam status); Generate
+counts present (+ late, per the layout's `countLateAsPresent`) days from the
+academic-year start to the exam end and freezes them on `ReportCard`
+(`daysPresent`, `daysLate`, `totalWorkingDays`). Rules in
+`utils/reportCardAttendance.js`.
+
 **Partial or rough:**
-- Report-card attendance prints `— / —`: attendance totals are plan phase 4.
 - No admin-facing attendance report page (the API exists).
 - Dashboards are stat cards only; no charts or trends.
 

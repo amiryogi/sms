@@ -103,8 +103,8 @@ const buildSample = (school, scale) => {
       totalSubjects: overall.totalSubjects,
       passedSubjects: overall.passedSubjects,
       failedSubjects: overall.failedSubjects,
-      attendancePresent: null,
-      attendanceTotal: null,
+      attendancePresent: 61,
+      attendanceTotal: 70,
     },
     remarks: {
       teacher: "Works hard; needs more practice in Social Studies.",

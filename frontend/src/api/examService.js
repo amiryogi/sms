@@ -34,6 +34,15 @@ export const examService = {
     return response.data;
   },
 
+  // Working days for report-card attendance ("61/70"); null clears it.
+  // Allowed in any exam status.
+  setWorkingDays: async (id, workingDays) => {
+    const response = await apiClient.put(`/exams/${id}/working-days`, {
+      workingDays,
+    });
+    return response.data;
+  },
+
   // Publish exam results
   publishExam: async (id) => {
     const response = await apiClient.put(`/exams/${id}/publish`);

@@ -16,6 +16,7 @@ import {
 import { Select, Button } from "../../components/common/FormElements";
 import NepalReportCard from "../../components/common/NepalReportCard";
 import BulkReportCardPrint from "../../components/common/BulkReportCardPrint";
+import WorkingDaysEditor from "../../components/admin/WorkingDaysEditor";
 import { reportCardService } from "../../api/reportCardService";
 import { examService } from "../../api/examService";
 import { academicService } from "../../api/academicService";
@@ -457,6 +458,11 @@ const ReportCards = () => {
             <strong>{summary.examName}</strong> | {summary.examType} |{" "}
             {summary.academicYear}
           </div>
+
+          <WorkingDaysEditor
+            attendance={summary.attendance}
+            onSaved={fetchReportCards}
+          />
         </div>
       )}
 
