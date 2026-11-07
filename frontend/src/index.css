@@ -2074,3 +2074,123 @@ body {
 .grade-scale-spacer {
   flex: 1;
 }
+
+/* ---------- School Settings -> Report Card Layout ---------- */
+/* Shares .grade-scales styles (messages, small buttons, field errors). */
+
+.rc-layout textarea.input-error {
+  border-color: var(--danger);
+  background: #fef2f2;
+}
+
+.rc-layout-status {
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.rc-layout-body {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) auto;
+  gap: 1.5rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  align-items: start;
+}
+
+.rc-layout-form textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.rc-layout-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0 1rem;
+}
+
+.rc-layout-checks {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem 0.75rem;
+  margin: 0 0 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.375rem 1rem;
+}
+
+.rc-layout-checks legend {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0 0.25rem;
+}
+
+.rc-layout-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.rc-layout-check input {
+  margin-top: 0.2rem;
+}
+
+.rc-layout-signatures {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-bottom: 0.5rem;
+}
+
+.rc-layout-signature {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.rc-layout-signature input {
+  flex: 1;
+  min-width: 0;
+}
+
+.rc-layout-signature .field-error {
+  flex-basis: 100%;
+}
+
+.rc-layout-preview-label {
+  font-size: 0.75rem;
+  margin-bottom: 0.375rem;
+}
+
+/* The real report-card component at half size. */
+.rc-layout-preview {
+  zoom: 0.5;
+  border: 1px solid var(--border);
+  background: #e2e8f0;
+  padding: 16px;
+}
+
+/* NepalReportCard is a full-screen overlay by default; inline it here. */
+.rc-layout-preview .report-card-overlay {
+  position: static;
+  background: none;
+  padding: 0;
+  overflow: visible;
+  z-index: auto;
+}
+
+.rc-layout-preview .report-card-container {
+  display: block;
+}
+
+@media (max-width: 1100px) {
+  .rc-layout-body {
+    grid-template-columns: 1fr;
+  }
+  .rc-layout-preview-wrap {
+    overflow-x: auto;
+  }
+}

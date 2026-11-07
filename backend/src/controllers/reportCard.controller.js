@@ -8,24 +8,16 @@ const {
 } = require("../utils");
 const { toGradeReference } = require("../utils/gradeScale");
 const {
+  SCHOOL_REPORT_SELECT,
+  normalizeLayout,
+  classWithNumeral,
+  issueDateBS,
+  schoolForReport,
+} = require("../utils/reportCardLayout");
+const {
   getDefaultScale,
   getScaleResolver,
 } = require("../services/gradeScale.service");
-
-// School fields every report-card response prints in its header.
-const SCHOOL_BRANDING_SELECT = {
-  id: true,
-  name: true,
-  address: true,
-  phone: true,
-  email: true,
-  logoUrl: true,
-  tagline: true,
-  website: true,
-  landlineNumber: true,
-  principalName: true,
-  establishedYear: true,
-};
 
 /**
  * Build detailed subject results with Nepal-style grading
@@ -475,7 +467,7 @@ const getReportCard = asyncHandler(async (req, res) => {
   // used to fetch six and print `undefined` for tagline, website and the rest.
   const school = await prisma.school.findUnique({
     where: { id: req.user.schoolId },
-    select: SCHOOL_BRANDING_SELECT,
+    select: SCHOOL_REPORT_SELECT,
   });
 
   // The scale this card was generated with
@@ -532,18 +524,7 @@ const getReportCard = asyncHandler(async (req, res) => {
   // Build Nepal-style report card response
   const response = {
     // School Information (full branding for print)
-    school: {
-      name: school.name,
-      address: school.address,
-      phone: school.phone,
-      email: school.email,
-      logoUrl: school.logoUrl,
-      tagline: school.tagline,
-      website: school.website,
-      landlineNumber: school.landlineNumber,
-      principalName: school.principalName,
-      establishedYear: school.establishedYear,
-    },
+    school: schoolForReport(school),
     // Examination Information
     examination: {
       name: reportCard.exam.name,
@@ -565,6 +546,9 @@ const getReportCard = asyncHandler(async (req, res) => {
       class: reportCard.studentClass.class.name,
       section: reportCard.studentClass.section.name,
       gradeLevel: reportCard.studentClass.class.gradeLevel,
+      classWithNumeral: classWithNumeral(
+        reportCard.studentClass.class.gradeLevel,
+      ),
       admissionNumber: reportCard.student.admissionNumber,
       dateOfBirth: reportCard.student.dateOfBirth,
       dobBS: dobBS?.formatted || null,
@@ -600,10 +584,13 @@ const getReportCard = asyncHandler(async (req, res) => {
       reportCardId: reportCard.id,
       isPublished: reportCard.isPublished,
       generatedAt: reportCard.generatedAt,
+      issueDateBS: issueDateBS(reportCard.generatedAt),
       gradeScale: scale.name,
     },
     // The bands of the scale this card was graded on
     gradeReference: toGradeReference(scale),
+    // How this school prints its report cards (School Settings)
+    layout: normalizeLayout(school.reportCardConfig),
   };
 
   ApiResponse.success(res, response);
@@ -756,11 +743,12 @@ const getBulkReportCards = asyncHandler(async (req, res) => {
   // Get school info
   const school = await prisma.school.findUnique({
     where: { id: req.user.schoolId },
-    select: SCHOOL_BRANDING_SELECT,
+    select: SCHOOL_REPORT_SELECT,
   });
 
   // Each card prints on the scale it was generated with
   const scales = await getScaleResolver(req.user.schoolId);
+  const layout = normalizeLayout(school.reportCardConfig);
 
   // Get all report cards for this class/section
   const reportCards = await prisma.reportCard.findMany({
@@ -850,18 +838,7 @@ const getBulkReportCards = asyncHandler(async (req, res) => {
         : null;
 
       return {
-        school: {
-          name: school.name,
-          address: school.address,
-          phone: school.phone,
-          email: school.email,
-          logoUrl: school.logoUrl,
-          tagline: school.tagline,
-          website: school.website,
-          landlineNumber: school.landlineNumber,
-          principalName: school.principalName,
-          establishedYear: school.establishedYear,
-        },
+        school: schoolForReport(school),
         examination: {
           name: exam.name,
           type: exam.examType,
@@ -883,6 +860,9 @@ const getBulkReportCards = asyncHandler(async (req, res) => {
           class: reportCard.studentClass.class.name,
           section: reportCard.studentClass.section.name,
           gradeLevel: reportCard.studentClass.class.gradeLevel,
+          classWithNumeral: classWithNumeral(
+            reportCard.studentClass.class.gradeLevel,
+          ),
           admissionNumber: reportCard.student.admissionNumber,
           dateOfBirth: reportCard.student.dateOfBirth,
           dobBS: dobBS?.formatted || null,
@@ -914,9 +894,11 @@ const getBulkReportCards = asyncHandler(async (req, res) => {
           reportCardId: reportCard.id,
           isPublished: reportCard.isPublished,
           generatedAt: reportCard.generatedAt,
+          issueDateBS: issueDateBS(reportCard.generatedAt),
           gradeScale: scale.name,
         },
         gradeReference: toGradeReference(scale),
+        layout,
       };
     }),
   );

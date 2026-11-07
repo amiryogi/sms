@@ -76,7 +76,7 @@ Then edit `backend/.env`:
 ```bash
 cd backend
 npx prisma generate
-npx prisma migrate deploy    # applies 0_init + grade_scales: 37 tables
+npx prisma migrate deploy    # applies 0_init, grade_scales, report_card_config: 37 tables
 npm run seed                 # demo school, roles, classes 1-10, students, exams
 ```
 
@@ -131,7 +131,7 @@ Demo logins, all with password `password123`:
 ## 8. Check it works
 
 ```bash
-cd backend && npm test          # 289 unit tests, no database needed
+cd backend && npm test          # 321 unit tests, no database needed
 cd backend && npm run lint
 cd frontend && npm run build
 ```

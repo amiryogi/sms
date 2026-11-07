@@ -185,6 +185,15 @@ following its existing `fieldErrors` pattern.
 
 ### Phase 3 — Layout configuration
 
+> **Status (2026-11-07): done and verified.** See `docs/STATUS.md`. Deviations
+> from the sketch below: a `template` key picks between `nebGradeSheet` and a
+> new `performanceReport` sheet (the SVI layout is a different table, not a set
+> of switches on the NEB one); the preset is `performanceReport`, not
+> `sviPerformanceReport`; the layout reaches the frontend inside each
+> report-card payload (`layout`) rather than the login payload, so it is never
+> stale; `showSeal` / `showWatermark` use the school logo (no `watermarkUrl`);
+> `countLateAsPresent` moves to Phase 4.
+
 One JSON column rather than twenty booleans:
 `School.reportCardConfig Json? @map("report_card_config")`.
 
