@@ -26,6 +26,7 @@ import {
   Youtube,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import PermissionNotice from "../components/common/PermissionNotice";
 
 const resolveAssetUrl = (url) => {
   if (!url) return "";
@@ -38,6 +39,14 @@ const resolveAssetUrl = (url) => {
     .replace(/^\//, "")
     .replace(/\\/g, "/")}`;
 };
+
+// "EXAM_OFFICER" -> "Exam Officer"
+const formatRoleName = (role) =>
+  String(role || "")
+    .toLowerCase()
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 
 const DashboardLayout = () => {
   const { user, logout, hasRole } = useAuth();
@@ -71,6 +80,7 @@ const DashboardLayout = () => {
           path: "/admin/class-subjects",
         },
         { title: "Exams", icon: ClipboardList, path: "/admin/exams" },
+        { title: "Marks Entry", icon: BookOpenCheck, path: "/teacher/marks" },
         { title: "Report Cards", icon: Award, path: "/admin/report-cards" },
         {
           title: "Teacher Assignment",
@@ -217,7 +227,13 @@ const DashboardLayout = () => {
       );
     }
 
-    return items;
+    // A user holding several roles can get the same link twice; keep the first.
+    const seen = new Set();
+    return items.filter((item) => {
+      if (seen.has(item.path)) return false;
+      seen.add(item.path);
+      return true;
+    });
   };
 
   const navItems = getNavItems();
@@ -289,7 +305,9 @@ const DashboardLayout = () => {
                 <span className="user-name">
                   {user?.firstName} {user?.lastName}
                 </span>
-                <span className="user-role">{user?.roles?.[0]}</span>
+                <span className="user-role">
+                  {(user?.roles || []).map(formatRoleName).join(", ")}
+                </span>
               </div>
             )}
           </div>
@@ -299,6 +317,8 @@ const DashboardLayout = () => {
           </button>
         </div>
       </motion.aside>
+
+      <PermissionNotice />
 
       {/* Main Content */}
       <main className="main-content">

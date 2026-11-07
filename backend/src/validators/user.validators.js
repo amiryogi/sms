@@ -4,6 +4,14 @@ const { body, query } = require('express-validator');
  * User validation rules
  */
 
+// Roles an admin may grant through the generic user endpoints. SUPER_ADMIN is
+// never grantable by a school admin; STUDENT and PARENT need a profile row and
+// are created through POST /students and POST /admin/parents instead.
+const ASSIGNABLE_ROLES = ['ADMIN', 'TEACHER', 'EXAM_OFFICER', 'ACCOUNTANT'];
+
+// Every role that can be filtered on when listing users.
+const ALL_ROLES = ['SUPER_ADMIN', 'ADMIN', 'TEACHER', 'EXAM_OFFICER', 'ACCOUNTANT', 'STUDENT', 'PARENT'];
+
 // Create user validation
 const createUserRules = [
   body('email')
@@ -36,12 +44,13 @@ const createUserRules = [
   body('roleIds.*')
     .optional()
     .isInt({ min: 1 })
-    .withMessage('Role ID must be a valid positive integer'),
+    .withMessage('Role ID must be a valid positive integer')
+    .toInt(),
   body('role')
     .optional()
     .isString()
-    .isIn(['SUPER_ADMIN', 'ADMIN', 'TEACHER', 'STUDENT', 'PARENT'])
-    .withMessage('Invalid role'),
+    .isIn(ASSIGNABLE_ROLES)
+    .withMessage(`Role must be one of ${ASSIGNABLE_ROLES.join(', ')}`),
   body('status')
     .optional()
     .isIn(['active', 'inactive', 'suspended'])
@@ -86,7 +95,8 @@ const updateRolesRules = [
     .withMessage('At least one role is required'),
   body('roleIds.*')
     .isInt({ min: 1 })
-    .withMessage('Role ID must be a valid positive integer'),
+    .withMessage('Role ID must be a valid positive integer')
+    .toInt(),
 ];
 
 // List users query validation
@@ -106,7 +116,7 @@ const listUsersRules = [
   query('role')
     .optional()
     .isString()
-    .isIn(['SUPER_ADMIN', 'ADMIN', 'TEACHER', 'STUDENT', 'PARENT'])
+    .isIn(ALL_ROLES)
     .withMessage('Invalid role filter'),
   query('status')
     .optional()

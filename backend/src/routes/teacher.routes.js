@@ -10,7 +10,6 @@ const {
   validate,
 } = require("../middleware");
 const {
-  teacherRules,
   updateTeacherRules,
   idParamRule,
   paginationRules,

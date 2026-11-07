@@ -12,6 +12,15 @@ const canBypassTeacherCheck = (user) => {
 };
 
 /**
+ * Helper: teachers only ever see PUBLISHED or LOCKED exams (never DRAFT).
+ */
+const assertExamVisibleToTeacher = (exam) => {
+  if (!["PUBLISHED", "LOCKED"].includes(exam.status)) {
+    throw ApiError.forbidden("This exam is not available yet");
+  }
+};
+
+/**
  * @desc    Get exams available for marks entry (PUBLISHED status only)
  * @route   GET /api/v1/exam-results/exams
  * @access  Private/Teacher, EXAM_OFFICER, Admin
@@ -326,14 +335,20 @@ const getResultsByExamSubject = asyncHandler(async (req, res) => {
     throw ApiError.forbidden("Exam subject does not belong to your school");
   }
 
-  // TEACHER: Verify teacher is assigned to this subject
-  // EXAM_OFFICER/ADMIN: Skip assignment check
+  // TEACHER: must name a section, the exam must be visible to teachers
+  // (PUBLISHED or LOCKED) and they must be assigned to this subject/section.
+  // EXAM_OFFICER/ADMIN: Skip assignment check; sectionId optional.
   if (!isExamOfficerOrAdmin) {
+    if (!sectionId) {
+      throw ApiError.badRequest("sectionId is required");
+    }
+    assertExamVisibleToTeacher(examSubject.exam);
+
     const teacherAssignment = await prisma.teacherSubject.findFirst({
       where: {
         userId,
         classSubjectId: examSubject.classSubjectId,
-        sectionId: sectionId ? parseInt(sectionId) : undefined,
+        sectionId: parseInt(sectionId),
       },
     });
 
@@ -341,6 +356,8 @@ const getResultsByExamSubject = asyncHandler(async (req, res) => {
       throw ApiError.forbidden("You are not assigned to this subject/section");
     }
   }
+
+  const sectionFilter = sectionId ? { sectionId: parseInt(sectionId) } : {};
 
   // Get existing results with student info
   const results = await prisma.examResult.findMany({
@@ -351,7 +368,7 @@ const getResultsByExamSubject = asyncHandler(async (req, res) => {
         studentClasses: {
           some: {
             classId: examSubject.classSubject.classId,
-            sectionId: parseInt(sectionId),
+            ...sectionFilter,
             academicYearId: examSubject.exam.academicYearId,
             status: "active",
             schoolId: req.user.schoolId, // Additional school isolation
@@ -369,9 +386,10 @@ const getResultsByExamSubject = asyncHandler(async (req, res) => {
           studentClasses: {
             where: {
               classId: examSubject.classSubject.classId,
-              sectionId: parseInt(sectionId),
+              ...sectionFilter,
               academicYearId: examSubject.exam.academicYearId,
               status: "active",
+              schoolId: req.user.schoolId,
             },
             select: {
               id: true,
@@ -621,9 +639,11 @@ const getStudentsForMarksEntry = asyncHandler(async (req, res) => {
     throw ApiError.forbidden("Exam subject does not belong to your school");
   }
 
-  // TEACHER: Verify teacher assignment
+  // TEACHER: exam must be PUBLISHED or LOCKED, and teacher assigned
   // EXAM_OFFICER/ADMIN: Skip assignment check
   if (!isExamOfficerOrAdmin) {
+    assertExamVisibleToTeacher(examSubject.exam);
+
     const teacherAssignment = await prisma.teacherSubject.findFirst({
       where: {
         userId,

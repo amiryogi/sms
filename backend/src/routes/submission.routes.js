@@ -1,11 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const submissionController = require('../controllers/submission.controller');
-const { authenticate, isStudent, isTeacher, validate } = require('../middleware');
+const { authenticate, isStudent, requireRole, validate } = require('../middleware');
 const { upload } = require('../middleware/upload.middleware');
 const { submissionRules, gradingRules, idParamRule } = require('../validators');
 
 router.use(authenticate);
+
+// submission.controller.js lets ADMIN view/grade any submission in the school,
+// so the guard must not turn admins away.
+const canReviewSubmissions = requireRole('TEACHER', 'ADMIN');
 
 // Submit assignment (Student only)
 router.post('/', 
@@ -20,7 +24,7 @@ const { param } = require('express-validator');
 
 // Get submissions for an assignment (Teacher/Admin only)
 router.get('/assignment/:assignmentId', 
-  isTeacher, 
+  canReviewSubmissions,
   [
     param('assignmentId')
       .isInt({ min: 1 })
@@ -32,7 +36,7 @@ router.get('/assignment/:assignmentId',
 
 // Grade a submission (Teacher/Admin only)
 router.put('/:id/grade', 
-  isTeacher, 
+  canReviewSubmissions,
   [idParamRule], 
   validate, 
   gradingRules, 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   LogIn,
@@ -30,14 +30,15 @@ const resolveAssetUrl = (url) => {
 const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const [searchParams] = useSearchParams();
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [schoolInfo, setSchoolInfo] = useState(null);
   const [loadingSchool, setLoadingSchool] = useState(false);
 
-  const from = location.state?.from?.pathname || "/dashboard";
+  // After login always land on /dashboard, which redirects by role. Returning
+  // to the pre-login `from` page could send a user to another role's page.
+  const POST_LOGIN_PATH = "/dashboard";
 
   // Get school code from URL params or environment variable
   // Usage: /login?school=DEMO001 or set VITE_DEFAULT_SCHOOL_CODE in .env
@@ -76,7 +77,7 @@ const Login = () => {
     setError("");
     try {
       await login(data);
-      navigate(from, { replace: true });
+      navigate(POST_LOGIN_PATH, { replace: true });
     } catch (err) {
       setError(
         err.response?.data?.message ||

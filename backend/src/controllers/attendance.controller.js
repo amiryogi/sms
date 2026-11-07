@@ -1,6 +1,15 @@
 const prisma = require("../config/database");
 const { ApiError, ApiResponse, asyncHandler } = require("../utils");
 
+const isAdminUser = (user) =>
+  user.roles.includes("ADMIN") || user.roles.includes("SUPER_ADMIN");
+
+const getCurrentAcademicYear = (schoolId) =>
+  prisma.academicYear.findFirst({
+    where: { schoolId, isCurrent: true },
+    select: { id: true },
+  });
+
 /**
  * @desc    Get attendance for a class-section on a specific date
  * @route   GET /api/v1/attendance
@@ -134,15 +143,18 @@ const markAttendance = asyncHandler(async (req, res) => {
     );
   }
 
-  // Defense-in-depth: Verify teacher is assigned to this class/section (if teacher role)
-  if (
-    req.user.roles.includes("TEACHER") &&
-    !req.user.roles.includes("ADMIN") &&
-    !req.user.roles.includes("SUPER_ADMIN")
-  ) {
+  // Attendance is always marked against the current academic year's enrollment
+  const currentYear = await getCurrentAcademicYear(req.user.schoolId);
+  if (!currentYear) {
+    throw ApiError.badRequest("No current academic year is set for your school");
+  }
+
+  // Defense-in-depth: Verify teacher is assigned to this class/section this year (if teacher role)
+  if (req.user.roles.includes("TEACHER") && !isAdminUser(req.user)) {
     const teacherAssignment = await prisma.teacherSubject.findFirst({
       where: {
         userId: req.user.id,
+        academicYearId: currentYear.id,
         sectionId: parseInt(sectionId),
         classSubject: {
           classId: parseInt(classId),
@@ -172,6 +184,7 @@ const markAttendance = asyncHandler(async (req, res) => {
         studentId: parseInt(studentId),
         classId: parseInt(classId),
         sectionId: parseInt(sectionId),
+        academicYearId: currentYear.id,
         student: {
           user: {
             schoolId: req.user.schoolId,
@@ -208,10 +221,12 @@ const markAttendance = asyncHandler(async (req, res) => {
           remarks: remarks || null,
           markedBy: req.user.id,
           studentClassId: studentClass.id,
+          schoolId: req.user.schoolId,
         },
         create: {
           studentId: parseInt(studentId),
           studentClassId: studentClass.id,
+          schoolId: req.user.schoolId,
           attendanceDate,
           status,
           remarks: remarks || null,
@@ -249,6 +264,57 @@ const getStudentAttendanceSummary = asyncHandler(async (req, res) => {
     throw ApiError.notFound(
       "Student not found or does not belong to your school"
     );
+  }
+
+  // Teachers: canAccessAttendance only checks the classId/sectionId in the query,
+  // not that :studentId is in that class. Require that the student is actively
+  // enrolled this year in a class+section the teacher is assigned to this year.
+  // A teacher who is also this student (or a linked parent) keeps that access.
+  if (req.user.roles.includes("TEACHER") && !isAdminUser(req.user)) {
+    const isSelf =
+      req.user.roles.includes("STUDENT") && req.user.studentId === studentId;
+    const isLinkedParent =
+      req.user.roles.includes("PARENT") &&
+      req.user.parentId &&
+      (await prisma.studentParent.findFirst({
+        where: { parentId: req.user.parentId, studentId },
+        select: { id: true },
+      }));
+
+    if (!isSelf && !isLinkedParent) {
+      const currentYear = await getCurrentAcademicYear(req.user.schoolId);
+      const enrollment = currentYear
+        ? await prisma.studentClass.findFirst({
+            where: {
+              studentId,
+              academicYearId: currentYear.id,
+              status: "active",
+            },
+            select: { classId: true, sectionId: true },
+          })
+        : null;
+
+      const teachesStudent =
+        enrollment &&
+        (await prisma.teacherSubject.findFirst({
+          where: {
+            userId: req.user.id,
+            academicYearId: currentYear.id,
+            sectionId: enrollment.sectionId,
+            classSubject: {
+              classId: enrollment.classId,
+              class: { schoolId: req.user.schoolId },
+            },
+          },
+          select: { id: true },
+        }));
+
+      if (!teachesStudent) {
+        throw ApiError.forbidden(
+          "You are not assigned to this student's class/section"
+        );
+      }
+    }
   }
 
   const where = {

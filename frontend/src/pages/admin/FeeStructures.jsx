@@ -6,6 +6,7 @@ import Modal from "../../components/common/Modal";
 import { Input, Select, Button } from "../../components/common/FormElements";
 import { feeService } from "../../api/feeService";
 import { academicService } from "../../api/academicService";
+import RoleGuard from "../../components/auth/RoleGuard";
 
 const FeeStructures = () => {
   const [feeStructures, setFeeStructures] = useState([]);
@@ -198,13 +199,16 @@ const FeeStructures = () => {
           >
             <Edit2 size={16} />
           </button>
-          <button
-            className="btn-icon btn-danger"
-            onClick={() => handleDelete(row.id)}
-            title="Delete"
-          >
-            <Trash2 size={16} />
-          </button>
+          {/* Delete is admin-only on the backend; accountants never see it. */}
+          <RoleGuard roles={["ADMIN"]}>
+            <button
+              className="btn-icon btn-danger"
+              onClick={() => handleDelete(row.id)}
+              title="Delete"
+            >
+              <Trash2 size={16} />
+            </button>
+          </RoleGuard>
         </div>
       ),
     },

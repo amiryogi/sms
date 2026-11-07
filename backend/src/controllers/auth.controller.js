@@ -6,6 +6,10 @@ const config = require("../config");
 const prisma = require("../config/database");
 const { ApiError, ApiResponse, asyncHandler } = require("../utils");
 
+// A revoked refresh token presented again within this window of its rotation
+// is treated as a benign concurrent refresh (no session-wide revocation).
+const REFRESH_REUSE_GRACE_MS = 10 * 1000;
+
 const hashRefreshToken = (token) =>
   crypto.createHash("sha256").update(token).digest("hex");
 
@@ -169,6 +173,20 @@ const login = asyncHandler(async (req, res) => {
     );
   }
 
+  // Check the school is active
+  if (!user.school || !user.school.isActive) {
+    throw ApiError.forbidden(
+      "Your school account is not active. Please contact administrator.",
+    );
+  }
+
+  // A user with no role can do nothing; `authenticate` would reject every call
+  if (user.userRoles.length === 0) {
+    throw ApiError.forbidden(
+      "Your account has no role assigned. Please contact administrator.",
+    );
+  }
+
   // Generate tokens
   const { accessToken, refreshToken } = generateTokens(user.id);
 
@@ -253,27 +271,24 @@ const login = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Register new user (Admin creates users)
+ * @desc    Register a new staff/admin user in the caller's school
  * @route   POST /api/v1/auth/register
- * @access  Public (for initial setup) / Admin only later
+ * @access  Private/Admin (route: authenticate + isAdmin)
+ *
+ * The account is created in req.user.schoolId; any client schoolCode is
+ * ignored. No tokens are issued — the new user logs in themselves.
+ * STUDENT / PARENT are rejected by the route validator: those need a profile
+ * row and have their own creation flows.
  */
 const register = asyncHandler(async (req, res) => {
-  const { email, password, firstName, lastName, phone, schoolCode } = req.body;
-
-  // Find school by code
-  const school = await prisma.school.findUnique({
-    where: { code: schoolCode },
-  });
-
-  if (!school) {
-    throw ApiError.badRequest("Invalid school code");
-  }
+  const { email, password, firstName, lastName, phone, role } = req.body;
+  const schoolId = req.user.schoolId;
 
   // Check if email already exists for this school
   const existingUser = await prisma.user.findFirst({
     where: {
       email,
-      schoolId: school.id,
+      schoolId,
     },
   });
 
@@ -281,60 +296,30 @@ const register = asyncHandler(async (req, res) => {
     throw ApiError.conflict("Email already registered for this school");
   }
 
+  const roleRecord = await prisma.role.findUnique({
+    where: { name: role },
+  });
+
+  if (!roleRecord) {
+    throw ApiError.badRequest(`Role '${role}' not found`);
+  }
+
   // Hash password
   const passwordHash = await bcrypt.hash(password, 10);
 
-  // Create user
+  // Create user and role in one write
   const user = await prisma.user.create({
     data: {
-      schoolId: school.id,
+      schoolId,
       email,
       passwordHash,
       firstName,
       lastName,
       phone,
       status: "active",
-    },
-  });
-
-  // For initial setup, check if this is the first user (make them admin)
-  const userCount = await prisma.user.count({
-    where: { schoolId: school.id },
-  });
-
-  if (userCount === 1) {
-    // First user becomes admin
-    const adminRole = await prisma.role.findUnique({
-      where: { name: "ADMIN" },
-    });
-
-    if (adminRole) {
-      await prisma.userRole.create({
-        data: {
-          userId: user.id,
-          roleId: adminRole.id,
-        },
-      });
-    }
-  }
-
-  // Generate tokens
-  const { accessToken, refreshToken } = generateTokens(user.id);
-
-  // Store refresh token (hashed) with metadata
-  const expiresAt = new Date(
-    Date.now() + parseExpiresIn(config.jwt.refreshExpiresIn),
-  );
-  const hashedToken = hashRefreshToken(refreshToken);
-  const { userAgent, ipAddress } = extractTokenMetadata(req);
-
-  await prisma.refreshToken.create({
-    data: {
-      userId: user.id,
-      token: hashedToken,
-      expiresAt,
-      userAgent,
-      ipAddress,
+      userRoles: {
+        create: [{ roleId: roleRecord.id }],
+      },
     },
   });
 
@@ -346,15 +331,11 @@ const register = asyncHandler(async (req, res) => {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        school: {
-          id: school.id,
-          name: school.name,
-          code: school.code,
-          logoUrl: school.logoUrl,
-        },
+        phone: user.phone,
+        status: user.status,
+        roles: [roleRecord.name],
+        schoolId,
       },
-      accessToken,
-      refreshToken,
     },
     "Registration successful",
   );
@@ -379,18 +360,55 @@ const refreshToken = asyncHandler(async (req, res) => {
   const hashedToken = hashRefreshToken(token);
   const now = new Date();
 
-  // Check if token exists in database and is not revoked
   const storedToken = await prisma.refreshToken.findFirst({
     where: {
       token: hashedToken,
       userId: decoded.userId,
-      expiresAt: { gt: now },
-      revokedAt: null,
     },
   });
 
-  if (!storedToken) {
+  if (!storedToken || storedToken.expiresAt <= now) {
     throw ApiError.unauthorized("Invalid or expired refresh token");
+  }
+
+  if (storedToken.revokedAt) {
+    // A rotated token presented again. Within a short grace window this is
+    // almost always the frontend firing parallel refreshes with the same
+    // token; outside it, treat it as theft and kill every session the user has.
+    const sinceRevokedMs = now.getTime() - new Date(storedToken.revokedAt).getTime();
+    const isConcurrentRotation =
+      storedToken.replacedByTokenId && sinceRevokedMs < REFRESH_REUSE_GRACE_MS;
+
+    if (!isConcurrentRotation) {
+      await prisma.refreshToken.updateMany({
+        where: { userId: decoded.userId, revokedAt: null },
+        data: { revokedAt: now },
+      });
+    }
+    throw ApiError.unauthorized("Invalid or expired refresh token");
+  }
+
+  // Refuse to refresh for an account or school that has been deactivated
+  const user = await prisma.user.findUnique({
+    where: { id: decoded.userId },
+    select: {
+      status: true,
+      school: { select: { isActive: true } },
+      _count: { select: { userRoles: true } },
+    },
+  });
+
+  if (
+    !user ||
+    user.status !== "active" ||
+    !user.school?.isActive ||
+    user._count.userRoles === 0
+  ) {
+    await prisma.refreshToken.updateMany({
+      where: { userId: decoded.userId, revokedAt: null },
+      data: { revokedAt: now },
+    });
+    throw ApiError.unauthorized("Account is not active");
   }
 
   // Generate new tokens
@@ -415,13 +433,19 @@ const refreshToken = asyncHandler(async (req, res) => {
       },
     });
 
-    await tx.refreshToken.update({
-      where: { id: storedToken.id },
+    // Only revoke if still unrevoked, so two parallel refreshes with the same
+    // token cannot both succeed; the loser rolls back its new token.
+    const revoked = await tx.refreshToken.updateMany({
+      where: { id: storedToken.id, revokedAt: null },
       data: {
         revokedAt: now,
         replacedByTokenId: created.id,
       },
     });
+
+    if (revoked.count !== 1) {
+      throw ApiError.unauthorized("Invalid or expired refresh token");
+    }
   });
 
   ApiResponse.success(

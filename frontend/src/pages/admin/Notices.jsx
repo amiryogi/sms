@@ -51,12 +51,24 @@ const STATUSES = [
   { value: "ARCHIVED", label: "Archived" },
 ];
 
-const AVAILABLE_ROLES = [
-  { id: 2, name: "ADMIN", label: "Administrators" },
-  { id: 3, name: "TEACHER", label: "Teachers" },
-  { id: 4, name: "STUDENT", label: "Students" },
-  { id: 5, name: "PARENT", label: "Parents" },
-];
+// Friendly labels keyed by role NAME. Role ids differ between databases, so
+// the ids always come from GET /users/roles; never hardcode them here.
+const ROLE_LABELS = {
+  SUPER_ADMIN: "Super Administrators",
+  ADMIN: "Administrators",
+  TEACHER: "Teachers",
+  EXAM_OFFICER: "Exam Officers",
+  ACCOUNTANT: "Accountants",
+  STUDENT: "Students",
+  PARENT: "Parents",
+};
+
+const roleLabel = (name) =>
+  ROLE_LABELS[name] ||
+  String(name || "")
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 
 // =============================================================================
 // HELPER COMPONENTS
@@ -118,7 +130,7 @@ const TargetBadge = ({ targetType, roleTargets, classTargets }) => {
 };
 
 // Multi-select for roles
-const RoleSelector = ({ value = [], onChange }) => {
+const RoleSelector = ({ roles = [], rolesError = false, value = [], onChange }) => {
   const handleToggle = (roleId) => {
     if (value.includes(roleId)) {
       onChange(value.filter((id) => id !== roleId));
@@ -130,18 +142,26 @@ const RoleSelector = ({ value = [], onChange }) => {
   return (
     <div className="form-group">
       <label>Target Roles</label>
-      <div className="checkbox-grid">
-        {AVAILABLE_ROLES.map((role) => (
-          <label key={role.id} className="checkbox-item">
-            <input
-              type="checkbox"
-              checked={value.includes(role.id)}
-              onChange={() => handleToggle(role.id)}
-            />
-            <span>{role.label}</span>
-          </label>
-        ))}
-      </div>
+      {rolesError ? (
+        <p className="text-muted">
+          Could not load roles. Close this form and try again.
+        </p>
+      ) : roles.length === 0 ? (
+        <p className="text-muted">Loading roles...</p>
+      ) : (
+        <div className="checkbox-grid">
+          {roles.map((role) => (
+            <label key={role.id} className="checkbox-item">
+              <input
+                type="checkbox"
+                checked={value.includes(role.id)}
+                onChange={() => handleToggle(role.id)}
+              />
+              <span>{roleLabel(role.name)}</span>
+            </label>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -239,6 +259,8 @@ const Notices = () => {
   const [notices, setNotices] = useState([]);
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [rolesError, setRolesError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -327,6 +349,14 @@ const Notices = () => {
       setSections(sectionsRes.data || []);
     } catch (error) {
       console.error("Error fetching metadata:", error);
+    }
+    try {
+      const rolesRes = await noticeService.getRoles();
+      setRoles(rolesRes.data || []);
+      setRolesError(false);
+    } catch (error) {
+      console.error("Error fetching roles:", error);
+      setRolesError(true);
     }
   };
 
@@ -771,7 +801,12 @@ const Notices = () => {
               name="roleTargets"
               control={control}
               render={({ field }) => (
-                <RoleSelector value={field.value} onChange={field.onChange} />
+                <RoleSelector
+                  roles={roles}
+                  rolesError={rolesError}
+                  value={field.value}
+                  onChange={field.onChange}
+                />
               )}
             />
           )}

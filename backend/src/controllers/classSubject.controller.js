@@ -16,6 +16,7 @@ const getClassSubjects = asyncHandler(async (req, res) => {
 
   const where = {
     academicYearId: parseInt(academicYearId),
+    class: { schoolId: req.user.schoolId },
   };
 
   if (classId) {
@@ -280,8 +281,8 @@ const updateClassSubject = asyncHandler(async (req, res) => {
 const removeSubjectFromClass = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const classSubject = await prisma.classSubject.findUnique({
-    where: { id: parseInt(id) },
+  const classSubject = await prisma.classSubject.findFirst({
+    where: { id: parseInt(id), class: { schoolId: req.user.schoolId } },
     include: { subject: true },
   });
 
@@ -338,9 +339,36 @@ const removeSubjectFromClass = asyncHandler(async (req, res) => {
  */
 const getClassSubjectAudit = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  const classSubjectId = parseInt(id);
+
+  // SubjectAudit has no relation to ClassSubject, so establish ownership first.
+  const classSubject = await prisma.classSubject.findFirst({
+    where: { id: classSubjectId, class: { schoolId: req.user.schoolId } },
+    select: { id: true },
+  });
+
+  if (!classSubject) {
+    // The class subject may have been deleted; its DELETE audit row keeps a
+    // snapshot (oldValue.classId) that still tells us which school it was in.
+    const deleteAudit = await prisma.subjectAudit.findFirst({
+      where: { classSubjectId, action: 'DELETE' },
+      select: { oldValue: true },
+    });
+    const snapshotClassId = parseInt(deleteAudit?.oldValue?.classId);
+    const ownedClass = Number.isInteger(snapshotClassId)
+      ? await prisma.class.findFirst({
+          where: { id: snapshotClassId, schoolId: req.user.schoolId },
+          select: { id: true },
+        })
+      : null;
+
+    if (!ownedClass) {
+      throw ApiError.notFound("Class subject assignment not found");
+    }
+  }
 
   const auditLogs = await prisma.subjectAudit.findMany({
-    where: { classSubjectId: parseInt(id) },
+    where: { classSubjectId },
     orderBy: { createdAt: 'desc' },
     take: 50,
   });

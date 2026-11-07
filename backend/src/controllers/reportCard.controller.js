@@ -136,16 +136,18 @@ const getReportCards = asyncHandler(async (req, res) => {
     },
   });
 
-  // Get class and section info
-  const classInfo = await prisma.class.findUnique({
-    where: { id: parseInt(classId) },
+  // Get class and section info (scoped to the user's school)
+  const classInfo = await prisma.class.findFirst({
+    where: { id: parseInt(classId), schoolId: req.user.schoolId },
     select: { id: true, name: true, gradeLevel: true },
   });
+  if (!classInfo) throw ApiError.notFound("Class not found");
 
-  const sectionInfo = await prisma.section.findUnique({
-    where: { id: parseInt(sectionId) },
+  const sectionInfo = await prisma.section.findFirst({
+    where: { id: parseInt(sectionId), schoolId: req.user.schoolId },
     select: { id: true, name: true },
   });
+  if (!sectionInfo) throw ApiError.notFound("Section not found");
 
   // Get all students in this class/section for this academic year
   const enrollments = await prisma.studentClass.findMany({
@@ -154,6 +156,7 @@ const getReportCards = asyncHandler(async (req, res) => {
       sectionId: parseInt(sectionId),
       academicYearId: exam.academicYearId,
       status: "active",
+      schoolId: req.user.schoolId,
     },
     include: {
       student: {
@@ -307,12 +310,19 @@ const generateReportCards = asyncHandler(async (req, res) => {
   if (!exam)
     throw ApiError.notFound("Exam not found or does not belong to your school");
 
-  const classInfo = await prisma.class.findUnique({
-    where: { id: parseInt(classId) },
+  const classInfo = await prisma.class.findFirst({
+    where: { id: parseInt(classId), schoolId: req.user.schoolId },
     select: { id: true, name: true, gradeLevel: true },
   });
 
   if (!classInfo) throw ApiError.notFound("Class not found");
+
+  const sectionInfo = await prisma.section.findFirst({
+    where: { id: parseInt(sectionId), schoolId: req.user.schoolId },
+    select: { id: true },
+  });
+
+  if (!sectionInfo) throw ApiError.notFound("Section not found");
 
   // Get all students in this class-section
   const enrollments = await prisma.studentClass.findMany({
@@ -464,6 +474,32 @@ const generateReportCards = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Whether the requester may see a report card before it is published.
+ * ADMIN / SUPER_ADMIN / EXAM_OFFICER: yes (queries are already school-scoped).
+ * TEACHER: only with a TeacherSubject for the card's class + section in the
+ * card's academic year. Everyone else: no.
+ */
+const canSeeUnpublishedCard = async (req, reportCard) => {
+  const roles = req.user.roles || [];
+  if (roles.some((r) => ["ADMIN", "SUPER_ADMIN", "EXAM_OFFICER"].includes(r))) {
+    return true;
+  }
+  if (!roles.includes("TEACHER") || !reportCard.studentClass) return false;
+
+  const { classId, sectionId, academicYearId } = reportCard.studentClass;
+  const assignment = await prisma.teacherSubject.findFirst({
+    where: {
+      userId: req.user.id,
+      sectionId,
+      academicYearId,
+      classSubject: { classId, class: { schoolId: req.user.schoolId } },
+    },
+    select: { id: true },
+  });
+  return Boolean(assignment);
+};
+
+/**
  * @desc    Get detailed report card for a student (Nepal-style format)
  * @route   GET /api/v1/report-cards/student/:studentId/exam/:examId
  * @access  Private
@@ -507,10 +543,10 @@ const getReportCard = asyncHandler(async (req, res) => {
 
   if (!reportCard) throw ApiError.notFound("Report card not found");
 
-  // Authorization check
-  const canSeeUnpublished =
-    req.user.roles.includes("ADMIN") || req.user.roles.includes("TEACHER");
-  if (!reportCard.isPublished && !canSeeUnpublished) {
+  // Authorization check: unpublished cards are visible only to admins, exam
+  // officers (own school), and teachers assigned to the card's class + section
+  // in the card's academic year.
+  if (!reportCard.isPublished && !(await canSeeUnpublishedCard(req, reportCard))) {
     throw ApiError.forbidden("Report card not yet published");
   }
 

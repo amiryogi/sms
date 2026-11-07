@@ -2,6 +2,29 @@ const bcrypt = require('bcryptjs');
 const prisma = require('../config/database');
 const { ApiError, ApiResponse, asyncHandler, parsePagination, parseSort, buildSearchQuery } = require('../utils');
 
+const isAdminUser = (user) => user.roles.includes('ADMIN') || user.roles.includes('SUPER_ADMIN');
+
+/**
+ * Verify that the class, section and academic year of an enrollment all belong
+ * to the caller's school. Throws 404 for the first one that does not.
+ */
+const assertEnrollmentTargetsInSchool = async (schoolId, { classId, sectionId, academicYearId }) => {
+  const [cls, section, year] = await Promise.all([
+    prisma.class.findFirst({ where: { id: parseInt(classId), schoolId }, select: { id: true } }),
+    prisma.section.findFirst({ where: { id: parseInt(sectionId), schoolId }, select: { id: true } }),
+    prisma.academicYear.findFirst({ where: { id: parseInt(academicYearId), schoolId }, select: { id: true } }),
+  ]);
+  if (!cls) throw ApiError.notFound('Class not found in your school');
+  if (!section) throw ApiError.notFound('Section not found in your school');
+  if (!year) throw ApiError.notFound('Academic year not found in your school');
+};
+
+// Fields a non-admin (the student, a linked parent, or an assigned teacher) may
+// change via PUT /students/:id. Everything else — name, date of birth, gender,
+// blood group (printed on report cards) and status — is admin-only.
+const SELF_SERVICE_FIELDS = ['phone', 'address', 'avatarUrl', 'emergencyContact'];
+const ADMIN_ONLY_FIELDS = ['firstName', 'lastName', 'dateOfBirth', 'gender', 'bloodGroup', 'status'];
+
 /**
  * @desc    Get all students
  * @route   GET /api/v1/students
@@ -19,16 +42,30 @@ const getStudents = asyncHandler(async (req, res) => {
   if (academicYearId) {
     enrollmentWhere.academicYearId = parseInt(academicYearId);
   } else {
-    enrollmentWhere.academicYear = { isCurrent: true };
+    enrollmentWhere.academicYear = { isCurrent: true, schoolId: req.user.schoolId };
   }
 
   if (classId) enrollmentWhere.classId = parseInt(classId);
   if (sectionId) enrollmentWhere.sectionId = parseInt(sectionId);
 
-  // Security: Teachers can only see students in their assigned classes
-  if (req.user.roles.includes('TEACHER') && !req.user.roles.includes('ADMIN') && !req.user.roles.includes('SUPER_ADMIN')) {
+  // Security: Teachers can only see students in their assigned classes, for the
+  // current academic year only (last year's assignment grants nothing now).
+  if (req.user.roles.includes('TEACHER') && !isAdminUser(req.user)) {
+    const currentYear = await prisma.academicYear.findFirst({
+      where: { schoolId: req.user.schoolId, isCurrent: true },
+      select: { id: true },
+    });
+
+    if (!currentYear) {
+      return ApiResponse.paginated(res, [], { page, limit, total: 0 });
+    }
+
+    // Force current-year enrollments regardless of the requested academicYearId
+    delete enrollmentWhere.academicYear;
+    enrollmentWhere.academicYearId = currentYear.id;
+
     const assignments = await prisma.teacherSubject.findMany({
-      where: { userId: req.user.id },
+      where: { userId: req.user.id, academicYearId: currentYear.id },
       select: {
         classSubject: { select: { classId: true } },
         sectionId: true,
@@ -239,6 +276,9 @@ const createStudent = asyncHandler(async (req, res) => {
     throw ApiError.conflict('Admission number already exists');
   }
 
+  // Class, section and academic year must all belong to the caller's school
+  await assertEnrollmentTargetsInSchool(req.user.schoolId, { classId, sectionId, academicYearId });
+
   // Get student role
   const studentRole = await prisma.role.findUnique({ where: { name: 'STUDENT' } });
   if (!studentRole) throw ApiError.internal('Student role not configured');
@@ -265,6 +305,7 @@ const createStudent = asyncHandler(async (req, res) => {
     const newStudent = await tx.student.create({
       data: {
         userId: user.id,
+        schoolId: req.user.schoolId,
         admissionNumber,
         dateOfBirth: new Date(dateOfBirth),
         gender,
@@ -278,6 +319,7 @@ const createStudent = asyncHandler(async (req, res) => {
     const enrollment = await tx.studentClass.create({
       data: {
         studentId: newStudent.id,
+        schoolId: req.user.schoolId,
         classId: parseInt(classId),
         sectionId: parseInt(sectionId),
         academicYearId: parseInt(academicYearId),
@@ -321,8 +363,8 @@ const updateStudent = asyncHandler(async (req, res) => {
     dateOfBirth, gender, bloodGroup, address, emergencyContact, status
   } = req.body;
 
-  const student = await prisma.student.findUnique({
-    where: { id: studentId },
+  const student = await prisma.student.findFirst({
+    where: { id: studentId, user: { schoolId: req.user.schoolId } },
     include: { 
       user: true,
       studentClasses: {
@@ -336,15 +378,25 @@ const updateStudent = asyncHandler(async (req, res) => {
     throw ApiError.notFound('Student not found');
   }
 
-  const isAdmin = req.user.roles.includes('ADMIN') || req.user.roles.includes('SUPER_ADMIN');
+  const isAdmin = isAdminUser(req.user);
+
+  // Non-admins may only edit the self-service contact fields
+  if (!isAdmin) {
+    const forbiddenFields = ADMIN_ONLY_FIELDS.filter((field) => req.body[field] !== undefined);
+    if (forbiddenFields.length > 0) {
+      throw ApiError.forbidden(
+        `Only an administrator can change: ${forbiddenFields.join(', ')}. You may update ${SELF_SERVICE_FIELDS.join(', ')}.`
+      );
+    }
+  }
 
   await prisma.$transaction(async (tx) => {
     // 1. Update User Profile
     await tx.user.update({
       where: { id: student.userId },
       data: {
-        ...(firstName && { firstName }),
-        ...(lastName && { lastName }),
+        ...(firstName && isAdmin && { firstName }),
+        ...(lastName && isAdmin && { lastName }),
         ...(phone !== undefined && { phone }),
         ...(avatarUrl !== undefined && { avatarUrl }),
         ...(status && isAdmin && { status }), // Only Admin can change status
@@ -355,9 +407,9 @@ const updateStudent = asyncHandler(async (req, res) => {
     await tx.student.update({
       where: { id: studentId },
       data: {
-        ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
-        ...(gender && { gender }),
-        ...(bloodGroup !== undefined && { bloodGroup }),
+        ...(dateOfBirth && isAdmin && { dateOfBirth: new Date(dateOfBirth) }),
+        ...(gender && isAdmin && { gender }),
+        ...(bloodGroup !== undefined && isAdmin && { bloodGroup }),
         ...(address !== undefined && { address }),
         ...(emergencyContact !== undefined && { emergencyContact }),
       },
@@ -375,6 +427,16 @@ const updateStudent = asyncHandler(async (req, res) => {
 const enrollStudent = asyncHandler(async (req, res) => {
   const studentId = parseInt(req.params.id);
   const { classId, sectionId, academicYearId, rollNumber } = req.body;
+
+  // Student, class, section and academic year must all belong to the caller's school
+  const student = await prisma.student.findFirst({
+    where: { id: studentId, user: { schoolId: req.user.schoolId } },
+    select: { id: true },
+  });
+  if (!student) {
+    throw ApiError.notFound('Student not found');
+  }
+  await assertEnrollmentTargetsInSchool(req.user.schoolId, { classId, sectionId, academicYearId });
 
   // Check if already enrolled in this year
   const existingEnrollment = await prisma.studentClass.findUnique({
@@ -402,6 +464,7 @@ const enrollStudent = asyncHandler(async (req, res) => {
   const enrollment = await prisma.studentClass.create({
     data: {
       studentId,
+      schoolId: req.user.schoolId,
       classId: parseInt(classId),
       sectionId: parseInt(sectionId),
       academicYearId: parseInt(academicYearId),

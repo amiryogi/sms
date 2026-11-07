@@ -1,6 +1,11 @@
 const prisma = require("../config/database");
 const { ApiError, ApiResponse, asyncHandler } = require("../utils");
 
+// Only admins see DRAFT exams; every other role sees PUBLISHED and LOCKED only.
+const canSeeDraftExams = (user) =>
+  (user.roles || []).some((r) => ["ADMIN", "SUPER_ADMIN"].includes(r));
+const VISIBLE_STATUSES = ["PUBLISHED", "LOCKED"];
+
 /**
  * @desc    Get all exams for an academic year
  * @route   GET /api/v1/exams
@@ -14,6 +19,9 @@ const getExams = asyncHandler(async (req, res) => {
     where.academicYearId = parseInt(academicYearId);
   } else {
     where.academicYear = { isCurrent: true };
+  }
+  if (!canSeeDraftExams(req.user)) {
+    where.status = { in: VISIBLE_STATUSES };
   }
 
   const exams = await prisma.exam.findMany({
@@ -41,8 +49,14 @@ const getExams = asyncHandler(async (req, res) => {
 const getExam = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
+  const where = { id: parseInt(id), schoolId: req.user.schoolId };
+  if (!canSeeDraftExams(req.user)) {
+    // DRAFT exams are invisible (404) to non-admins
+    where.status = { in: VISIBLE_STATUSES };
+  }
+
   const exam = await prisma.exam.findFirst({
-    where: { id: parseInt(id), schoolId: req.user.schoolId },
+    where,
     include: {
       academicYear: true,
       createdByUser: {
@@ -90,11 +104,46 @@ const createExam = asyncHandler(async (req, res) => {
   const { name, examType, startDate, endDate, academicYearId, classIds } =
     req.body;
 
+  // 0. The academic year and every class must belong to the user's school
+  const yearId = parseInt(academicYearId);
+  const academicYear = Number.isInteger(yearId)
+    ? await prisma.academicYear.findFirst({
+        where: { id: yearId, schoolId: req.user.schoolId },
+        select: { id: true },
+      })
+    : null;
+  if (!academicYear) {
+    throw ApiError.notFound(
+      "Academic year not found or does not belong to your school"
+    );
+  }
+
+  let classIdList = [];
+  if (classIds !== undefined && classIds !== null) {
+    if (!Array.isArray(classIds)) {
+      throw ApiError.badRequest("classIds must be an array");
+    }
+    classIdList = [...new Set(classIds.map((cid) => parseInt(cid)))];
+    if (classIdList.some((cid) => !Number.isInteger(cid) || cid < 1)) {
+      throw ApiError.badRequest("classIds must contain valid class IDs");
+    }
+    if (classIdList.length > 0) {
+      const ownClasses = await prisma.class.count({
+        where: { id: { in: classIdList }, schoolId: req.user.schoolId },
+      });
+      if (ownClasses !== classIdList.length) {
+        throw ApiError.badRequest(
+          "One or more classes not found or do not belong to your school"
+        );
+      }
+    }
+  }
+
   // 1. Create Exam with DRAFT status
   const exam = await prisma.exam.create({
     data: {
       schoolId: req.user.schoolId,
-      academicYearId: parseInt(academicYearId),
+      academicYearId: yearId,
       name,
       examType,
       status: "DRAFT",
@@ -105,11 +154,12 @@ const createExam = asyncHandler(async (req, res) => {
   });
 
   // 2. Auto-link subjects for the selected classes (if provided)
-  if (classIds && Array.isArray(classIds) && classIds.length > 0) {
+  if (classIdList.length > 0) {
     const classSubjects = await prisma.classSubject.findMany({
       where: {
-        academicYearId: parseInt(academicYearId),
-        classId: { in: classIds.map((id) => parseInt(id)) },
+        academicYearId: yearId,
+        classId: { in: classIdList },
+        class: { schoolId: req.user.schoolId },
       },
     });
 
@@ -158,6 +208,31 @@ const updateExamSubjects = asyncHandler(async (req, res) => {
   if (exam.status !== "DRAFT") {
     throw ApiError.badRequest(
       "Cannot modify exam subjects after publishing. Exam must be in DRAFT status."
+    );
+  }
+
+  if (!Array.isArray(subjects) || subjects.length === 0) {
+    throw ApiError.badRequest("subjects must be a non-empty array");
+  }
+
+  // Every classSubjectId must belong to this school AND to the exam's year;
+  // otherwise an exam could snapshot another school's / year's subjects.
+  const classSubjectIds = [
+    ...new Set(subjects.map((sub) => parseInt(sub && sub.classSubjectId))),
+  ];
+  if (classSubjectIds.some((csId) => !Number.isInteger(csId) || csId < 1)) {
+    throw ApiError.badRequest("Each subject needs a valid classSubjectId");
+  }
+  const validClassSubjects = await prisma.classSubject.count({
+    where: {
+      id: { in: classSubjectIds },
+      academicYearId: exam.academicYearId,
+      class: { schoolId: req.user.schoolId },
+    },
+  });
+  if (validClassSubjects !== classSubjectIds.length) {
+    throw ApiError.badRequest(
+      "One or more class subjects do not belong to your school or to this exam's academic year"
     );
   }
 
@@ -263,6 +338,18 @@ const updateExam = asyncHandler(async (req, res) => {
     throw ApiError.badRequest(
       "Cannot edit exam after publishing. Exam must be in DRAFT status."
     );
+  }
+
+  if (academicYearId) {
+    const year = await prisma.academicYear.findFirst({
+      where: { id: parseInt(academicYearId), schoolId: req.user.schoolId },
+      select: { id: true },
+    });
+    if (!year) {
+      throw ApiError.notFound(
+        "Academic year not found or does not belong to your school"
+      );
+    }
   }
 
   const updatedExam = await prisma.exam.update({

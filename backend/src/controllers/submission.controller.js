@@ -1,6 +1,9 @@
 const prisma = require("../config/database");
 const { ApiError, ApiResponse, asyncHandler } = require("../utils");
 
+const isAdminUser = (user) =>
+  user.roles.includes("ADMIN") || user.roles.includes("SUPER_ADMIN");
+
 /**
  * @desc    Submit assignment (Student)
  * @route   POST /api/v1/submissions
@@ -115,16 +118,19 @@ const submitAssignment = asyncHandler(async (req, res) => {
 const getSubmissionsByAssignment = asyncHandler(async (req, res) => {
   const assignmentId = parseInt(req.params.assignmentId);
 
-  // Verify teacher ownership
-  const assignment = await prisma.assignment.findUnique({
-    where: { id: assignmentId },
+  // The assignment must be in this school, and set by this teacher (or the
+  // caller is an admin).
+  const assignment = await prisma.assignment.findFirst({
+    where: {
+      id: assignmentId,
+      teacherSubject: { classSubject: { class: { schoolId: req.user.schoolId } } },
+    },
     include: { teacherSubject: true },
   });
 
   if (
     !assignment ||
-    (assignment.teacherSubject.userId !== req.user.id &&
-      !req.user.roles.includes("ADMIN"))
+    (assignment.teacherSubject.userId !== req.user.id && !isAdminUser(req.user))
   ) {
     throw ApiError.forbidden("Unauthorized");
   }
@@ -178,7 +184,7 @@ const gradeSubmission = asyncHandler(async (req, res) => {
   if (
     !submission ||
     (submission.assignment.teacherSubject.userId !== req.user.id &&
-      !req.user.roles.includes("ADMIN"))
+      !isAdminUser(req.user))
   ) {
     throw ApiError.forbidden("Unauthorized");
   }

@@ -20,6 +20,47 @@ const STAFF_ROLES = [
   { value: "ACCOUNTANT", label: "Accountant" },
 ];
 
+const STAFF_ROLE_BADGE = {
+  TEACHER: "badge-primary",
+  EXAM_OFFICER: "badge-info",
+  ACCOUNTANT: "badge-success",
+};
+
+const ROLE_HINTS = {
+  TEACHER: "Teachers can only enter marks for their assigned subjects.",
+  EXAM_OFFICER:
+    "Exam Officers can enter marks for any subject without being assigned.",
+  ACCOUNTANT: "Accountants manage fee types, structures and payments only.",
+};
+
+// The staff role this person currently holds (first matching staff role).
+const currentStaffRole = (person) =>
+  STAFF_ROLES.find((r) => person?.roles?.includes(r.value))?.value ||
+  "TEACHER";
+
+const roleLabelOf = (value) =>
+  STAFF_ROLES.find((r) => r.value === value)?.label || value;
+
+// Pull the server message and per-field validation errors out of an axios error.
+// Backend shape: { success: false, message, errors: [{ field, message }] }.
+const parseServerError = (error, fallback) => {
+  const body = error?.response?.data || {};
+  const fieldErrors = {};
+  const otherErrors = [];
+  (Array.isArray(body.errors) ? body.errors : []).forEach((e) => {
+    if (e && typeof e === "object" && e.field) {
+      fieldErrors[e.field] = fieldErrors[e.field] || e.message;
+    } else if (e) {
+      otherErrors.push(typeof e === "string" ? e : e.message);
+    }
+  });
+  return {
+    message: body.message || error?.message || fallback,
+    fieldErrors,
+    otherErrors: otherErrors.filter(Boolean),
+  };
+};
+
 const resolveAssetUrl = (url) => {
   if (!url) return "";
   if (url.startsWith("http")) return url;
@@ -41,6 +82,7 @@ const Teachers = () => {
   const [avatarUrl, setAvatarUrl] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [selectedRole, setSelectedRole] = useState("TEACHER");
+  const [serverError, setServerError] = useState(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -53,6 +95,8 @@ const Teachers = () => {
     register,
     handleSubmit,
     reset,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm();
 
@@ -81,6 +125,8 @@ const Teachers = () => {
 
   const openModal = (teacher = null) => {
     setEditingTeacher(teacher);
+    setServerError(null);
+    clearErrors();
     if (teacher) {
       reset({
         firstName: teacher.firstName,
@@ -89,8 +135,7 @@ const Teachers = () => {
         phone: teacher.phone,
       });
       setAvatarUrl(teacher.avatarUrl || "");
-      // Set role from existing teacher (if available)
-      setSelectedRole(teacher.roles?.[0] || "TEACHER");
+      setSelectedRole(currentStaffRole(teacher));
     } else {
       reset({});
       setAvatarUrl("");
@@ -104,14 +149,18 @@ const Teachers = () => {
     setEditingTeacher(null);
     setAvatarUrl("");
     setSelectedRole("TEACHER");
+    setServerError(null);
     reset();
   };
 
   const onSubmit = async (data) => {
     setSubmitting(true);
+    setServerError(null);
+    clearErrors();
+    // role is sent on both create (POST /users) and update (PUT /teachers/:id).
     try {
-      const payload = { 
-        ...data, 
+      const payload = {
+        ...data,
         avatarUrl: avatarUrl || undefined,
         role: selectedRole,
       };
@@ -123,8 +172,15 @@ const Teachers = () => {
       fetchTeachers();
       closeModal();
     } catch (error) {
-      console.error("Error saving teacher:", error);
-      alert(error.response?.data?.message || "Error saving teacher");
+      console.error("Error saving staff member:", error);
+      const parsed = parseServerError(error, "Error saving staff member");
+      const formFields = ["firstName", "lastName", "email", "phone", "password"];
+      Object.entries(parsed.fieldErrors).forEach(([field, message]) => {
+        if (formFields.includes(field)) {
+          setError(field, { type: "server", message });
+        }
+      });
+      setServerError(parsed);
     } finally {
       setSubmitting(false);
     }
@@ -158,21 +214,26 @@ const Teachers = () => {
         </div>
       ),
     },
-    { 
-      header: "Role", 
+    {
+      header: "Role",
       render: (row) => {
-        const roles = row.roles || [];
-        if (roles.includes("ACCOUNTANT")) {
-          return <span className="badge badge-success">Accountant</span>;
-        }
-        if (roles.includes("EXAM_OFFICER")) {
-          return <span className="badge badge-info">Exam Officer</span>;
-        }
-        if (roles.includes("TEACHER")) {
-          return <span className="badge badge-primary">Teacher</span>;
-        }
-        return "-";
-      }
+        const staffRoles = STAFF_ROLES.filter((r) =>
+          (row.roles || []).includes(r.value),
+        );
+        if (staffRoles.length === 0) return "-";
+        return (
+          <div className="badge-list">
+            {staffRoles.map((r) => (
+              <span
+                key={r.value}
+                className={`badge ${STAFF_ROLE_BADGE[r.value] || ""}`}
+              >
+                {r.label}
+              </span>
+            ))}
+          </div>
+        );
+      },
     },
     { header: "Phone", render: (row) => row.phone || "-" },
     {
@@ -213,7 +274,7 @@ const Teachers = () => {
           emptyMessage="No teachers found"
           actions={
             <Button icon={Plus} onClick={() => openModal()}>
-              Add Teacher
+              Add Staff Member
             </Button>
           }
         />
@@ -222,21 +283,43 @@ const Teachers = () => {
       <Modal
         isOpen={modalOpen}
         onClose={closeModal}
-        title={editingTeacher ? "Edit Teacher" : "Add Teacher"}
+        title={editingTeacher ? "Edit Staff Member" : "Add Staff Member"}
         size="lg"
       >
         <form onSubmit={handleSubmit(onSubmit)}>
+          {serverError && (
+            <div className="form-alert" role="alert">
+              <strong>{serverError.message}</strong>
+              {(serverError.otherErrors.length > 0 ||
+                Object.keys(serverError.fieldErrors).length > 0) && (
+                <ul>
+                  {Object.entries(serverError.fieldErrors).map(
+                    ([field, message]) => (
+                      <li key={field}>
+                        {field}: {message}
+                      </li>
+                    ),
+                  )}
+                  {serverError.otherErrors.map((message, i) => (
+                    <li key={i}>{message}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
           <FormRow>
             <Input
               label="First Name"
               name="firstName"
               register={register}
+              error={errors.firstName?.message}
               required
             />
             <Input
               label="Last Name"
               name="lastName"
               register={register}
+              error={errors.lastName?.message}
               required
             />
           </FormRow>
@@ -246,33 +329,48 @@ const Teachers = () => {
               name="email"
               type="email"
               register={register}
+              error={errors.email?.message}
               required
             />
-            <Input label="Phone" name="phone" type="tel" register={register} />
+            <Input
+              label="Phone"
+              name="phone"
+              type="tel"
+              register={register}
+              error={errors.phone?.message}
+            />
           </FormRow>
-          {!editingTeacher && (
-            <FormRow>
-              <div className="form-group">
-                <label>Role</label>
-                <select
-                  value={selectedRole}
-                  onChange={(e) => setSelectedRole(e.target.value)}
-                  className="form-control"
-                >
-                  {STAFF_ROLES.map((r) => (
-                    <option key={r.value} value={r.value}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
-                <small className="text-muted">
-                  {selectedRole === "EXAM_OFFICER" 
-                    ? "Exam Officers can enter marks for any subject without being assigned" 
-                    : "Teachers can only enter marks for their assigned subjects"}
-                </small>
-              </div>
-            </FormRow>
-          )}
+          <FormRow>
+            <div className="form-group">
+              <label htmlFor="staff-role">Role</label>
+              <select
+                id="staff-role"
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value)}
+                className="form-control"
+              >
+                {STAFF_ROLES.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+              {serverError?.fieldErrors?.role && (
+                <span className="form-error">
+                  {serverError.fieldErrors.role}
+                </span>
+              )}
+              <small className="text-muted">
+                {editingTeacher &&
+                selectedRole !== currentStaffRole(editingTeacher)
+                  ? `Changing role from ${roleLabelOf(
+                      currentStaffRole(editingTeacher),
+                    )} to ${roleLabelOf(selectedRole)}. `
+                  : ""}
+                {ROLE_HINTS[selectedRole]}
+              </small>
+            </div>
+          </FormRow>
           <div className="form-group">
             <label>Profile Photo</label>
             <div className="flex items-center gap-3">
@@ -304,6 +402,7 @@ const Teachers = () => {
               name="password"
               type="password"
               register={register}
+              error={errors.password?.message}
               required
               minLength={8}
             />

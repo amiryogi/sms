@@ -2,6 +2,31 @@ const bcrypt = require('bcryptjs');
 const prisma = require('../config/database');
 const { ApiError, ApiResponse, asyncHandler, parsePagination, parseSort, buildSearchQuery } = require('../utils');
 
+// Roles that need a profile row (Student / Parent). They are created through
+// their own flows — POST /students and POST /admin/parents — never by
+// granting the bare role here, which would leave a role without a profile.
+const PROFILE_ROLES = ['STUDENT', 'PARENT'];
+const PROFILE_ROLE_MESSAGE =
+  'STUDENT and PARENT roles cannot be granted here. Create students via POST /students and parents via POST /admin/parents so the profile is created with the account.';
+
+const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN'];
+
+/**
+ * Load Role rows for a list of ids (deduplicated). Roles are global, not
+ * per-school, so there is no schoolId to scope them by.
+ */
+const loadRoles = async (roleIds) => {
+  const ids = [...new Set(roleIds.map((id) => parseInt(id, 10)))];
+  if (ids.some((id) => !Number.isInteger(id) || id < 1)) {
+    throw ApiError.badRequest('One or more role IDs are invalid');
+  }
+  const roles = await prisma.role.findMany({ where: { id: { in: ids } } });
+  if (roles.length !== ids.length) {
+    throw ApiError.badRequest('One or more role IDs are invalid');
+  }
+  return roles;
+};
+
 /**
  * @desc    Get all users (with pagination and filters)
  * @route   GET /api/v1/users
@@ -166,7 +191,7 @@ const createUser = asyncHandler(async (req, res) => {
   }
 
   // Handle role string payload (e.g., "TEACHER")
-  let finalRoleIds = [...roleIds];
+  const finalRoleIds = [...(roleIds || [])];
   if (role) {
     const roleRecord = await prisma.role.findUnique({
       where: { name: role }
@@ -174,20 +199,15 @@ const createUser = asyncHandler(async (req, res) => {
     if (!roleRecord) {
       throw ApiError.badRequest(`Role '${role}' not found`);
     }
-    if (!finalRoleIds.includes(roleRecord.id)) {
-      finalRoleIds.push(roleRecord.id);
-    }
+    finalRoleIds.push(roleRecord.id);
   }
 
   // Verify all role IDs are valid
-  const roles = await prisma.role.findMany({
-    where: {
-      id: { in: finalRoleIds },
-    },
-  });
+  const roles = await loadRoles(finalRoleIds);
 
-  if (roles.length !== finalRoleIds.length) {
-    throw ApiError.badRequest('One or more role IDs are invalid');
+  // Students and parents need a profile row; they have their own flows
+  if (roles.some((r) => PROFILE_ROLES.includes(r.name))) {
+    throw ApiError.badRequest(PROFILE_ROLE_MESSAGE);
   }
 
   // Prevent non-super-admins from creating super admins
@@ -211,8 +231,8 @@ const createUser = asyncHandler(async (req, res) => {
       status,
       avatarUrl, // Save avatarUrl
       userRoles: {
-        create: finalRoleIds.map((roleId) => ({
-          roleId,
+        create: roles.map((r) => ({
+          roleId: r.id,
         })),
       },
     },
@@ -328,11 +348,16 @@ const updateUserRoles = asyncHandler(async (req, res) => {
   const userId = parseInt(req.params.id, 10);
   const { roleIds } = req.body;
 
-  // Find user
+  // Find user (in the caller's school only)
   const user = await prisma.user.findFirst({
     where: {
       id: userId,
       schoolId: req.user.schoolId,
+    },
+    include: {
+      userRoles: { include: { role: true } },
+      student: { select: { id: true } },
+      parent: { select: { id: true } },
     },
   });
 
@@ -341,20 +366,29 @@ const updateUserRoles = asyncHandler(async (req, res) => {
   }
 
   // Verify all role IDs are valid
-  const roles = await prisma.role.findMany({
-    where: {
-      id: { in: roleIds },
-    },
-  });
+  const roles = await loadRoles(roleIds);
+  const newRoleNames = roles.map((r) => r.name);
+  const currentRoleNames = user.userRoles.map((ur) => ur.role.name);
+  const isSuperAdminCaller = req.user.roles.includes('SUPER_ADMIN');
 
-  if (roles.length !== roleIds.length) {
-    throw ApiError.badRequest('One or more role IDs are invalid');
+  // STUDENT / PARENT only when the matching profile row already exists
+  if (
+    (newRoleNames.includes('STUDENT') && !user.student) ||
+    (newRoleNames.includes('PARENT') && !user.parent)
+  ) {
+    throw ApiError.badRequest(PROFILE_ROLE_MESSAGE);
   }
 
-  // Prevent non-super-admins from assigning super admin role
-  const hasSuperAdmin = roles.some((r) => r.name === 'SUPER_ADMIN');
-  if (hasSuperAdmin && !req.user.roles.includes('SUPER_ADMIN')) {
-    throw ApiError.forbidden('Only super admins can assign super admin role');
+  // Prevent non-super-admins from assigning or removing super admin role
+  const addsSuperAdmin = newRoleNames.includes('SUPER_ADMIN');
+  const holdsSuperAdmin = currentRoleNames.includes('SUPER_ADMIN');
+  if ((addsSuperAdmin || holdsSuperAdmin) && !isSuperAdminCaller) {
+    throw ApiError.forbidden('Only super admins can assign or change super admin roles');
+  }
+
+  // Prevent an admin from locking themselves out
+  if (userId === req.user.id && !newRoleNames.some((r) => ADMIN_ROLES.includes(r))) {
+    throw ApiError.badRequest('You cannot remove your own admin role');
   }
 
   // Delete existing roles and create new ones
@@ -363,9 +397,9 @@ const updateUserRoles = asyncHandler(async (req, res) => {
       where: { userId },
     }),
     prisma.userRole.createMany({
-      data: roleIds.map((roleId) => ({
+      data: roles.map((r) => ({
         userId,
-        roleId,
+        roleId: r.id,
       })),
     }),
   ]);
