@@ -168,10 +168,60 @@ model School {
   feeTypes       FeeType[]
   feeStructures  FeeStructure[]
   feePayments    FeePayment[]
+  gradeScales    GradeScale[]
 
   @@index([code])
   @@index([isActive])
   @@map("schools")
+}
+
+// =====================================================
+// GRADE SCALES
+// =====================================================
+
+/// A school's grading scale. Exactly one per school should have isDefault = true;
+/// with none, the code falls back to the built-in NEB 8-band scale.
+/// A scale referenced by a ReportCard is frozen: edit a copy instead, or already
+/// printed report cards would change (same idea as the ExamSubject snapshot).
+model GradeScale {
+  id          Int      @id @default(autoincrement())
+  schoolId    Int      @map("school_id")
+  name        String   @db.VarChar(100)
+  /// A theory or practical component below this percentage fails the subject
+  passPercent Decimal  @default(35) @map("pass_percent") @db.Decimal(5, 2)
+  isDefault   Boolean  @default(false) @map("is_default")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  school      School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  bands       GradeBand[]
+  reportCards ReportCard[]
+
+  @@unique([schoolId, name])
+  @@index([schoolId])
+  @@map("grade_scales")
+}
+
+/// One letter grade in a scale. Bands are contiguous: each band's maxPercent
+/// equals the next band's minPercent, and a boundary score takes the higher band.
+model GradeBand {
+  id           Int     @id @default(autoincrement())
+  gradeScaleId Int     @map("grade_scale_id")
+  minPercent   Decimal @map("min_percent") @db.Decimal(5, 2)
+  maxPercent   Decimal @map("max_percent") @db.Decimal(5, 2)
+  grade        String  @db.VarChar(5)
+  gradePoint   Decimal @map("grade_point") @db.Decimal(3, 2)
+  description  String? @db.VarChar(100)
+  /// Replaces the old `grade !== "NG"` test, so a scale may name its failing band anything
+  isPassing    Boolean @default(true) @map("is_passing")
+
+  // Relations
+  gradeScale GradeScale @relation(fields: [gradeScaleId], references: [id], onDelete: Cascade)
+
+  @@unique([gradeScaleId, grade])
+  @@index([gradeScaleId])
+  @@map("grade_bands")
 }
 
 // =====================================================
@@ -789,11 +839,15 @@ model ReportCard {
   isPublished      Boolean   @default(false) @map("is_published")
   generatedAt      DateTime? @map("generated_at")
   createdAt        DateTime  @default(now()) @map("created_at")
+  /// The grade scale this card was generated with. Null = built-in NEB 8-band
+  /// (cards generated before grade scales existed, or a school with none set up).
+  gradeScaleId     Int?      @map("grade_scale_id")
 
   // Relations
   student      Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
   exam         Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
   studentClass StudentClass @relation(fields: [studentClassId], references: [id], onDelete: Cascade)
+  gradeScale   GradeScale?  @relation(fields: [gradeScaleId], references: [id], onDelete: Restrict)
 
   @@unique([studentId, examId])
   @@index([studentId])
@@ -801,6 +855,7 @@ model ReportCard {
   @@index([studentClassId])
   @@index([isPublished])
   @@index([classRank])
+  @@index([gradeScaleId])
   @@map("report_cards")
 }
 

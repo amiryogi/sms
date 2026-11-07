@@ -5,6 +5,7 @@ const {
   asyncHandler,
   gradeCalculator,
 } = require("../utils");
+const { getDefaultScale } = require("../services/gradeScale.service");
 
 /**
  * @desc    Get results for an exam subject (for teachers to enter marks)
@@ -212,6 +213,9 @@ const saveResults = asyncHandler(async (req, res) => {
     }
   }
 
+  // Stored grades use the school's default scale, like a newly generated card.
+  const scale = await getDefaultScale(req.user.schoolId);
+
   const savedResults = await prisma.$transaction(async (tx) => {
     const updated = [];
     for (const res of results) {
@@ -275,17 +279,20 @@ const saveResults = asyncHandler(async (req, res) => {
       }
       // Grade via the shared calculator so the stored grade is identical to the
       // one the report card renders for these marks (CLAUDE.md invariant #8).
-      // It applies the NEB per-component rule: failing theory or practical
-      // below the pass mark makes the whole subject NG.
-      const { finalGrade: grade } = gradeCalculator.calculateSubjectGrade({
-        theoryMarks: theoryObtained,
-        theoryFullMarks:
-          examSubject.theoryFullMarks || examSubject.fullMarks || 100,
-        practicalMarks: practicalObtained,
-        practicalFullMarks: examSubject.practicalFullMarks || 0,
-        hasPractical: Boolean(examSubject.hasPractical),
-        isAbsent: Boolean(res.isAbsent),
-      });
+      // It applies the per-component rule: failing theory or practical below
+      // the scale's pass percentage makes the whole subject fail.
+      const { finalGrade: grade } = gradeCalculator.calculateSubjectGrade(
+        {
+          theoryMarks: theoryObtained,
+          theoryFullMarks:
+            examSubject.theoryFullMarks || examSubject.fullMarks || 100,
+          practicalMarks: practicalObtained,
+          practicalFullMarks: examSubject.practicalFullMarks || 0,
+          hasPractical: Boolean(examSubject.hasPractical),
+          isAbsent: Boolean(res.isAbsent),
+        },
+        scale,
+      );
 
       const result = await tx.examResult.upsert({
         where: {

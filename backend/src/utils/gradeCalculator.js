@@ -1,8 +1,9 @@
 /**
  * Nepal-style GPA and Grade Calculation Utility
- * Based on NEB (National Examination Board) Nepal grading system
  *
- * Grade Mapping:
+ * Every function takes an optional grade `scale` (see `utils/gradeScale.js`).
+ * Without one it uses the official NEB 8-band scale:
+ *
  * 90-100% = A+ (4.0 GPA)
  * 80-89%  = A  (3.6 GPA)
  * 70-79%  = B+ (3.2 GPA)
@@ -11,78 +12,80 @@
  * 40-49%  = C  (2.0 GPA)
  * 35-39%  = D  (1.6 GPA)
  * < 35%   = NG (0.0 GPA) - Not Graded / Fail
+ *
+ * A school's own scale is loaded by `services/gradeScale.service.js` and passed
+ * in. Nothing here should hardcode a grade letter or a pass percentage.
  */
 
-// Grade thresholds based on Nepal NEB system
-const GRADE_THRESHOLDS = [
-  { min: 90, max: 100, grade: "A+", gpa: 4.0, description: "Outstanding" },
-  { min: 80, max: 90, grade: "A", gpa: 3.6, description: "Excellent" },
-  { min: 70, max: 80, grade: "B+", gpa: 3.2, description: "Very Good" },
-  { min: 60, max: 70, grade: "B", gpa: 2.8, description: "Good" },
-  { min: 50, max: 60, grade: "C+", gpa: 2.4, description: "Satisfactory" },
-  { min: 40, max: 50, grade: "C", gpa: 2.0, description: "Acceptable" },
-  {
-    min: 35,
-    max: 40,
-    grade: "D",
-    gpa: 1.6,
-    description: "Partially Acceptable",
-  },
-  { min: 0, max: 35, grade: "NG", gpa: 0.0, description: "Not Graded" },
-];
+const { NEB_8_BAND, normalizeScale } = require("./gradeScale");
+
+/** The scale used when a caller passes none: the official NEB 8-band scale. */
+const DEFAULT_SCALE = normalizeScale(NEB_8_BAND);
+
+// The NEB bands in their original shape, kept for existing importers.
+const GRADE_THRESHOLDS = DEFAULT_SCALE.bands.map(
+  ({ min, max, grade, gpa, description }) => ({ min, max, grade, gpa, description }),
+);
+
+/** The result a scale gives for a failure or an ungradeable input. */
+const failResult = (scale, description) => {
+  const band = scale.bands.find((b) => b.grade === scale.failGrade);
+  return {
+    grade: scale.failGrade,
+    gpa: 0.0,
+    description: description ?? band?.description ?? "Not Graded",
+    isPassed: false,
+  };
+};
 
 /**
  * Calculate grade and GPA from percentage
  * @param {number} percentage - The percentage score (0-100)
+ * @param {Object} [scale] - A normalized grade scale; defaults to NEB 8-band
  * @returns {Object} { grade, gpa, description, isPassed }
  */
-const calculateGradeFromPercentage = (percentage) => {
+const calculateGradeFromPercentage = (percentage, scale = DEFAULT_SCALE) => {
   // Handle null/undefined/NaN
   if (percentage === null || percentage === undefined || isNaN(percentage)) {
-    return {
-      grade: "NG",
-      gpa: 0.0,
-      description: "Not Graded",
-      isPassed: false,
-    };
+    return failResult(scale, "Not Graded");
   }
 
   // Clamp percentage to valid range
   const pct = Math.max(0, Math.min(100, parseFloat(percentage)));
 
-  for (const threshold of GRADE_THRESHOLDS) {
-    if (pct >= threshold.min && pct <= threshold.max) {
+  // Bands are sorted highest first, so a boundary score lands in the higher band.
+  for (const band of scale.bands) {
+    if (pct >= band.min && pct <= band.max) {
       return {
-        grade: threshold.grade,
-        gpa: threshold.gpa,
-        description: threshold.description,
-        isPassed: threshold.grade !== "NG",
+        grade: band.grade,
+        gpa: band.gpa,
+        description: band.description,
+        isPassed: band.isPassing,
       };
     }
   }
 
-  return { grade: "NG", gpa: 0.0, description: "Not Graded", isPassed: false };
+  return failResult(scale, "Not Graded");
 };
 
 /**
  * Calculate grade from marks obtained and full marks
  * @param {number} marksObtained - Marks obtained by student
  * @param {number} fullMarks - Total/full marks
+ * @param {Object} [scale] - A normalized grade scale; defaults to NEB 8-band
  * @returns {Object} { grade, gpa, description, isPassed, percentage }
  */
-const calculateGradeFromMarks = (marksObtained, fullMarks) => {
+const calculateGradeFromMarks = (
+  marksObtained,
+  fullMarks,
+  scale = DEFAULT_SCALE,
+) => {
   if (!fullMarks || fullMarks <= 0) {
-    return {
-      grade: "NG",
-      gpa: 0.0,
-      description: "Invalid",
-      isPassed: false,
-      percentage: 0,
-    };
+    return { ...failResult(scale, "Invalid"), percentage: 0 };
   }
 
   const percentage = (parseFloat(marksObtained) / parseFloat(fullMarks)) * 100;
-  const result = calculateGradeFromPercentage(percentage);
+  const result = calculateGradeFromPercentage(percentage, scale);
 
   return {
     ...result,
@@ -92,7 +95,8 @@ const calculateGradeFromMarks = (marksObtained, fullMarks) => {
 
 /**
  * Calculate subject-wise grade (combining theory and practical)
- * Nepal Rule: If either theory or practical is absent/failed (< 35%), subject is NG
+ * Nepal Rule: if theory or practical falls below the scale's pass percentage
+ * (35% on the NEB scale), the whole subject fails and prints the fail grade.
  *
  * @param {Object} params
  * @param {number} params.theoryMarks - Theory marks obtained
@@ -101,17 +105,21 @@ const calculateGradeFromMarks = (marksObtained, fullMarks) => {
  * @param {number} params.practicalFullMarks - Practical full marks (0 if no practical)
  * @param {boolean} params.hasPractical - Whether subject has practical component
  * @param {boolean} params.isAbsent - Whether student was absent
+ * @param {Object} [scale] - A normalized grade scale; defaults to NEB 8-band
  * @returns {Object} Complete subject grade breakdown
  */
-const calculateSubjectGrade = ({
-  theoryMarks,
-  theoryFullMarks,
-  practicalMarks = 0,
-  practicalFullMarks = 0,
-  hasPractical = false,
-  isAbsent = false,
-}) => {
-  // If student is absent, return NG
+const calculateSubjectGrade = (
+  {
+    theoryMarks,
+    theoryFullMarks,
+    practicalMarks = 0,
+    practicalFullMarks = 0,
+    hasPractical = false,
+    isAbsent = false,
+  },
+  scale = DEFAULT_SCALE,
+) => {
+  // Absent students print AB, whatever the scale
   if (isAbsent) {
     return {
       theoryMarks: 0,
@@ -143,14 +151,14 @@ const calculateSubjectGrade = ({
 
   // Calculate theory percentage and grade
   const theoryPercentage = theoryFull > 0 ? (theory / theoryFull) * 100 : 0;
-  const theoryResult = calculateGradeFromPercentage(theoryPercentage);
+  const theoryResult = calculateGradeFromPercentage(theoryPercentage, scale);
 
   // Calculate practical percentage and grade (if applicable)
   let practicalResult = null;
   let practicalPercentage = null;
   if (hasPractical && practicalFull > 0) {
     practicalPercentage = (practical / practicalFull) * 100;
-    practicalResult = calculateGradeFromPercentage(practicalPercentage);
+    practicalResult = calculateGradeFromPercentage(practicalPercentage, scale);
   }
 
   // Calculate combined/final marks and percentage
@@ -158,26 +166,27 @@ const calculateSubjectGrade = ({
   const totalFullMarks = theoryFull + practicalFull;
   const finalPercentage =
     totalFullMarks > 0 ? (totalMarks / totalFullMarks) * 100 : 0;
-  const finalResult = calculateGradeFromPercentage(finalPercentage);
+  const finalResult = calculateGradeFromPercentage(finalPercentage, scale);
 
-  // Nepal Rule: Check if either component fails (< 35%)
+  // Nepal Rule: a component below the pass percentage fails the subject
   let isPassed = finalResult.isPassed;
   let remark = finalResult.description;
+  const { passPercent } = scale;
 
-  // If theory fails (< 35%), entire subject fails
-  if (theoryPercentage < 35) {
+  // If theory fails, entire subject fails
+  if (theoryPercentage < passPercent) {
     isPassed = false;
     remark = "Theory Failed";
   }
 
-  // If practical exists and fails (< 35%), entire subject fails
-  if (hasPractical && practicalFull > 0 && practicalPercentage < 35) {
+  // If practical exists and fails, entire subject fails
+  if (hasPractical && practicalFull > 0 && practicalPercentage < passPercent) {
     isPassed = false;
     remark = "Practical Failed";
   }
 
-  // Override grade to NG if failed
-  const overallGrade = isPassed ? finalResult.grade : "NG";
+  // A failed subject prints the scale's fail grade (NG on the NEB scale)
+  const overallGrade = isPassed ? finalResult.grade : scale.failGrade;
   const overallGpa = isPassed ? finalResult.gpa : 0.0;
 
   return {
@@ -206,7 +215,7 @@ const calculateSubjectGrade = ({
 
 /**
  * Calculate overall GPA from array of subject GPAs
- * Nepal Rule: If any subject has NG (0.0), overall result is FAIL
+ * Nepal Rule: if any subject fails, the overall result fails
  *
  * For NEB Grade 11-12 (useCreditWeighting=true):
  *   GPA = Σ(gradePoint × creditHours) / Σ(creditHours)
@@ -217,15 +226,16 @@ const calculateSubjectGrade = ({
  * @param {Array<Object>} subjects - Array of subject results with gpa and creditHours properties
  * @param {Object} options - Calculation options
  * @param {boolean} options.useCreditWeighting - Whether to use credit-weighted calculation (NEB mode)
+ * @param {Object} [options.scale] - A normalized grade scale; defaults to NEB 8-band
  * @returns {Object} { gpa, grade, isPassed, totalSubjects, passedSubjects, failedSubjects, totalCredits }
  */
 const calculateOverallGPA = (subjects, options = {}) => {
-  const { useCreditWeighting = false } = options;
+  const { useCreditWeighting = false, scale = DEFAULT_SCALE } = options;
 
   if (!subjects || subjects.length === 0) {
     return {
       gpa: 0,
-      grade: "NG",
+      grade: scale.failGrade,
       isPassed: false,
       totalSubjects: 0,
       passedSubjects: 0,
@@ -241,7 +251,7 @@ const calculateOverallGPA = (subjects, options = {}) => {
   let weightedGpaSum = 0;
   let passedSubjects = 0;
   let failedSubjects = 0;
-  let hasNG = false;
+  let anyFailed = false;
 
   subjects.forEach((subject) => {
     const gpa = parseFloat(subject.finalGpa) || 0;
@@ -259,7 +269,7 @@ const calculateOverallGPA = (subjects, options = {}) => {
       passedSubjects++;
     } else {
       failedSubjects++;
-      hasNG = true;
+      anyFailed = true;
     }
   });
 
@@ -280,11 +290,11 @@ const calculateOverallGPA = (subjects, options = {}) => {
   const roundedGpa = Math.round(calculatedGpa * 100) / 100;
 
   // Get grade from average percentage for display
-  const gradeResult = calculateGradeFromPercentage(averagePercentage);
+  const gradeResult = calculateGradeFromPercentage(averagePercentage, scale);
 
-  // Nepal Rule: Any NG means overall FAIL
-  const isPassed = !hasNG && roundedGpa > 0;
-  const overallGrade = isPassed ? gradeResult.grade : "NG";
+  // Nepal Rule: any failed subject means overall FAIL
+  const isPassed = !anyFailed && roundedGpa > 0;
+  const overallGrade = isPassed ? gradeResult.grade : scale.failGrade;
 
   return {
     gpa: roundedGpa,
@@ -339,6 +349,7 @@ const getResultStatus = (isPassed) => {
 };
 
 module.exports = {
+  DEFAULT_SCALE,
   GRADE_THRESHOLDS,
   calculateGradeFromPercentage,
   calculateGradeFromMarks,

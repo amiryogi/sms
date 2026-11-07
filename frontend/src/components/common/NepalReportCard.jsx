@@ -1,6 +1,8 @@
 import React, { useRef } from "react";
+import { createPortal } from "react-dom";
 import { Printer, Download, X } from "lucide-react";
 import ReportSheet from "./reportcard/ReportSheet";
+import usePrintIsolation from "./reportcard/usePrintIsolation";
 
 /**
  * Nepal-style Report Card Component
@@ -16,10 +18,20 @@ import ReportSheet from "./reportcard/ReportSheet";
  * - Plain black/white print-friendly design
  */
 
-const NepalReportCard = ({ data, onClose, showActions = true }) => {
-  const reportRef = useRef(null);
+const NepalReportCard = (props) => {
+  // With a Close button this is a modal over the page: render it under <body>
+  // and print only it. Without one (student/parent report-card pages) the page
+  // shows it inline and handles printing itself.
+  const isModal = Boolean(props.onClose);
+  usePrintIsolation(isModal && Boolean(props.data));
 
-  if (!data) return null;
+  if (!props.data) return null;
+  const card = <ReportCardOverlay {...props} />;
+  return isModal ? createPortal(card, document.body) : card;
+};
+
+const ReportCardOverlay = ({ data, onClose, showActions = true }) => {
+  const reportRef = useRef(null);
 
   const handlePrint = () => {
     window.print();
@@ -518,17 +530,43 @@ const NepalReportCard = ({ data, onClose, showActions = true }) => {
             display: block;
           }
 
-          .report-card-a4 {
+          /* One A4 page. !important beats the student/parent pages' own
+             on-screen .report-card-a4 shadow rule, which is also !important. */
+          .report-card-container .report-card-a4 {
             width: 100%;
             min-height: auto;
-            box-shadow: none;
-            padding: 10mm;
+            box-shadow: none !important;
+            padding: 6mm 8mm;
             margin: 0;
+          }
+
+          /* Shown inline on the student/parent pages: drop the page's own
+             padding so the card gets the full printable width. */
+          .page-content,
+          .page-container {
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: none !important;
+          }
+
+          .signature-section {
+            margin-top: 14px;
+            padding-top: 8px;
+            break-inside: avoid;
+          }
+
+          .signature-grid {
+            margin-bottom: 8px;
+          }
+
+          .report-footer {
+            margin-top: 8px;
+            padding-top: 6px;
           }
 
           @page {
             size: A4;
-            margin: 10mm;
+            margin: 8mm;
           }
 
           body {

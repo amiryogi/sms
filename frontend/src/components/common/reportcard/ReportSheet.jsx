@@ -42,9 +42,14 @@ const ReportSheet = ({
   logoError = false,
 }) => {
   const options = { ...VARIANTS[variant], ...overrides };
-  const { school, examination, student, subjects, summary, remarks } = data || {};
+  const { school, examination, student, subjects, summary, remarks, gradeReference } =
+    data || {};
 
   if (!data) return null;
+
+  // Remark wording comes from the scale this card was graded on, so a legacy
+  // "D+" or "E" gets its own description instead of a blank.
+  const bands = gradeReference?.length ? gradeReference : undefined;
 
   // Credit hours shown in the table footer: theory + internal across all subjects.
   const totalCreditHours =
@@ -67,7 +72,7 @@ const ReportSheet = ({
     .join(", ");
 
   const rows = subjects?.map((subject, index) => {
-    const remarkText = remarkForGrade(subject.finalGrade);
+    const remarkText = remarkForGrade(subject.finalGrade, bands);
     const span = subject.hasPractical ? 2 : 1;
     const theoryRow = (
       <tr className="theory-row">
@@ -283,7 +288,7 @@ const ReportSheet = ({
             <div className="attendance-item">
               <span className="label">REMARKS:</span>
               <span className="value">
-                {remarkForGrade(summary?.grade) || "—"}
+                {remarkForGrade(summary?.grade, bands) || "—"}
               </span>
             </div>
           </div>
@@ -303,7 +308,7 @@ const ReportSheet = ({
           </div>
           <div className="item">
             <span className="label">REMARKS:</span>
-            <span>{remarkForGrade(summary?.grade) || "—"}</span>
+            <span>{remarkForGrade(summary?.grade, bands) || "—"}</span>
           </div>
         </div>
       )}

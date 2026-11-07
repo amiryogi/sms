@@ -13,6 +13,10 @@
  * report card uses. This script finds rows whose stored grade disagrees with that
  * function and optionally rewrites them.
  *
+ * Each row is graded on its school's current default grade scale, which is what
+ * saving the marks again would store. Run it after changing a school's default
+ * scale if you want stored grades to follow.
+ *
  * Run from backend/:
  *   node scripts/audit-exam-grades.js           # report only
  *   node scripts/audit-exam-grades.js --apply   # write corrections
@@ -21,6 +25,7 @@
  */
 const prisma = require('../src/config/database');
 const gradeCalculator = require('../src/utils/gradeCalculator');
+const { getDefaultScale } = require('../src/services/gradeScale.service');
 
 const APPLY = process.argv.includes('--apply');
 
@@ -35,17 +40,26 @@ const APPLY = process.argv.includes('--apply');
     `exam results examined: ${rows.length} ${APPLY ? '(APPLY MODE)' : '(read-only)'}`
   );
 
+  const scales = new Map();
+  const scaleFor = async (schoolId) => {
+    if (!scales.has(schoolId)) scales.set(schoolId, await getDefaultScale(schoolId));
+    return scales.get(schoolId);
+  };
+
   const mismatches = [];
   for (const r of rows) {
     const es = r.examSubject;
-    const correct = gradeCalculator.calculateSubjectGrade({
-      theoryMarks: Number(r.marksObtained || 0),
-      theoryFullMarks: es.theoryFullMarks || es.fullMarks || 100,
-      practicalMarks: Number(r.practicalMarks || 0),
-      practicalFullMarks: es.practicalFullMarks || 0,
-      hasPractical: Boolean(es.hasPractical),
-      isAbsent: Boolean(r.isAbsent),
-    }).finalGrade;
+    const correct = gradeCalculator.calculateSubjectGrade(
+      {
+        theoryMarks: Number(r.marksObtained || 0),
+        theoryFullMarks: es.theoryFullMarks || es.fullMarks || 100,
+        practicalMarks: Number(r.practicalMarks || 0),
+        practicalFullMarks: es.practicalFullMarks || 0,
+        hasPractical: Boolean(es.hasPractical),
+        isAbsent: Boolean(r.isAbsent),
+      },
+      await scaleFor(r.schoolId),
+    ).finalGrade;
 
     if (r.grade !== correct) {
       mismatches.push({

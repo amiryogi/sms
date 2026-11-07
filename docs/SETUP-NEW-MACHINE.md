@@ -76,7 +76,7 @@ Then edit `backend/.env`:
 ```bash
 cd backend
 npx prisma generate
-npx prisma migrate deploy    # applies 0_init, creating all 35 tables
+npx prisma migrate deploy    # applies 0_init + grade_scales: 37 tables
 npm run seed                 # demo school, roles, classes 1-10, students, exams
 ```
 
@@ -110,6 +110,13 @@ cd backend  && npm run dev     # http://localhost:5000  (health: /health)
 cd frontend && npm run dev     # http://localhost:5173
 ```
 
+**Backend crashes with `listen EACCES: permission denied 0.0.0.0:5000`?** Windows
+has reserved port 5000 on that machine (check with
+`netsh interface ipv4 show excludedportrange protocol=tcp`). Use another port:
+set `PORT=5001` in `backend/.env`, and in `frontend/.env` set
+`VITE_API_URL=http://localhost:5001/api/v1`. Restart both servers — Vite reads
+`.env` only at startup.
+
 Demo logins, all with password `password123`:
 
 | Role | Email |
@@ -124,7 +131,7 @@ Demo logins, all with password `password123`:
 ## 8. Check it works
 
 ```bash
-cd backend && npm test          # 244 unit tests, no database needed
+cd backend && npm test          # 289 unit tests, no database needed
 cd backend && npm run lint
 cd frontend && npm run build
 ```

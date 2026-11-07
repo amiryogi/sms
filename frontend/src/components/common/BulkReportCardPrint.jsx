@@ -1,6 +1,8 @@
 import React, { useRef } from "react";
+import { createPortal } from "react-dom";
 import { Printer, X, Loader2 } from "lucide-react";
 import ReportSheet from "./reportcard/ReportSheet";
+import usePrintIsolation from "./reportcard/usePrintIsolation";
 
 /**
  * Bulk Report Card Print Component
@@ -18,9 +20,14 @@ import ReportSheet from "./reportcard/ReportSheet";
 const MAX_SUBJECTS_NORMAL = 10; // Normal mode supports up to 10 subjects comfortably
 const MAX_SUBJECTS_COMPACT = 16; // Compact mode can fit up to 16 subjects
 
-// Get remark text based on grade
+// Rendered under <body>, outside the page, so printing outputs only the cards
+// (see usePrintIsolation).
+const BulkReportCardPrint = (props) => {
+  usePrintIsolation(true);
+  return createPortal(<BulkPrintOverlay {...props} />, document.body);
+};
 
-const BulkReportCardPrint = ({ data, onClose, loading = false }) => {
+const BulkPrintOverlay = ({ data, onClose, loading = false }) => {
   const printRef = useRef(null);
 
   if (loading) {

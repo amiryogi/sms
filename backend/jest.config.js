@@ -4,6 +4,8 @@
  * Scope: pure-unit tests only. These tests must run with NO MySQL server and
  * without starting Express, so nothing here may import `src/config/database.js`,
  * `src/app.js`, or any controller (controllers pull in Prisma transitively).
+ * A service test may `jest.mock('../../config/database', () => ({}))` and pass a
+ * fake client in, as `services/__tests__/gradeScale.service.test.js` does.
  *
  * TZ is pinned because `src/utils/dateConverter.js` builds its reference point
  * with `new Date(1944, 0, 1)` (local midnight) and therefore produces different

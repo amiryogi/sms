@@ -67,9 +67,10 @@ Demo logins (after seed, password `password123`):
 `admin@svi.edu.np`, `admin@demo-school.edu.np`, `teacher@demo-school.edu.np`,
 `student@demo-school.edu.np`, `parent@demo-school.edu.np`. School code `DEMO001`.
 
-**Tests:** `npm test` (Jest) runs 244 unit tests over the pure utilities in
-`backend/src/utils/__tests__/` — grade calculation, BS date conversion,
-pagination and the response helpers. They need no database, so they run
+**Tests:** `npm test` (Jest) runs 289 unit tests over the pure utilities in
+`backend/src/utils/__tests__/` — grade calculation, grade scales, BS date
+conversion, pagination and the response helpers — plus the grade-scale service
+in `backend/src/services/__tests__/` (Prisma mocked). They need no database, so they run
 anywhere. A handful are marked `test.failing`: those pin **known, unfixed** bugs
 and flip the suite red the moment someone fixes the source without removing the
 marker. Do not delete a marker to silence it.
@@ -144,7 +145,7 @@ a component without going through a service.
 5. **`ExamSubject` is a snapshot.** `hasTheory`, `hasPractical`, `fullMarks`, `passMarks`, `theoryFullMarks`, `practicalFullMarks` are copied from `ClassSubject` when the exam is created. Later `ClassSubject` edits must **not** retroactively change an existing exam — that would rewrite the basis of already-entered marks.
 6. **Exam lifecycle:** `DRAFT -> PUBLISHED -> LOCKED`. Marks may only be entered or edited while `PUBLISHED`; teachers only see `PUBLISHED` exams; unlock moves `LOCKED -> PUBLISHED`.
 7. **Results reach students/parents only when published.** `ReportCard.isPublished` gates report cards; exam status gates raw marks.
-8. **Grades come from `backend/src/utils/gradeCalculator.js`** (NEB scale: A+ 90 / 4.0 … D 35 / 1.6, NG below 35). Never reimplement a grade table in a controller or a component.
+8. **Grades come from `backend/src/utils/gradeCalculator.js`, on the school's grade scale.** Scales are per school (`GradeScale` / `GradeBand`; presets NEB 8-band and legacy SLC 9-band in `utils/gradeScale.js`). Load one with `services/gradeScale.service.js` and pass it to the calculator; with no scale argument it uses NEB 8-band (A+ 90 / 4.0 … D 35 / 1.6, NG below 35). A `ReportCard` keeps the `gradeScaleId` it was generated with, and a scale in use cannot be edited. Never reimplement a grade table, and never test for the string `"NG"` — use `isPassed` / `band.isPassing`.
 9. **Never trust names, only flags.** No `className.includes('10')`, no grade-level string parsing in the frontend. The backend decides academic rules and returns booleans; the frontend renders them.
 10. **MySQL reserved words:** `rank` is mapped as `classRank` -> `class_rank`. Watch for similar collisions when adding columns.
 

@@ -9,30 +9,60 @@ New machine? Start with [SETUP-NEW-MACHINE.md](SETUP-NEW-MACHINE.md).
 
 ## Do this next
 
-**1. Visually check the report card.** This is the one open loop, and it blocks
-the next phase of work. The single-card and bulk-print marksheets were merged
-into one component (`frontend/src/components/common/reportcard/ReportSheet.jsx`).
-The output *should* be unchanged — the markup emits the same class names both
-stylesheets already targeted — but that is reasoning, not observation, and
-nobody has looked at a printed page since the merge.
+Phase 2 (per-school grade scale) is **verified** (2026-11-07):
+
+- API: a 38-check script against the live API and database — access control,
+  CRUD, gap/overlap rejection, marks save, generate, snapshot on default change,
+  locking, bulk = single = admin table.
+- Browser (headless Chrome): all 41 pages across admin, teacher, student, parent
+  and accountant load with no console errors, exceptions or failed API calls;
+  the Grade Scales section, generate, view, publish, student and parent views
+  were driven by script.
+- Print (Chrome's print engine to PDF, pages inspected): bulk print is one A4
+  page per student; single card, student and parent prints are one page each.
+
+Fixed on the way: printing from a report-card overlay printed the whole page
+behind it first (bulk print came out as admin screen + N cards); the single card
+spilled its footer onto a second page; the student/parent print kept the
+on-screen drop shadow. Overlays are now portalled to `<body>` and
+`reportcard/usePrintIsolation.js` hides `#root` while printing.
+
+Still for a human: hold a real printout against `marksheetformat*.jpeg` — the
+layout is the generic NEB sheet until Phase 3. Attendance prints `— / —` until
+Phase 4.
+
+**1. Apply the migration and reseed** (on any new machine). No `GRANT` needed —
+`migrate deploy` uses no shadow database. The seed now stores a grade on each
+seeded exam result; databases seeded before that have `grade = NULL` there
+(`node scripts/audit-exam-grades.js --apply` fills them in).
 
 ```
-Admin → Report Cards → pick an exam, Grade 10, section A → Generate
-  → View (single card)      — check header, marks table, summary, signatures
-  → Print All (bulk)        — check one page per student, no split TH/IN pairs,
-                              no trailing blank page
+cd backend
+npx prisma migrate deploy     # applies 20261106120000_grade_scales
+npx prisma generate
+npm run seed -- --clean       # seeds both grade-scale presets, NEB 8-band as default
 ```
 
-If it looks right, Phase 2 can start. If not, the cause is almost certainly in
-`ReportSheet.jsx`'s variant flags, not in the stylesheets, which were left
-untouched.
+**2. Print check — done** (see above). Phase 3 is unblocked.
 
-**2. Run the `GRANT`** from section 3 of the setup guide if you have not. Phase 2
-adds tables, and `prisma migrate dev` fails with P3014 without it.
+**3. Optional: click through Phase 2 yourself.**
 
-**3. Then: Phase 2 of** [plans/configurable-report-card.md](plans/configurable-report-card.md)
-— the per-school grade scale. That plan is approved and phases 0 and 1 of it are
-already done.
+```
+Admin → School Settings → Grade Scales (bottom of the page)
+  → both presets listed, NEB 8-band marked Default
+  → Edit NEB, set A's "To %" to 89 → Save is refused with a "Gap" error on that cell
+  → Make "Legacy SLC (9-band)" the default
+Admin → Report Cards → Generate again → View
+  → a 35% subject prints D+ / 1.6, a 25% one D / 1.2; no NG anywhere
+  → School Settings: the legacy scale now shows "Used by N report card(s)",
+    Edit is disabled, Duplicate works
+```
+
+Also check the school header on the single card now shows tagline, website and
+principal (they printed blank before).
+
+**4. Then Phase 3** of [plans/configurable-report-card.md](plans/configurable-report-card.md)
+— layout configuration.
 
 ---
 
@@ -58,7 +88,7 @@ exactly (35 models). `npx prisma migrate status` reports up to date.
   (100 / 15 min), both skipping successful requests so normal use is unaffected.
 
 ### Tests and tooling
-- 244 unit tests (`npm test` in `backend/`), no database needed.
+- 289 unit tests (`npm test` in `backend/`), no database needed.
 - Backend ESLint config added — `npm run lint` works now.
 - `backend/scripts/audit-exam-grades.js` finds and repairs `ExamResult.grade`
   rows written by the old grading code.
@@ -79,6 +109,30 @@ exactly (35 models). `npx prisma migrate status` reports up to date.
   that printed `NG` for students who had passed everything, and every Bikram
   Sambat date was one day late.
 
+### Report card work (phase 2: per-school grade scale) — verified
+- New tables `grade_scales` / `grade_bands`; `report_cards.grade_scale_id`
+  records which scale a card was generated with. Migration
+  `20261106120000_grade_scales`, generated with `prisma migrate diff`.
+- Two presets in `backend/src/utils/gradeScale.js`: **NEB 2078 (8-band)** and
+  **Legacy SLC (9-band)** (D+ 1.6, D 1.2, E 0.8). The legacy preset has every
+  band passing and no component pass mark, because `marksheetformat1.jpeg`
+  prints a theory `D` with a final `C`. Its GPAs match fmt1 (2.45) and fmt3 (2.11).
+- `gradeCalculator` takes an optional scale; with none it is NEB 8-band, so the
+  old 244 tests pass untouched. The bare `35`s are now `scale.passPercent`; the
+  `"NG"` checks are now `band.isPassing` and `scale.failGrade`.
+- Marks save, report-card list/generate/view/bulk and the audit script all
+  grade on the school's scale. Old cards with no scale id stay on NEB 8-band.
+- A scale used by any report card cannot be edited or deleted (duplicate it
+  instead). Saving rejects gaps, overlaps, duplicate letters, `AB`, and a passing
+  band below a failing one.
+- Admin UI: School Settings → Grade Scales. API: `/api/v1/grade-scales`
+  (admin only).
+- Report sheet remarks use the card's own bands; the student Results page shows
+  the report card's stored grade instead of computing one.
+- Finished two Phase 1 items that had not landed: `getReportCard` now selects
+  tagline / website / landline / principal / established year (they printed
+  blank), and the dead `getReportCardPdfData` endpoint is deleted.
+
 ---
 
 ## Decisions waiting on you
@@ -91,6 +145,10 @@ exactly (35 models). `npx prisma migrate status` reports up to date.
 | **`POST /auth/register`** | Public and unauthenticated, and grants ADMIN to the first user in a school. Not exploitable on the current seeded data, but it is one `migrate reset` away from being so. Lock it down? |
 | **Git history purge** | Old secrets are in pushed commits. Rotation is the real fix and is half done; a `filter-repo` rewrite is optional and only worth doing after rotation. |
 | **8 copies of `resolveAssetUrl`** | `utils/assets.js` is now the canonical one; 3 call sites converted. Eight more remain in unrelated pages — left alone to keep the report-card diff focused. |
+| **Which grade scale is SVI's default?** | The seed makes NEB 8-band the default so nothing changes until someone chooses. The sample marksheets say SVI uses the legacy 9-band scale for internal exams. If so, switch it in School Settings. That is one click, and already-generated cards are unaffected until regenerated. |
+| **Does SVI fail anyone on the legacy scale?** | The preset treats every band, including E (below 20%), as passing, with no component pass mark. That matches the samples and the 2072–2077 letter-grade system, but the samples never show a failing student. If SVI does fail students below some mark, set a pass % and untick "Passing" on the bands below it. |
+| **`ClassSubject.passMarks` vs the scale** | `passMarks` (default 40) is only displayed; it has never decided pass/fail. The grade scale's pass % (35 on NEB) does. Left as it is. Either drop `passMarks` from the UI, or derive it from the scale. |
+| **Stored `ExamResult.grade` after a scale change** | Report cards recompute from marks, but the per-subject grade stored at marks entry keeps the old scale's letter until the marks are saved again. `node scripts/audit-exam-grades.js --apply` regrades them on the current default. |
 
 ## Known issues, not yet fixed
 

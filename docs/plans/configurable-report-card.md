@@ -129,6 +129,12 @@ element shape as its only contract.
 
 ### Phase 2 — Per-school grade scale
 
+> **Status (2026-11-07): done and verified** (API, browser and print). See
+> `docs/STATUS.md`. Deviations from the sketch below: `GradeBand` also has
+> `@@unique([gradeScaleId, grade])`; `ReportCard.gradeScale` is `onDelete:
+> Restrict`; the `passMarks` 40-vs-35 contradiction was documented as an open
+> decision rather than changed.
+
 ```prisma
 model GradeScale {
   id         Int      @id @default(autoincrement())
