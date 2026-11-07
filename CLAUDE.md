@@ -47,9 +47,9 @@ database/schema.sql         raw SQL mirror of the Prisma schema
 ```bash
 # backend/  (port 5000)
 npm run dev              # nodemon
-npm run prisma:generate  # after ANY schema.prisma edit
-npm run prisma:push      # push schema without a migration  <- what this project mostly uses
-npm run prisma:migrate   # create a real migration (see section 8 caveat)
+npm run prisma:generate  # after ANY schema.prisma edit (stop the dev server first on Windows: EPERM)
+npx prisma migrate deploy  # apply committed migrations — how schema changes travel
+npm run prisma:migrate   # create a new migration (needs the shadow-DB grant; see docs/SETUP-NEW-MACHINE.md)
 npm run prisma:studio    # DB browser
 npm run seed             # node prisma/seed.js — wipes + reseeds demo data
 npm run lint
@@ -67,9 +67,9 @@ Demo logins (after seed, password `password123`):
 `admin@svi.edu.np`, `admin@demo-school.edu.np`, `teacher@demo-school.edu.np`,
 `student@demo-school.edu.np`, `parent@demo-school.edu.np`. School code `DEMO001`.
 
-**Tests:** `npm test` (Jest) runs 289 unit tests over the pure utilities in
-`backend/src/utils/__tests__/` — grade calculation, grade scales, BS date
-conversion, pagination and the response helpers — plus the grade-scale service
+**Tests:** `npm test` (Jest) runs 321 unit tests over the pure utilities in
+`backend/src/utils/__tests__/` — grade calculation, grade scales, report-card
+layouts, BS date conversion, pagination and the response helpers — plus the grade-scale service
 in `backend/src/services/__tests__/` (Prisma mocked). They need no database, so they run
 anywhere. A handful are marked `test.failing`: those pin **known, unfixed** bugs
 and flip the suite red the moment someone fixes the source without removing the
@@ -194,8 +194,17 @@ and grading; notices (global / role / class targeting); fees (types,
 structures, payments); promotions; school branding settings; subject Excel
 import.
 
+**Report card layout is per school** (School Settings → Report Card Layout,
+`/api/v1/report-card-layout`). `School.reportCardConfig` (JSON, null = the
+original NEB grade sheet) is normalized by `utils/reportCardLayout.js` and sent
+in every report-card payload as `layout`. Two templates: `nebGradeSheet`
+(`reportcard/ReportSheet.jsx`) and `performanceReport`
+(`reportcard/PerformanceSheet.jsx`, matches `marksheetformat1-4.jpeg`). Any
+layout change goes through `normalizeLayout`/`validateLayout`; the frontend only
+renders the flags. Plan: `docs/plans/configurable-report-card.md`.
+
 **Partial or rough:**
-- Report card layout is still being matched to the reference sheet — see `REPORT_CARD_IMPLEMENTATION_PLAN.md` with `gradesheetdemo.jpg`, `template.jpg`, `template_HTML.html`.
+- Report-card attendance prints `— / —`: attendance totals are plan phase 4.
 - No admin-facing attendance report page (the API exists).
 - Dashboards are stat cards only; no charts or trends.
 
@@ -239,18 +248,9 @@ classes and the dead NEB specs under `.github/`.
 - `ClassSubject.creditHours/theoryCreditHours/practicalCreditHours` columns and
   the per-subject credit-hour fields in report-card responses.
 
-**Outstanding:** the schema edit is in the working tree but **no migration has
-been applied**. Dropping `programs`, `program_subjects`, `student_programs`,
-`student_subjects` and `subject_components` destroys rows, so take a
-`mysqldump` first, then run from `backend/`:
-
-```bash
-npx prisma migrate dev --name drop_neb_grade_11_12
-```
-
-A recorded migration, not `db push`. After it lands, reseed
-(`npm run seed -- --clean`) and click through marks entry → report card for a
-Grade 10 class.
+The database was rebuilt from scratch afterwards, so the dropped tables never
+existed there: the committed baseline migration `0_init` already matches the
+K–10 schema.
 
 `backend/prisma/seeds/comprehensiveSeed.js` was left in place — it is an
 alternative full seeder, not an NEB-import script — but it still writes to the
@@ -260,11 +260,17 @@ wired into any npm script (`npm run seed` uses `prisma/seed.js`). Strip its
 
 ## 8. Known issues, not yet fixed
 
-1. **`backend/.env` is committed to git**, and the `.env` rule is commented out in `backend/.gitignore`. A real `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET` and a Cloudinary secret are in history. Rotate the secrets, `git rm --cached backend/.env frontend/.env`, uncomment the ignore rule. There is also no root `.gitignore`. The file's first line (`here is my .env file`) is stray text, not a variable.
-2. **`backend/prisma/migrations/` is gitignored** while four migration folders exist locally and untracked. Schema changes therefore travel by `prisma db push` plus raw `.sql` dumps, so environments drift. Decide one way: track migrations (preferred) or declare `db push` official and delete the orphan folders.
-3. **Five MySQL dumps sit in the repo** (`almostfinaldbfromhome.sql`, `dbfileaftersclsetting.sql`, `smsfromscl.sql`, `SQL_Scl_GradeSheet_1_23.sql`, plus `database/schema.sql`). They are snapshots of the author's machine, not a schema source. `schema.prisma` wins; treat the dumps as read-only history.
-4. **JWT config falls back to `'default-secret-change-in-production'`** when `JWT_SECRET` is unset (`src/config/index.js`). It should fail fast in production instead.
-5. **No rate limiting** on `/auth/login` or `/auth/refresh-token`.
+Fixed since this list was written: `.env` files are untracked and ignored;
+migrations are tracked in git (apply with `npx prisma migrate deploy`; never
+`db push`); JWT secrets are required in production; `/auth/login` and
+`/auth/refresh-token` are rate limited. Old secrets remain in git history —
+see `docs/STATUS.md`.
+
+1. **`.env.example` is committed.** Keep placeholders in it (`USER:PASSWORD`); real values go only in the ignored `.env`.
+2. *(fixed — see above)*
+3. **Five MySQL dumps sit in the repo** (`almostfinaldbfromhome.sql`, `dbfileaftersclsetting.sql`, `smsfromscl.sql`, `SQL_Scl_GradeSheet_1_23.sql`, plus `database/schema.sql`). They are snapshots of the author's machine, not a schema source, and three contain personal data. `schema.prisma` wins; treat the dumps as read-only history.
+4. *(fixed)*
+5. *(fixed)*
 6. `localStorage.clear()` on refresh failure in `apiClient.js` wipes unrelated keys.
 7. CORS origins are hardcoded to localhost 3000/5173/5174 plus `FRONTEND_URL`.
 8. `uploads/` is served statically by the backend; Cloudinary is wired but optional.

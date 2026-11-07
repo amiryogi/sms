@@ -150,6 +150,10 @@ model School {
   principalName   String?  @map("principal_name") @db.VarChar(255)
   establishedYear Int?     @map("established_year")
 
+  /// What the printed report card shows (utils/reportCardLayout.js).
+  /// Null = the original NEB grade sheet.
+  reportCardConfig Json?   @map("report_card_config")
+
   // Relations
   users         User[]
   academicYears AcademicYear[]

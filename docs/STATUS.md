@@ -1,13 +1,38 @@
 # Where this project is
 
-Updated 2026-11-06. Keep this current when you stop work — it is the handover
+Updated 2026-11-07. Keep this current when you stop work — it is the handover
 between machines and between sessions.
 
 New machine? Start with [SETUP-NEW-MACHINE.md](SETUP-NEW-MACHINE.md).
 
+**Branch:** phases 2 and 3 are on `report-card-config`, not yet merged to
+`main`. Merge (or `git push -u origin report-card-config`) before switching
+machines, or the other machine will not have them.
+
 ---
 
 ## Do this next
+
+**1. Phase 4 — attendance on the report card.** One decision first (see
+"Decisions waiting on you"): where the *total working days* number comes from.
+
+**2. Optional: hold a printed Performance Report against `marksheetformat1.jpeg`.**
+School Settings → Report Card Layout → "Performance Report" → Save, then print
+from Report Cards. Upload the school logo in School Settings first; the samples
+have it top-left. Set the principal's name there too — it prints above
+"Principal".
+
+Phase 3 (report-card layout) is **verified** (2026-11-07):
+
+- API: 18 checks — admin only (401/403 for others), per-field validation errors,
+  save normalizes, reset, and the single, bulk and student payloads all carry
+  `layout`, `student.classWithNumeral` and `meta.issueDateBS`.
+- Browser + print (headless Chrome → PDF, pages inspected): settings card,
+  preset switch, live preview, blank-title error, save; Performance Report as
+  single card, bulk (5 students → 5 pages), and student page — one A4 page each,
+  including with every option on (marks + grades, codes, credit hours, rank,
+  percentage, result, summary, grade table, three signatures); NEB sheet with
+  custom title, signatures, grade table and footer.
 
 Phase 2 (per-school grade scale) is **verified** (2026-11-07):
 
@@ -27,25 +52,20 @@ spilled its footer onto a second page; the student/parent print kept the
 on-screen drop shadow. Overlays are now portalled to `<body>` and
 `reportcard/usePrintIsolation.js` hides `#root` while printing.
 
-Still for a human: hold a real printout against `marksheetformat*.jpeg` — the
-layout is the generic NEB sheet until Phase 3. Attendance prints `— / —` until
-Phase 4.
+Attendance prints `— / —` until Phase 4.
 
-**1. Apply the migration and reseed** (on any new machine). No `GRANT` needed —
-`migrate deploy` uses no shadow database. The seed now stores a grade on each
-seeded exam result; databases seeded before that have `grade = NULL` there
-(`node scripts/audit-exam-grades.js --apply` fills them in).
+**On any new machine: apply the migrations and reseed.** No `GRANT` needed —
+`migrate deploy` uses no shadow database. Stop the backend before
+`prisma generate`, or Windows refuses to replace the engine file (EPERM).
 
 ```
 cd backend
-npx prisma migrate deploy     # applies 20261106120000_grade_scales
+npx prisma migrate deploy     # grade_scales + report_card_config
 npx prisma generate
 npm run seed -- --clean       # seeds both grade-scale presets, NEB 8-band as default
 ```
 
-**2. Print check — done** (see above). Phase 3 is unblocked.
-
-**3. Optional: click through Phase 2 yourself.**
+**Optional: click through Phase 2 yourself.**
 
 ```
 Admin → School Settings → Grade Scales (bottom of the page)
@@ -60,9 +80,6 @@ Admin → Report Cards → Generate again → View
 
 Also check the school header on the single card now shows tagline, website and
 principal (they printed blank before).
-
-**4. Then Phase 3** of [plans/configurable-report-card.md](plans/configurable-report-card.md)
-— layout configuration.
 
 ---
 
@@ -109,6 +126,34 @@ exactly (35 models). `npx prisma migrate status` reports up to date.
   that printed `NG` for students who had passed everything, and every Bikram
   Sambat date was one day late.
 
+### Report card work (phase 3: layout) — verified
+- `School.reportCardConfig` (JSON; null = the original NEB sheet, so nothing
+  changed for a school until it chooses). Migration
+  `20261107120000_report_card_config`.
+- `backend/src/utils/reportCardLayout.js`: two presets, `normalizeLayout`
+  (never throws; bad stored values fall back to defaults), `validateLayout`
+  (per-field errors), `classWithNumeral` ("Nine [9]"), `issueDateBS`
+  ("2083-05-06"). 32 unit tests.
+- `GET/PUT/DELETE /api/v1/report-card-layout` (admin only). GET also returns a
+  sample card graded on the school's default scale, for the preview.
+- Every report-card payload carries `layout`, `student.classWithNumeral` and
+  `meta.issueDateBS`, so students, parents and bulk print follow the setting
+  without re-login. The layout is **not** snapshotted per card — it changes how
+  grades are printed, never the grades.
+- Templates: **NEB grade sheet** (the existing sheet; title, attendance,
+  summary, remarks, grade table, signatures and footer are settable) and
+  **Performance Report** (`reportcard/PerformanceSheet.jsx`, built from
+  `marksheetformat1-4.jpeg`: one row per subject, Theory/Practical columns only
+  when the exam has practicals, empty remark column, seal, BS issue date,
+  guardian note). Every setting applies to it: grades / marks / both, codes,
+  credit hours, rank, percentage, result, summary, grade table, watermark,
+  principal's name, minimum table rows.
+- Admin UI: School Settings → Report Card Layout, with a live half-size preview
+  using the real report-card component.
+- Deviation from the plan sketch: the preset is called `performanceReport`, not
+  `sviPerformanceReport`, since any school can use it. `countLateAsPresent` was
+  left for Phase 4, where it is used.
+
 ### Report card work (phase 2: per-school grade scale) — verified
 - New tables `grade_scales` / `grade_bands`; `report_cards.grade_scale_id`
   records which scale a card was generated with. Migration
@@ -147,10 +192,17 @@ exactly (35 models). `npx prisma migrate status` reports up to date.
 | **8 copies of `resolveAssetUrl`** | `utils/assets.js` is now the canonical one; 3 call sites converted. Eight more remain in unrelated pages — left alone to keep the report-card diff focused. |
 | **Which grade scale is SVI's default?** | The seed makes NEB 8-band the default so nothing changes until someone chooses. The sample marksheets say SVI uses the legacy 9-band scale for internal exams. If so, switch it in School Settings. That is one click, and already-generated cards are unaffected until regenerated. |
 | **Does SVI fail anyone on the legacy scale?** | The preset treats every band, including E (below 20%), as passing, with no component pass mark. That matches the samples and the 2072–2077 letter-grade system, but the samples never show a failing student. If SVI does fail students below some mark, set a pass % and untick "Passing" on the bands below it. |
+| **Phase 4: where do "total working days" come from?** | `61/70` on fmt1 needs a total the attendance table can't give: an unmarked day looks the same as a holiday. Suggested: the admin enters working days per exam, and the report card stores days present / working days when generated (like rank and GPA already are). Alternative: count distinct days on which any attendance was marked for the class. |
 | **`ClassSubject.passMarks` vs the scale** | `passMarks` (default 40) is only displayed; it has never decided pass/fail. The grade scale's pass % (35 on NEB) does. Left as it is. Either drop `passMarks` from the UI, or derive it from the scale. |
 | **Stored `ExamResult.grade` after a scale change** | Report cards recompute from marks, but the per-subject grade stored at marks entry keeps the old scale's letter until the marks are saved again. `node scripts/audit-exam-grades.js --apply` regrades them on the current default. |
 
 ## Known issues, not yet fixed
+
+- The NEB grade sheet asks for Times New Roman but prints in Inter: `index.css`
+  sets Inter on `*`, which beats inheritance. The Performance Report overrides
+  it; the NEB sheet was left alone so its look doesn't change unasked. Its
+  "Date of Issue" also prints only the BS year (`2082`), not a date —
+  `meta.issueDateBS` now exists if you want it.
 
 - 2 backend lint errors: a duplicated `description` key in a Prisma `create()`
   (`subject.controller.js:68`) and a `const` inside an unbraced `case`

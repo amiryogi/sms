@@ -3,6 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { schoolService } from "../../api/schoolService";
 import { resolveAssetUrl } from "../../utils/assets";
 import GradeScaleSettings from "../../components/admin/GradeScaleSettings";
+import ReportCardLayoutSettings from "../../components/admin/ReportCardLayoutSettings";
 import {
   Building2,
   Save,
@@ -744,6 +745,9 @@ const SchoolSettings = () => {
 
         {/* Grade scales: own card, own save flow */}
         <GradeScaleSettings />
+
+        {/* Report card layout: own card, own save flow */}
+        <ReportCardLayoutSettings />
       </div>
 
       <style>{`

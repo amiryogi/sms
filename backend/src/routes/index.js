@@ -29,6 +29,7 @@ const schoolRoutes = require("./school.routes");
 const publicRoutes = require("./public.routes");
 const promotionRoutes = require('./promotion.routes');
 const gradeScaleRoutes = require("./gradeScale.routes");
+const reportCardLayoutRoutes = require("./reportCardLayout.routes");
 
 // API Version prefix
 const API_VERSION = "/v1";
@@ -61,6 +62,7 @@ router.use(`${API_VERSION}/school`, schoolRoutes);
 router.use(`${API_VERSION}/public`, publicRoutes);
 router.use(`${API_VERSION}/promotions`, promotionRoutes);
 router.use(`${API_VERSION}/grade-scales`, gradeScaleRoutes);
+router.use(`${API_VERSION}/report-card-layout`, reportCardLayoutRoutes);
 
 // Root route
 router.get("/", (req, res) => {
@@ -89,6 +91,7 @@ router.get("/", (req, res) => {
       public: "/api/v1/public",
       promotions: "/api/v1/promotions",
       gradeScales: "/api/v1/grade-scales",
+      reportCardLayout: "/api/v1/report-card-layout",
     },
   });
 });

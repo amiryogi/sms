@@ -1,7 +1,9 @@
 import React from "react";
 import { remarkForGrade } from "../../../utils/grades";
 import { resolveAssetUrl } from "../../../utils/assets";
-import { VARIANTS } from "./variants";
+import { VARIANTS, layoutOptions } from "./variants";
+import PerformanceSheet from "./PerformanceSheet";
+import GradeLegend from "./GradeLegend";
 
 /**
  * The marksheet itself — one student, one A4 sheet.
@@ -20,6 +22,11 @@ import { VARIANTS } from "./variants";
  * rather than as separate components. VARIANTS below reproduce exactly what each
  * caller rendered before unification. When report-card layout becomes per-school
  * configuration, that config maps onto these same flags — no new rendering paths.
+ *
+ * Per-school layout: the payload's `layout` (School Settings -> Report Card
+ * Layout) either switches to the Performance Report template, or adjusts the
+ * few NEB-sheet settings mapped in variants.js `layoutOptions`. With no
+ * `layout` in the payload the sheet prints exactly as before.
  *
  * Styling note: each caller still supplies its own <style> block, and this
  * markup deliberately keeps the class names those stylesheets already target, so
@@ -41,11 +48,26 @@ const ReportSheet = ({
   onLogoError,
   logoError = false,
 }) => {
-  const options = { ...VARIANTS[variant], ...overrides };
-  const { school, examination, student, subjects, summary, remarks, gradeReference } =
-    data || {};
-
   if (!data) return null;
+
+  if (data.layout?.template === "performanceReport") {
+    return (
+      <PerformanceSheet
+        data={data}
+        compact={compact}
+        logoError={logoError}
+        onLogoError={onLogoError}
+      />
+    );
+  }
+
+  const options = {
+    ...VARIANTS[variant],
+    ...layoutOptions(data.layout, variant),
+    ...overrides,
+  };
+  const { school, examination, student, subjects, summary, remarks, gradeReference } =
+    data;
 
   // Remark wording comes from the scale this card was graded on, so a legacy
   // "D+" or "E" gets its own description instead of a blank.
@@ -274,6 +296,8 @@ const ReportSheet = ({
         table
       )}
 
+      {options.showGradeLegend && <GradeLegend bands={bands} />}
+
       {/* Attendance strip (single) */}
       {options.showAttendanceStrip && (
         <section className="attendance-section">
@@ -372,9 +396,14 @@ const ReportSheet = ({
 
       {/* Signatures */}
       <section className="signature-section">
-        <div className="signature-grid">
-          {["CLASS TEACHER", "EXAM CO-ORDINATOR", "PRINCIPAL"].map((label) => (
-            <div className="signature-item" key={label}>
+        <div
+          className="signature-grid"
+          style={{
+            gridTemplateColumns: `repeat(${Math.max(1, options.signatures.length)}, 1fr)`,
+          }}
+        >
+          {options.signatures.map((label, i) => (
+            <div className="signature-item" key={`${label}-${i}`}>
               <div className="signature-line"></div>
               <span className="signature-label">{label}</span>
             </div>
@@ -396,7 +425,11 @@ const ReportSheet = ({
 
       {/* Footer */}
       <footer className="report-footer">
-        {options.footerInParagraph ? (
+        {options.footerText ? (
+          <p className="contact-info" style={{ whiteSpace: "pre-line", textAlign: "left" }}>
+            {options.footerText}
+          </p>
+        ) : options.footerInParagraph ? (
           <p className="contact-info">{contactLine}</p>
         ) : (
           contactLine
