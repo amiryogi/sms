@@ -67,10 +67,11 @@ Demo logins (after seed, password `password123`):
 `admin@svi.edu.np`, `admin@demo-school.edu.np`, `teacher@demo-school.edu.np`,
 `student@demo-school.edu.np`, `parent@demo-school.edu.np`. School code `DEMO001`.
 
-**Tests:** `npm test` (Jest) runs 346 unit tests over the pure utilities in
+**Tests:** `npm test` (Jest) runs 377 unit tests over the pure utilities in
 `backend/src/utils/__tests__/` — grade calculation, grade scales, report-card
 layouts and attendance, BS date conversion, pagination and the response helpers — plus the grade-scale service
-in `backend/src/services/__tests__/` (Prisma mocked). They need no database, so they run
+in `backend/src/services/__tests__/` and the auth/ownership middleware in
+`backend/src/middleware/__tests__/` (Prisma mocked). They need no database, so they run
 anywhere. A handful are marked `test.failing`: those pin **known, unfixed** bugs
 and flip the suite red the moment someone fixes the source without removing the
 marker. Do not delete a marker to silence it.
@@ -179,7 +180,32 @@ change.**
 
 Middleware: `authorize(...perms)` (ANY match), `requireRole(...roles)` (ANY
 match), `isAdmin`, `isTeacher`, `isStudent`, plus `isOwnStudent`,
-`isAssignedTeacher`, `canAccessAttendance` in `ownership.middleware.js`.
+`isAssignedTeacher`, `canAccessAttendance`, `canAccessResults`,
+`canAccessAssignment` in `ownership.middleware.js`.
+
+Rules the RBAC audit (2026-11-07) established — keep them:
+
+- **Fail closed.** An ownership check that can't find the profile id
+  (`req.user.studentId` / `parentId`) or the row it looks up denies; it never
+  calls `next()`. Prisma silently drops `undefined` filters, so always guard
+  the id before querying.
+- **Teacher scope is the current academic year** (`AcademicYear.isCurrent`) and,
+  where the request names one, the section. Last year's `TeacherSubject` rows
+  grant nothing.
+- `authenticate` refuses users with no role, inactive users and inactive
+  schools. `POST /auth/register` is admin-only (no public sign-up; the first
+  user of a school is not made ADMIN).
+- `POST /users` creates staff only (ADMIN, TEACHER, EXAM_OFFICER, ACCOUNTANT).
+  Students and parents are created through `/students` and `/admin/parents`,
+  which create their profile rows.
+- Students and parents see raw marks only when the exam is LOCKED or their
+  report card is published; non-admins never see DRAFT exams; students and
+  parents see only published assignments for their own class.
+- Fee data is readable by ADMIN, ACCOUNTANT, and STUDENT/PARENT for their own.
+- Uploads are named from a MIME whitelist (never the client's extension),
+  checked by magic bytes, and served with `nosniff`; non-images download.
+- Most seeded permissions are **not enforced** — routes check roles. Only the
+  attendance, result and report-card routes use `authorize`. See STATUS.md.
 
 ---
 
@@ -277,7 +303,7 @@ see `docs/STATUS.md`.
 3. **Five MySQL dumps sit in the repo** (`almostfinaldbfromhome.sql`, `dbfileaftersclsetting.sql`, `smsfromscl.sql`, `SQL_Scl_GradeSheet_1_23.sql`, plus `database/schema.sql`). They are snapshots of the author's machine, not a schema source, and three contain personal data. `schema.prisma` wins; treat the dumps as read-only history.
 4. *(fixed)*
 5. *(fixed)*
-6. `localStorage.clear()` on refresh failure in `apiClient.js` wipes unrelated keys.
+6. *(fixed — `apiClient.js` now removes only the auth keys, and token refresh is single-flight)*
 7. CORS origins are hardcoded to localhost 3000/5173/5174 plus `FRONTEND_URL`.
 8. `uploads/` is served statically by the backend; Cloudinary is wired but optional.
 

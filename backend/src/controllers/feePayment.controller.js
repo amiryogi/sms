@@ -2,6 +2,11 @@ const prisma = require("../config/database");
 const { ApiError, ApiResponse, asyncHandler } = require("../utils");
 const { getFeeManagementRole } = require("../middleware");
 
+// Roles that may read every student's fee records within their school.
+const FEE_ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "ACCOUNTANT"];
+const isFeeAdmin = (roles = []) =>
+  roles.some((role) => FEE_ADMIN_ROLES.includes(role));
+
 /**
  * @desc    Get all fee payments (with filters)
  * @route   GET /api/v1/fees/payments
@@ -14,11 +19,16 @@ const getFeePayments = asyncHandler(async (req, res) => {
 
   const where = { schoolId };
 
-  // Role-based filtering
-  if (userRoles.includes("STUDENT")) {
+  // Role-based filtering (default deny)
+  if (isFeeAdmin(userRoles)) {
+    // Admin / accountant: optionally filter by a specific student
+    if (studentId) {
+      where.studentClass = { studentId: parseInt(studentId) };
+    }
+  } else if (userRoles.includes("STUDENT")) {
     // Students can only see their own fees
     const student = await prisma.student.findFirst({
-      where: { userId: req.user.id },
+      where: { userId: req.user.id, schoolId },
     });
     if (!student) {
       throw ApiError.forbidden("Student profile not found");
@@ -27,7 +37,7 @@ const getFeePayments = asyncHandler(async (req, res) => {
   } else if (userRoles.includes("PARENT")) {
     // Parents can see their children's fees
     const parent = await prisma.parent.findFirst({
-      where: { userId: req.user.id },
+      where: { userId: req.user.id, schoolId },
       include: {
         studentParents: { select: { studentId: true } },
       },
@@ -37,9 +47,8 @@ const getFeePayments = asyncHandler(async (req, res) => {
     }
     const childIds = parent.studentParents.map((sp) => sp.studentId);
     where.studentClass = { studentId: { in: childIds } };
-  } else if (studentId) {
-    // Admin filtering by specific student
-    where.studentClass = { studentId: parseInt(studentId) };
+  } else {
+    throw ApiError.forbidden("You are not allowed to view fee records");
   }
 
   // Additional filters
@@ -97,23 +106,27 @@ const getStudentFeeSummary = asyncHandler(async (req, res) => {
   const schoolId = req.user.schoolId;
   const userRoles = req.user.roles || [];
 
-  // Authorization check
-  if (userRoles.includes("STUDENT")) {
+  // Authorization check (default deny)
+  if (isFeeAdmin(userRoles)) {
+    // Admin / accountant may view any student in their school
+  } else if (userRoles.includes("STUDENT")) {
     const student = await prisma.student.findFirst({
-      where: { userId: req.user.id },
+      where: { userId: req.user.id, schoolId },
     });
     if (!student || student.id !== parseInt(studentId)) {
       throw ApiError.forbidden("You can only view your own fees");
     }
   } else if (userRoles.includes("PARENT")) {
     const parent = await prisma.parent.findFirst({
-      where: { userId: req.user.id },
+      where: { userId: req.user.id, schoolId },
       include: { studentParents: { select: { studentId: true } } },
     });
     const childIds = parent?.studentParents.map((sp) => sp.studentId) || [];
     if (!childIds.includes(parseInt(studentId))) {
       throw ApiError.forbidden("You can only view your children's fees");
     }
+  } else {
+    throw ApiError.forbidden("You are not allowed to view fee records");
   }
 
   // Get student's enrollment

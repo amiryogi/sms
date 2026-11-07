@@ -6,6 +6,7 @@ const authController = require('../controllers/auth.controller');
 const {
   validate,
   authenticate,
+  isAdmin,
   loginLimiter,
   refreshLimiter,
 } = require('../middleware');
@@ -47,10 +48,13 @@ const registerValidation = [
     .optional()
     .isMobilePhone()
     .withMessage('Please provide a valid phone number'),
-  body('schoolCode')
-    .trim()
-    .notEmpty()
-    .withMessage('School code is required'),
+  // Accounts are always created in the calling admin's school; any client
+  // supplied schoolCode is ignored. Students and parents have their own
+  // creation flows (POST /students, POST /admin/parents) because they need a
+  // profile row, so they cannot be registered here.
+  body('role')
+    .isIn(['ADMIN', 'TEACHER', 'EXAM_OFFICER', 'ACCOUNTANT'])
+    .withMessage('Role must be one of ADMIN, TEACHER, EXAM_OFFICER, ACCOUNTANT'),
 ];
 
 const refreshTokenValidation = [
@@ -74,7 +78,8 @@ const changePasswordValidation = [
 // Rate limiters run BEFORE the validators so a throttled request is rejected
 // without paying for validation, a DB lookup or a bcrypt comparison.
 router.post('/login', loginLimiter, loginValidation, validate, authController.login);
-router.post('/register', registerValidation, validate, authController.register);
+// Admin-only: creating accounts is never public.
+router.post('/register', authenticate, isAdmin, registerValidation, validate, authController.register);
 router.post(
   '/refresh-token',
   refreshLimiter,

@@ -1,12 +1,10 @@
-import apiClient from './apiClient';
+import apiClient, { clearAuthStorage } from './apiClient';
 
+// There is deliberately no register() here: POST /auth/register is admin-only.
+// Staff and students are created by an admin through /users, /students, etc.
 export const authService = {
   login: async (credentials) => {
     const response = await apiClient.post('/auth/login', credentials);
-    return response.data;
-  },
-  register: async (userData) => {
-    const response = await apiClient.post('/auth/register', userData);
     return response.data;
   },
   getProfile: async () => {
@@ -14,7 +12,10 @@ export const authService = {
     return response.data;
   },
   logout: async () => {
-    await apiClient.post('/auth/logout');
-    localStorage.clear();
+    try {
+      await apiClient.post('/auth/logout');
+    } finally {
+      clearAuthStorage();
+    }
   },
 };

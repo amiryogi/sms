@@ -3,6 +3,11 @@ const { ApiError } = require('../utils');
 /**
  * Authorization middleware factory
  * Checks if user has required permission(s)
+ *
+ * SUPER_ADMIN has no permissions of its own in the seed; `authenticate`
+ * (auth.middleware.js) gives it the ADMIN role's permissions, so it passes
+ * exactly the checks an ADMIN passes — still only within req.user.schoolId,
+ * because every controller scopes by it.
  */
 const authorize = (...requiredPermissions) => {
   return (req, res, next) => {

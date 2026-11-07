@@ -1,43 +1,114 @@
 const prisma = require("../config/database");
 const { ApiError, ApiResponse, asyncHandler } = require("../utils");
 
+const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
+
+/**
+ * Build the role-based visibility filter for assignments (default deny).
+ *  - ADMIN / SUPER_ADMIN: every assignment in the school
+ *  - TEACHER: assignments on their own TeacherSubject rows
+ *  - STUDENT: published assignments for their current-year class + section
+ *  - PARENT: published assignments for their linked children's current-year
+ *    class + section
+ *  - anyone else: 403
+ * Returns a Prisma `where` fragment (possibly empty) to AND with the query.
+ */
+const buildAssignmentScope = async (req) => {
+  const roles = req.user.roles || [];
+  const schoolId = req.user.schoolId;
+
+  if (roles.some((r) => ADMIN_ROLES.includes(r))) return {};
+
+  if (roles.includes("TEACHER")) {
+    return { teacherSubject: { userId: req.user.id } };
+  }
+
+  let studentIds = null;
+  if (roles.includes("STUDENT")) {
+    const student = await prisma.student.findFirst({
+      where: { userId: req.user.id, schoolId },
+      select: { id: true },
+    });
+    if (!student) throw ApiError.forbidden("Student profile not found");
+    studentIds = [student.id];
+  } else if (roles.includes("PARENT")) {
+    const parent = await prisma.parent.findFirst({
+      where: { userId: req.user.id, schoolId },
+      include: { studentParents: { select: { studentId: true } } },
+    });
+    if (!parent) throw ApiError.forbidden("Parent profile not found");
+    studentIds = parent.studentParents.map((sp) => sp.studentId);
+  } else {
+    throw ApiError.forbidden("You are not allowed to view assignments");
+  }
+
+  const enrollments = studentIds.length
+    ? await prisma.studentClass.findMany({
+        where: {
+          studentId: { in: studentIds },
+          schoolId,
+          academicYear: { isCurrent: true, schoolId },
+        },
+        select: { classId: true, sectionId: true, academicYearId: true },
+      })
+    : [];
+
+  if (enrollments.length === 0) {
+    // No current enrollment -> nothing to see (matches no rows)
+    return { id: -1 };
+  }
+
+  return {
+    isPublished: true,
+    OR: enrollments.map((e) => ({
+      teacherSubject: {
+        sectionId: e.sectionId,
+        academicYearId: e.academicYearId,
+        classSubject: { classId: e.classId },
+      },
+    })),
+  };
+};
+
 /**
  * @desc    Get all assignments for a teacher or student
  * @route   GET /api/v1/assignments
- * @access  Private
+ * @access  Private (Admin all, Teacher own, Student/Parent published for class)
  */
 const getAssignments = asyncHandler(async (req, res) => {
   const { teacherSubjectId, classId, sectionId, academicYearId } = req.query;
 
-  const where = {
-    teacherSubject: {
-      // School-level isolation: ensure assignment belongs to user's school
-      classSubject: {
-        class: {
-          schoolId: req.user.schoolId,
-        },
+  const conditions = [
+    {
+      teacherSubject: {
+        // School-level isolation: ensure assignment belongs to user's school
+        classSubject: { class: { schoolId: req.user.schoolId } },
       },
     },
-  };
+    await buildAssignmentScope(req),
+  ];
 
-  if (req.user.roles.includes("TEACHER")) {
-    where.teacherSubject.userId = req.user.id;
+  // Optional filters (only narrow further; never widen the role scope)
+  if (teacherSubjectId) {
+    conditions.push({ teacherSubjectId: parseInt(teacherSubjectId) });
   }
-
-  if (teacherSubjectId) where.teacherSubjectId = parseInt(teacherSubjectId);
-
-  // Scoping for student view
-  if (classId || sectionId || academicYearId) {
-    where.teacherSubject = {
-      ...where.teacherSubject,
-      sectionId: sectionId ? parseInt(sectionId) : undefined,
-      classSubject: {
-        ...where.teacherSubject.classSubject,
-        classId: classId ? parseInt(classId) : undefined,
-        academicYearId: academicYearId ? parseInt(academicYearId) : undefined,
+  if (sectionId) {
+    conditions.push({ teacherSubject: { sectionId: parseInt(sectionId) } });
+  }
+  if (classId) {
+    conditions.push({
+      teacherSubject: { classSubject: { classId: parseInt(classId) } },
+    });
+  }
+  if (academicYearId) {
+    conditions.push({
+      teacherSubject: {
+        classSubject: { academicYearId: parseInt(academicYearId) },
       },
-    };
+    });
   }
+
+  const where = { AND: conditions };
 
   const assignments = await prisma.assignment.findMany({
     where,
@@ -74,21 +145,26 @@ const getAssignments = asyncHandler(async (req, res) => {
 /**
  * @desc    Get single assignment details
  * @route   GET /api/v1/assignments/:id
- * @access  Private
+ * @access  Private (same visibility rules as the list)
  */
 const getAssignment = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const assignment = await prisma.assignment.findFirst({
     where: {
-      id: parseInt(id),
-      teacherSubject: {
-        classSubject: {
-          class: {
-            schoolId: req.user.schoolId, // School-level isolation
+      AND: [
+        {
+          id: parseInt(id),
+          teacherSubject: {
+            classSubject: {
+              class: {
+                schoolId: req.user.schoolId, // School-level isolation
+              },
+            },
           },
         },
-      },
+        await buildAssignmentScope(req),
+      ],
     },
     include: {
       teacherSubject: {
@@ -154,7 +230,7 @@ const createAssignment = asyncHandler(async (req, res) => {
     },
   });
 
-  if (!ts && !req.user.roles.includes("ADMIN")) {
+  if (!ts && !req.user.roles.some((r) => ADMIN_ROLES.includes(r))) {
     throw ApiError.forbidden(
       "You are not authorized to create assignments for this subject or it does not belong to your school"
     );
@@ -168,7 +244,7 @@ const createAssignment = asyncHandler(async (req, res) => {
   }
 
   // Additional check for admin: ensure teacherSubject belongs to school
-  if (req.user.roles.includes("ADMIN") && !ts) {
+  if (req.user.roles.some((r) => ADMIN_ROLES.includes(r)) && !ts) {
     const adminCheck = await prisma.teacherSubject.findFirst({
       where: {
         id: parseInt(teacherSubjectId),
@@ -264,7 +340,7 @@ const updateAssignment = asyncHandler(async (req, res) => {
 
   if (
     assignment.teacherSubject.userId !== req.user.id &&
-    !req.user.roles.includes("ADMIN")
+    !req.user.roles.some((r) => ADMIN_ROLES.includes(r))
   ) {
     throw ApiError.forbidden("Unauthorized");
   }
@@ -346,7 +422,7 @@ const deleteAssignment = asyncHandler(async (req, res) => {
 
   if (
     assignment.teacherSubject.userId !== req.user.id &&
-    !req.user.roles.includes("ADMIN")
+    !req.user.roles.some((r) => ADMIN_ROLES.includes(r))
   ) {
     throw ApiError.forbidden("Unauthorized");
   }

@@ -194,6 +194,22 @@ const updateAssignment = asyncHandler(async (req, res) => {
       ? isClassTeacher
       : currentAssignment.isClassTeacher;
 
+  // A changed teacher must be a TEACHER of this school (same rule as assignTeacher)
+  if (targetUserId !== currentAssignment.userId) {
+    const teacher = await prisma.user.findFirst({
+      where: {
+        id: targetUserId,
+        schoolId: req.user.schoolId,
+        userRoles: { some: { role: { name: "TEACHER" } } },
+      },
+      select: { id: true },
+    });
+
+    if (!teacher) {
+      throw ApiError.badRequest("Valid teacher not found in this school");
+    }
+  }
+
   const targetClassSubject = await prisma.classSubject.findUnique({
     where: { id: targetClassSubjectId },
     include: { class: true, academicYear: true },
@@ -287,8 +303,11 @@ const updateAssignment = asyncHandler(async (req, res) => {
 const removeAssignment = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const assignment = await prisma.teacherSubject.findUnique({
-    where: { id: parseInt(id) },
+  const assignment = await prisma.teacherSubject.findFirst({
+    where: {
+      id: parseInt(id),
+      classSubject: { class: { schoolId: req.user.schoolId } },
+    },
   });
 
   if (!assignment) {

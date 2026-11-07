@@ -4,6 +4,8 @@ import {
   Routes,
   Route,
   Navigate,
+  Link,
+  useNavigate,
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -74,11 +76,39 @@ const NotFound = () => (
     <h1>404 - Page Not Found</h1>
   </div>
 );
-const Unauthorized = () => (
-  <div className="card error-page">
-    <h1>401 - Unauthorized Access</h1>
-  </div>
-);
+// Reached when a signed-in user opens a page their role does not allow (403).
+const Unauthorized = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login", { replace: true });
+  };
+
+  return (
+    <div className="card error-page">
+      <h1>403 — Access denied</h1>
+      <p className="text-muted">
+        Your account doesn&apos;t have access to this page.
+      </p>
+      <div className="error-page-actions">
+        <Link to="/dashboard" className="btn btn-primary">
+          Back to dashboard
+        </Link>
+        {user && (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleLogout}
+          >
+            Log out
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
 
 // Loading Component
 const LoadingFallback = () => (
@@ -143,16 +173,17 @@ function App() {
               />
             </Route>
 
-            {/* Teacher Routes */}
+            {/* Teacher-only routes: these pages call endpoints scoped to the
+                caller's own TeacherSubject assignments (e.g. GET
+                /teachers/my-students is isTeacher on the backend). */}
             <Route
               element={
-                <ProtectedRoute roles={["TEACHER", "EXAM_OFFICER", "ADMIN"]}>
+                <ProtectedRoute roles={["TEACHER"]}>
                   <DashboardLayout />
                 </ProtectedRoute>
               }
             >
               <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
-              <Route path="/teacher/notices" element={<NoticesView />} />
               <Route
                 path="/teacher/attendance"
                 element={<TeacherAttendance />}
@@ -161,8 +192,20 @@ function App() {
                 path="/teacher/assignments"
                 element={<TeacherAssignments />}
               />
-              <Route path="/teacher/marks" element={<MarksEntry />} />
               <Route path="/teacher/students" element={<MyStudents />} />
+            </Route>
+
+            {/* Shared staff routes: marks entry and notices also work for
+                exam officers and admins. */}
+            <Route
+              element={
+                <ProtectedRoute roles={["TEACHER", "EXAM_OFFICER", "ADMIN"]}>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/teacher/notices" element={<NoticesView />} />
+              <Route path="/teacher/marks" element={<MarksEntry />} />
             </Route>
 
             {/* Student Routes */}

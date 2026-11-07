@@ -4,7 +4,14 @@ const router = express.Router();
 const feeTypeController = require("../controllers/feeType.controller");
 const feeStructureController = require("../controllers/feeStructure.controller");
 const feePaymentController = require("../controllers/feePayment.controller");
-const { authenticate, isAdmin, canManageFees, validate } = require("../middleware");
+const { body, param } = require("express-validator");
+const {
+  authenticate,
+  isAdmin,
+  canManageFees,
+  requireRole,
+  validate,
+} = require("../middleware");
 const {
   idParamRule,
   feeTypeRules,
@@ -19,6 +26,59 @@ const {
   studentIdParamRule,
 } = require("../validators");
 
+// Roles that may read fee data. Teachers and exam officers have no business
+// with fees; students and parents are narrowed to their own records in the
+// controllers.
+const canReadFees = requireRole(
+  "ADMIN",
+  "SUPER_ADMIN",
+  "ACCOUNTANT",
+  "STUDENT",
+  "PARENT"
+);
+
+// Route-local validators (not in validators/fee.validators.js)
+const byClassParamRules = [
+  param("classId")
+    .isInt({ min: 1 })
+    .withMessage("Class ID must be a valid positive integer"),
+  param("academicYearId")
+    .isInt({ min: 1 })
+    .withMessage("Academic Year ID must be a valid positive integer"),
+];
+
+const bulkFeeStructureRules = [
+  body("classId")
+    .isInt({ min: 1 })
+    .withMessage("Valid Class ID is required")
+    .toInt(),
+  body("academicYearId")
+    .isInt({ min: 1 })
+    .withMessage("Valid Academic Year ID is required")
+    .toInt(),
+  body("fees")
+    .isArray({ min: 1 })
+    .withMessage("fees must be a non-empty array"),
+  body("fees.*.feeTypeId")
+    .isInt({ min: 1 })
+    .withMessage("Each fee needs a valid Fee Type ID")
+    .toInt(),
+  body("fees.*.amount")
+    .isFloat({ min: 0 })
+    .withMessage("Each fee amount must be a valid positive number"),
+];
+
+const bulkGenerateFeesRules = [
+  body("classId")
+    .isInt({ min: 1 })
+    .withMessage("Valid Class ID is required")
+    .toInt(),
+  body("academicYearId")
+    .isInt({ min: 1 })
+    .withMessage("Valid Academic Year ID is required")
+    .toInt(),
+];
+
 // All fee routes require authentication
 router.use(authenticate);
 
@@ -27,10 +87,16 @@ router.use(authenticate);
 // =====================================================
 
 // GET /api/v1/fees/types - Get all fee types
-router.get("/types", feeTypeController.getFeeTypes);
+router.get("/types", canReadFees, feeTypeController.getFeeTypes);
 
 // GET /api/v1/fees/types/:id - Get single fee type
-router.get("/types/:id", [idParamRule], validate, feeTypeController.getFeeType);
+router.get(
+  "/types/:id",
+  canReadFees,
+  [idParamRule],
+  validate,
+  feeTypeController.getFeeType
+);
 
 // POST /api/v1/fees/types - Create fee type (Admin or Accountant)
 router.post(
@@ -66,6 +132,7 @@ router.delete(
 // GET /api/v1/fees/structures - Get all fee structures
 router.get(
   "/structures",
+  canReadFees,
   feeStructureQueryRules,
   validate,
   feeStructureController.getFeeStructures
@@ -74,12 +141,16 @@ router.get(
 // GET /api/v1/fees/structures/by-class/:classId/:academicYearId - Get structures for class
 router.get(
   "/structures/by-class/:classId/:academicYearId",
+  canReadFees,
+  byClassParamRules,
+  validate,
   feeStructureController.getFeeStructuresByClass
 );
 
 // GET /api/v1/fees/structures/:id - Get single fee structure
 router.get(
   "/structures/:id",
+  canReadFees,
   [idParamRule],
   validate,
   feeStructureController.getFeeStructure
@@ -98,6 +169,8 @@ router.post(
 router.post(
   "/structures/bulk",
   canManageFees,
+  bulkFeeStructureRules,
+  validate,
   feeStructureController.bulkCreateFeeStructures
 );
 
@@ -126,6 +199,7 @@ router.delete(
 // GET /api/v1/fees/payments - Get all payments (filtered by role)
 router.get(
   "/payments",
+  canReadFees,
   studentFeeQueryRules,
   validate,
   feePaymentController.getFeePayments
@@ -134,6 +208,7 @@ router.get(
 // GET /api/v1/fees/payments/student/:studentId - Get student fee summary
 router.get(
   "/payments/student/:studentId",
+  canReadFees,
   [studentIdParamRule],
   validate,
   feePaymentController.getStudentFeeSummary
@@ -161,6 +236,8 @@ router.post(
 router.post(
   "/payments/generate-bulk",
   canManageFees,
+  bulkGenerateFeesRules,
+  validate,
   feePaymentController.bulkGenerateFees
 );
 

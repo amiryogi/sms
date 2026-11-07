@@ -86,7 +86,24 @@ if (process.env.NODE_ENV === "development") {
 // STATIC FILES (Uploads)
 // =====================================================
 
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+// Uploaded files are user-supplied. Never let the browser sniff a type, and only
+// let raster images render inline (logos/avatars are shown via <img>);
+// everything else -- including any legacy .html/.svg stored before the upload
+// extension whitelist -- is forced to download inside a sandbox CSP.
+const INLINE_UPLOAD_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp"]);
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "../uploads"), {
+    setHeaders: (res, filePath) => {
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
+      const ext = path.extname(filePath).toLowerCase();
+      if (!INLINE_UPLOAD_EXTENSIONS.has(ext)) {
+        res.setHeader("Content-Disposition", "attachment");
+      }
+    },
+  })
+);
 
 // =====================================================
 // HEALTH CHECK

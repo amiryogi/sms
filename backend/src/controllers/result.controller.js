@@ -10,7 +10,7 @@ const { getDefaultScale } = require("../services/gradeScale.service");
 /**
  * @desc    Get results for an exam subject (for teachers to enter marks)
  * @route   GET /api/v1/results/:examSubjectId
- * @access  Private/Admin/Teacher
+ * @access  Private/Admin (LEGACY -- superseded by /exam-results; admin-only)
  */
 const getResultsBySubject = asyncHandler(async (req, res) => {
   const examSubjectId = parseInt(req.params.examSubjectId);
@@ -137,7 +137,7 @@ const getResultsBySubject = asyncHandler(async (req, res) => {
 /**
  * @desc    Bulk enter/update marks for an exam subject
  * @route   POST /api/v1/results
- * @access  Private/Admin/Teacher
+ * @access  Private/Admin (LEGACY -- superseded by /exam-results; admin-only)
  */
 const saveResults = asyncHandler(async (req, res) => {
   const { examSubjectId, results } = req.body; // results: Array of { studentId, marksObtained, practicalMarks, remarks }
@@ -380,13 +380,61 @@ const getStudentExamResults = asyncHandler(async (req, res) => {
     },
   });
 
-  // Only show results if published/locked, or if user is Admin/Teacher
-  const canSeeAll =
-    req.user.roles.includes("ADMIN") || req.user.roles.includes("TEACHER");
-  if (exam.status === "DRAFT" && !canSeeAll) {
-    throw ApiError.forbidden(
-      "Results for this exam have not been published yet"
-    );
+  // Visibility of raw marks:
+  //  - ADMIN / SUPER_ADMIN / EXAM_OFFICER (own school): always
+  //  - TEACHER: only with a TeacherSubject for the student's class + section in
+  //    the exam's academic year
+  //  - STUDENT / PARENT: only once the student's report card for this exam is
+  //    published, or the exam is LOCKED (marks entry closed). PUBLISHED alone is
+  //    not enough -- marks entry is still open then.
+  const roles = req.user.roles || [];
+  let allowed = false;
+
+  if (roles.some((r) => ["ADMIN", "SUPER_ADMIN", "EXAM_OFFICER"].includes(r))) {
+    allowed = true;
+  } else if (roles.includes("TEACHER") && exam.status !== "DRAFT") {
+    const enrollment = await prisma.studentClass.findFirst({
+      where: {
+        studentId,
+        academicYearId: exam.academicYearId,
+        schoolId: req.user.schoolId,
+      },
+      select: { classId: true, sectionId: true },
+    });
+    if (enrollment) {
+      const assignment = await prisma.teacherSubject.findFirst({
+        where: {
+          userId: req.user.id,
+          sectionId: enrollment.sectionId,
+          academicYearId: exam.academicYearId,
+          classSubject: {
+            classId: enrollment.classId,
+            class: { schoolId: req.user.schoolId },
+          },
+        },
+        select: { id: true },
+      });
+      allowed = Boolean(assignment);
+    }
+  }
+
+  if (!allowed && (roles.includes("STUDENT") || roles.includes("PARENT"))) {
+    if (exam.status === "LOCKED") {
+      allowed = true;
+    } else if (exam.status === "PUBLISHED") {
+      const publishedCard = await prisma.reportCard.findFirst({
+        where: { studentId, examId, isPublished: true },
+        select: { id: true },
+      });
+      allowed = Boolean(publishedCard);
+    }
+    if (!allowed) {
+      throw ApiError.forbidden("Results not yet published");
+    }
+  }
+
+  if (!allowed) {
+    throw ApiError.forbidden("You are not allowed to view these results");
   }
 
   ApiResponse.success(res, results);

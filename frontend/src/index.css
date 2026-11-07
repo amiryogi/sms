@@ -2257,3 +2257,87 @@ body {
 .working-days .field-error {
   color: var(--danger);
 }
+
+/* ===== Role handling: permission notice, auth retry, error pages ===== */
+
+/* App-wide notice for 403 responses (components/common/PermissionNotice.jsx) */
+.permission-notice {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  max-width: calc(100vw - 2rem);
+  padding: 0.75rem 1rem;
+  background: var(--bg-card);
+  color: var(--text-main);
+  border: 1px solid var(--danger);
+  border-left: 4px solid var(--danger);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  font-size: 0.875rem;
+}
+
+.permission-notice-icon {
+  color: var(--danger);
+  flex-shrink: 0;
+}
+
+.permission-notice-close {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.25rem;
+  padding: 0.125rem;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.permission-notice-close:hover {
+  color: var(--text-main);
+  background: var(--bg-main);
+}
+
+/* Session restore failed for a non-auth reason (AuthContext) */
+.auth-retry {
+  padding: 1rem;
+  text-align: center;
+}
+
+.auth-retry-actions,
+.error-page-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.error-page-actions .btn {
+  text-decoration: none;
+}
+
+/* Server error summary inside a form (admin/Teachers.jsx) */
+.form-alert {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--danger-light);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+}
+
+.form-alert ul {
+  margin: 0.375rem 0 0 1.25rem;
+}
+
+.badge-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}

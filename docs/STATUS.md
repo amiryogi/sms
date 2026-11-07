@@ -85,6 +85,46 @@ principal (they printed blank before).
 
 ## What is done
 
+### RBAC audit and fixes (2026-11-07) — verified, not yet committed
+Four read-only audits (middleware and permissions, every route, controller data
+scoping, frontend role handling) found ~40 problems; four fix agents with
+disjoint files fixed them. Highlights:
+- `POST /auth/register` was public and could make the first user of a school
+  ADMIN → now admin-only. Users with no role, inactive users and inactive
+  schools are refused by `authenticate`; refresh tokens rotate atomically and
+  reuse revokes the session.
+- Ownership checks failed **open** for a PARENT/STUDENT without a profile row
+  (Prisma drops `undefined` filters) → now fail closed, school-scoped.
+- Teachers were scoped by class only, ignoring the academic year and section →
+  current year (and section) only. A teacher could read any student's
+  attendance → only students they teach.
+- Fee payments were readable by teachers and exam officers → admin, accountant,
+  and the student/parent themselves only.
+- Uploads kept the client's extension and were served inline (stored XSS) →
+  MIME whitelist + magic-byte check, `nosniff`, non-images download.
+- Students and parents saw raw marks during entry, DRAFT exams, and every
+  assignment in the school → gated by publication / own class.
+- Students, parents and teachers could change a student's name and DOB →
+  admin only; others may edit phone, address, avatar, emergency contact.
+- Nested ids (class, section, year, class-subject, teacher) are now checked
+  against the school on create/update; `schoolId` is set explicitly.
+- Frontend: notices targeted roles by stale hardcoded ids (Parents never
+  reachable) → loaded from the server; admins could not create Exam Officer /
+  Accountant staff → fixed end to end; random logouts from parallel token
+  refreshes → single-flight refresh; `localStorage.clear()` → only auth keys; a
+  403 shows a "no permission" notice; accountants no longer see Delete they
+  can't use; per-route roles on `/teacher/*`; admin Marks Entry link; real 403
+  page.
+
+Verified against the running servers: 39 role-by-role API probes (6 roles), a
+browser sweep of all 44 pages across 6 roles with no console errors or refused
+calls, and spot checks of the notice roles, accountant buttons and exam-officer
+redirect. 377 unit tests (31 new for the middleware).
+
+Not verified: "a teacher is refused for a student they don't teach" against
+live data — the seed assigns every teacher to every Grade 8–10 section, so no
+such student exists (covered by the middleware unit tests).
+
 ### Scope: K–10 only
 Grade 11–12 / NEB "+2" support was removed in full — five Prisma models, two
 enums, the `/programs` and `/subject-components` routers, `nebGradeUtils.js`,
@@ -208,6 +248,9 @@ A4 page.
 
 | | |
 |---|---|
+| **RBAC: roles or permissions?** | Only 13 of the 59 seeded permissions are enforced (attendance, result, report-card routes); every other route checks role names, so editing a role's permissions in the database changes nothing. Either move routes to `authorize(...)` or delete the dead permissions. Also: the seed only adds role grants (removing one from seed.js does nothing without `--clean`) and skips unknown permission names silently. |
+| **SUPER_ADMIN** | Referenced throughout the code (treated as ADMIN within its own school) but never seeded, and the frontend has no pages for it. Seed it or remove it. |
+| **Exam officer / accountant viewing a student** | Both hold `student.read` but `GET /students/:id` refuses them. Add read access if they need the student profile page. |
 | **Personal data in the public repo** | `smsfromscl.sql`, `almostfinaldbfromhome.sql` and `dbfileaftersclsetting.sql` are tracked and pushed, and contain real email addresses and **23 bcrypt password hashes** between them. The repository is public. `git rm --cached` the six root `*.sql` files, then decide whether to rewrite history. New root dumps are now gitignored. |
 | **Rotate the MySQL password** | Old credentials are in pushed git history. The user they belonged to is gone with the old install, but do not reuse that password. |
 | **`comprehensiveSeed.js`** | 1193-line alternative seeder, wired to no npm script, still writes to the five dropped Grade 11–12 tables. It will throw if anyone runs it. Delete, or strip its 11–12 half? |

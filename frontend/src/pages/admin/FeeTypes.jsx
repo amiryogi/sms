@@ -12,6 +12,7 @@ import DataTable from "../../components/common/DataTable";
 import Modal from "../../components/common/Modal";
 import { Input, Button } from "../../components/common/FormElements";
 import { feeService } from "../../api/feeService";
+import RoleGuard from "../../components/auth/RoleGuard";
 
 const FeeTypes = () => {
   const [feeTypes, setFeeTypes] = useState([]);
@@ -154,13 +155,16 @@ const FeeTypes = () => {
           >
             <Edit2 size={16} />
           </button>
-          <button
-            className="btn-icon btn-danger"
-            onClick={() => handleDelete(row.id)}
-            title="Delete"
-          >
-            <Trash2 size={16} />
-          </button>
+          {/* Delete is admin-only on the backend; accountants never see it. */}
+          <RoleGuard roles={["ADMIN"]}>
+            <button
+              className="btn-icon btn-danger"
+              onClick={() => handleDelete(row.id)}
+              title="Delete"
+            >
+              <Trash2 size={16} />
+            </button>
+          </RoleGuard>
         </div>
       ),
     },

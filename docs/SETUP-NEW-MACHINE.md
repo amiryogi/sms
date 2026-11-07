@@ -131,7 +131,7 @@ Demo logins, all with password `password123`:
 ## 8. Check it works
 
 ```bash
-cd backend && npm test          # 346 unit tests, no database needed
+cd backend && npm test          # 377 unit tests, no database needed
 cd backend && npm run lint
 cd frontend && npm run build
 ```
