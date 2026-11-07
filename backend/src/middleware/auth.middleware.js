@@ -23,10 +23,10 @@ const userInclude = {
 };
 
 /**
- * SUPER_ADMIN is referenced throughout the middleware but has no permissions
- * of its own in the seed. For permission checks it is treated exactly like
- * ADMIN: it receives the ADMIN role's permissions. It gains nothing
- * cross-school from this — every controller still scopes by req.user.schoolId.
+ * SUPER_ADMIN is seeded with every permission; older databases seeded before
+ * that have it with none, so it also receives the ADMIN role's permissions
+ * here. It gains nothing cross-school — every controller still scopes by
+ * req.user.schoolId.
  */
 const loadAdminPermissions = async () => {
   const adminRole = await prisma.role.findUnique({
@@ -90,7 +90,11 @@ const resolveUser = async (req) => {
     });
   });
 
+  // A super admin is an admin everywhere: every `isAdmin`, `requireRole('ADMIN')`
+  // and `roles.includes('ADMIN')` check passes. Super-admin-only actions
+  // (managing admins and super admins) test for 'SUPER_ADMIN' itself.
   if (roles.includes('SUPER_ADMIN')) {
+    if (!roles.includes('ADMIN')) roles.push('ADMIN');
     (await loadAdminPermissions()).forEach((p) => permissions.add(p));
   }
 

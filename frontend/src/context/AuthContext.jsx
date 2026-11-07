@@ -142,8 +142,13 @@ export const AuthProvider = ({ children }) => {
     return user?.permissions?.includes(permission);
   };
 
+  // A super admin is an admin everywhere (the backend treats it the same way),
+  // so hasRole("ADMIN") is true for them; only hasRole("SUPER_ADMIN") tells
+  // the two apart.
   const hasRole = (role) => {
-    return user?.roles?.includes(role);
+    const roles = user?.roles || [];
+    if (roles.includes(role)) return true;
+    return role === "ADMIN" && roles.includes("SUPER_ADMIN");
   };
 
   if (initError && !user) {

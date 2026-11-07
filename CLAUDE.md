@@ -64,7 +64,7 @@ Health check: `GET http://localhost:5000/health`. API root: `GET /api/v1`.
 Frontend reads `VITE_API_URL` (`frontend/.env`), default `http://localhost:5000/api/v1`.
 
 Demo logins (after seed, password `password123`):
-`admin@svi.edu.np`, `admin@demo-school.edu.np`, `teacher@demo-school.edu.np`,
+`superadmin@svi.edu.np`, `admin@svi.edu.np`, `admin@demo-school.edu.np`, `teacher@demo-school.edu.np`,
 `student@demo-school.edu.np`, `parent@demo-school.edu.np`. School code `DEMO001`.
 
 **Tests:** `npm test` (Jest) runs 377 unit tests over the pure utilities in
@@ -162,11 +162,11 @@ User -> UserRole -> Role -> RolePermission -> Permission
 
 | Role           | Scope                                            |
 | -------------- | ------------------------------------------------ |
-| `SUPER_ADMIN`  | Cross-school (modelled, barely used)             |
+| `SUPER_ADMIN`  | Everything ADMIN can, plus managing admins and super admins; school admins can't edit, deactivate, demote or delete one. Same school only (no cross-school UI) |
 | `ADMIN`        | Everything within their school                   |
 | `TEACHER`      | Only their `TeacherSubject` assignments          |
-| `EXAM_OFFICER` | Marks entry for any subject; no finance          |
-| `ACCOUNTANT`   | Fees only                                        |
+| `EXAM_OFFICER` | Marks entry for any subject; read-only student directory; no finance |
+| `ACCOUNTANT`   | Fees; read-only student directory                |
 | `STUDENT`      | Own records (`isOwnStudent`)                     |
 | `PARENT`       | Linked children only (via `StudentParent`)       |
 
@@ -185,6 +185,10 @@ match), `isAdmin`, `isTeacher`, `isStudent`, plus `isOwnStudent`,
 
 Rules the RBAC audit (2026-11-07) established — keep them:
 
+- **A super admin is an admin.** `authenticate` adds `ADMIN` to a super admin's
+  roles and the frontend's `hasRole("ADMIN")` is true for one, so every admin
+  check passes; only super-admin-only actions test for `SUPER_ADMIN`. The role
+  is seeded last (id 7) with every permission.
 - **Fail closed.** An ownership check that can't find the profile id
   (`req.user.studentId` / `parentId`) or the row it looks up denies; it never
   calls `next()`. Prisma silently drops `undefined` filters, so always guard

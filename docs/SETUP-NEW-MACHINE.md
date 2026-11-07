@@ -121,6 +121,7 @@ Demo logins, all with password `password123`:
 
 | Role | Email |
 |---|---|
+| Super admin | `superadmin@svi.edu.np` |
 | Admin | `admin@svi.edu.np` |
 | Teacher | `teacher1@svi.edu.np` … `teacher8@svi.edu.np` |
 | Exam officer | `examofficer@svi.edu.np` |

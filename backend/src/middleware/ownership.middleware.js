@@ -267,6 +267,20 @@ const isOwnStudent = asyncHandler(async (req, res, next) => {
 
   let denial = 'Access denied';
 
+  // Exam officers and accountants may read (never edit) any student in their
+  // school: they hold student.read / student.list in the seed.
+  if (
+    req.method === 'GET' &&
+    req.user.roles.some((r) => r === 'EXAM_OFFICER' || r === 'ACCOUNTANT')
+  ) {
+    const inSchool = await prisma.student.findFirst({
+      where: { id: studentId, schoolId: req.user.schoolId },
+      select: { id: true },
+    });
+    if (inSchool) return next();
+    denial = 'Student not found in your school';
+  }
+
   // Teachers can access students in their assigned classes (current year)
   if (req.user.roles.includes('TEACHER')) {
     if (await teacherTeachesStudent(req.user, studentId)) {

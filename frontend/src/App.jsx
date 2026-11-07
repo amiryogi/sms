@@ -273,6 +273,20 @@ function App() {
               <Route path="/accountant/notices" element={<NoticesView />} />
             </Route>
 
+            {/* Read-only student directory for exam officers and accountants */}
+            <Route
+              element={
+                <ProtectedRoute roles={["EXAM_OFFICER", "ACCOUNTANT"]}>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route
+                path="/staff/students"
+                element={<AdminStudents readOnly />}
+              />
+            </Route>
+
             {/* Dashboard Redirect Logic */}
             <Route
               element={
@@ -299,14 +313,15 @@ function App() {
 
 // Role-based dashboard redirect
 function RoleBasedDashboard() {
-  const { user } = useAuth();
+  const { user, hasRole } = useAuth();
 
   // Safety check - redirect to unauthorized if no user or no roles
   if (!user || !user.roles || user.roles.length === 0) {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  if (user.roles.includes("ADMIN")) {
+  // hasRole("ADMIN") is also true for SUPER_ADMIN.
+  if (hasRole("ADMIN")) {
     return <Navigate to="/admin/dashboard" replace />;
   }
   if (user.roles.includes("ACCOUNTANT")) {

@@ -85,7 +85,21 @@ principal (they printed blank before).
 
 ## What is done
 
-### RBAC audit and fixes (2026-11-07) — verified, not yet committed
+### Super admin and staff student directory (2026-11-07) — verified
+- `SUPER_ADMIN` is seeded (role id 7, every permission) with the login
+  `superadmin@svi.edu.np`. It is an admin everywhere (`authenticate` adds
+  `ADMIN`; frontend `hasRole("ADMIN")` is true) and alone can grant, change or
+  remove ADMIN/SUPER_ADMIN on others. School admins can't edit, deactivate,
+  demote or delete a super admin. Same school only — there is still no
+  cross-school UI. Existing databases: the role and login were added without a
+  reseed; a fresh `npm run seed` creates them.
+- Exam officers and accountants get a read-only student directory
+  (`/staff/students`, sidebar "Students"): `GET /students` and
+  `GET /students/:id` within their school; edit and enroll stay refused.
+- Verified: 30 API checks and a browser pass (super admin landing and menu;
+  directory list, view-only details form, no edit controls) for both roles.
+
+### RBAC audit and fixes (2026-11-07) — verified
 Four read-only audits (middleware and permissions, every route, controller data
 scoping, frontend role handling) found ~40 problems; four fix agents with
 disjoint files fixed them. Highlights:
@@ -249,8 +263,6 @@ A4 page.
 | | |
 |---|---|
 | **RBAC: roles or permissions?** | Only 13 of the 59 seeded permissions are enforced (attendance, result, report-card routes); every other route checks role names, so editing a role's permissions in the database changes nothing. Either move routes to `authorize(...)` or delete the dead permissions. Also: the seed only adds role grants (removing one from seed.js does nothing without `--clean`) and skips unknown permission names silently. |
-| **SUPER_ADMIN** | Referenced throughout the code (treated as ADMIN within its own school) but never seeded, and the frontend has no pages for it. Seed it or remove it. |
-| **Exam officer / accountant viewing a student** | Both hold `student.read` but `GET /students/:id` refuses them. Add read access if they need the student profile page. |
 | **Personal data in the public repo** | `smsfromscl.sql`, `almostfinaldbfromhome.sql` and `dbfileaftersclsetting.sql` are tracked and pushed, and contain real email addresses and **23 bcrypt password hashes** between them. The repository is public. `git rm --cached` the six root `*.sql` files, then decide whether to rewrite history. New root dumps are now gitignored. |
 | **Rotate the MySQL password** | Old credentials are in pushed git history. The user they belonged to is gone with the old install, but do not reuse that password. |
 | **`comprehensiveSeed.js`** | 1193-line alternative seeder, wired to no npm script, still writes to the five dropped Grade 11–12 tables. It will throw if anyone runs it. Delete, or strip its 11–12 half? |
