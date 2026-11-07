@@ -170,13 +170,18 @@ User -> UserRole -> Role -> RolePermission -> Permission
 | `STUDENT`      | Own records (`isOwnStudent`)                     |
 | `PARENT`       | Linked children only (via `StudentParent`)       |
 
-Permission names use **dot notation** and must match `backend/prisma/seed.js`
-exactly: `student.list`, `attendance.view_class`, `result.enter`,
-`report_card.generate`, `fee.record_payment`, and so on. A permission string
-that isn't in the seed silently denies everyone — the project already hit this
-(`attendance:view` vs `attendance.view_all`, see `AUDIT_REPORT.md`). **When you
-add a permission, add it to `seed.js` and to the role mapping in the same
-change.**
+**Roles decide access.** Routes use `requireRole` / `isAdmin` / ownership
+middleware. Permissions exist only where a route checks them with
+`authorize(...)`: the 11 attendance, result and report-card permissions
+(`attendance.mark`, `attendance.view_all|view_class|view_own`,
+`result.enter`, `result.view_all|view_own|view_child`,
+`report_card.view_all|view_own|view_child`). The 48 that no route checked were
+removed (migration `20261107210000_drop_unused_permissions`). Don't add a
+permission unless a route checks it; if you do, add it to `seed.js` and the
+role mapping in the same change. The seed now removes permissions and grants it
+no longer lists, and throws on an unknown permission name instead of silently
+skipping it (a typo would deny everyone — the project hit this with
+`attendance:view` vs `attendance.view_all`).
 
 Middleware: `authorize(...perms)` (ANY match), `requireRole(...roles)` (ANY
 match), `isAdmin`, `isTeacher`, `isStudent`, plus `isOwnStudent`,
@@ -208,8 +213,8 @@ Rules the RBAC audit (2026-11-07) established — keep them:
 - Fee data is readable by ADMIN, ACCOUNTANT, and STUDENT/PARENT for their own.
 - Uploads are named from a MIME whitelist (never the client's extension),
   checked by magic bytes, and served with `nosniff`; non-images download.
-- Most seeded permissions are **not enforced** — routes check roles. Only the
-  attendance, result and report-card routes use `authorize`. See STATUS.md.
+- Only the attendance, result and report-card routes use `authorize`; every
+  other route checks roles. That is deliberate (one school, fixed roles).
 
 ---
 

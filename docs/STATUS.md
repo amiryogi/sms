@@ -85,6 +85,14 @@ principal (they printed blank before).
 
 ## What is done
 
+### Roles, not permissions (2026-11-07) — verified
+Decided: roles decide access. The 48 seeded permissions no route checked are
+removed (migration `20261107210000_drop_unused_permissions`); the 11 that the
+attendance, result and report-card routes check remain, with unchanged grants.
+The seed now deletes permissions and grants it no longer lists and throws on
+an unknown name. Re-verified: 87 API checks across all roles and the 44-page
+browser sweep, all unchanged.
+
 ### Super admin and staff student directory (2026-11-07) — verified
 - `SUPER_ADMIN` is seeded (role id 7, every permission) with the login
   `superadmin@svi.edu.np`. It is an admin everywhere (`authenticate` adds
@@ -262,7 +270,6 @@ A4 page.
 
 | | |
 |---|---|
-| **RBAC: roles or permissions?** | Only 13 of the 59 seeded permissions are enforced (attendance, result, report-card routes); every other route checks role names, so editing a role's permissions in the database changes nothing. Either move routes to `authorize(...)` or delete the dead permissions. Also: the seed only adds role grants (removing one from seed.js does nothing without `--clean`) and skips unknown permission names silently. |
 | **Personal data in the public repo** | `smsfromscl.sql`, `almostfinaldbfromhome.sql` and `dbfileaftersclsetting.sql` are tracked and pushed, and contain real email addresses and **23 bcrypt password hashes** between them. The repository is public. `git rm --cached` the six root `*.sql` files, then decide whether to rewrite history. New root dumps are now gitignored. |
 | **Rotate the MySQL password** | Old credentials are in pushed git history. The user they belonged to is gone with the old install, but do not reuse that password. |
 | **`comprehensiveSeed.js`** | 1193-line alternative seeder, wired to no npm script, still writes to the five dropped Grade 11–12 tables. It will throw if anyone runs it. Delete, or strip its 11–12 half? |
