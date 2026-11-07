@@ -5,11 +5,12 @@
  * that came from the API -- `subject.finalGrade`, `result.grade`, `summary.gpa` --
  * over anything derived here.
  *
- * `DEFAULT_GRADE_BANDS` mirrors `backend/src/utils/gradeCalculator.js` and exists
- * only as a fallback for screens that have no band data to hand. Every function
- * below takes a `bands` argument so a caller holding the API's `gradeReference`
- * payload can pass the school's real scale instead. Once grade scales become
- * per-school data, `gradeReference` is the channel: no new wiring needed.
+ * Grade scales are per school. A report-card payload carries the bands of the
+ * scale that card was graded on as `gradeReference`; pass it as the `bands`
+ * argument of every function below. `DEFAULT_GRADE_BANDS` is the NEB 8-band
+ * scale and is only a fallback for screens with no band data to hand -- with a
+ * school on another scale (e.g. legacy 9-band's D+ / E) it will not know every
+ * letter.
  *
  * Do NOT reimplement a grade table anywhere else in the frontend.
  */

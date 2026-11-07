@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { schoolService } from "../../api/schoolService";
 import { resolveAssetUrl } from "../../utils/assets";
+import GradeScaleSettings from "../../components/admin/GradeScaleSettings";
 import {
   Building2,
   Save,
@@ -740,6 +741,9 @@ const SchoolSettings = () => {
             </div>
           </div>
         </div>
+
+        {/* Grade scales: own card, own save flow */}
+        <GradeScaleSettings />
       </div>
 
       <style>{`

@@ -6,27 +6,51 @@ const {
   gradeCalculator,
   dateConverter,
 } = require("../utils");
+const { toGradeReference } = require("../utils/gradeScale");
+const {
+  getDefaultScale,
+  getScaleResolver,
+} = require("../services/gradeScale.service");
+
+// School fields every report-card response prints in its header.
+const SCHOOL_BRANDING_SELECT = {
+  id: true,
+  name: true,
+  address: true,
+  phone: true,
+  email: true,
+  logoUrl: true,
+  tagline: true,
+  website: true,
+  landlineNumber: true,
+  principalName: true,
+  establishedYear: true,
+};
 
 /**
  * Build detailed subject results with Nepal-style grading
  * @param {Array} examResults - Raw exam results from database
+ * @param {Object} scale - Normalized grade scale (see services/gradeScale.service.js)
  * @returns {Array} Processed subject results with grades and GPAs
  */
-const buildSubjectResults = (examResults) => {
+const buildSubjectResults = (examResults, scale) => {
   return examResults.map((result) => {
     const examSubject = result.examSubject;
     const classSubject = examSubject.classSubject;
     const totalCreditHours = parseFloat(classSubject.creditHours) || 4;
 
-    // Calculate subject grade using Nepal rules
-    const gradeResult = gradeCalculator.calculateSubjectGrade({
-      theoryMarks: result.marksObtained,
-      theoryFullMarks: examSubject.theoryFullMarks || examSubject.fullMarks,
-      practicalMarks: result.practicalMarks,
-      practicalFullMarks: examSubject.practicalFullMarks || 0,
-      hasPractical: examSubject.hasPractical,
-      isAbsent: result.isAbsent,
-    });
+    // Calculate subject grade using Nepal rules, on the school's scale
+    const gradeResult = gradeCalculator.calculateSubjectGrade(
+      {
+        theoryMarks: result.marksObtained,
+        theoryFullMarks: examSubject.theoryFullMarks || examSubject.fullMarks,
+        practicalMarks: result.practicalMarks,
+        practicalFullMarks: examSubject.practicalFullMarks || 0,
+        hasPractical: examSubject.hasPractical,
+        isAbsent: result.isAbsent,
+      },
+      scale,
+    );
 
     // Credit hour breakdown comes from the ClassSubject database fields
     let theoryCreditHours = parseFloat(classSubject.theoryCreditHours) || 0;
@@ -176,12 +200,19 @@ const getReportCards = asyncHandler(async (req, res) => {
     );
   });
 
+  // A student with a generated card is shown on that card's scale; one without
+  // is previewed on the school default, which is what Generate would use.
+  const scales = await getScaleResolver(req.user.schoolId);
+
   // Build response with student data, results, and report card status
   const data = enrollments.map((enrollment) => {
     const rawResults = resultsByStudent[enrollment.studentId] || [];
-    const subjectResults = buildSubjectResults(rawResults);
-    const overallResult = gradeCalculator.calculateOverallGPA(subjectResults);
     const reportCard = enrollment.student.reportCards[0] || null;
+    const scale = scales.forReportCard(reportCard);
+    const subjectResults = buildSubjectResults(rawResults, scale);
+    const overallResult = gradeCalculator.calculateOverallGPA(subjectResults, {
+      scale,
+    });
 
     const totalObtained = subjectResults.reduce(
       (sum, r) => sum + r.totalMarks,
@@ -281,6 +312,10 @@ const generateReportCards = asyncHandler(async (req, res) => {
     throw ApiError.notFound("No students found in this section");
   }
 
+  // Grade on the school's current default scale and record which one, so the
+  // card keeps printing these grades if the default changes later.
+  const scale = await getDefaultScale(req.user.schoolId);
+
   // Process each student and generate report cards
   const reportCards = await prisma.$transaction(async (tx) => {
     const results = [];
@@ -305,9 +340,11 @@ const generateReportCards = asyncHandler(async (req, res) => {
       if (studentResults.length === 0) continue;
 
       // Process with Nepal grading (unweighted GPA for K-10)
-      const subjectResults = buildSubjectResults(studentResults);
-      const overallResult =
-        gradeCalculator.calculateOverallGPA(subjectResults);
+      const subjectResults = buildSubjectResults(studentResults, scale);
+      const overallResult = gradeCalculator.calculateOverallGPA(
+        subjectResults,
+        { scale },
+      );
 
       const totalObtained = subjectResults.reduce(
         (sum, r) => sum + r.totalMarks,
@@ -355,6 +392,7 @@ const generateReportCards = asyncHandler(async (req, res) => {
           percentage: data.percentage,
           overallGrade: data.grade,
           classRank: rank,
+          gradeScaleId: scale.id,
           generatedAt: new Date(),
         },
         create: {
@@ -365,6 +403,7 @@ const generateReportCards = asyncHandler(async (req, res) => {
           percentage: data.percentage,
           overallGrade: data.grade,
           classRank: rank,
+          gradeScaleId: scale.id,
           generatedAt: new Date(),
         },
       });
@@ -432,18 +471,17 @@ const getReportCard = asyncHandler(async (req, res) => {
     throw ApiError.forbidden("Report card not yet published");
   }
 
-  // Get school info
+  // Get school info. Must select every field the header below reads; this
+  // used to fetch six and print `undefined` for tagline, website and the rest.
   const school = await prisma.school.findUnique({
     where: { id: req.user.schoolId },
-    select: {
-      id: true,
-      name: true,
-      address: true,
-      phone: true,
-      email: true,
-      logoUrl: true,
-    },
+    select: SCHOOL_BRANDING_SELECT,
   });
+
+  // The scale this card was generated with
+  const scale = (await getScaleResolver(req.user.schoolId)).forReportCard(
+    reportCard,
+  );
 
   // Get subject-wise results with Nepal grading
   const examResults = await prisma.examResult.findMany({
@@ -470,8 +508,10 @@ const getReportCard = asyncHandler(async (req, res) => {
   });
 
   // Process with Nepal grading (unweighted GPA for K-10)
-  const subjectResults = buildSubjectResults(examResults);
-  const overallResult = gradeCalculator.calculateOverallGPA(subjectResults);
+  const subjectResults = buildSubjectResults(examResults, scale);
+  const overallResult = gradeCalculator.calculateOverallGPA(subjectResults, {
+    scale,
+  });
 
   // Convert student DOB to BS format
   const dobBS = reportCard.student.dateOfBirth
@@ -560,131 +600,13 @@ const getReportCard = asyncHandler(async (req, res) => {
       reportCardId: reportCard.id,
       isPublished: reportCard.isPublished,
       generatedAt: reportCard.generatedAt,
+      gradeScale: scale.name,
     },
-    // Grade reference table for display
-    gradeReference: gradeCalculator.GRADE_THRESHOLDS,
+    // The bands of the scale this card was graded on
+    gradeReference: toGradeReference(scale),
   };
 
   ApiResponse.success(res, response);
-});
-
-/**
- * @desc    Get detailed report card data for PDF generation
- * @route   GET /api/v1/report-cards/student/:studentId/exam/:examId/pdf-data
- * @access  Private
- */
-const getReportCardPdfData = asyncHandler(async (req, res) => {
-  const studentId = parseInt(req.params.studentId);
-  const examId = parseInt(req.params.examId);
-
-  const reportCard = await prisma.reportCard.findFirst({
-    where: {
-      studentId,
-      examId,
-      exam: { schoolId: req.user.schoolId },
-    },
-    include: {
-      exam: { include: { academicYear: true } },
-      student: {
-        include: {
-          user: true,
-        },
-      },
-      studentClass: { include: { class: true, section: true } },
-    },
-  });
-
-  if (!reportCard) throw ApiError.notFound("Report card not found");
-
-  // Authorization check
-  const canSeeUnpublished =
-    req.user.roles.includes("ADMIN") || req.user.roles.includes("TEACHER");
-  if (!reportCard.isPublished && !canSeeUnpublished) {
-    throw ApiError.forbidden("Report card not yet published");
-  }
-
-  const school = await prisma.school.findUnique({
-    where: { id: req.user.schoolId },
-    select: {
-      id: true,
-      name: true,
-      address: true,
-      phone: true,
-      email: true,
-      logoUrl: true,
-    },
-  });
-
-  const examResults = await prisma.examResult.findMany({
-    where: { studentId, examSubject: { examId } },
-    include: {
-      examSubject: {
-        include: { classSubject: { include: { subject: true } } },
-      },
-    },
-    orderBy: { examSubject: { classSubject: { subject: { name: "asc" } } } },
-  });
-
-  const subjectResults = buildSubjectResults(examResults);
-  const overallResult = gradeCalculator.calculateOverallGPA(subjectResults);
-
-  // Convert student DOB to BS format for PDF
-  const dobBS = reportCard.student.dateOfBirth
-    ? dateConverter.convertADToBS(reportCard.student.dateOfBirth)
-    : null;
-  const dobAD = reportCard.student.dateOfBirth
-    ? dateConverter.formatADDate(reportCard.student.dateOfBirth)
-    : null;
-
-  // Get academic year in BS
-  const academicYearAD = reportCard.exam.academicYear?.name || "";
-  const yearMatch = academicYearAD.match(/\d{4}/);
-  const academicYearBS = yearMatch
-    ? dateConverter.getApproxBSYear(parseInt(yearMatch[0]))
-    : null;
-
-  // Return formatted data for PDF generation
-  ApiResponse.success(res, {
-    school,
-    examination: {
-      name: reportCard.exam.name,
-      type: reportCard.exam.examType,
-      academicYear: reportCard.exam.academicYear.name,
-      yearAD: yearMatch ? yearMatch[0] : new Date().getFullYear().toString(),
-      yearBS: academicYearBS ? academicYearBS.toString() : null,
-    },
-    student: {
-      ...reportCard.student,
-      user: reportCard.student.user,
-      name: `${reportCard.student.user.firstName} ${reportCard.student.user.lastName}`,
-      class: reportCard.studentClass.class,
-      section: reportCard.studentClass.section,
-      rollNumber: reportCard.studentClass.rollNumber,
-      gradeLevel: reportCard.studentClass.class.gradeLevel,
-      dobBS: dobBS?.formatted || null,
-      dobAD: dobAD,
-    },
-    subjects: subjectResults,
-    summary: {
-      totalMarks: subjectResults.reduce((sum, s) => sum + s.totalMarks, 0),
-      totalFullMarks: subjectResults.reduce(
-        (sum, s) => sum + s.totalFullMarks,
-        0,
-      ),
-      percentage: overallResult.averagePercentage,
-      gpa: overallResult.gpa,
-      grade: overallResult.grade,
-      classRank: reportCard.classRank,
-      isPassed: overallResult.isPassed,
-      resultStatus: gradeCalculator.getResultStatus(overallResult.isPassed),
-    },
-    remarks: {
-      teacher: reportCard.teacherRemarks,
-      principal: reportCard.principalRemarks,
-    },
-    gradeReference: gradeCalculator.GRADE_THRESHOLDS,
-    generatedAt: new Date().toISOString(),
-  });
 });
 
 /**
@@ -834,20 +756,11 @@ const getBulkReportCards = asyncHandler(async (req, res) => {
   // Get school info
   const school = await prisma.school.findUnique({
     where: { id: req.user.schoolId },
-    select: {
-      id: true,
-      name: true,
-      address: true,
-      phone: true,
-      email: true,
-      logoUrl: true,
-      tagline: true,
-      website: true,
-      landlineNumber: true,
-      principalName: true,
-      establishedYear: true,
-    },
+    select: SCHOOL_BRANDING_SELECT,
   });
+
+  // Each card prints on the scale it was generated with
+  const scales = await getScaleResolver(req.user.schoolId);
 
   // Get all report cards for this class/section
   const reportCards = await prisma.reportCard.findMany({
@@ -921,9 +834,12 @@ const getBulkReportCards = asyncHandler(async (req, res) => {
         },
       });
 
-      const subjectResults = buildSubjectResults(examResults);
-      const overallResult =
-        gradeCalculator.calculateOverallGPA(subjectResults);
+      const scale = scales.forReportCard(reportCard);
+      const subjectResults = buildSubjectResults(examResults, scale);
+      const overallResult = gradeCalculator.calculateOverallGPA(
+        subjectResults,
+        { scale },
+      );
 
       // Convert student DOB to BS format
       const dobBS = reportCard.student.dateOfBirth
@@ -998,8 +914,9 @@ const getBulkReportCards = asyncHandler(async (req, res) => {
           reportCardId: reportCard.id,
           isPublished: reportCard.isPublished,
           generatedAt: reportCard.generatedAt,
+          gradeScale: scale.name,
         },
-        gradeReference: gradeCalculator.GRADE_THRESHOLDS,
+        gradeReference: toGradeReference(scale),
       };
     }),
   );
@@ -1017,7 +934,6 @@ module.exports = {
   getReportCards,
   generateReportCards,
   getReportCard,
-  getReportCardPdfData,
   publishReportCards,
   unpublishReportCards,
   getStudentPublishedExams,

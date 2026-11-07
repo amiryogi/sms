@@ -76,18 +76,6 @@ router.get(
   reportCardController.getStudentPublishedExams
 );
 
-// Get PDF data for report card (used by frontend for PDF generation)
-router.get(
-  "/student/:studentId/exam/:examId/pdf-data",
-  authorize(
-    "report_card.view_own",
-    "report_card.view_all",
-    "report_card.view_child"
-  ),
-  canAccessResults,
-  reportCardController.getReportCardPdfData
-);
-
 // Bulk get all report cards for a class/section (for printing)
 router.get(
   "/bulk/:examId/:classId/:sectionId",

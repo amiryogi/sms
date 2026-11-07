@@ -1,5 +1,11 @@
 const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
+const {
+  GRADE_SCALE_PRESETS,
+  NEB_8_BAND,
+  normalizeScale,
+} = require("../src/utils/gradeScale");
+const { calculateSubjectGrade } = require("../src/utils/gradeCalculator");
 
 const prisma = new PrismaClient();
 
@@ -57,7 +63,11 @@ async function cleanupDatabase() {
     "users",
     "roles",
     "permissions",
-    
+
+    // Grading
+    "grade_bands",
+    "grade_scales",
+
     // School (root)
     "schools",
   ];
@@ -377,6 +387,40 @@ async function main() {
     },
   });
   console.log(`   ✓ Created school: ${school.name}\n`);
+
+  // 4b. Grade scales: both presets, NEB 8-band as the default. An admin can
+  // switch to the legacy 9-band scale in School Settings -> Grade Scales.
+  console.log("📊 Creating grade scales...");
+  const hasDefaultScale = await prisma.gradeScale.findFirst({
+    where: { schoolId: school.id, isDefault: true },
+  });
+  for (const preset of Object.values(GRADE_SCALE_PRESETS)) {
+    const existing = await prisma.gradeScale.findUnique({
+      where: { schoolId_name: { schoolId: school.id, name: preset.name } },
+    });
+    if (existing) continue; // never touch a scale that may already be in use
+    await prisma.gradeScale.create({
+      data: {
+        schoolId: school.id,
+        name: preset.name,
+        passPercent: preset.passPercent,
+        isDefault: !hasDefaultScale && preset.key === NEB_8_BAND.key,
+        bands: {
+          create: preset.bands.map((b) => ({
+            minPercent: b.min,
+            maxPercent: b.max,
+            grade: b.grade,
+            gradePoint: b.gpa,
+            description: b.description,
+            isPassing: b.isPassing,
+          })),
+        },
+      },
+    });
+  }
+  console.log(
+    `   ✓ Grade scales: ${Object.values(GRADE_SCALE_PRESETS).map((p) => p.name).join(", ")}\n`,
+  );
 
   // 5. Create Academic Years
   console.log("📅 Creating academic years...");
@@ -866,7 +910,17 @@ async function main() {
   // 16. Create Exam Results for First Term
   console.log("📊 Creating exam results...");
   let resultCount = 0;
-  
+
+  // Store a grade with each result, as marks entry does, on the school's
+  // default scale. Without it the student Results page shows "—".
+  const defaultScaleRow = await prisma.gradeScale.findFirst({
+    where: { schoolId: school.id, isDefault: true },
+    include: { bands: true },
+  });
+  const seedScale = defaultScaleRow?.bands.length
+    ? normalizeScale(defaultScaleRow)
+    : undefined; // undefined -> calculator's built-in NEB 8-band
+
   for (const studentData of createdStudents) {
     const classSubjects = createdClassSubjects[studentData.cls.id] || [];
     
@@ -884,7 +938,17 @@ async function main() {
           ? getRandomInt(45, 70) 
           : getRandomInt(55, 92);
         const practicalMarks = cs.hasPractical ? getRandomInt(18, 24) : null;
-        
+        const { finalGrade } = calculateSubjectGrade(
+          {
+            theoryMarks,
+            theoryFullMarks: examSubject.theoryFullMarks || examSubject.fullMarks,
+            practicalMarks: practicalMarks || 0,
+            practicalFullMarks: examSubject.practicalFullMarks || 0,
+            hasPractical: Boolean(examSubject.hasPractical),
+          },
+          seedScale,
+        );
+
         await prisma.examResult.upsert({
           where: {
             examSubjectId_studentId: {
@@ -901,6 +965,7 @@ async function main() {
             marksObtained: theoryMarks,
             practicalMarks,
             isAbsent: false,
+            grade: finalGrade,
             enteredBy: adminUser.id,
             remarks: theoryMarks >= 80 ? "Excellent" : theoryMarks >= 60 ? "Good" : "Needs Improvement",
           },

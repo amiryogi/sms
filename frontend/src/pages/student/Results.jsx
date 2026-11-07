@@ -3,7 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { Select } from "../../components/common/FormElements";
 import { Award, TrendingUp } from "lucide-react";
 import { examService } from "../../api/examService";
-import { gradeColor, gradeForPercentage } from "../../utils/grades";
+import { gradeColor } from "../../utils/grades";
 
 const Results = () => {
   const { user } = useAuth();
@@ -70,6 +70,12 @@ const Results = () => {
 
   const totals = calculateTotal();
 
+  // The overall grade is the one frozen on the report card, graded on the
+  // school's scale. Never derive it here (CLAUDE.md invariants #8 and #9).
+  const selectedExamInfo = exams.find(
+    (e) => String(e.examId || e.id) === String(selectedExam)
+  );
+
   // Exams from getStudentPublishedExams have examId, examName, etc.
   const examOptions = exams.map((e) => ({
     value: (e.examId || e.id).toString(),
@@ -125,7 +131,7 @@ const Results = () => {
                 </div>
                 <div className="summary-card grade-card">
                   <div className="grade-badge">
-                    {gradeForPercentage(totals.percentage)}
+                    {selectedExamInfo?.overallGrade || "—"}
                   </div>
                   <span className="summary-label">Grade</span>
                 </div>
@@ -145,9 +151,8 @@ const Results = () => {
                   {results.map((result) => {
                     const { obtained, max } = subjectMarks(result);
                     const pct = max > 0 ? ((obtained / max) * 100).toFixed(1) : null;
-                    const grade = result.isAbsent
-                      ? "AB"
-                      : result.grade || gradeForPercentage(pct);
+                    // Stored by the backend on the school's grade scale.
+                    const grade = result.isAbsent ? "AB" : result.grade || "—";
                     const pill = gradeColor(grade);
                     return (
                       <tr key={result.id}>

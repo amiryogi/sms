@@ -42,18 +42,6 @@ export const reportCardService = {
   },
 
   /**
-   * Get report card PDF data for rendering
-   * @param {number} studentId
-   * @param {number} examId
-   */
-  getReportCardPdfData: async (studentId, examId) => {
-    const response = await apiClient.get(
-      `/report-cards/student/${studentId}/exam/${examId}/pdf-data`
-    );
-    return response.data;
-  },
-
-  /**
    * Get published exams for a student
    * @param {number} studentId
    */
