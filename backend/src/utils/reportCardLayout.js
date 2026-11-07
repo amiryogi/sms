@@ -47,6 +47,7 @@ const NEB_GRADE_SHEET = Object.freeze({
   showCreditHours: true,
   remarkColumn: "description",
   showAttendance: true,
+  countLateAsPresent: true,
   showPercentage: false,
   showRank: true,
   showResult: true,
@@ -72,8 +73,9 @@ const PERFORMANCE_REPORT = Object.freeze({
   showSubjectCode: false,
   showCreditHours: false,
   remarkColumn: "blank",
-  // fmt1 prints attendance; it needs attendance totals (plan phase 4) first.
+  // fmt1 prints attendance, fmt2-4 do not. Turn on once working days are set.
   showAttendance: false,
+  countLateAsPresent: true,
   showPercentage: false,
   showRank: false,
   showResult: false,
@@ -122,6 +124,7 @@ const TEMPLATE_FIELDS = Object.freeze({
   nebGradeSheet: Object.freeze([
     "title",
     "showAttendance",
+    "countLateAsPresent",
     "showSummaryGrid",
     "showGradeLegend",
     "showTeacherRemarks",

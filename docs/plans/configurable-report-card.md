@@ -224,6 +224,13 @@ behaviour when the column is null, so existing schools are unaffected. Add the c
 
 ### Phase 4 — Attendance
 
+> **Status (2026-11-07): done.** See `docs/STATUS.md`. Decided: working days are
+> admin-entered per exam (`Exam.workingDays`, editable in any status from the
+> Report Cards page) and frozen on `ReportCard` with `daysPresent` and `daysLate`
+> at generation. Late days are stored separately so `countLateAsPresent` (a layout
+> setting) applies without regenerating. The window is academic-year start to
+> exam end; one `groupBy` per section, in `generateReportCards`.
+
 One grouped query per section in `getReportCard` / `getBulkReportCards`:
 
 ```js

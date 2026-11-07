@@ -15,6 +15,12 @@ const {
   schoolForReport,
 } = require("../utils/reportCardLayout");
 const {
+  attendanceWindow,
+  attendanceDateFilter,
+  tallyAttendance,
+  attendanceForCard,
+} = require("../utils/reportCardAttendance");
+const {
   getDefaultScale,
   getScaleResolver,
 } = require("../services/gradeScale.service");
@@ -239,10 +245,15 @@ const getReportCards = asyncHandler(async (req, res) => {
             classRank: reportCard.classRank,
             isPublished: reportCard.isPublished,
             generatedAt: reportCard.generatedAt,
+            daysPresent: reportCard.daysPresent,
+            daysLate: reportCard.daysLate,
+            totalWorkingDays: reportCard.totalWorkingDays,
           }
         : null,
     };
   });
+
+  const window = attendanceWindow(exam, exam.academicYear);
 
   // Summary stats
   const summary = {
@@ -257,6 +268,20 @@ const getReportCards = asyncHandler(async (req, res) => {
     published: data.filter((d) => d.reportCard?.isPublished).length,
     passed: data.filter((d) => d.isPassed).length,
     failed: data.filter((d) => !d.isPassed).length,
+    // Attendance: the admin enters working days per exam; generating freezes
+    // them on each card, so cards made before a change need regenerating.
+    attendance: {
+      examId: exam.id,
+      workingDays: exam.workingDays,
+      fromBS: issueDateBS(window.from),
+      toBS: issueDateBS(window.to),
+      cardsOutdated: data.filter(
+        (d) =>
+          d.reportCard &&
+          (d.reportCard.daysPresent === null ||
+            d.reportCard.totalWorkingDays !== exam.workingDays),
+      ).length,
+    },
   };
 
   ApiResponse.success(res, { summary, students: data });
@@ -308,6 +333,24 @@ const generateReportCards = asyncHandler(async (req, res) => {
   // card keeps printing these grades if the default changes later.
   const scale = await getDefaultScale(req.user.schoolId);
 
+  // Attendance from the academic year start to the exam's end, one grouped
+  // query for the whole section. Frozen on each card below, with the exam's
+  // admin-entered working days as the total.
+  const attendance = tallyAttendance(
+    await prisma.attendance.groupBy({
+      by: ["studentClassId", "status"],
+      where: {
+        schoolId: req.user.schoolId,
+        studentClassId: { in: enrollments.map((e) => e.id) },
+        status: { in: ["present", "late"] },
+        attendanceDate: attendanceDateFilter(
+          attendanceWindow(exam, exam.academicYear),
+        ),
+      },
+      _count: { _all: true },
+    }),
+  );
+
   // Process each student and generate report cards
   const reportCards = await prisma.$transaction(async (tx) => {
     const results = [];
@@ -357,6 +400,8 @@ const generateReportCards = asyncHandler(async (req, res) => {
         gpa: overallResult.gpa,
         grade: overallResult.grade,
         isPassed: overallResult.isPassed,
+        daysPresent: attendance.get(enrollment.id)?.present ?? 0,
+        daysLate: attendance.get(enrollment.id)?.late ?? 0,
       });
     }
 
@@ -385,6 +430,9 @@ const generateReportCards = asyncHandler(async (req, res) => {
           overallGrade: data.grade,
           classRank: rank,
           gradeScaleId: scale.id,
+          daysPresent: data.daysPresent,
+          daysLate: data.daysLate,
+          totalWorkingDays: exam.workingDays,
           generatedAt: new Date(),
         },
         create: {
@@ -396,6 +444,9 @@ const generateReportCards = asyncHandler(async (req, res) => {
           overallGrade: data.grade,
           classRank: rank,
           gradeScaleId: scale.id,
+          daysPresent: data.daysPresent,
+          daysLate: data.daysLate,
+          totalWorkingDays: exam.workingDays,
           generatedAt: new Date(),
         },
       });
@@ -474,6 +525,7 @@ const getReportCard = asyncHandler(async (req, res) => {
   const scale = (await getScaleResolver(req.user.schoolId)).forReportCard(
     reportCard,
   );
+  const layout = normalizeLayout(school.reportCardConfig);
 
   // Get subject-wise results with Nepal grading
   const examResults = await prisma.examResult.findMany({
@@ -573,6 +625,7 @@ const getReportCard = asyncHandler(async (req, res) => {
       totalSubjects: overallResult.totalSubjects,
       passedSubjects: overallResult.passedSubjects,
       failedSubjects: overallResult.failedSubjects,
+      ...attendanceForCard(reportCard, layout),
     },
     // Remarks
     remarks: {
@@ -590,7 +643,7 @@ const getReportCard = asyncHandler(async (req, res) => {
     // The bands of the scale this card was graded on
     gradeReference: toGradeReference(scale),
     // How this school prints its report cards (School Settings)
-    layout: normalizeLayout(school.reportCardConfig),
+    layout,
   };
 
   ApiResponse.success(res, response);
@@ -885,6 +938,7 @@ const getBulkReportCards = asyncHandler(async (req, res) => {
           totalSubjects: overallResult.totalSubjects,
           passedSubjects: overallResult.passedSubjects,
           failedSubjects: overallResult.failedSubjects,
+          ...attendanceForCard(reportCard, layout),
         },
         remarks: {
           teacher: reportCard.teacherRemarks,

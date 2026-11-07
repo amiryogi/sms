@@ -1120,6 +1120,47 @@ async function main() {
   }
   console.log(`   ✓ Created ${attendanceCount} attendance records\n`);
 
+  // 20b. First-term attendance, so report cards print "Attendance 61/70"-style
+  // numbers: every school day (Saturday off) from the academic year start to
+  // the first exam's last day, for every seeded student, plus that exam's
+  // working days. Deterministic, so reseeding gives the same totals.
+  console.log("📅 Creating first-term attendance...");
+  const termDays = [];
+  for (
+    let d = new Date(academicYear.startDate);
+    d <= firstTermExam.endDate;
+    d = new Date(d.getTime() + 86400000)
+  ) {
+    if (d.getUTCDay() !== 6) termDays.push(new Date(d));
+  }
+  const termRows = [];
+  createdStudents.forEach((studentData, si) => {
+    termDays.forEach((day, di) => {
+      const k = (si * 7 + di * 3) % 29;
+      const status = k === 0 || k === 13 ? "absent" : k === 5 ? "late" : "present";
+      termRows.push({
+        studentId: studentData.student.id,
+        studentClassId: studentData.studentClass.id,
+        schoolId: school.id,
+        attendanceDate: day,
+        status,
+        markedBy: teachers[0]?.user.id || adminUser.id,
+      });
+    });
+  });
+  const { count: termCount } = await prisma.attendance.createMany({
+    data: termRows,
+    skipDuplicates: true,
+  });
+  await prisma.exam.update({
+    where: { id: firstTermExam.id },
+    data: { workingDays: termDays.length },
+  });
+  console.log(
+    `   ✓ Created ${termCount} records over ${termDays.length} school days; ` +
+      `"${firstTermExam.name}" has ${termDays.length} working days\n`,
+  );
+
   // Final Summary
   console.log("═══════════════════════════════════════════════════════════════════════");
   console.log("✅ Database seeded successfully!");

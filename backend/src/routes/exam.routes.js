@@ -5,6 +5,7 @@ const { authenticate, isAdmin, validate } = require("../middleware");
 const {
   examRules,
   examSubjectUpdateRules,
+  workingDaysRules,
   idParamRule,
 } = require("../validators");
 
@@ -26,6 +27,16 @@ router.put(
   [idParamRule, ...examRules],
   validate,
   examController.updateExam
+);
+
+// Working days for report-card attendance (Admin only). Allowed in any exam
+// status: the number is usually known only when report cards are made.
+router.put(
+  "/:id/working-days",
+  isAdmin,
+  [idParamRule, ...workingDaysRules],
+  validate,
+  examController.setWorkingDays
 );
 
 // Update/Add exam subjects (Admin only)

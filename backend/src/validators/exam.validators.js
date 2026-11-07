@@ -1,4 +1,5 @@
 const { body } = require('express-validator');
+const { isValidWorkingDays, MAX_WORKING_DAYS } = require('../utils/reportCardAttendance');
 
 const examRules = [
   body('name').trim().notEmpty().withMessage('Exam name is required'),
@@ -7,6 +8,13 @@ const examRules = [
   body('startDate').optional().isISO8601().withMessage('Valid start date required'),
   body('endDate').optional().isISO8601().withMessage('Valid end date required'),
   body('classIds').optional().isArray().withMessage('Class IDs must be an array'),
+];
+
+// Working days for report-card attendance; null clears it.
+const workingDaysRules = [
+  body('workingDays')
+    .custom((v) => v !== undefined && isValidWorkingDays(v))
+    .withMessage(`Working days must be a whole number from 1 to ${MAX_WORKING_DAYS}, or empty`),
 ];
 
 const examSubjectUpdateRules = [
@@ -32,4 +40,5 @@ module.exports = {
   examRules,
   examSubjectUpdateRules,
   resultSaveRules,
+  workingDaysRules,
 };
