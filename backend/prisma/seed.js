@@ -110,89 +110,27 @@ const lastNames = ["Sharma", "Adhikari", "Poudel", "Gurung", "Tamang", "Thapa", 
 // SEED DATA
 // =====================================================
 
+// Permissions are kept only where a route actually checks them with
+// `authorize(...)` (attendance, result and report-card routes). Everything
+// else is decided by role (requireRole / isAdmin / ownership middleware); see
+// CLAUDE.md §5. Don't add a permission here unless a route checks it.
 const permissions = [
-  // User Management
-  { name: "user.create", module: "users", description: "Create new users" },
-  { name: "user.read", module: "users", description: "View user details" },
-  { name: "user.update", module: "users", description: "Update user information" },
-  { name: "user.delete", module: "users", description: "Delete users" },
-  { name: "user.list", module: "users", description: "List all users" },
-
-  // Student Management
-  { name: "student.create", module: "students", description: "Create new students" },
-  { name: "student.read", module: "students", description: "View student details" },
-  { name: "student.update", module: "students", description: "Update student information" },
-  { name: "student.delete", module: "students", description: "Delete students" },
-  { name: "student.list", module: "students", description: "List students" },
-  { name: "student.view_own", module: "students", description: "View own student profile" },
-
-  // Teacher Management
-  { name: "teacher.create", module: "teachers", description: "Create new teachers" },
-  { name: "teacher.read", module: "teachers", description: "View teacher details" },
-  { name: "teacher.update", module: "teachers", description: "Update teacher information" },
-  { name: "teacher.delete", module: "teachers", description: "Delete teachers" },
-  { name: "teacher.list", module: "teachers", description: "List teachers" },
-
-  // Academic Structure
-  { name: "academic_year.manage", module: "academic", description: "Manage academic years" },
-  { name: "class.manage", module: "academic", description: "Manage classes" },
-  { name: "section.manage", module: "academic", description: "Manage sections" },
-  { name: "subject.manage", module: "academic", description: "Manage subjects" },
-  { name: "class_subject.manage", module: "academic", description: "Manage class-subject assignments" },
-  { name: "teacher_subject.manage", module: "academic", description: "Manage teacher assignments" },
-
-  // Attendance
+  // Attendance (attendance.routes.js)
   { name: "attendance.mark", module: "attendance", description: "Mark attendance" },
   { name: "attendance.view_all", module: "attendance", description: "View all attendance records" },
-  { name: "attendance.view_own", module: "attendance", description: "View own attendance" },
+  { name: "attendance.view_own", module: "attendance", description: "View own (or own child's) attendance" },
   { name: "attendance.view_class", module: "attendance", description: "View class attendance" },
 
-  // Exams
-  { name: "exam.create", module: "exams", description: "Create exams" },
-  { name: "exam.read", module: "exams", description: "View exam details" },
-  { name: "exam.update", module: "exams", description: "Update exam information" },
-  { name: "exam.delete", module: "exams", description: "Delete exams" },
-  { name: "exam.manage_subjects", module: "exams", description: "Manage exam subjects" },
-
-  // Results
+  // Results (result.routes.js)
   { name: "result.enter", module: "results", description: "Enter exam results" },
   { name: "result.view_all", module: "results", description: "View all results" },
   { name: "result.view_own", module: "results", description: "View own results" },
   { name: "result.view_child", module: "results", description: "View child results" },
-  { name: "result.publish", module: "results", description: "Publish results" },
 
-  // Report Cards
-  { name: "report_card.generate", module: "report_cards", description: "Generate report cards" },
+  // Report cards (reportCard.routes.js)
   { name: "report_card.view_all", module: "report_cards", description: "View all report cards" },
   { name: "report_card.view_own", module: "report_cards", description: "View own report card" },
   { name: "report_card.view_child", module: "report_cards", description: "View child report card" },
-
-  // Assignments
-  { name: "assignment.create", module: "assignments", description: "Create assignments" },
-  { name: "assignment.read", module: "assignments", description: "View assignments" },
-  { name: "assignment.update", module: "assignments", description: "Update assignments" },
-  { name: "assignment.delete", module: "assignments", description: "Delete assignments" },
-  { name: "assignment.grade", module: "assignments", description: "Grade submissions" },
-  { name: "assignment.submit", module: "assignments", description: "Submit assignments" },
-  { name: "assignment.view_own", module: "assignments", description: "View own assignments" },
-
-  // Notices
-  { name: "notice.create", module: "notices", description: "Create notices" },
-  { name: "notice.read", module: "notices", description: "View notices" },
-  { name: "notice.update", module: "notices", description: "Update notices" },
-  { name: "notice.delete", module: "notices", description: "Delete notices" },
-
-  // Promotions
-  { name: "promotion.process", module: "promotions", description: "Process student promotions" },
-  { name: "promotion.view", module: "promotions", description: "View promotion history" },
-
-  // Fee Management
-  { name: "fee.manage_types", module: "fees", description: "Create/update/delete fee types" },
-  { name: "fee.manage_structures", module: "fees", description: "Create/update/delete fee structures" },
-  { name: "fee.record_payment", module: "fees", description: "Record fee payments" },
-  { name: "fee.view_all", module: "fees", description: "View all fee records and reports" },
-  { name: "fee.generate_invoice", module: "fees", description: "Generate fee invoices for students" },
-  { name: "fee.apply_discount", module: "fees", description: "Apply discounts or fines to fees" },
 ];
 
 const roles = [
@@ -207,46 +145,21 @@ const roles = [
   { name: "SUPER_ADMIN", description: "Super Administrator - full access, manages admins" },
 ];
 
-// Role-permission mappings
+// Role-permission mappings. SUPER_ADMIN gets every permission (step 3).
 const rolePermissions = {
   ADMIN: [
-    "user.create", "user.read", "user.update", "user.delete", "user.list",
-    "student.create", "student.read", "student.update", "student.delete", "student.list",
-    "teacher.create", "teacher.read", "teacher.update", "teacher.delete", "teacher.list",
-    "academic_year.manage", "class.manage", "section.manage", "subject.manage",
-    "class_subject.manage", "teacher_subject.manage",
     "attendance.mark", "attendance.view_all", "attendance.view_class",
-    "exam.create", "exam.read", "exam.update", "exam.delete", "exam.manage_subjects",
-    "result.enter", "result.view_all", "result.publish",
-    "report_card.generate", "report_card.view_all",
-    "assignment.create", "assignment.read", "assignment.update", "assignment.delete", "assignment.grade",
-    "notice.create", "notice.read", "notice.update", "notice.delete",
-    "promotion.process", "promotion.view",
-    "fee.manage_types", "fee.manage_structures", "fee.record_payment", "fee.view_all", "fee.generate_invoice", "fee.apply_discount",
+    "result.enter", "result.view_all",
+    "report_card.view_all",
   ],
   TEACHER: [
-    "student.read", "student.list",
     "attendance.mark", "attendance.view_class",
-    "exam.read", "result.enter", "result.view_all",
-    "assignment.create", "assignment.read", "assignment.update", "assignment.delete", "assignment.grade",
-    "notice.read", "notice.create",
+    "result.enter", "result.view_all",
   ],
-  STUDENT: [
-    "student.view_own", "attendance.view_own", "result.view_own", "report_card.view_own",
-    "assignment.submit", "assignment.view_own", "notice.read",
-  ],
-  PARENT: [
-    "attendance.view_own", "result.view_child", "report_card.view_child",
-    "assignment.view_own", "notice.read",
-  ],
-  EXAM_OFFICER: [
-    "student.read", "student.list", "exam.read", "result.enter", "result.view_all", "notice.read",
-  ],
-  ACCOUNTANT: [
-    "student.read", "student.list",
-    "fee.manage_types", "fee.manage_structures", "fee.record_payment", "fee.view_all", "fee.generate_invoice", "fee.apply_discount",
-    "notice.read",
-  ],
+  EXAM_OFFICER: ["result.enter", "result.view_all"],
+  ACCOUNTANT: [],
+  STUDENT: ["attendance.view_own", "result.view_own", "report_card.view_own"],
+  PARENT: ["attendance.view_own", "result.view_child", "report_card.view_child"],
 };
 
 // Demo subjects for Grade 1-10
@@ -343,7 +256,12 @@ async function main() {
       create: permission,
     });
   }
-  console.log(`   ✓ Created ${permissions.length} permissions\n`);
+  // Remove permissions no longer listed (their grants cascade), so an existing
+  // database matches this file.
+  const removed = await prisma.permission.deleteMany({
+    where: { name: { notIn: permissions.map((perm) => perm.name) } },
+  });
+  console.log(`   ✓ ${permissions.length} permissions (${removed.count} unused removed)\n`);
 
   // 2. Create Roles
   console.log("👥 Creating roles...");
@@ -361,11 +279,14 @@ async function main() {
   rolePermissions.SUPER_ADMIN = permissions.map((perm) => perm.name);
   for (const [roleName, permissionNames] of Object.entries(rolePermissions)) {
     const role = await prisma.role.findUnique({ where: { name: roleName } });
-    if (!role) continue;
+    if (!role) throw new Error(`seed: unknown role "${roleName}" in rolePermissions`);
 
+    const grantIds = [];
     for (const permName of permissionNames) {
+      // A typo here would silently deny everyone; fail loudly instead.
       const permission = await prisma.permission.findUnique({ where: { name: permName } });
-      if (!permission) continue;
+      if (!permission) throw new Error(`seed: unknown permission "${permName}" for ${roleName}`);
+      grantIds.push(permission.id);
 
       await prisma.rolePermission.upsert({
         where: { roleId_permissionId: { roleId: role.id, permissionId: permission.id } },
@@ -373,6 +294,11 @@ async function main() {
         create: { roleId: role.id, permissionId: permission.id },
       });
     }
+
+    // Revoke grants this file no longer lists for the role.
+    await prisma.rolePermission.deleteMany({
+      where: { roleId: role.id, permissionId: { notIn: grantIds } },
+    });
   }
   console.log("   ✓ Assigned permissions to roles\n");
 

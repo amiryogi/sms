@@ -31,7 +31,7 @@ const dbUser = (overrides = {}) => ({
   schoolId: 1,
   status: 'active',
   school: { id: 1, isActive: true },
-  userRoles: [role('TEACHER', ['exam.read'])],
+  userRoles: [role('TEACHER', ['result.view_all'])],
   student: null,
   parent: null,
   ...overrides,
@@ -49,7 +49,7 @@ describe('authenticate', () => {
     prisma.user.findUnique.mockResolvedValue(dbUser());
     const req = withToken();
     expect(await run(authenticate, req)).toBeUndefined();
-    expect(req.user).toMatchObject({ id: 7, schoolId: 1, roles: ['TEACHER'], permissions: ['exam.read'] });
+    expect(req.user).toMatchObject({ id: 7, schoolId: 1, roles: ['TEACHER'], permissions: ['result.view_all'] });
     expect(req.user.parentId).toBeUndefined();
   });
 
@@ -85,11 +85,11 @@ describe('authenticate', () => {
     prisma.user.findUnique.mockResolvedValue(dbUser({ userRoles: [role('SUPER_ADMIN')] }));
     prisma.role.findUnique.mockResolvedValue({
       name: 'ADMIN',
-      rolePermissions: [{ permission: { name: 'student.list' } }],
+      rolePermissions: [{ permission: { name: 'attendance.view_class' } }],
     });
     const req = withToken();
     expect(await run(authenticate, req)).toBeUndefined();
-    expect(req.user.permissions).toEqual(['student.list']);
+    expect(req.user.permissions).toEqual(['attendance.view_class']);
     expect(req.user.schoolId).toBe(1);
   });
 });
