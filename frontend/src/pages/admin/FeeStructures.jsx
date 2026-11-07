@@ -186,7 +186,6 @@ const FeeStructures = () => {
         title="Fee Structures"
         description="How much each class pays for each fee type in a year."
         actions={<Button icon={Plus} onClick={() => openModal()}>Add fee structure</Button>}
-        className="mb-0"
       />
 
       {totalsByClass.length > 0 && (

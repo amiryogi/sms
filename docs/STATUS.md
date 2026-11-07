@@ -18,7 +18,7 @@ each tested in the browser and committed separately.
 | Wave | Scope | State |
 |---|---|---|
 | 1 | Tailwind, tokens, legacy layer + bridge, `ui/` kit, shared components, shell, login, error pages, per-school brand colour | **Done** (2026-11-08) |
-| 2 | All 18 admin pages | **In progress** — 12 done (dashboard, academic years, classes, sections, subjects + Excel import, class subjects, teacher assignment, students, teachers, parents, fee types/structures/payments); left: exams, report cards, promotions, notices, school settings |
+| 2 | All 18 admin pages | **Done** (2026-11-08) |
 | 3 | Teacher + exam officer | — |
 | 4 | Student, parent, accountant (real accountant dashboard) | — |
 | 5 | Charts + `/dashboard/*` summary endpoints | — |
@@ -31,6 +31,20 @@ single/bulk/student and the all-options card render as before with the same
 page counts; brand colour API (hex validation, admin only, reaches the session
 and the public login endpoint, reset) and live preview with the light-colour
 contrast fallback.
+
+Wave 2 verified: build and lint clean; every page across 7 roles loads with no
+console errors or failed calls, including each School Settings tab
+(`?tab=branding|grading|report-card`); screenshots at 1440 and 390 px;
+generating, publishing and printing from the new Report Cards page; print
+regression unchanged (NEB and Performance Report single/student 1 page, bulk 5).
+Notes:
+- School Settings is now tabbed: profile, branding (logo, banner, brand colour),
+  grading (grade scales), report card (layout). Links can open a tab with `?tab=`.
+- Promotions takes the suggested next class and year from the API
+  (`suggestedNextClassId`, `suggestedAcademicYearId` on
+  `GET /promotions/eligible`) instead of guessing `gradeLevel + 1` in the browser.
+- `DELETE /exams/:id/subjects/:examSubjectId` is now used by the exam details dialog.
+- Subject Excel import accepts any grade that exists as a class (it was 11/12 only).
 
 Migration `20261108090000_school_brand_color` adds `schools.brand_color`.
 

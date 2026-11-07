@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, NavLink, Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Building2,
@@ -47,8 +47,23 @@ const SchoolMark = ({ school, size = "md" }) => {
 };
 
 /** The navigation list, shared by the desktop sidebar and the mobile drawer. */
-const SidebarNav = ({ sections, collapsed, onNavigate }) => (
-  <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Main">
+const SidebarNav = ({ sections, collapsed, onNavigate }) => {
+  const navRef = useRef(null);
+  const { pathname } = useLocation();
+
+  // Keep the active item in view: on a short screen, Notices or Settings sit
+  // below the fold. Scrolls only the nav, never the page.
+  useEffect(() => {
+    const nav = navRef.current;
+    const link = nav?.querySelector('[aria-current="page"]');
+    if (!link) return;
+    const n = nav.getBoundingClientRect();
+    const r = link.getBoundingClientRect();
+    if (r.top < n.top || r.bottom > n.bottom) nav.scrollTop += r.top - n.top - (n.height - r.height) / 2;
+  }, [pathname, collapsed]);
+
+  return (
+  <nav ref={navRef} className="flex-1 overflow-y-auto px-3 py-4" aria-label="Main">
     {sections.map((section) => (
       <div key={section.label} className="mb-5 last:mb-0">
         {!collapsed && (
@@ -89,7 +104,8 @@ const SidebarNav = ({ sections, collapsed, onNavigate }) => (
       </div>
     ))}
   </nav>
-);
+  );
+};
 
 const DashboardLayout = () => {
   const { user, logout, hasRole } = useAuth();

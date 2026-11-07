@@ -1,18 +1,8 @@
 import React, { useEffect, useState } from "react";
-import {
-  BarChart3,
-  Check,
-  Copy,
-  Loader2,
-  Lock,
-  Pencil,
-  Plus,
-  Save,
-  Star,
-  Trash2,
-  X,
-} from "lucide-react";
+import { BarChart3, Copy, Lock, Pencil, Plus, Save, Star, Trash2 } from "lucide-react";
 import { gradeScaleService } from "../../api/gradeScaleService";
+import { cn } from "../../lib/cn";
+import { Alert, Badge, Button, Card, CardHeader, Field, IconButton, LoadingBlock, TextInput, toast, confirmDialog } from "../ui";
 
 /**
  * School Settings -> Grade Scales.
@@ -22,14 +12,7 @@ import { gradeScaleService } from "../../api/gradeScaleService";
  * this component only displays them. It never decides a grade itself.
  */
 
-const emptyBand = () => ({
-  grade: "",
-  min: "",
-  max: "",
-  gpa: "",
-  description: "",
-  isPassing: true,
-});
+const emptyBand = () => ({ grade: "", min: "", max: "", gpa: "", description: "", isPassing: true });
 
 // Bands from the API are numbers; the editor keeps strings so inputs can be blank.
 const toEditorBands = (bands) =>
@@ -54,29 +37,25 @@ const uniqueName = (base, scales) => {
   }
 };
 
+const cellInput = "h-9 px-2.5";
+
 const GradeScaleSettings = () => {
   const [scales, setScales] = useState([]);
   const [presets, setPresets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
-  const [message, setMessage] = useState({ type: "", text: "" });
+  const [problem, setProblem] = useState("");
   const [editor, setEditor] = useState(null); // { id, name, passPercent, bands }
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
     try {
-      const [list, presetList] = await Promise.all([
-        gradeScaleService.getAll(),
-        gradeScaleService.getPresets(),
-      ]);
+      const [list, presetList] = await Promise.all([gradeScaleService.getAll(), gradeScaleService.getPresets()]);
       setScales(list.data.data || []);
       setPresets(presetList.data.data || []);
     } catch (error) {
-      setMessage({
-        type: "error",
-        text: error.response?.data?.message || "Could not load grade scales",
-      });
+      toast.error(error.response?.data?.message || "Could not load grade scales");
     } finally {
       setLoading(false);
     }
@@ -86,16 +65,9 @@ const GradeScaleSettings = () => {
     load();
   }, []);
 
-  const flash = (type, text) => {
-    setMessage({ type, text });
-    if (type === "success") {
-      setTimeout(() => setMessage({ type: "", text: "" }), 5000);
-    }
-  };
-
   const openEditor = (source, { asCopy = false } = {}) => {
     setErrors({});
-    setMessage({ type: "", text: "" });
+    setProblem("");
     setEditor({
       id: asCopy ? null : source.id ?? null,
       name: asCopy ? uniqueName(source.name, scales) : source.name,
@@ -104,16 +76,19 @@ const GradeScaleSettings = () => {
     });
   };
 
+  const closeEditor = () => {
+    setEditor(null);
+    setErrors({});
+    setProblem("");
+  };
+
   const startFromPreset = (key) => {
     const preset = presets.find((p) => p.key === key);
     if (preset) openEditor(preset, { asCopy: true });
   };
 
   const updateBand = (index, field, value) => {
-    setEditor((ed) => ({
-      ...ed,
-      bands: ed.bands.map((b, i) => (i === index ? { ...b, [field]: value } : b)),
-    }));
+    setEditor((ed) => ({ ...ed, bands: ed.bands.map((b, i) => (i === index ? { ...b, [field]: value } : b)) }));
   };
 
   const removeBand = (index) => {
@@ -121,13 +96,12 @@ const GradeScaleSettings = () => {
     setErrors({}); // indexes shift; stale errors would point at the wrong row
   };
 
-  const addBand = () => {
-    setEditor((ed) => ({ ...ed, bands: [...ed.bands, emptyBand()] }));
-  };
+  const addBand = () => setEditor((ed) => ({ ...ed, bands: [...ed.bands, emptyBand()] }));
 
   const handleSave = async () => {
     setSaving(true);
     setErrors({});
+    setProblem("");
     const payload = {
       name: editor.name,
       passPercent: numOrNull(editor.passPercent),
@@ -145,7 +119,7 @@ const GradeScaleSettings = () => {
       if (editor.id) await gradeScaleService.update(editor.id, payload);
       else await gradeScaleService.create(payload);
       setEditor(null);
-      flash("success", `Grade scale "${payload.name}" saved.`);
+      toast.success(`Grade scale "${payload.name}" saved`);
       await load();
     } catch (error) {
       const list = error.response?.data?.errors;
@@ -155,9 +129,9 @@ const GradeScaleSettings = () => {
           if (e.field && !map[e.field]) map[e.field] = e.message;
         });
         setErrors(map);
-        flash("error", `Please fix ${list.length} problem(s) in the scale below.`);
+        setProblem(`Please fix ${list.length} problem(s) in the scale below.`);
       } else {
-        flash("error", error.response?.data?.message || "Could not save the grade scale");
+        toast.error(error.response?.data?.message || "Could not save the grade scale");
       }
     } finally {
       setSaving(false);
@@ -165,299 +139,231 @@ const GradeScaleSettings = () => {
   };
 
   const handleMakeDefault = async (scale) => {
-    const ok = window.confirm(
-      `Make "${scale.name}" the default?\n\n` +
-        "Marks saved and report cards generated from now on will use it. " +
-        "Report cards already generated keep the scale they were made with " +
-        "until you generate them again."
-    );
+    const ok = await confirmDialog({
+      title: `Make "${scale.name}" the default?`,
+      message:
+        "Marks saved and report cards generated from now on will use it. Report cards already generated keep the scale they were made with until you generate them again.",
+      confirmLabel: "Make default",
+    });
     if (!ok) return;
     setBusyId(scale.id);
     try {
       await gradeScaleService.setDefault(scale.id);
-      flash("success", `"${scale.name}" is now the default grade scale.`);
+      toast.success(`"${scale.name}" is now the default grade scale`);
       await load();
     } catch (error) {
-      flash("error", error.response?.data?.message || "Could not change the default");
+      toast.error(error.response?.data?.message || "Could not change the default");
     } finally {
       setBusyId(null);
     }
   };
 
   const handleDelete = async (scale) => {
-    if (!window.confirm(`Delete the grade scale "${scale.name}"?`)) return;
+    const ok = await confirmDialog({ title: `Delete "${scale.name}"?`, message: "This cannot be undone.", confirmLabel: "Delete", tone: "danger" });
+    if (!ok) return;
     setBusyId(scale.id);
     try {
       await gradeScaleService.remove(scale.id);
-      flash("success", `"${scale.name}" deleted.`);
+      toast.success(`"${scale.name}" deleted`);
       await load();
     } catch (error) {
-      flash("error", error.response?.data?.message || "Could not delete the grade scale");
+      toast.error(error.response?.data?.message || "Could not delete the grade scale");
     } finally {
       setBusyId(null);
     }
   };
 
-  const fieldError = (key) =>
-    errors[key] ? <span className="field-error">{errors[key]}</span> : null;
-
-  const cellClass = (key) => (errors[key] ? "input-error" : "");
+  const errorText = (key) => (errors[key] ? <p className="field-error mt-1 text-xs font-medium text-red-600">{errors[key]}</p> : null);
 
   return (
-    <div className="card grade-scales">
-      <h3 className="card-title">
-        <BarChart3 size={20} /> Grade Scales
-      </h3>
-      <p className="text-muted grade-scales-intro">
-        The scale turns marks into letter grades and grade points on marks
-        entry and report cards. The default scale is used for new marks and
-        newly generated report cards; a report card keeps the scale it was
-        generated with.
-      </p>
-
-      {message.text && (
-        <div className={`grade-scales-message is-${message.type}`}>
-          {message.type === "success" ? <Check size={16} /> : <X size={16} />}
-          <span>{message.text}</span>
-        </div>
-      )}
+    <Card className="grade-scales">
+      <CardHeader
+        icon={BarChart3}
+        title="Grade scales"
+        description="Turns marks into letter grades and grade points on marks entry and report cards. The default scale is used for new marks and newly generated report cards; a report card keeps the scale it was generated with."
+      />
 
       {loading ? (
-        <div className="grade-scales-loading">
-          <Loader2 className="spinner" size={20} /> Loading grade scales...
-        </div>
+        <LoadingBlock text="Loading grade scales…" />
       ) : (
-        <>
+        <div className="space-y-4">
           {scales.length === 0 && (
-            <p className="grade-scales-empty">
-              No grade scales set up yet, so the built-in NEB 8-band scale is in
-              use. Start one from a preset below.
-            </p>
+            <Alert tone="info">No grade scales set up yet, so the built-in NEB 8-band scale is in use. Start one from a preset below.</Alert>
           )}
 
-          <div className="grade-scales-list">
-            {scales.map((scale) => (
-              <div key={scale.id} className="grade-scale-item">
-                <div className="grade-scale-head">
-                  <div className="grade-scale-name">
-                    <strong>{scale.name}</strong>
-                    {scale.isDefault && <span className="badge badge-success">Default</span>}
+          {scales.map((scale) => (
+            <div key={scale.id} className="rounded-xl border border-slate-200 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="font-semibold text-slate-900">{scale.name}</h4>
+                    {scale.isDefault && <Badge tone="success" dot>Default</Badge>}
                     {scale.isLocked && (
-                      <span
-                        className="badge badge-secondary"
-                        title="Used by generated report cards, so it can no longer be edited"
-                      >
-                        <Lock size={12} /> Used by {scale.reportCardCount} report card(s)
-                      </span>
+                      <Badge tone="neutral" icon={Lock}>
+                        <span title="Used by generated report cards, so it can no longer be edited">Used by {scale.reportCardCount} report card(s)</span>
+                      </Badge>
                     )}
                   </div>
-                  <div className="grade-scale-actions">
-                    {!scale.isDefault && (
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-small"
-                        disabled={busyId === scale.id}
-                        onClick={() => handleMakeDefault(scale)}
-                      >
-                        <Star size={14} /> Make default
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-small"
-                      disabled={scale.isLocked}
-                      title={scale.isLocked ? "In use: duplicate it and edit the copy" : ""}
-                      onClick={() => openEditor(scale)}
-                    >
-                      <Pencil size={14} /> Edit
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-small"
-                      onClick={() => openEditor(scale, { asCopy: true })}
-                    >
-                      <Copy size={14} /> Duplicate
-                    </button>
-                    {!scale.isDefault && !scale.isLocked && (
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-small grade-scale-delete"
-                        disabled={busyId === scale.id}
-                        onClick={() => handleDelete(scale)}
-                      >
-                        <Trash2 size={14} /> Delete
-                      </button>
-                    )}
-                  </div>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {scale.passPercent > 0
+                      ? `Theory or practical below ${scale.passPercent}% fails the subject, which then prints ${scale.failGrade}.`
+                      : "No component pass mark: a low theory or practical score is graded, not failed."}
+                  </p>
                 </div>
-                <div className="grade-scale-meta text-muted">
-                  {scale.passPercent > 0
-                    ? `Theory or practical below ${scale.passPercent}% fails the subject, which then prints ${scale.failGrade}.`
-                    : "No component pass mark: a low theory or practical score is graded, not failed."}
-                </div>
-                <div className="grade-scale-bands">
-                  {scale.bands.map((b) => (
-                    <span
-                      key={b.grade}
-                      className={`grade-scale-band${b.isPassing ? "" : " is-failing"}`}
-                      title={b.description || ""}
-                    >
-                      <strong>{b.grade}</strong> {b.min}–{b.max}% · {b.gpa.toFixed(1)}
-                    </span>
-                  ))}
+                <div className="flex flex-wrap gap-1.5">
+                  {!scale.isDefault && (
+                    <Button size="sm" variant="secondary" icon={Star} disabled={busyId === scale.id} onClick={() => handleMakeDefault(scale)}>
+                      Make default
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    icon={Pencil}
+                    disabled={scale.isLocked}
+                    title={scale.isLocked ? "In use: duplicate it and edit the copy" : undefined}
+                    onClick={() => openEditor(scale)}
+                  >
+                    Edit
+                  </Button>
+                  <Button size="sm" variant="secondary" icon={Copy} onClick={() => openEditor(scale, { asCopy: true })}>
+                    Duplicate
+                  </Button>
+                  {!scale.isDefault && !scale.isLocked && (
+                    <IconButton icon={Trash2} label={`Delete ${scale.name}`} variant="danger-soft" size="sm" disabled={busyId === scale.id} onClick={() => handleDelete(scale)} />
+                  )}
                 </div>
               </div>
-            ))}
-          </div>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {scale.bands.map((b) => (
+                  <span
+                    key={b.grade}
+                    title={b.description || undefined}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs ring-1 ring-inset",
+                      b.isPassing ? "bg-slate-50 text-slate-700 ring-slate-200" : "bg-red-50 text-red-700 ring-red-200",
+                    )}
+                  >
+                    <strong className="font-semibold">{b.grade}</strong>
+                    <span className="tabular-nums">{b.min}–{b.max}%</span>
+                    <span className="text-slate-400">·</span>
+                    <span className="tabular-nums">{b.gpa.toFixed(1)}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
 
           {!editor && presets.length > 0 && (
-            <div className="grade-scales-new">
-              <span className="text-muted">New scale from a preset:</span>
+            <div className="grade-scales-new flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-slate-300 p-3">
+              <span className="text-sm text-slate-500">New scale from a preset:</span>
               {presets.map((p) => (
-                <button
-                  key={p.key}
-                  type="button"
-                  className="btn btn-secondary btn-small"
-                  onClick={() => startFromPreset(p.key)}
-                >
-                  <Plus size={14} /> {p.name}
-                </button>
+                <Button key={p.key} size="sm" variant="secondary" icon={Plus} onClick={() => startFromPreset(p.key)}>
+                  {p.name}
+                </Button>
               ))}
             </div>
           )}
 
           {editor && (
-            <div className="grade-scale-editor">
-              <h4>{editor.id ? `Edit "${editor.name}"` : "New grade scale"}</h4>
+            <div className="rounded-xl border border-brand-200 bg-brand-50/30 p-4">
+              <h4 className="mb-4 font-semibold text-slate-900">{editor.id ? `Edit "${editor.name}"` : "New grade scale"}</h4>
 
-              <div className="grade-scale-editor-fields">
-                <div className="form-group">
-                  <label htmlFor="gs-name">Name</label>
-                  <input
-                    id="gs-name"
-                    value={editor.name}
-                    maxLength={100}
-                    className={cellClass("name")}
-                    onChange={(e) => setEditor({ ...editor, name: e.target.value })}
-                  />
-                  {fieldError("name")}
-                </div>
-                <div className="form-group">
-                  <label htmlFor="gs-pass">Component pass mark (%)</label>
-                  <input
+              {problem && <Alert tone="danger" className="mb-4">{problem}</Alert>}
+
+              <div className="mb-4 grid gap-4 sm:grid-cols-2">
+                <Field label="Name" htmlFor="gs-name" error={errors.name}>
+                  <TextInput id="gs-name" value={editor.name} maxLength={100} invalid={Boolean(errors.name)} onChange={(e) => setEditor({ ...editor, name: e.target.value })} />
+                </Field>
+                <Field
+                  label="Component pass mark (%)"
+                  htmlFor="gs-pass"
+                  error={errors.passPercent}
+                  hint="Theory or practical below this fails the subject. 0 = no such rule."
+                >
+                  <TextInput
                     id="gs-pass"
                     type="number"
                     min="0"
                     max="100"
                     step="0.01"
                     value={editor.passPercent}
-                    className={cellClass("passPercent")}
+                    invalid={Boolean(errors.passPercent)}
                     onChange={(e) => setEditor({ ...editor, passPercent: e.target.value })}
                   />
-                  {fieldError("passPercent")}
-                  <small className="text-muted">
-                    Theory or practical below this fails the subject. 0 = no
-                    such rule.
-                  </small>
-                </div>
+                </Field>
               </div>
 
-              {fieldError("bands")}
-              <div className="grade-scale-table-wrap">
-                <table className="data-table grade-scale-table">
-                  <thead>
+              {errorText("bands")}
+              <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                <table className="w-full min-w-[640px] text-sm">
+                  <thead className="bg-slate-50 text-left text-xs font-medium text-slate-500">
                     <tr>
-                      <th>Grade</th>
-                      <th>From %</th>
-                      <th>To %</th>
-                      <th>Grade point</th>
-                      <th>Description</th>
-                      <th>Passing</th>
-                      <th aria-label="Remove" />
+                      <th className="px-3 py-2 font-medium">Grade</th>
+                      <th className="px-3 py-2 font-medium">From %</th>
+                      <th className="px-3 py-2 font-medium">To %</th>
+                      <th className="px-3 py-2 font-medium">Grade point</th>
+                      <th className="px-3 py-2 font-medium">Description</th>
+                      <th className="px-3 py-2 text-center font-medium">Passing</th>
+                      <th className="px-3 py-2"><span className="sr-only">Remove</span></th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-slate-100">
                     {editor.bands.map((b, i) => {
                       const k = (f) => `bands[${i}].${f}`;
+                      const numberCell = (field, label, opts) => (
+                        <td className="px-2 py-2 align-top">
+                          <TextInput
+                            type="number"
+                            {...opts}
+                            value={b[field]}
+                            invalid={Boolean(errors[k(field)])}
+                            className={cn(cellInput, "w-24")}
+                            onChange={(e) => updateBand(i, field, e.target.value)}
+                            aria-label={`Band ${i + 1} ${label}`}
+                          />
+                          {errorText(k(field))}
+                        </td>
+                      );
                       return (
                         <tr key={i}>
-                          <td>
-                            <input
+                          <td className="px-2 py-2 align-top">
+                            <TextInput
                               value={b.grade}
                               maxLength={5}
-                              className={cellClass(k("grade"))}
+                              invalid={Boolean(errors[k("grade")])}
+                              className={cn(cellInput, "w-20 font-semibold")}
                               onChange={(e) => updateBand(i, "grade", e.target.value)}
                               aria-label={`Band ${i + 1} grade`}
                             />
-                            {fieldError(k("grade"))}
+                            {errorText(k("grade"))}
                           </td>
-                          <td>
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              step="0.01"
-                              value={b.min}
-                              className={cellClass(k("min"))}
-                              onChange={(e) => updateBand(i, "min", e.target.value)}
-                              aria-label={`Band ${i + 1} from percent`}
-                            />
-                            {fieldError(k("min"))}
-                          </td>
-                          <td>
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              step="0.01"
-                              value={b.max}
-                              className={cellClass(k("max"))}
-                              onChange={(e) => updateBand(i, "max", e.target.value)}
-                              aria-label={`Band ${i + 1} to percent`}
-                            />
-                            {fieldError(k("max"))}
-                          </td>
-                          <td>
-                            <input
-                              type="number"
-                              min="0"
-                              max="9.99"
-                              step="0.1"
-                              value={b.gpa}
-                              className={cellClass(k("gpa"))}
-                              onChange={(e) => updateBand(i, "gpa", e.target.value)}
-                              aria-label={`Band ${i + 1} grade point`}
-                            />
-                            {fieldError(k("gpa"))}
-                          </td>
-                          <td>
-                            <input
+                          {numberCell("min", "from percent", { min: "0", max: "100", step: "0.01" })}
+                          {numberCell("max", "to percent", { min: "0", max: "100", step: "0.01" })}
+                          {numberCell("gpa", "grade point", { min: "0", max: "9.99", step: "0.1" })}
+                          <td className="px-2 py-2 align-top">
+                            <TextInput
                               value={b.description}
                               maxLength={100}
-                              className={cellClass(k("description"))}
+                              invalid={Boolean(errors[k("description")])}
+                              className={cellInput}
                               onChange={(e) => updateBand(i, "description", e.target.value)}
                               aria-label={`Band ${i + 1} description`}
                             />
-                            {fieldError(k("description"))}
+                            {errorText(k("description"))}
                           </td>
-                          <td className="grade-scale-passing">
+                          <td className="px-2 py-2 text-center align-middle">
                             <input
                               type="checkbox"
+                              className="size-4 cursor-pointer"
                               checked={b.isPassing}
                               onChange={(e) => updateBand(i, "isPassing", e.target.checked)}
                               aria-label={`Band ${i + 1} is passing`}
                             />
-                            {fieldError(k("isPassing"))}
+                            {errorText(k("isPassing"))}
                           </td>
-                          <td>
-                            <button
-                              type="button"
-                              className="btn-icon btn-danger"
-                              onClick={() => removeBand(i)}
-                              aria-label={`Remove band ${i + 1}`}
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                          <td className="px-2 py-2 align-top">
+                            <IconButton icon={Trash2} label={`Remove band ${i + 1}`} variant="ghost" size="sm" onClick={() => removeBand(i)} />
                           </td>
                         </tr>
                       );
@@ -465,42 +371,21 @@ const GradeScaleSettings = () => {
                   </tbody>
                 </table>
               </div>
-              <p className="text-muted grade-scale-hint">
-                Each band's "To %" must equal the next band's "From %". A score
-                exactly on a boundary gets the higher grade.
+              <p className="mt-2 text-xs text-slate-500">
+                Each band's "To %" must equal the next band's "From %". A score exactly on a boundary gets the higher grade.
               </p>
 
-              <div className="grade-scale-editor-actions">
-                <button type="button" className="btn btn-secondary" onClick={addBand}>
-                  <Plus size={16} /> Add band
-                </button>
-                <span className="grade-scale-spacer" />
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setEditor(null);
-                    setErrors({});
-                  }}
-                  disabled={saving}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={handleSave}
-                  disabled={saving}
-                >
-                  {saving ? <Loader2 className="spinner" size={16} /> : <Save size={16} />}
-                  Save scale
-                </button>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <Button variant="secondary" icon={Plus} onClick={addBand}>Add band</Button>
+                <span className="flex-1" />
+                <Button variant="secondary" onClick={closeEditor} disabled={saving}>Cancel</Button>
+                <Button icon={Save} onClick={handleSave} loading={saving}>Save scale</Button>
               </div>
             </div>
           )}
-        </>
+        </div>
       )}
-    </div>
+    </Card>
   );
 };
 

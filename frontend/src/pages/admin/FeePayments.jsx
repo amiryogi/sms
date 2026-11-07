@@ -235,7 +235,6 @@ const FeePayments = () => {
         title="Fee Payments"
         description="Record payments and track what each student still owes."
         actions={<Button icon={Sparkles} onClick={openGenerateModal}>Generate fees</Button>}
-        className="mb-0"
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

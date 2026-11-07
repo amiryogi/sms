@@ -1,13 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowUpRight, ArrowRight, GraduationCap, AlertCircle, CheckCircle, RotateCcw, Users } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { ArrowUpRight, Repeat, GraduationCap, RotateCcw, Users, CheckCircle2, ArrowRight, X } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
-import { Select, Button, FormRow, Input } from '../../components/common/FormElements';
+import StatCard from '../../components/common/StatCard';
+import { Select, Button } from '../../components/common/FormElements';
+import { PageHeader, Card, CardHeader, Badge, Tabs, IconButton, EmptyState, LoadingBlock, DialogActions, Alert, toast, confirmDialog } from '../../components/ui';
+import { cn } from '../../lib/cn';
 import { promotionService } from '../../api/promotionService';
 import { academicService } from '../../api/academicService';
+import { formatDate } from '../../utils/format';
+
+const DECISIONS = [
+  { value: 'promoted', label: 'Promote', icon: ArrowUpRight, active: 'bg-emerald-600 text-white', tone: 'success' },
+  { value: 'detained', label: 'Detain', icon: Repeat, active: 'bg-amber-500 text-white', tone: 'warning' },
+  { value: 'graduated', label: 'Graduate', icon: GraduationCap, active: 'bg-sky-600 text-white', tone: 'info' },
+];
+const toneOf = (status) => DECISIONS.find((d) => d.value === status)?.tone || 'neutral';
+const labelOf = (status) => DECISIONS.find((d) => d.value === status)?.label || status;
 
 const Promotions = () => {
-  // State for source selection
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
   const [academicYears, setAcademicYears] = useState([]);
@@ -15,28 +26,22 @@ const Promotions = () => {
   const [selectedSection, setSelectedSection] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
 
-  // State for eligible students
   const [eligibleData, setEligibleData] = useState(null);
   const [selectedStudents, setSelectedStudents] = useState(new Map());
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // State for target selection
   const [targetClass, setTargetClass] = useState('');
   const [targetSection, setTargetSection] = useState('');
   const [targetYear, setTargetYear] = useState('');
   const [targetSections, setTargetSections] = useState([]);
 
-  // History view
-  const [showHistory, setShowHistory] = useState(false);
+  const [view, setView] = useState('promote');
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
-  const [historyPagination, setHistoryPagination] = useState({ page: 1, limit: 20, total: 0 });
+  const [historyPagination, setHistoryPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 1 });
 
-  // Stats
   const [stats, setStats] = useState(null);
-
-  // Confirmation modal
   const [confirmModal, setConfirmModal] = useState(false);
 
   useEffect(() => {
@@ -45,24 +50,15 @@ const Promotions = () => {
 
   const fetchInitialData = async () => {
     try {
-      const [classesRes, yearsRes] = await Promise.all([
-        academicService.getClasses(),
-        academicService.getAcademicYears(),
-      ]);
+      const [classesRes, yearsRes] = await Promise.all([academicService.getClasses(), academicService.getAcademicYears()]);
       setClasses(classesRes.data || []);
       setAcademicYears(yearsRes.data || []);
-
-      // Auto-select current year
-      const currentYear = (yearsRes.data || []).find(y => y.isCurrent);
-      if (currentYear) {
-        setSelectedYear(currentYear.id.toString());
-      }
-
-      // Fetch stats
+      const currentYear = (yearsRes.data || []).find((y) => y.isCurrent);
+      if (currentYear) setSelectedYear((prev) => prev || currentYear.id.toString());
       const statsRes = await promotionService.getStats();
       setStats(statsRes.data);
-    } catch (error) {
-      console.error('Error fetching initial data:', error);
+    } catch {
+      // Stats are optional; the rest of the page still works.
     }
   };
 
@@ -72,14 +68,12 @@ const Promotions = () => {
     setSections([]);
     setEligibleData(null);
     setSelectedStudents(new Map());
-
-    if (classId) {
-      try {
-        const response = await academicService.getSections(classId);
-        setSections(response.data || []);
-      } catch (error) {
-        console.error('Error fetching sections:', error);
-      }
+    if (!classId) return;
+    try {
+      const response = await academicService.getSections(classId);
+      setSections(response.data || []);
+    } catch {
+      setSections([]);
     }
   };
 
@@ -87,98 +81,73 @@ const Promotions = () => {
     setTargetClass(classId);
     setTargetSection('');
     setTargetSections([]);
-
-    if (classId) {
-      try {
-        const response = await academicService.getSections(classId);
-        setTargetSections(response.data || []);
-      } catch (error) {
-        console.error('Error fetching target sections:', error);
-      }
+    if (!classId) return;
+    try {
+      const response = await academicService.getSections(classId);
+      setTargetSections(response.data || []);
+    } catch {
+      setTargetSections([]);
     }
   };
 
   const fetchEligibleStudents = async () => {
     if (!selectedClass || !selectedYear) {
-      alert('Please select a class and academic year');
+      toast.info('Choose a class and academic year first.');
       return;
     }
-
     setLoading(true);
     try {
       const response = await promotionService.getEligibleStudents(
         parseInt(selectedClass),
         parseInt(selectedYear),
-        selectedSection ? parseInt(selectedSection) : null
+        selectedSection ? parseInt(selectedSection) : null,
       );
-      setEligibleData(response.data);
+      const data = response.data;
+      setEligibleData(data);
       setSelectedStudents(new Map());
 
-      // Auto-select next class and year
-      if (response.data.nextClasses?.length > 0) {
-        const currentGrade = response.data.currentClass.gradeLevel;
-        const nextClass = response.data.nextClasses.find(c => c.gradeLevel === currentGrade + 1);
-        if (nextClass) {
-          setTargetClass(nextClass.id.toString());
-          setTargetSections(nextClass.sections || []);
-          if (nextClass.sections?.length > 0) {
-            setTargetSection(nextClass.sections[0].id.toString());
-          }
-        }
+      // Targets suggested by the backend (next grade, next academic year).
+      const next = (data.nextClasses || []).find((c) => c.id === data.suggestedNextClassId);
+      if (next) {
+        setTargetClass(next.id.toString());
+        setTargetSections(next.sections || []);
+        setTargetSection(next.sections?.[0]?.id?.toString() || '');
       }
-
-      // Auto-select next academic year
-      if (response.data.academicYears?.length > 1) {
-        const nextYear = response.data.academicYears.find(y => y.id !== parseInt(selectedYear));
-        if (nextYear) {
-          setTargetYear(nextYear.id.toString());
-        }
-      }
+      if (data.suggestedAcademicYearId) setTargetYear(data.suggestedAcademicYearId.toString());
     } catch (error) {
-      console.error('Error fetching eligible students:', error);
-      alert(error.response?.data?.message || 'Error fetching students');
+      toast.error(error.response?.data?.message || 'Could not load students');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStudentSelection = (studentId, status) => {
-    const newSelection = new Map(selectedStudents);
-    if (status === null) {
-      newSelection.delete(studentId);
-    } else {
-      newSelection.set(studentId, { status, remarks: '' });
-    }
-    setSelectedStudents(newSelection);
+  const decide = (studentId, status) => {
+    setSelectedStudents((prev) => {
+      const next = new Map(prev);
+      if (status === null || prev.get(studentId)?.status === status) next.delete(studentId);
+      else next.set(studentId, { status, remarks: '' });
+      return next;
+    });
   };
 
-  const handleSelectAll = (status) => {
+  const decideAll = (status) => {
     if (!eligibleData?.students) return;
-
-    const newSelection = new Map();
-    eligibleData.students
-      .filter(s => !s.alreadyPromoted)
-      .forEach(s => {
-        newSelection.set(s.studentId, { status, remarks: '' });
-      });
-    setSelectedStudents(newSelection);
+    const next = new Map();
+    eligibleData.students.filter((s) => !s.alreadyPromoted).forEach((s) => next.set(s.studentId, { status, remarks: '' }));
+    setSelectedStudents(next);
   };
 
-  const handleClearSelection = () => {
-    setSelectedStudents(new Map());
-  };
+  const counts = useMemo(() => {
+    const c = { promoted: 0, detained: 0, graduated: 0 };
+    selectedStudents.forEach((v) => {
+      c[v.status] += 1;
+    });
+    return c;
+  }, [selectedStudents]);
 
-  const handleBulkPromote = async () => {
-    if (selectedStudents.size === 0) {
-      alert('Please select at least one student');
-      return;
-    }
-
-    if (!targetClass || !targetYear) {
-      alert('Please select target class and academic year');
-      return;
-    }
-
+  const handleBulkPromote = () => {
+    if (!selectedStudents.size) return toast.info('Choose what happens to at least one student.');
+    if (!targetClass || !targetYear) return toast.info('Choose the target class and academic year.');
     setConfirmModal(true);
   };
 
@@ -191,7 +160,6 @@ const Promotions = () => {
         remarks: data.remarks || null,
         rollNumber: null,
       }));
-
       await promotionService.bulkPromote({
         fromClassId: parseInt(selectedClass),
         fromSectionId: selectedSection ? parseInt(selectedSection) : null,
@@ -201,14 +169,12 @@ const Promotions = () => {
         toAcademicYearId: parseInt(targetYear),
         students,
       });
-
-      alert(`Successfully processed ${students.length} promotion(s)`);
+      toast.success(`Processed ${students.length} student${students.length === 1 ? '' : 's'}`);
       setConfirmModal(false);
       fetchEligibleStudents();
-      fetchInitialData(); // Refresh stats
+      fetchInitialData();
     } catch (error) {
-      console.error('Error processing promotions:', error);
-      alert(error.response?.data?.message || 'Error processing promotions');
+      toast.error(error.response?.data?.message || 'Could not process the promotions');
     } finally {
       setSubmitting(false);
     }
@@ -217,52 +183,43 @@ const Promotions = () => {
   const fetchHistory = async (page = 1) => {
     setHistoryLoading(true);
     try {
-      const response = await promotionService.getHistory({
-        page,
-        limit: historyPagination.limit,
-        fromAcademicYearId: selectedYear || undefined,
-      });
+      const response = await promotionService.getHistory({ page, limit: historyPagination.limit, fromAcademicYearId: selectedYear || undefined });
       setHistory(response.data || []);
       if (response.pagination) {
-        setHistoryPagination(prev => ({ ...prev, ...response.pagination }));
+        setHistoryPagination((prev) => ({
+          ...prev,
+          ...response.pagination,
+          totalPages: response.pagination.totalPages || Math.ceil((response.pagination.total || 0) / prev.limit) || 1,
+        }));
       }
     } catch (error) {
-      console.error('Error fetching history:', error);
+      toast.error(error.response?.data?.message || 'Could not load history');
     } finally {
       setHistoryLoading(false);
     }
   };
 
-  const handleUndoPromotion = async (promotionId) => {
-    if (!confirm('Are you sure you want to undo this promotion? This will restore the student to their previous class.')) {
-      return;
-    }
-
+  const handleUndoPromotion = async (row) => {
+    const ok = await confirmDialog({
+      title: 'Undo this promotion?',
+      message: `${row.student?.user?.firstName} ${row.student?.user?.lastName} goes back to ${row.fromClass?.name} (${row.fromAcademicYear?.name}).`,
+      confirmLabel: 'Undo',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
-      await promotionService.undoPromotion(promotionId);
-      alert('Promotion undone successfully');
+      await promotionService.undoPromotion(row.id);
+      toast.success('Promotion undone');
       fetchHistory(historyPagination.page);
       fetchInitialData();
     } catch (error) {
-      console.error('Error undoing promotion:', error);
-      alert(error.response?.data?.message || 'Error undoing promotion');
+      toast.error(error.response?.data?.message || 'Could not undo the promotion');
     }
   };
 
-  const toggleHistory = () => {
-    if (!showHistory) {
-      fetchHistory();
-    }
-    setShowHistory(!showHistory);
-  };
-
-  const getStatusBadge = (status) => {
-    const badges = {
-      promoted: 'badge-success',
-      detained: 'badge-warning',
-      graduated: 'badge-info',
-    };
-    return badges[status] || 'badge-secondary';
+  const switchView = (next) => {
+    setView(next);
+    if (next === 'history') fetchHistory();
   };
 
   const historyColumns = [
@@ -270,397 +227,267 @@ const Promotions = () => {
       header: 'Student',
       render: (row) => (
         <div>
-          <div className="font-medium">{row.student?.user?.firstName} {row.student?.user?.lastName}</div>
-          <div className="text-muted text-sm">{row.student?.admissionNumber}</div>
+          <p className="font-medium text-slate-900">{row.student?.user?.firstName} {row.student?.user?.lastName}</p>
+          <p className="font-mono text-xs text-slate-500">{row.student?.admissionNumber}</p>
         </div>
       ),
     },
     {
-      header: 'From',
+      header: 'Move',
       render: (row) => (
-        <div>
-          <div>{row.fromClass?.name}</div>
-          <div className="text-muted text-sm">{row.fromAcademicYear?.name}</div>
-        </div>
-      ),
-    },
-    {
-      header: 'To',
-      render: (row) => (
-        <div>
-          <div>{row.toClass?.name || 'N/A'}</div>
-          <div className="text-muted text-sm">{row.toAcademicYear?.name}</div>
-        </div>
-      ),
-    },
-    {
-      header: 'Status',
-      render: (row) => (
-        <span className={`badge ${getStatusBadge(row.status)}`}>
-          {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
+        <span className="inline-flex items-center gap-2 text-sm">
+          <span>{row.fromClass?.name} <span className="text-slate-400">{row.fromAcademicYear?.name}</span></span>
+          <ArrowRight size={14} className="text-slate-300" aria-hidden="true" />
+          <span>{row.toClass?.name || '—'} <span className="text-slate-400">{row.toAcademicYear?.name}</span></span>
         </span>
       ),
     },
+    { header: 'Decision', render: (row) => <Badge tone={toneOf(row.status)}>{labelOf(row.status)}</Badge> },
     {
-      header: 'Processed By',
+      header: 'By',
       render: (row) => (
-        <div>
-          <div>{row.processedByUser?.firstName} {row.processedByUser?.lastName}</div>
-          <div className="text-muted text-sm">{new Date(row.processedAt).toLocaleDateString()}</div>
+        <div className="text-sm">
+          <p>{row.processedByUser?.firstName} {row.processedByUser?.lastName}</p>
+          <p className="text-xs text-slate-500">{formatDate(row.processedAt)}</p>
         </div>
       ),
     },
     {
-      header: 'Actions',
+      header: <span className="sr-only">Undo</span>,
+      width: '56px',
       render: (row) => (
-        <Button
-          variant="outline"
-          size="small"
-          onClick={() => handleUndoPromotion(row.id)}
-          title="Undo promotion"
-        >
-          <RotateCcw size={14} />
-        </Button>
+        <div className="flex justify-end">
+          <IconButton icon={RotateCcw} label="Undo promotion" onClick={() => handleUndoPromotion(row)} />
+        </div>
       ),
     },
   ];
 
-  return (
-    <div className="promotions-page">
-      <div className="page-header">
-        <h1>Student Promotions</h1>
-        <Button variant="outline" onClick={toggleHistory}>
-          {showHistory ? 'Back to Promotions' : 'View History'}
-        </Button>
-      </div>
+  const yearName = (id) => academicYears.find((y) => y.id.toString() === id)?.name;
+  const className = (id) => (eligibleData?.nextClasses || classes).find((c) => c.id.toString() === id)?.name;
 
-      {/* Stats Cards */}
+  return (
+    <div className={cn('mx-auto max-w-6xl space-y-6', selectedStudents.size > 0 && view === 'promote' && 'pb-24')}>
+      <PageHeader
+        icon={ArrowUpRight}
+        title="Promotions"
+        description="Move students into next year's classes at the end of the academic year."
+      />
+
       {stats && (
-        <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-icon bg-success">
-              <ArrowUpRight size={24} />
-            </div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.summary?.promoted || 0}</div>
-              <div className="stat-label">Promoted</div>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon bg-warning">
-              <AlertCircle size={24} />
-            </div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.summary?.detained || 0}</div>
-              <div className="stat-label">Detained</div>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon bg-info">
-              <GraduationCap size={24} />
-            </div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.summary?.graduated || 0}</div>
-              <div className="stat-label">Graduated</div>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon bg-primary">
-              <Users size={24} />
-            </div>
-            <div className="stat-content">
-              <div className="stat-value">{stats.summary?.total || 0}</div>
-              <div className="stat-label">Total Processed</div>
-            </div>
-          </div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard title="Promoted" value={stats.summary?.promoted || 0} icon={ArrowUpRight} color="success" />
+          <StatCard title="Detained" value={stats.summary?.detained || 0} icon={Repeat} color="warning" />
+          <StatCard title="Graduated" value={stats.summary?.graduated || 0} icon={GraduationCap} color="info" />
+          <StatCard title="Processed" value={stats.summary?.total || 0} icon={Users} color="primary" />
         </div>
       )}
 
-      {showHistory ? (
-        /* History View */
-        <div className="card">
-          <div className="card-header">
-            <h3>Promotion History</h3>
-          </div>
-          <DataTable
-            columns={historyColumns}
-            data={history}
-            loading={historyLoading}
-            emptyMessage="No promotion records found"
-          />
-          {historyPagination.total > historyPagination.limit && (
-            <div className="pagination">
-              <Button
-                variant="outline"
-                disabled={historyPagination.page <= 1}
-                onClick={() => fetchHistory(historyPagination.page - 1)}
-              >
-                Previous
-              </Button>
-              <span>Page {historyPagination.page}</span>
-              <Button
-                variant="outline"
-                disabled={historyPagination.page * historyPagination.limit >= historyPagination.total}
-                onClick={() => fetchHistory(historyPagination.page + 1)}
-              >
-                Next
-              </Button>
-            </div>
-          )}
-        </div>
+      <Tabs
+        value={view}
+        onChange={switchView}
+        tabs={[
+          { value: 'promote', label: 'Promote students' },
+          { value: 'history', label: 'History' },
+        ]}
+      />
+
+      {view === 'history' ? (
+        <DataTable
+          columns={historyColumns}
+          data={history}
+          loading={historyLoading}
+          pagination={historyPagination.total > historyPagination.limit ? historyPagination : null}
+          onPageChange={(page) => fetchHistory(page)}
+          emptyMessage="No promotions recorded yet"
+          emptyIcon={RotateCcw}
+        />
       ) : (
-        /* Promotion Process View */
         <>
-          {/* Source Selection */}
-          <div className="card">
-            <div className="card-header">
-              <h3>Select Students to Promote</h3>
+          <Card>
+            <CardHeader title="1. Students to promote" description="The class and year they are finishing." />
+            <div className="grid items-end gap-x-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto]">
+              <Select
+                label="Class"
+                name="fromClass"
+                value={selectedClass}
+                onChange={(e) => handleClassChange(e.target.value)}
+                options={classes.map((c) => ({ value: c.id, label: c.name }))}
+                placeholder="Select class"
+              />
+              <Select
+                label="Section"
+                name="fromSection"
+                value={selectedSection}
+                onChange={(e) => setSelectedSection(e.target.value)}
+                options={sections.map((s) => ({ value: s.id, label: s.name }))}
+                placeholder="All sections"
+                disabled={!selectedClass}
+              />
+              <Select
+                label="Academic year"
+                name="fromYear"
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                options={academicYears.map((y) => ({ value: y.id, label: y.name }))}
+                placeholder="Select year"
+              />
+              <Button onClick={fetchEligibleStudents} loading={loading} className="mb-4">Load students</Button>
             </div>
-            <div className="card-body">
-              <FormRow columns={4}>
-                <Select
-                  label="From Class"
-                  value={selectedClass}
-                  onChange={(e) => handleClassChange(e.target.value)}
-                  options={[
-                    { value: '', label: 'Select Class' },
-                    ...classes.map(c => ({ value: c.id, label: c.name })),
-                  ]}
-                />
-                <Select
-                  label="Section (Optional)"
-                  value={selectedSection}
-                  onChange={(e) => setSelectedSection(e.target.value)}
-                  options={[
-                    { value: '', label: 'All Sections' },
-                    ...sections.map(s => ({ value: s.id, label: s.name })),
-                  ]}
-                  disabled={!selectedClass}
-                />
-                <Select
-                  label="Academic Year"
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(e.target.value)}
-                  options={[
-                    { value: '', label: 'Select Year' },
-                    ...academicYears.map(y => ({ value: y.id, label: y.name })),
-                  ]}
-                />
-                <div className="form-group" style={{ display: 'flex', alignItems: 'flex-end' }}>
-                  <Button onClick={fetchEligibleStudents} disabled={loading}>
-                    {loading ? 'Loading...' : 'Load Students'}
-                  </Button>
-                </div>
-              </FormRow>
-            </div>
-          </div>
+          </Card>
 
-          {eligibleData && (
+          {loading && <LoadingBlock text="Loading students…" />}
+
+          {eligibleData && !loading && (
             <>
-              {/* Target Selection */}
-              <div className="card">
-                <div className="card-header">
-                  <h3>Promotion Target</h3>
+              <Card>
+                <CardHeader title="2. Where they go" description="Promoted students are enrolled here. Detained students repeat their class in the new year." />
+                <div className="grid gap-x-4 sm:grid-cols-3">
+                  <Select
+                    label="Class"
+                    name="toClass"
+                    value={targetClass}
+                    onChange={(e) => handleTargetClassChange(e.target.value)}
+                    options={(eligibleData.nextClasses || []).map((c) => ({ value: c.id, label: c.name }))}
+                    placeholder="Select class"
+                  />
+                  <Select
+                    label="Section"
+                    name="toSection"
+                    value={targetSection}
+                    onChange={(e) => setTargetSection(e.target.value)}
+                    options={targetSections.map((s) => ({ value: s.id, label: s.name }))}
+                    placeholder="Default section"
+                    disabled={!targetClass}
+                  />
+                  <Select
+                    label="Academic year"
+                    name="toYear"
+                    value={targetYear}
+                    onChange={(e) => setTargetYear(e.target.value)}
+                    options={(eligibleData.academicYears || []).filter((y) => y.id !== parseInt(selectedYear)).map((y) => ({ value: y.id, label: y.name }))}
+                    placeholder="Select year"
+                  />
                 </div>
-                <div className="card-body">
-                  <FormRow columns={3}>
-                    <Select
-                      label="To Class"
-                      value={targetClass}
-                      onChange={(e) => handleTargetClassChange(e.target.value)}
-                      options={[
-                        { value: '', label: 'Select Class' },
-                        ...(eligibleData.nextClasses || []).map(c => ({
-                          value: c.id,
-                          label: `${c.name} (Grade ${c.gradeLevel})`,
-                        })),
-                      ]}
-                    />
-                    <Select
-                      label="To Section"
-                      value={targetSection}
-                      onChange={(e) => setTargetSection(e.target.value)}
-                      options={[
-                        { value: '', label: 'Default Section' },
-                        ...targetSections.map(s => ({ value: s.id, label: s.name })),
-                      ]}
-                      disabled={!targetClass}
-                    />
-                    <Select
-                      label="To Academic Year"
-                      value={targetYear}
-                      onChange={(e) => setTargetYear(e.target.value)}
-                      options={[
-                        { value: '', label: 'Select Year' },
-                        ...(eligibleData.academicYears || [])
-                          .filter(y => y.id !== parseInt(selectedYear))
-                          .map(y => ({ value: y.id, label: y.name })),
-                      ]}
-                    />
-                  </FormRow>
-                </div>
-              </div>
+                {!(eligibleData.academicYears || []).some((y) => y.id !== parseInt(selectedYear)) && (
+                  <Alert tone="warning">Create next year on the Academic Years page before promoting students.</Alert>
+                )}
+              </Card>
 
-              {/* Students List */}
-              <div className="card">
-                <div className="card-header">
+              <div className="overflow-hidden rounded-card border border-slate-200/80 bg-white shadow-card">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-3.5">
                   <div>
-                    <h3>Students ({eligibleData.students?.length || 0})</h3>
-                    <p className="text-muted">
-                      {eligibleData.eligibleCount} eligible, {eligibleData.alreadyPromotedCount} already processed
+                    <h2 className="text-base font-semibold text-slate-900">Students ({eligibleData.students?.length || 0})</h2>
+                    <p className="text-xs text-slate-500">
+                      {eligibleData.eligibleCount} to decide · {eligibleData.alreadyPromotedCount} already processed
                     </p>
                   </div>
-                  <div className="header-actions">
-                    <Button variant="outline" size="small" onClick={() => handleSelectAll('promoted')}>
-                      Select All (Promote)
-                    </Button>
-                    <Button variant="outline" size="small" onClick={() => handleSelectAll('detained')}>
-                      Select All (Detain)
-                    </Button>
-                    <Button variant="ghost" size="small" onClick={handleClearSelection}>
-                      Clear
-                    </Button>
-                  </div>
-                </div>
-                <div className="card-body">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Roll</th>
-                        <th>Name</th>
-                        <th>Section</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {eligibleData.students?.map((student) => (
-                        <tr key={student.studentId} className={student.alreadyPromoted ? 'row-disabled' : ''}>
-                          <td>{student.rollNumber || '-'}</td>
-                          <td>
-                            <div>{student.firstName} {student.lastName}</div>
-                            <div className="text-muted text-sm">{student.admissionNumber}</div>
-                          </td>
-                          <td>{student.section?.name}</td>
-                          <td>
-                            {student.alreadyPromoted ? (
-                              <span className={`badge ${getStatusBadge(student.existingPromotion?.status)}`}>
-                                {student.existingPromotion?.status} → {student.existingPromotion?.toAcademicYear?.name}
-                              </span>
-                            ) : selectedStudents.has(student.studentId) ? (
-                              <span className={`badge ${getStatusBadge(selectedStudents.get(student.studentId).status)}`}>
-                                {selectedStudents.get(student.studentId).status}
-                              </span>
-                            ) : (
-                              <span className="badge badge-secondary">Pending</span>
-                            )}
-                          </td>
-                          <td>
-                            {!student.alreadyPromoted && (
-                              <div className="btn-group">
-                                <Button
-                                  variant={selectedStudents.get(student.studentId)?.status === 'promoted' ? 'primary' : 'outline'}
-                                  size="small"
-                                  onClick={() => handleStudentSelection(student.studentId, 'promoted')}
-                                  title="Promote"
-                                >
-                                  <ArrowUpRight size={14} />
-                                </Button>
-                                <Button
-                                  variant={selectedStudents.get(student.studentId)?.status === 'detained' ? 'warning' : 'outline'}
-                                  size="small"
-                                  onClick={() => handleStudentSelection(student.studentId, 'detained')}
-                                  title="Detain"
-                                >
-                                  <ArrowRight size={14} />
-                                </Button>
-                                <Button
-                                  variant={selectedStudents.get(student.studentId)?.status === 'graduated' ? 'info' : 'outline'}
-                                  size="small"
-                                  onClick={() => handleStudentSelection(student.studentId, 'graduated')}
-                                  title="Graduate"
-                                >
-                                  <GraduationCap size={14} />
-                                </Button>
-                                {selectedStudents.has(student.studentId) && (
-                                  <Button
-                                    variant="ghost"
-                                    size="small"
-                                    onClick={() => handleStudentSelection(student.studentId, null)}
-                                    title="Clear"
-                                  >
-                                    ×
-                                  </Button>
-                                )}
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="card-footer">
-                  <div className="selection-summary">
-                    <strong>Selected: {selectedStudents.size}</strong>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="secondary" icon={ArrowUpRight} onClick={() => decideAll('promoted')}>Promote all</Button>
+                    <Button size="sm" variant="secondary" icon={Repeat} onClick={() => decideAll('detained')}>Detain all</Button>
                     {selectedStudents.size > 0 && (
-                      <span className="text-muted">
-                        {' '}
-                        ({Array.from(selectedStudents.values()).filter(s => s.status === 'promoted').length} promote,
-                        {' '}{Array.from(selectedStudents.values()).filter(s => s.status === 'detained').length} detain,
-                        {' '}{Array.from(selectedStudents.values()).filter(s => s.status === 'graduated').length} graduate)
-                      </span>
+                      <Button size="sm" variant="ghost" icon={X} onClick={() => setSelectedStudents(new Map())}>Clear</Button>
                     )}
                   </div>
-                  <Button
-                    variant="primary"
-                    onClick={handleBulkPromote}
-                    disabled={selectedStudents.size === 0 || submitting}
-                  >
-                    <CheckCircle size={16} />
-                    Process Promotions
-                  </Button>
                 </div>
+                {eligibleData.students?.length ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-max text-sm">
+                      <thead className="bg-slate-50 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                        <tr>
+                          <th className="col-roll px-4 py-2.5 text-left">Roll</th>
+                          <th className="col-name px-4 py-2.5 text-left">Student</th>
+                          <th className="px-4 py-2.5 text-left">Section</th>
+                          <th className="px-4 py-2.5 text-left">Decision</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {eligibleData.students.map((s) => {
+                          const current = selectedStudents.get(s.studentId)?.status;
+                          return (
+                            <tr key={s.studentId} className={cn(s.alreadyPromoted && 'bg-slate-50/60 text-slate-400')}>
+                              <td className="col-roll px-4 py-3 tabular-nums">{s.rollNumber || '—'}</td>
+                              <td className="col-name px-4 py-3">
+                                <p className={cn('font-medium', s.alreadyPromoted ? 'text-slate-500' : 'text-slate-900')}>{s.firstName} {s.lastName}</p>
+                                <p className="font-mono text-xs text-slate-500">{s.admissionNumber}</p>
+                              </td>
+                              <td className="px-4 py-3">{s.section?.name}</td>
+                              <td className="px-4 py-2.5">
+                                {s.alreadyPromoted ? (
+                                  <Badge tone={toneOf(s.existingPromotion?.status)}>
+                                    {labelOf(s.existingPromotion?.status)} · {s.existingPromotion?.toAcademicYear?.name}
+                                  </Badge>
+                                ) : (
+                                  <div className="inline-flex rounded-lg bg-slate-100 p-0.5" role="radiogroup" aria-label={`Decision for ${s.firstName}`}>
+                                    {DECISIONS.map((d) => (
+                                      <button
+                                        key={d.value}
+                                        type="button"
+                                        role="radio"
+                                        aria-checked={current === d.value}
+                                        onClick={() => decide(s.studentId, d.value)}
+                                        className={cn(
+                                          'inline-flex cursor-pointer items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                                          current === d.value ? d.active : 'text-slate-600 hover:bg-white hover:text-slate-900',
+                                        )}
+                                      >
+                                        <d.icon size={13} aria-hidden="true" /> {d.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <EmptyState icon={Users} title="No students in this class" />
+                )}
               </div>
             </>
+          )}
+
+          {!eligibleData && !loading && (
+            <Card>
+              <EmptyState icon={GraduationCap} title="Load a class to begin" description="Choose the class and year students are finishing, then load them." />
+            </Card>
           )}
         </>
       )}
 
-      {/* Confirmation Modal */}
-      <Modal
-        isOpen={confirmModal}
-        onClose={() => setConfirmModal(false)}
-        title="Confirm Bulk Promotion"
-      >
-        <div className="modal-body">
-          <p>You are about to process <strong>{selectedStudents.size}</strong> student(s):</p>
-          <ul>
-            <li>
-              <strong>{Array.from(selectedStudents.values()).filter(s => s.status === 'promoted').length}</strong> will be promoted
-            </li>
-            <li>
-              <strong>{Array.from(selectedStudents.values()).filter(s => s.status === 'detained').length}</strong> will be detained
-            </li>
-            <li>
-              <strong>{Array.from(selectedStudents.values()).filter(s => s.status === 'graduated').length}</strong> will be marked as graduated
-            </li>
-          </ul>
-          <p>
-            Target: <strong>{classes.find(c => c.id.toString() === targetClass)?.name}</strong>
-            {' → '}
-            <strong>{academicYears.find(y => y.id.toString() === targetYear)?.name}</strong>
-          </p>
-          <p className="text-warning">This action can be undone from the History view.</p>
+      {/* Sticky action bar */}
+      {view === 'promote' && selectedStudents.size > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur lg:left-64">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+            <p className="text-sm text-slate-700">
+              <span className="font-semibold text-slate-900">{selectedStudents.size} selected</span>
+              <span className="text-slate-500"> · {counts.promoted} promote · {counts.detained} detain · {counts.graduated} graduate</span>
+            </p>
+            <Button icon={CheckCircle2} onClick={handleBulkPromote} disabled={submitting}>Process promotions</Button>
+          </div>
         </div>
-        <div className="modal-footer">
-          <Button variant="outline" onClick={() => setConfirmModal(false)}>
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={confirmBulkPromote} disabled={submitting}>
-            {submitting ? 'Processing...' : 'Confirm'}
-          </Button>
-        </div>
+      )}
+
+      <Modal isOpen={confirmModal} onClose={() => setConfirmModal(false)} title="Process promotions?" size="sm">
+        <ul className="space-y-2 text-sm">
+          {DECISIONS.map((d) => (
+            <li key={d.value} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
+              <span className="inline-flex items-center gap-2 text-slate-700"><d.icon size={15} aria-hidden="true" /> {d.label}</span>
+              <span className="font-semibold text-slate-900 tabular-nums">{counts[d.value]}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-4 text-sm text-slate-600">
+          Into <span className="font-medium text-slate-900">{className(targetClass)}</span> for{' '}
+          <span className="font-medium text-slate-900">{yearName(targetYear)}</span>. You can undo any of these from History.
+        </p>
+        <DialogActions>
+          <Button variant="secondary" onClick={() => setConfirmModal(false)}>Cancel</Button>
+          <Button onClick={confirmBulkPromote} loading={submitting}>Process {selectedStudents.size}</Button>
+        </DialogActions>
       </Modal>
     </div>
   );

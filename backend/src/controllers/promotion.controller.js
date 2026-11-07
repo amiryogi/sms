@@ -162,12 +162,19 @@ const getEligibleStudents = asyncHandler(async (req, res) => {
     orderBy: { startDate: 'asc' },
   });
 
+  // Suggested targets, so the frontend doesn't infer them from grade numbers:
+  // the lowest grade above this class, and the next academic year.
+  const suggestedNextClass = nextClasses.find((c) => c.gradeLevel > classData.gradeLevel) || null;
+  const suggestedAcademicYear = academicYears.find((y) => y.id !== academicYear.id) || null;
+
   ApiResponse.success(res, {
     currentClass: classData,
     currentAcademicYear: academicYear,
     students,
     nextClasses,
     academicYears,
+    suggestedNextClassId: suggestedNextClass?.id ?? null,
+    suggestedAcademicYearId: suggestedAcademicYear?.id ?? null,
     eligibleCount: students.filter((s) => !s.alreadyPromoted).length,
     alreadyPromotedCount: students.filter((s) => s.alreadyPromoted).length,
   });

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { CalendarDays, Check, Loader2, Save } from "lucide-react";
+import { CalendarDays, Check, Save } from "lucide-react";
+import { Button, TextInput } from "../ui";
 import { examService } from "../../api/examService";
 
 /**
@@ -47,48 +48,46 @@ const WorkingDaysEditor = ({ attendance, onSaved }) => {
   };
 
   return (
-    <div className="working-days">
-      <label htmlFor="working-days-input" className="working-days-label">
-        <CalendarDays size={16} /> Working days for attendance
-      </label>
-      <input
-        id="working-days-input"
-        type="number"
-        min="1"
-        max="366"
-        step="1"
-        placeholder="e.g. 70"
-        value={value}
-        className={error ? "input-error" : ""}
-        onChange={(e) => setValue(e.target.value)}
-      />
-      <button
-        type="button"
-        className="btn btn-secondary btn-small"
-        onClick={handleSave}
-        disabled={saving || !dirty}
-      >
-        {saving ? <Loader2 className="spin" size={14} /> : <Save size={14} />} Save
-      </button>
-      {justSaved && (
-        <span className="working-days-ok">
-          <Check size={14} /> Saved
-        </span>
-      )}
-      <div className="working-days-help text-muted">
+    <div className="working-days rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+      <div className="flex flex-wrap items-end gap-3">
+        <div>
+          <label htmlFor="working-days-input" className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-slate-700">
+            <CalendarDays size={15} className="text-slate-400" aria-hidden="true" /> Working days for attendance
+          </label>
+          <TextInput
+            id="working-days-input"
+            type="number"
+            min="1"
+            max="366"
+            step="1"
+            placeholder="e.g. 70"
+            value={value}
+            invalid={Boolean(error)}
+            className="w-32"
+            onChange={(e) => setValue(e.target.value)}
+          />
+        </div>
+        <Button variant="secondary" icon={Save} onClick={handleSave} loading={saving} disabled={!dirty}>
+          Save
+        </Button>
+        {justSaved && (
+          <span className="working-days-ok inline-flex items-center gap-1 pb-2 text-sm font-medium text-emerald-700">
+            <Check size={15} aria-hidden="true" /> Saved
+          </span>
+        )}
+      </div>
+      <p className="working-days-help mt-2 text-xs text-slate-500">
         Days present are counted
         {attendance.fromBS ? ` from ${attendance.fromBS}` : ""}
-        {attendance.toBS ? ` to ${attendance.toBS}` : ""} (BS): the start of the
-        academic year to the last day of this exam.
+        {attendance.toBS ? ` to ${attendance.toBS}` : ""} (BS): the start of the academic year to the last day of this exam.
         {saved === null && " Without working days, report cards print only the days present."}
-      </div>
+      </p>
       {attendance.cardsOutdated > 0 && (
-        <div className="working-days-warning">
-          {attendance.cardsOutdated} report card(s) were generated before this
-          number was set or changed. Regenerate to update their attendance.
-        </div>
+        <p className="working-days-warning mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900 ring-1 ring-amber-200 ring-inset">
+          {attendance.cardsOutdated} report card(s) were generated before this number was set or changed. Regenerate to update their attendance.
+        </p>
       )}
-      {error && <div className="field-error">{error}</div>}
+      {error && <p className="field-error mt-2 text-xs font-medium text-red-600">{error}</p>}
     </div>
   );
 };

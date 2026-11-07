@@ -43,6 +43,12 @@ export const examService = {
     return response.data;
   },
 
+  // Remove one subject from a DRAFT exam
+  removeExamSubject: async (examId, examSubjectId) => {
+    const response = await apiClient.delete(`/exams/${examId}/subjects/${examSubjectId}`);
+    return response.data;
+  },
+
   // Publish exam results
   publishExam: async (id) => {
     const response = await apiClient.put(`/exams/${id}/publish`);
