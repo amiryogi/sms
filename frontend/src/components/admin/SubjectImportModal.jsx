@@ -1,9 +1,22 @@
 import React, { useState } from 'react';
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle } from 'lucide-react';
+import { Upload, FileSpreadsheet, CheckCircle2, XCircle } from 'lucide-react';
 import Modal from '../common/Modal';
-import { Button } from '../common/FormElements';
+import { Button, Alert, DialogActions } from '../ui';
+import { cn } from '../../lib/cn';
 import apiClient from '../../api/apiClient';
 
+const COLUMNS = [
+  ['Grade', 'Grade level of an existing class, e.g. 9'],
+  ['Subject Name', 'e.g. Science & Technology'],
+  ['Subject Code', 'Unique, e.g. SCI'],
+  ['Component', 'Theory, Practical or Both'],
+  ['Credit Hour', 'e.g. 4'],
+  ['Full Marks', 'e.g. 100'],
+  ['Pass Marks', 'e.g. 35'],
+  ['Practical Marks', 'Optional'],
+];
+
+/** Excel import: choose file -> preview (server validates each row) -> import. */
 const SubjectImportModal = ({ isOpen, onClose, onSuccess }) => {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -12,31 +25,29 @@ const SubjectImportModal = ({ isOpen, onClose, onSuccess }) => {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (selectedFile) {
-      setFile(selectedFile);
-      setPreview(null);
-      setResult(null);
-      setError(null);
-    }
+  const pick = (selected) => {
+    if (!selected) return;
+    setFile(selected);
+    setPreview(null);
+    setResult(null);
+    setError(null);
+  };
+
+  const send = async (path) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.post(path, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+    return response.data.data;
   };
 
   const handlePreview = async () => {
     if (!file) return;
     setLoading(true);
     setError(null);
-
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
-      const response = await apiClient.post('/subjects/import/preview', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      setPreview(response.data.data);
+      setPreview(await send('/subjects/import/preview'));
     } catch (err) {
-      setError(err.response?.data?.message || 'Error previewing file');
+      setError(err.response?.data?.message || 'Could not read the file');
     } finally {
       setLoading(false);
     }
@@ -46,121 +57,96 @@ const SubjectImportModal = ({ isOpen, onClose, onSuccess }) => {
     if (!file) return;
     setImporting(true);
     setError(null);
-
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
-      const response = await apiClient.post('/subjects/import', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      setResult(response.data.data);
-      if (onSuccess) onSuccess();
+      setResult(await send('/subjects/import'));
+      onSuccess?.();
     } catch (err) {
-      setError(err.response?.data?.message || 'Error importing subjects');
+      setError(err.response?.data?.message || 'Could not import the subjects');
     } finally {
       setImporting(false);
     }
   };
 
-  const resetModal = () => {
+  const handleClose = () => {
     setFile(null);
     setPreview(null);
     setResult(null);
     setError(null);
     setLoading(false);
     setImporting(false);
-  };
-
-  const handleClose = () => {
-    resetModal();
     onClose();
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={handleClose}
-      title="Import Grade 11-12 Subjects"
-      size="lg"
-    >
-      <div className="p-4">
-        {/* Instructions */}
-        <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-4">
-          <h4 className="font-medium text-blue-800 mb-2">Excel Format Required:</h4>
-          <ul className="text-sm text-blue-700 list-disc list-inside">
-            <li>Grade (11 or 12)</li>
-            <li>Subject Name</li>
-            <li>Subject Code</li>
-            <li>Component (Theory / Practical / Both)</li>
-            <li>Credit Hour</li>
-            <li>Full Marks</li>
-            <li>Pass Marks</li>
-            <li>Practical Marks (optional)</li>
-          </ul>
-        </div>
-
-        {/* File Upload */}
-        <div className="mb-4">
-          <label className="block mb-2 font-medium">Select Excel File</label>
-          <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 px-4 py-2 bg-gray-100 border rounded cursor-pointer hover:bg-gray-200">
-              <FileSpreadsheet size={18} />
-              <span>{file ? file.name : 'Choose file...'}</span>
-              <input
-                type="file"
-                accept=".xlsx,.xls"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-            </label>
-            {file && !preview && !result && (
-              <Button onClick={handlePreview} loading={loading}>
-                Preview
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Error */}
-        {error && (
-          <div className="bg-red-50 border border-red-300 rounded p-3 mb-4 text-red-700 flex items-center gap-2">
-            <AlertCircle size={18} />
-            {error}
+    <Modal isOpen={isOpen} onClose={handleClose} title="Import subjects from Excel" size="lg">
+      <div className="space-y-5">
+        {!result && (
+          <div>
+            <p className="mb-2 text-sm text-slate-600">The first sheet needs these column headings:</p>
+            <div className="grid gap-x-6 gap-y-1.5 rounded-xl bg-slate-50 p-4 text-sm sm:grid-cols-2">
+              {COLUMNS.map(([name, hint]) => (
+                <div key={name} className="flex items-baseline gap-2">
+                  <span className="font-medium text-slate-800">{name}</span>
+                  <span className="truncate text-xs text-slate-500">{hint}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Preview Table */}
+        {!result && (
+          <label
+            className={cn(
+              'flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed px-4 py-4 transition-colors',
+              file ? 'border-brand-300 bg-brand-50/50' : 'border-slate-300 hover:border-brand-300 hover:bg-brand-50/30',
+            )}
+          >
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-white text-emerald-600 shadow-sm ring-1 ring-slate-200">
+              <FileSpreadsheet size={20} aria-hidden="true" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium text-slate-800">{file ? file.name : 'Choose an Excel file'}</span>
+              <span className="block text-xs text-slate-500">.xlsx or .xls</span>
+            </span>
+            <span className="text-sm font-semibold text-brand-700">{file ? 'Change' : 'Browse'}</span>
+            <input type="file" accept=".xlsx,.xls" onChange={(e) => pick(e.target.files?.[0])} className="sr-only" />
+          </label>
+        )}
+
+        {error && <Alert tone="danger">{error}</Alert>}
+
         {preview && !result && (
-          <div className="mb-4">
-            <div className="flex justify-between items-center mb-2">
-              <h4 className="font-medium">Preview ({preview.valid} valid, {preview.invalid} invalid)</h4>
+          <div>
+            <div className="mb-2 flex items-center gap-3 text-sm">
+              <span className="font-medium text-slate-800">Preview</span>
+              <span className="text-emerald-700">{preview.valid} ready</span>
+              {preview.invalid > 0 && <span className="text-red-600">{preview.invalid} with problems</span>}
             </div>
-            <div className="max-h-60 overflow-auto border rounded">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 sticky top-0">
+            <div className="max-h-72 overflow-auto rounded-xl border border-slate-200">
+              <table className="w-full text-left text-sm">
+                <thead className="sticky top-0 bg-slate-50 text-xs font-semibold tracking-wide text-slate-500 uppercase">
                   <tr>
-                    <th className="p-2 text-left">Row</th>
-                    <th className="p-2 text-left">Grade</th>
-                    <th className="p-2 text-left">Subject</th>
-                    <th className="p-2 text-left">Code</th>
-                    <th className="p-2 text-left">Status</th>
+                    {['Row', 'Grade', 'Subject', 'Code', 'Status'].map((h) => (
+                      <th key={h} className="px-3 py-2">{h}</th>
+                    ))}
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-100">
                   {preview.preview.map((row) => (
-                    <tr key={row.row} className={row.valid ? '' : 'bg-red-50'}>
-                      <td className="p-2">{row.row}</td>
-                      <td className="p-2">{row.grade}</td>
-                      <td className="p-2">{row.subjectName}</td>
-                      <td className="p-2">{row.subjectCode}</td>
-                      <td className="p-2">
+                    <tr key={row.row} className={row.valid ? '' : 'bg-red-50/60'}>
+                      <td className="px-3 py-2 text-slate-500 tabular-nums">{row.row}</td>
+                      <td className="px-3 py-2">{row.grade}</td>
+                      <td className="px-3 py-2 font-medium text-slate-800">{row.subjectName}</td>
+                      <td className="px-3 py-2 font-mono text-xs">{row.subjectCode}</td>
+                      <td className="px-3 py-2">
                         {row.valid ? (
-                          <span className="text-green-600 flex items-center gap-1">
-                            <CheckCircle size={14} /> Valid
+                          <span className="inline-flex items-center gap-1 text-emerald-700">
+                            <CheckCircle2 size={14} aria-hidden="true" /> Ready
                           </span>
                         ) : (
-                          <span className="text-red-600">{row.errors.join(', ')}</span>
+                          <span className="inline-flex items-start gap-1 text-red-600">
+                            <XCircle size={14} className="mt-0.5 shrink-0" aria-hidden="true" /> {row.errors.join(', ')}
+                          </span>
                         )}
                       </td>
                     </tr>
@@ -171,34 +157,25 @@ const SubjectImportModal = ({ isOpen, onClose, onSuccess }) => {
           </div>
         )}
 
-        {/* Result */}
         {result && (
-          <div className="bg-green-50 border border-green-300 rounded p-4 mb-4">
-            <div className="flex items-center gap-2 text-green-700 font-medium mb-2">
-              <CheckCircle size={20} />
-              Import Complete
-            </div>
-            <p>Successfully imported {result.imported} of {result.total} subjects.</p>
-            {result.errors && result.errors.length > 0 && (
-              <div className="mt-2 text-sm text-red-600">
-                {result.errors.length} rows had errors and were skipped.
-              </div>
-            )}
-          </div>
+          <Alert tone="success" title="Import complete">
+            Imported {result.imported} of {result.total} subjects.
+            {result.errors?.length > 0 && ` ${result.errors.length} rows had problems and were skipped.`}
+          </Alert>
         )}
-
-        {/* Actions */}
-        <div className="flex justify-end gap-3 mt-4">
-          <Button variant="secondary" onClick={handleClose}>
-            {result ? 'Done' : 'Cancel'}
-          </Button>
-          {preview && !result && (
-            <Button onClick={handleImport} loading={importing} icon={Upload}>
-              Import {preview.valid} Subjects
-            </Button>
-          )}
-        </div>
       </div>
+
+      <DialogActions>
+        <Button variant="secondary" onClick={handleClose}>{result ? 'Done' : 'Cancel'}</Button>
+        {file && !preview && !result && (
+          <Button onClick={handlePreview} loading={loading}>Check file</Button>
+        )}
+        {preview && !result && (
+          <Button onClick={handleImport} loading={importing} icon={Upload} disabled={!preview.valid}>
+            Import {preview.valid} subject{preview.valid === 1 ? '' : 's'}
+          </Button>
+        )}
+      </DialogActions>
     </Modal>
   );
 };

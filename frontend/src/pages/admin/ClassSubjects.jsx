@@ -1,9 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { Plus, Trash2, Link as LinkIcon, Pencil, Lock } from "lucide-react";
+import { Plus, Trash2, Link as LinkIcon, Pencil, Lock, BookOpenCheck } from "lucide-react";
 import DataTable from "../../components/common/DataTable";
 import Modal from "../../components/common/Modal";
-import { Select, Button, Input } from "../../components/common/FormElements";
+import { Select, Button, Input, FormRow } from "../../components/common/FormElements";
+import {
+  PageHeader,
+  Badge,
+  IconButton,
+  Checkbox,
+  SelectInput,
+  DialogActions,
+  toast,
+  confirmDialog,
+} from "../../components/ui";
 import { academicService } from "../../api/academicService";
 
 const ClassSubjects = () => {
@@ -13,9 +23,8 @@ const ClassSubjects = () => {
   const [academicYears, setAcademicYears] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState(null); // holds the row being edited or null
+  const [editing, setEditing] = useState(null); // the row being edited, or null
   const [submitting, setSubmitting] = useState(false);
-  const [status, setStatus] = useState(null); // { type: 'success' | 'error', message: string }
   const [filters, setFilters] = useState({ academicYearId: "", classId: "" });
 
   const {
@@ -46,16 +55,13 @@ const ClassSubjects = () => {
       setSubjects(subjectsRes.data || []);
       setAcademicYears(yearsRes.data || []);
 
-      // Set default filter to current year
+      // Default to the current year
       const currentYear = yearsRes.data?.find((y) => y.isCurrent);
       if (currentYear) {
-        setFilters((prev) => ({
-          ...prev,
-          academicYearId: currentYear.id.toString(),
-        }));
+        setFilters((prev) => ({ ...prev, academicYearId: currentYear.id.toString() }));
       }
     } catch (error) {
-      console.error("Error fetching initial data:", error);
+      toast.error(error.response?.data?.message || "Could not load classes and subjects");
     } finally {
       setLoading(false);
     }
@@ -65,13 +71,12 @@ const ClassSubjects = () => {
     setLoading(true);
     try {
       const params = {};
-      if (filters.academicYearId)
-        params.academicYearId = filters.academicYearId;
+      if (filters.academicYearId) params.academicYearId = filters.academicYearId;
       if (filters.classId) params.classId = filters.classId;
       const response = await academicService.getClassSubjects(params);
       setClassSubjects(response.data || []);
     } catch (error) {
-      console.error("Error fetching class subjects:", error);
+      toast.error(error.response?.data?.message || "Could not load class subjects");
     } finally {
       setLoading(false);
     }
@@ -118,46 +123,22 @@ const ClassSubjects = () => {
   };
 
   const onSubmit = async (data) => {
+    const theory = parseInt(data.theoryMarks || 100);
+    const practical = parseInt(data.practicalMarks || 0);
+    const credits = parseFloat(data.creditHours || 3.0);
+
+    if (Number.isNaN(theory) || theory < 0) return toast.error("Theory marks must be zero or greater.");
+    if (Number.isNaN(practical) || practical < 0) return toast.error("Practical marks must be zero or greater.");
+    if (Number.isNaN(credits) || credits <= 0) return toast.error("Credit hours must be greater than zero.");
+
     setSubmitting(true);
     try {
-      const theory = parseInt(data.theoryMarks || 100);
-      const practical = parseInt(data.practicalMarks || 0);
-      const credits = parseFloat(data.creditHours || 3.0);
-
-      if (Number.isNaN(theory) || theory < 0) {
-        setStatus({
-          type: "error",
-          message: "Theory marks must be zero or greater.",
-        });
-        setSubmitting(false);
-        return;
-      }
-      if (Number.isNaN(practical) || practical < 0) {
-        setStatus({
-          type: "error",
-          message: "Practical marks must be zero or greater.",
-        });
-        setSubmitting(false);
-        return;
-      }
-      if (Number.isNaN(credits) || credits <= 0) {
-        setStatus({
-          type: "error",
-          message: "Credit hours must be greater than zero.",
-        });
-        setSubmitting(false);
-        return;
-      }
-
       const payload = {
-        academicYearId: editing
-          ? editing.academicYearId
-          : parseInt(data.academicYearId),
+        academicYearId: editing ? editing.academicYearId : parseInt(data.academicYearId),
         classId: editing ? editing.classId : parseInt(data.classId),
         subjectId: editing ? editing.subjectId : parseInt(data.subjectId),
         hasTheory: data.hasTheory === true || data.hasTheory === "true",
-        hasPractical:
-          data.hasPractical === true || data.hasPractical === "true",
+        hasPractical: data.hasPractical === true || data.hasPractical === "true",
         theoryMarks: theory,
         practicalMarks: practical,
         creditHours: credits,
@@ -167,343 +148,242 @@ const ClassSubjects = () => {
 
       if (editing) {
         await academicService.updateClassSubject(editing.id, payload);
-        setStatus({
-          type: "success",
-          message: "Class subject updated successfully.",
-        });
+        toast.success("Class subject updated");
       } else {
         await academicService.assignSubjectToClass(payload);
-        setStatus({ type: "success", message: "Subject assigned to class." });
+        toast.success("Subject added to the class");
       }
       fetchClassSubjects();
       closeModal();
     } catch (error) {
-      console.error("Error assigning subject:", error);
-      setStatus({
-        type: "error",
-        message: error.response?.data?.message || "Error assigning subject",
-      });
+      toast.error(error.response?.data?.message || "Could not save the class subject");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (
-      !confirm("Are you sure you want to remove this subject from the class?")
-    )
-      return;
+  const getClassName = (classId) => classes.find((c) => c.id === classId)?.name || "Unknown";
+  const getSubjectName = (subjectId) => subjects.find((s) => s.id === subjectId)?.name || "Unknown";
+  const getYearName = (yearId) => academicYears.find((y) => y.id === yearId)?.name || "Unknown";
+
+  const handleDelete = async (row) => {
+    const ok = await confirmDialog({
+      title: `Remove ${getSubjectName(row.subjectId)} from ${getClassName(row.classId)}?`,
+      message: "Teachers assigned to it lose the assignment. Subjects with entered marks are locked and cannot be removed.",
+      confirmLabel: "Remove",
+      tone: "danger",
+    });
+    if (!ok) return;
     try {
-      await academicService.removeSubjectFromClass(id);
+      await academicService.removeSubjectFromClass(row.id);
+      toast.success("Subject removed from the class");
       fetchClassSubjects();
-      setStatus({ type: "success", message: "Subject removed from class." });
     } catch (error) {
-      console.error("Error removing subject:", error);
-      setStatus({
-        type: "error",
-        message: error.response?.data?.message || "Error removing",
-      });
+      toast.error(error.response?.data?.message || "Could not remove the subject");
     }
   };
 
-  const getClassName = (classId) =>
-    classes.find((c) => c.id === classId)?.name || "Unknown";
-  const getSubjectName = (subjectId) =>
-    subjects.find((s) => s.id === subjectId)?.name || "Unknown";
-  const getYearName = (yearId) =>
-    academicYears.find((y) => y.id === yearId)?.name || "Unknown";
-
   const columns = [
     {
-      header: "Academic Year",
-      render: (row) => getYearName(row.academicYearId),
+      header: "Subject",
+      render: (row) => (
+        <div className="min-w-0">
+          <p className="font-medium text-slate-900">{getSubjectName(row.subjectId)}</p>
+          <p className="text-xs text-slate-500">
+            {getClassName(row.classId)} · {getYearName(row.academicYearId)}
+          </p>
+        </div>
+      ),
     },
-    { header: "Class", render: (row) => getClassName(row.classId) },
-    { header: "Subject", render: (row) => getSubjectName(row.subjectId) },
     {
       header: "Evaluation",
       render: (row) => (
-        <div className="flex gap-1">
-          {row.hasTheory !== false && (
-            <span className="badge badge-info" title="Has Theory">
-              T: {row.theoryMarks}
-            </span>
-          )}
-          {row.hasPractical === true && (
-            <span className="badge badge-success" title="Has Practical">
-              P: {row.practicalMarks}
-            </span>
-          )}
-          {row.hasTheory === false && row.hasPractical !== true && (
-            <span className="badge badge-secondary">No Config</span>
-          )}
+        <div className="flex flex-wrap gap-1">
+          {row.hasTheory !== false && <Badge tone="info">Theory {row.theoryMarks}</Badge>}
+          {row.hasPractical === true && <Badge tone="success">Practical {row.practicalMarks}</Badge>}
+          {row.hasTheory === false && row.hasPractical !== true && <Badge tone="warning">Not configured</Badge>}
         </div>
       ),
     },
-    { 
-      header: "Credit Hours", 
+    {
+      header: "Credit hours",
       render: (row) => (
         <div>
-          <span>{row.creditHours}</span>
+          <span className="tabular-nums">{row.creditHours}</span>
           {(row.theoryCreditHours > 0 || row.practicalCreditHours > 0) && (
-            <div className="text-muted" style={{ fontSize: '0.8em' }}>
-              TH: {row.theoryCreditHours || 0} | IN: {row.practicalCreditHours || 0}
-            </div>
+            <p className="text-xs text-slate-500 tabular-nums">
+              TH {row.theoryCreditHours || 0} · IN {row.practicalCreditHours || 0}
+            </p>
           )}
         </div>
-      )
+      ),
     },
     {
       header: "Status",
-      width: "80px",
-      render: (row) => (
+      render: (row) =>
         row.isLocked ? (
-          <span className="badge badge-warning flex items-center gap-1" title="Locked - Cannot be modified">
-            <Lock size={12} /> Locked
-          </span>
+          <Badge tone="warning" icon={Lock}>
+            Locked
+          </Badge>
         ) : (
-          <span className="badge badge-success">Active</span>
-        )
-      ),
+          <Badge tone="success" dot>
+            Editable
+          </Badge>
+        ),
     },
     {
-      header: "Actions",
-      width: "80px",
+      header: <span className="sr-only">Actions</span>,
+      width: "96px",
       render: (row) => (
-        <div className="flex gap-2">
-          <button
-            className="btn-icon"
+        <div className="flex justify-end gap-1">
+          <IconButton
+            icon={Pencil}
+            label={row.isLocked ? "Locked: marks have been entered" : "Edit"}
             onClick={() => openEditModal(row)}
-            title={row.isLocked ? "Locked - Cannot edit" : "Edit"}
             disabled={row.isLocked}
-          >
-            <Pencil size={16} />
-          </button>
-          <button
-            className="btn-icon btn-danger"
-            onClick={() => handleDelete(row.id)}
-            title={row.isLocked ? "Locked - Cannot delete" : "Delete"}
+          />
+          <IconButton
+            icon={Trash2}
+            label={row.isLocked ? "Locked: marks have been entered" : "Remove from class"}
+            variant="danger-soft"
+            onClick={() => handleDelete(row)}
             disabled={row.isLocked}
-          >
-            <Trash2 size={16} />
-          </button>
+          />
         </div>
       ),
     },
   ];
 
-  const yearOptions = academicYears.map((y) => ({
-    value: y.id.toString(),
-    label: y.name,
-  }));
-  const classOptions = classes.map((c) => ({
-    value: c.id.toString(),
-    label: c.name,
-  }));
-  const subjectOptions = subjects.map((s) => ({
-    value: s.id.toString(),
-    label: s.name,
-  }));
+  const yearOptions = academicYears.map((y) => ({ value: y.id.toString(), label: y.name }));
+  const classOptions = classes.map((c) => ({ value: c.id.toString(), label: c.name }));
+  const subjectOptions = subjects.map((s) => ({ value: s.id.toString(), label: s.name }));
+
+  const toolbar = (
+    <>
+      <div className="w-full sm:w-44">
+        <SelectInput
+          aria-label="Academic year"
+          value={filters.academicYearId}
+          onChange={(e) => setFilters((prev) => ({ ...prev, academicYearId: e.target.value }))}
+        >
+          <option value="">All years</option>
+          {yearOptions.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </SelectInput>
+      </div>
+      <div className="w-full sm:w-44">
+        <SelectInput
+          aria-label="Class"
+          value={filters.classId}
+          onChange={(e) => setFilters((prev) => ({ ...prev, classId: e.target.value }))}
+        >
+          <option value="">All classes</option>
+          {classOptions.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </SelectInput>
+      </div>
+    </>
+  );
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1>Class Subjects</h1>
-          <p className="text-muted">
-            Assign subjects to classes for each academic year
-          </p>
-        </div>
-      </div>
+    <div className="mx-auto max-w-6xl">
+      <PageHeader
+        icon={BookOpenCheck}
+        title="Class Subjects"
+        description="Which subjects each class studies this year, with full marks and credit hours. Exams copy these settings when they are created."
+        actions={<Button icon={Plus} onClick={openModal}>Add subject to class</Button>}
+      />
 
-      {status && (
-        <div
-          className={`alert ${
-            status.type === "error" ? "alert-danger" : "alert-success"
-          }`}
-          role="alert"
-        >
-          {status.message}
-        </div>
-      )}
-
-      <div className="card filter-card">
-        <div className="filter-row">
-          <Select
-            label="Academic Year"
-            name="academicYearId"
-            options={yearOptions}
-            value={filters.academicYearId}
-            onChange={(e) =>
-              setFilters((prev) => ({
-                ...prev,
-                academicYearId: e.target.value,
-              }))
-            }
-          />
-          <Select
-            label="Class"
-            name="classId"
-            options={classOptions}
-            value={filters.classId}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, classId: e.target.value }))
-            }
-            placeholder="All Classes"
-          />
-        </div>
-      </div>
-
-      <div className="card">
-        <DataTable
-          columns={columns}
-          data={classSubjects}
-          loading={loading}
-          emptyMessage="No subjects assigned. Select filters and add subjects."
-          actions={
-            <Button icon={Plus} onClick={openModal}>
-              Assign Subject
-            </Button>
-          }
-        />
-      </div>
+      <DataTable
+        columns={columns}
+        data={classSubjects}
+        loading={loading}
+        toolbar={toolbar}
+        emptyMessage="No subjects for this selection"
+        emptyDescription="Pick a year and class, then add the subjects the class studies."
+        emptyIcon={BookOpenCheck}
+      />
 
       <Modal
         isOpen={modalOpen}
         onClose={closeModal}
-        title={editing ? "Edit Class Subject" : "Assign Subject to Class"}
-        size="md"
+        title={editing ? "Edit class subject" : "Add subject to class"}
+        description={editing ? `${getSubjectName(editing.subjectId)} · ${getClassName(editing.classId)}` : undefined}
+        size="lg"
       >
         <form onSubmit={handleSubmit(onSubmit)}>
-          <Select
-            label="Academic Year"
-            name="academicYearId"
-            options={yearOptions}
-            register={register}
-            error={errors.academicYearId?.message}
-            required
-            disabled={!!editing}
-          />
-          <Select
-            label="Class"
-            name="classId"
-            options={classOptions}
-            register={register}
-            error={errors.classId?.message}
-            required
-            disabled={!!editing}
-          />
-          <Select
-            label="Subject"
-            name="subjectId"
-            options={subjectOptions}
-            register={register}
-            error={errors.subjectId?.message}
-            required
-            disabled={!!editing}
-          />
+          {!editing && (
+            <FormRow>
+              <Select
+                label="Academic year"
+                name="academicYearId"
+                options={yearOptions}
+                register={register}
+                error={errors.academicYearId?.message}
+                required
+              />
+              <Select
+                label="Class"
+                name="classId"
+                options={classOptions}
+                register={register}
+                error={errors.classId?.message}
+                required
+              />
+              <Select
+                label="Subject"
+                name="subjectId"
+                options={subjectOptions}
+                register={register}
+                error={errors.subjectId?.message}
+                required
+              />
+            </FormRow>
+          )}
 
-          {/* Evaluation Structure Configuration */}
-          <div className="form-section">
-            <label className="form-label">Evaluation Structure</label>
-            <p
-              className="form-helper text-muted"
-              style={{ marginBottom: "0.75rem" }}
-            >
-              Configure which components this subject has for this class. This
-              determines what mark fields teachers see during marks entry.
+          <fieldset className="mb-4 rounded-xl border border-slate-200 p-4">
+            <legend className="px-1 text-sm font-medium text-slate-700">Evaluation</legend>
+            <p className="mb-3 text-xs text-slate-500">
+              Decides which mark fields teachers see in marks entry.
             </p>
-            <div
-              className="checkbox-row"
-              style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}
-            >
-              <label
-                className="checkbox-label"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  cursor: "pointer",
-                }}
-              >
-                <input
-                  type="checkbox"
-                  {...register("hasTheory")}
-                  style={{ width: "18px", height: "18px" }}
-                />
-                <span>Has Theory Component</span>
-              </label>
-              <label
-                className="checkbox-label"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  cursor: "pointer",
-                }}
-              >
-                <input
-                  type="checkbox"
-                  {...register("hasPractical")}
-                  style={{ width: "18px", height: "18px" }}
-                />
-                <span>Has Practical Component</span>
-              </label>
+            <div className="mb-4 flex flex-wrap gap-6">
+              <Checkbox id="hasTheory" label="Theory" {...register("hasTheory")} />
+              <Checkbox id="hasPractical" label="Practical" {...register("hasPractical")} />
             </div>
-          </div>
+            <FormRow>
+              <Input label="Theory full marks" name="theoryMarks" type="number" register={register} className="mb-0" />
+              <Input label="Practical full marks" name="practicalMarks" type="number" register={register} className="mb-0" />
+            </FormRow>
+          </fieldset>
 
-          <div className="grid grid-cols-2 gap-4">
+          <FormRow>
+            <Input label="Total credit hours" name="creditHours" type="number" step="0.1" register={register} />
             <Input
-              label="Theory Full Marks"
-              name="theoryMarks"
-              type="number"
-              defaultValue={100}
-              register={register}
-            />
-            <Input
-              label="Practical Full Marks"
-              name="practicalMarks"
-              type="number"
-              defaultValue={0}
-              register={register}
-            />
-          </div>
-          <Input
-            label="Total Credit Hours"
-            name="creditHours"
-            type="number"
-            step="0.1"
-            defaultValue={3.0}
-            register={register}
-          />
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Theory Credit Hours (TH)"
+              label="Theory credit hours (TH)"
               name="theoryCreditHours"
               type="number"
               step="0.01"
-              defaultValue={0}
               register={register}
-              helper="Credit hours for Theory component (for Grade Sheet)"
+              hint="Shown on the grade sheet"
             />
             <Input
-              label="Practical Credit Hours (IN)"
+              label="Practical credit hours (IN)"
               name="practicalCreditHours"
               type="number"
               step="0.01"
-              defaultValue={0}
               register={register}
-              helper="Credit hours for Internal/Practical component"
+              hint="Internal / practical"
             />
-          </div>
-          <div className="modal-actions">
-            <Button type="button" variant="secondary" onClick={closeModal}>
-              Cancel
+          </FormRow>
+
+          <DialogActions>
+            <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>
+            <Button type="submit" loading={submitting} icon={editing ? undefined : LinkIcon}>
+              {editing ? "Save changes" : "Add to class"}
             </Button>
-            <Button type="submit" loading={submitting} icon={LinkIcon}>
-              {editing ? "Save Changes" : "Assign"}
-            </Button>
-          </div>
+          </DialogActions>
         </form>
       </Modal>
     </div>

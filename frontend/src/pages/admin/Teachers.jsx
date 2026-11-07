@@ -1,77 +1,38 @@
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { Plus, Edit2 } from "lucide-react";
+import { Plus, Pencil, UsersRound, Mail, Phone } from "lucide-react";
 import DataTable from "../../components/common/DataTable";
 import Modal from "../../components/common/Modal";
-import {
-  Input,
-  Button,
-  FormRow,
-  FileUpload,
-  Select,
-} from "../../components/common/FormElements";
+import { Input, Button, FormRow } from "../../components/common/FormElements";
+import AvatarUpload from "../../components/common/AvatarUpload";
+import { PageHeader, Badge, Avatar, IconButton, Alert, DialogActions, toast } from "../../components/ui";
+import { cn } from "../../lib/cn";
 import { teacherService } from "../../api/teacherService";
-import { uploadService } from "../../api/uploadService";
 
-// Staff roles that can be created from this page
+// Staff roles that can be created and edited from this page
 const STAFF_ROLES = [
-  { value: "TEACHER", label: "Teacher" },
-  { value: "EXAM_OFFICER", label: "Exam Officer" },
-  { value: "ACCOUNTANT", label: "Accountant" },
+  { value: "TEACHER", label: "Teacher", tone: "brand", hint: "Enters marks and attendance only for the subjects and sections assigned to them." },
+  { value: "EXAM_OFFICER", label: "Exam Officer", tone: "info", hint: "Enters marks for any subject without an assignment. No access to fees." },
+  { value: "ACCOUNTANT", label: "Accountant", tone: "success", hint: "Manages fee types, structures and payments. Read-only student directory." },
 ];
 
-const STAFF_ROLE_BADGE = {
-  TEACHER: "badge-primary",
-  EXAM_OFFICER: "badge-info",
-  ACCOUNTANT: "badge-success",
-};
-
-const ROLE_HINTS = {
-  TEACHER: "Teachers can only enter marks for their assigned subjects.",
-  EXAM_OFFICER:
-    "Exam Officers can enter marks for any subject without being assigned.",
-  ACCOUNTANT: "Accountants manage fee types, structures and payments only.",
-};
-
 // The staff role this person currently holds (first matching staff role).
-const currentStaffRole = (person) =>
-  STAFF_ROLES.find((r) => person?.roles?.includes(r.value))?.value ||
-  "TEACHER";
+const currentStaffRole = (person) => STAFF_ROLES.find((r) => person?.roles?.includes(r.value))?.value || "TEACHER";
+const roleOf = (value) => STAFF_ROLES.find((r) => r.value === value);
 
-const roleLabelOf = (value) =>
-  STAFF_ROLES.find((r) => r.value === value)?.label || value;
-
-// Pull the server message and per-field validation errors out of an axios error.
-// Backend shape: { success: false, message, errors: [{ field, message }] }.
+// Server message and per-field errors. Shape: { success, message, errors: [{ field, message }] }.
 const parseServerError = (error, fallback) => {
   const body = error?.response?.data || {};
   const fieldErrors = {};
   const otherErrors = [];
   (Array.isArray(body.errors) ? body.errors : []).forEach((e) => {
-    if (e && typeof e === "object" && e.field) {
-      fieldErrors[e.field] = fieldErrors[e.field] || e.message;
-    } else if (e) {
-      otherErrors.push(typeof e === "string" ? e : e.message);
-    }
+    if (e && typeof e === "object" && e.field) fieldErrors[e.field] = fieldErrors[e.field] || e.message;
+    else if (e) otherErrors.push(typeof e === "string" ? e : e.message);
   });
-  return {
-    message: body.message || error?.message || fallback,
-    fieldErrors,
-    otherErrors: otherErrors.filter(Boolean),
-  };
+  return { message: body.message || error?.message || fallback, fieldErrors, otherErrors: otherErrors.filter(Boolean) };
 };
 
-const resolveAssetUrl = (url) => {
-  if (!url) return "";
-  if (url.startsWith("http")) return url;
-  const base = import.meta.env.VITE_API_URL
-    ? import.meta.env.VITE_API_URL.replace(/\/api\/v1$/, "")
-    : window.location.origin;
-  return `${base}/${url
-    .replace(/^\\?/, "")
-    .replace(/^\//, "")
-    .replace(/\\/g, "/")}`;
-};
+const FORM_FIELDS = ["firstName", "lastName", "email", "phone", "password"];
 
 const Teachers = () => {
   const [teachers, setTeachers] = useState([]);
@@ -80,15 +41,9 @@ const Teachers = () => {
   const [editingTeacher, setEditingTeacher] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState("");
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [selectedRole, setSelectedRole] = useState("TEACHER");
   const [serverError, setServerError] = useState(null);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
-    total: 0,
-    totalPages: 1,
-  });
+  const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
   const [search, setSearch] = useState("");
 
   const {
@@ -107,17 +62,13 @@ const Teachers = () => {
   const fetchTeachers = async () => {
     setLoading(true);
     try {
-      const response = await teacherService.getTeachers({
-        page: pagination.page,
-        limit: pagination.limit,
-        search,
-      });
+      const response = await teacherService.getTeachers({ page: pagination.page, limit: pagination.limit, search });
       setTeachers(response.data?.teachers || response.data || []);
-      if (response.data?.pagination) {
-        setPagination((prev) => ({ ...prev, ...response.data.pagination }));
-      }
+      // The API returns { data: [...], pagination } at the top level.
+      const pager = response.pagination || response.data?.pagination;
+      if (pager) setPagination((prev) => ({ ...prev, ...pager }));
     } catch (error) {
-      console.error("Error fetching teachers:", error);
+      toast.error(error.response?.data?.message || "Could not load staff");
     } finally {
       setLoading(false);
     }
@@ -128,12 +79,7 @@ const Teachers = () => {
     setServerError(null);
     clearErrors();
     if (teacher) {
-      reset({
-        firstName: teacher.firstName,
-        lastName: teacher.lastName,
-        email: teacher.email,
-        phone: teacher.phone,
-      });
+      reset({ firstName: teacher.firstName, lastName: teacher.lastName, email: teacher.email, phone: teacher.phone });
       setAvatarUrl(teacher.avatarUrl || "");
       setSelectedRole(currentStaffRole(teacher));
     } else {
@@ -157,28 +103,22 @@ const Teachers = () => {
     setSubmitting(true);
     setServerError(null);
     clearErrors();
-    // role is sent on both create (POST /users) and update (PUT /teachers/:id).
     try {
-      const payload = {
-        ...data,
-        avatarUrl: avatarUrl || undefined,
-        role: selectedRole,
-      };
+      // role is sent on both create (POST /users) and update (PUT /teachers/:id).
+      const payload = { ...data, avatarUrl: avatarUrl || undefined, role: selectedRole };
       if (editingTeacher) {
         await teacherService.updateTeacher(editingTeacher.id, payload);
+        toast.success("Staff member updated");
       } else {
         await teacherService.createTeacher(payload);
+        toast.success(`${roleOf(selectedRole)?.label || "Staff member"} added`);
       }
       fetchTeachers();
       closeModal();
     } catch (error) {
-      console.error("Error saving staff member:", error);
-      const parsed = parseServerError(error, "Error saving staff member");
-      const formFields = ["firstName", "lastName", "email", "phone", "password"];
+      const parsed = parseServerError(error, "Could not save the staff member");
       Object.entries(parsed.fieldErrors).forEach(([field, message]) => {
-        if (formFields.includes(field)) {
-          setError(field, { type: "server", message });
-        }
+        if (FORM_FIELDS.includes(field)) setError(field, { type: "server", message });
       });
       setServerError(parsed);
     } finally {
@@ -186,235 +126,178 @@ const Teachers = () => {
     }
   };
 
-  const handleAvatarUpload = async (files) => {
-    const file = files && files[0];
-    if (!file) return;
-    setUploadingAvatar(true);
-    try {
-      const res = await uploadService.uploadAvatar(file);
-      const url = res?.data?.url || res?.url || res?.data?.data?.url;
-      if (url) setAvatarUrl(url);
-    } catch (error) {
-      console.error("Error uploading avatar:", error);
-      alert(error.response?.data?.message || "Error uploading avatar");
-    } finally {
-      setUploadingAvatar(false);
-    }
-  };
+  const name = (row) => `${row.firstName || ""} ${row.lastName || ""}`.trim();
+  const roleChanged = editingTeacher && selectedRole !== currentStaffRole(editingTeacher);
+  const unshownErrors = serverError
+    ? [
+        ...Object.entries(serverError.fieldErrors)
+          .filter(([field]) => !FORM_FIELDS.includes(field))
+          .map(([, m]) => m),
+        ...serverError.otherErrors,
+      ]
+    : [];
 
   const columns = [
     {
-      header: "Staff Member",
+      header: "Staff member",
       render: (row) => (
-        <div className="user-cell">
-          <span className="user-name">
-            {row.firstName} {row.lastName}
-          </span>
-          <span className="user-email">{row.email}</span>
+        <div className="flex min-w-0 items-center gap-3">
+          <Avatar src={row.avatarUrl} name={name(row)} size="sm" />
+          <div className="min-w-0">
+            <p className="truncate font-medium text-slate-900">{name(row)}</p>
+            <p className="flex items-center gap-1 truncate text-xs text-slate-500">
+              <Mail size={11} aria-hidden="true" /> {row.email}
+            </p>
+          </div>
         </div>
       ),
     },
     {
       header: "Role",
       render: (row) => {
-        const staffRoles = STAFF_ROLES.filter((r) =>
-          (row.roles || []).includes(r.value),
-        );
-        if (staffRoles.length === 0) return "-";
+        const roles = STAFF_ROLES.filter((r) => (row.roles || []).includes(r.value));
+        if (!roles.length) return <span className="text-slate-400">—</span>;
         return (
-          <div className="badge-list">
-            {staffRoles.map((r) => (
-              <span
-                key={r.value}
-                className={`badge ${STAFF_ROLE_BADGE[r.value] || ""}`}
-              >
-                {r.label}
-              </span>
+          <div className="flex flex-wrap gap-1">
+            {roles.map((r) => (
+              <Badge key={r.value} tone={r.tone}>{r.label}</Badge>
             ))}
           </div>
         );
       },
     },
-    { header: "Phone", render: (row) => row.phone || "-" },
     {
-      header: "Actions",
-      width: "120px",
+      header: "Phone",
+      render: (row) =>
+        row.phone ? (
+          <span className="inline-flex items-center gap-1.5 text-slate-600">
+            <Phone size={13} className="text-slate-400" aria-hidden="true" /> {row.phone}
+          </span>
+        ) : (
+          <span className="text-slate-400">—</span>
+        ),
+    },
+    {
+      header: <span className="sr-only">Actions</span>,
+      width: "56px",
       render: (row) => (
-        <div className="action-buttons">
-          <button
-            className="btn-icon"
-            onClick={() => openModal(row)}
-            title="Edit"
-          >
-            <Edit2 size={16} />
-          </button>
+        <div className="flex justify-end">
+          <IconButton icon={Pencil} label={`Edit ${name(row)}`} onClick={() => openModal(row)} />
         </div>
       ),
     },
   ];
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1>Teachers & Staff</h1>
-          <p className="text-muted">Manage teachers, exam officers, and accountants</p>
-        </div>
-      </div>
+    <div className="mx-auto max-w-6xl">
+      <PageHeader
+        icon={UsersRound}
+        title="Teachers & Staff"
+        description="Teachers, exam officers and accountants, with their sign-in details."
+        actions={<Button icon={Plus} onClick={() => openModal()}>Add staff member</Button>}
+      />
 
-      <div className="card">
-        <DataTable
-          columns={columns}
-          data={teachers}
-          loading={loading}
-          pagination={pagination}
-          onPageChange={(page) => setPagination((prev) => ({ ...prev, page }))}
-          searchValue={search}
-          onSearchChange={setSearch}
-          emptyMessage="No teachers found"
-          actions={
-            <Button icon={Plus} onClick={() => openModal()}>
-              Add Staff Member
-            </Button>
-          }
-        />
-      </div>
+      <DataTable
+        columns={columns}
+        data={teachers}
+        loading={loading}
+        pagination={pagination}
+        onPageChange={(page) => setPagination((prev) => ({ ...prev, page }))}
+        searchValue={search}
+        onSearchChange={(value) => {
+          setSearch(value);
+          setPagination((prev) => ({ ...prev, page: 1 }));
+        }}
+        searchPlaceholder="Search name or email…"
+        emptyMessage={search ? "No staff match your search" : "No staff yet"}
+        emptyIcon={UsersRound}
+      />
 
       <Modal
         isOpen={modalOpen}
         onClose={closeModal}
-        title={editingTeacher ? "Edit Staff Member" : "Add Staff Member"}
+        title={editingTeacher ? "Edit staff member" : "Add staff member"}
+        description={editingTeacher ? name(editingTeacher) : undefined}
         size="lg"
       >
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {serverError && (
-            <div className="form-alert" role="alert">
-              <strong>{serverError.message}</strong>
-              {(serverError.otherErrors.length > 0 ||
-                Object.keys(serverError.fieldErrors).length > 0) && (
-                <ul>
-                  {Object.entries(serverError.fieldErrors).map(
-                    ([field, message]) => (
-                      <li key={field}>
-                        {field}: {message}
-                      </li>
-                    ),
-                  )}
-                  {serverError.otherErrors.map((message, i) => (
-                    <li key={i}>{message}</li>
+            <Alert tone="danger" title={serverError.message}>
+              {unshownErrors.length > 0 && (
+                <ul className="mt-1 list-disc pl-5">
+                  {unshownErrors.map((m, i) => (
+                    <li key={i}>{m}</li>
                   ))}
                 </ul>
               )}
-            </div>
+            </Alert>
           )}
-          <FormRow>
-            <Input
-              label="First Name"
-              name="firstName"
-              register={register}
-              error={errors.firstName?.message}
-              required
-            />
-            <Input
-              label="Last Name"
-              name="lastName"
-              register={register}
-              error={errors.lastName?.message}
-              required
-            />
-          </FormRow>
-          <FormRow>
-            <Input
-              label="Email"
-              name="email"
-              type="email"
-              register={register}
-              error={errors.email?.message}
-              required
-            />
-            <Input
-              label="Phone"
-              name="phone"
-              type="tel"
-              register={register}
-              error={errors.phone?.message}
-            />
-          </FormRow>
-          <FormRow>
-            <div className="form-group">
-              <label htmlFor="staff-role">Role</label>
-              <select
-                id="staff-role"
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value)}
-                className="form-control"
-              >
-                {STAFF_ROLES.map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
-              {serverError?.fieldErrors?.role && (
-                <span className="form-error">
-                  {serverError.fieldErrors.role}
-                </span>
-              )}
-              <small className="text-muted">
-                {editingTeacher &&
-                selectedRole !== currentStaffRole(editingTeacher)
-                  ? `Changing role from ${roleLabelOf(
-                      currentStaffRole(editingTeacher),
-                    )} to ${roleLabelOf(selectedRole)}. `
-                  : ""}
-                {ROLE_HINTS[selectedRole]}
-              </small>
-            </div>
-          </FormRow>
-          <div className="form-group">
-            <label>Profile Photo</label>
-            <div className="flex items-center gap-3">
-              {avatarUrl ? (
-                <img
-                  src={resolveAssetUrl(avatarUrl)}
-                  alt="Avatar"
-                  className="user-avatar-sm"
-                />
-              ) : (
-                <div className="user-avatar-placeholder-sm">
-                  {(editingTeacher?.firstName || "N")[0]}
-                </div>
-              )}
-              <FileUpload
-                label="Upload Avatar"
-                accept="image/*"
-                multiple={false}
-                onChange={handleAvatarUpload}
+
+          <AvatarUpload url={avatarUrl} name={editingTeacher ? name(editingTeacher) : ""} onChange={setAvatarUrl} />
+
+          <div>
+            <FormRow>
+              <Input label="First name" name="firstName" register={register} error={errors.firstName?.message} required />
+              <Input label="Last name" name="lastName" register={register} error={errors.lastName?.message} required />
+            </FormRow>
+            <FormRow>
+              <Input label="Email" name="email" type="email" register={register} error={errors.email?.message} required />
+              <Input label="Phone" name="phone" type="tel" register={register} error={errors.phone?.message} />
+            </FormRow>
+            {!editingTeacher && (
+              <Input
+                label="Password"
+                name="password"
+                type="password"
+                register={register}
+                error={errors.password?.message}
+                required
+                minLength={8}
+                hint="At least 8 characters. They sign in with this email and password."
               />
-            </div>
-            {uploadingAvatar && (
-              <p className="text-sm text-muted">Uploading...</p>
             )}
           </div>
-          {!editingTeacher && (
-            <Input
-              label="Password"
-              name="password"
-              type="password"
-              register={register}
-              error={errors.password?.message}
-              required
-              minLength={8}
-            />
-          )}
-          <div className="modal-actions">
-            <Button type="button" variant="secondary" onClick={closeModal}>
-              Cancel
-            </Button>
-            <Button type="submit" loading={submitting}>
-              {editingTeacher ? "Update" : "Create"}
-            </Button>
-          </div>
+
+          <fieldset>
+            <legend className="mb-2 text-sm font-medium text-slate-700">Role</legend>
+            <div className="grid gap-2 sm:grid-cols-3" role="radiogroup">
+              {STAFF_ROLES.map((r) => {
+                const active = selectedRole === r.value;
+                return (
+                  <label
+                    key={r.value}
+                    className={cn(
+                      "flex cursor-pointer flex-col gap-1 rounded-xl border p-3 text-sm transition-colors",
+                      active ? "border-brand-400 bg-brand-50/60 ring-1 ring-brand-400" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50",
+                    )}
+                  >
+                    <span className="flex items-center gap-2 font-medium text-slate-900">
+                      <input
+                        type="radio"
+                        name="staff-role"
+                        value={r.value}
+                        checked={active}
+                        onChange={() => setSelectedRole(r.value)}
+                      />
+                      {r.label}
+                    </span>
+                    <span className="text-xs text-slate-500">{r.hint}</span>
+                  </label>
+                );
+              })}
+            </div>
+            {serverError?.fieldErrors?.role && <p className="mt-1 text-xs font-medium text-red-600">{serverError.fieldErrors.role}</p>}
+            {roleChanged && (
+              <p className="mt-2 text-xs text-amber-700">
+                Changing role from {roleOf(currentStaffRole(editingTeacher))?.label} to {roleOf(selectedRole)?.label}.
+              </p>
+            )}
+          </fieldset>
+
+          <DialogActions>
+            <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>
+            <Button type="submit" loading={submitting}>{editingTeacher ? "Save changes" : "Add staff member"}</Button>
+          </DialogActions>
         </form>
       </Modal>
     </div>

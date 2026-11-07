@@ -4,12 +4,12 @@ const { ApiError, ApiResponse, asyncHandler } = require('../utils');
 const { createSubjectAudit } = require('../utils/subjectAudit');
 
 /**
- * @desc    Import Grade 11-12 subjects from Excel file
+ * @desc    Import subjects from an Excel file and attach them to classes
  * @route   POST /api/v1/subjects/import
  * @access  Private/Admin
  * 
  * Expected Excel columns:
- * - Grade (11 or 12)
+ * - Grade (a grade level that exists as a class in the school, e.g. 1-10)
  * - Subject Name
  * - Subject Code
  * - Component (Theory / Practical / Both)
@@ -44,12 +44,9 @@ const importSubjects = asyncHandler(async (req, res) => {
   });
   existingSubjects.forEach(s => existingCodes.add(s.code.toLowerCase()));
 
-  // Fetch classes for Grade 11/12
+  // The school's classes, by grade level (K-10 scope: whatever exists)
   const classes = await prisma.class.findMany({
-    where: { 
-      schoolId: req.user.schoolId,
-      gradeLevel: { in: [11, 12] }
-    },
+    where: { schoolId: req.user.schoolId },
     select: { id: true, gradeLevel: true, name: true },
   });
   const classMap = {};
@@ -83,8 +80,8 @@ const importSubjects = asyncHandler(async (req, res) => {
     const practicalMarks = parseInt(row['Practical Marks'] || row['practical_marks'] || row['PracticalMarks'] || 0);
 
     // Validation
-    if (!grade || (grade !== 11 && grade !== 12)) {
-      rowErrors.push('Grade must be 11 or 12');
+    if (!grade) {
+      rowErrors.push('Grade is required');
     }
     if (!subjectName) {
       rowErrors.push('Subject Name is required');
@@ -214,6 +211,10 @@ const previewImport = asyncHandler(async (req, res) => {
     select: { code: true },
   });
   const existingCodes = new Set(existingSubjects.map(s => s.code.toLowerCase()));
+  const gradeLevels = new Set(
+    (await prisma.class.findMany({ where: { schoolId: req.user.schoolId }, select: { gradeLevel: true } }))
+      .map((c) => c.gradeLevel),
+  );
 
   const preview = [];
   const seenCodes = new Set();
@@ -230,7 +231,8 @@ const previewImport = asyncHandler(async (req, res) => {
     const creditHour = parseFloat(row['Credit Hour'] || row['credit_hour'] || row['CreditHour'] || 3);
     const fullMarks = parseInt(row['Full Marks'] || row['full_marks'] || row['FullMarks'] || 100);
 
-    if (!grade || (grade !== 11 && grade !== 12)) errors.push('Invalid grade');
+    if (!grade) errors.push('Missing grade');
+    else if (!gradeLevels.has(grade)) errors.push(`No Grade ${grade} class`);
     if (!subjectName) errors.push('Missing name');
     if (!subjectCode) errors.push('Missing code');
     if (existingCodes.has(subjectCode.toLowerCase())) errors.push('Duplicate in DB');

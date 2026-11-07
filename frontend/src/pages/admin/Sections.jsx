@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Plus, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Layers, Users } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
-import { Input, Button } from '../../components/common/FormElements';
+import { Input, Button, FormRow } from '../../components/common/FormElements';
+import { PageHeader, IconButton, DialogActions, toast, confirmDialog } from '../../components/ui';
 import { academicService } from '../../api/academicService';
 
 const Sections = () => {
@@ -25,7 +26,7 @@ const Sections = () => {
       const response = await academicService.getSections();
       setSections(response.data || []);
     } catch (error) {
-      console.error('Error fetching sections:', error);
+      toast.error(error.response?.data?.message || 'Could not load sections');
     } finally {
       setLoading(false);
     }
@@ -33,11 +34,7 @@ const Sections = () => {
 
   const openModal = (section = null) => {
     setEditingSection(section);
-    if (section) {
-      reset({ name: section.name, capacity: section.capacity });
-    } else {
-      reset({ name: '', capacity: 40 });
-    }
+    reset(section ? { name: section.name, capacity: section.capacity } : { name: '', capacity: 40 });
     setModalOpen(true);
   };
 
@@ -56,102 +53,109 @@ const Sections = () => {
       } else {
         await academicService.createSection(payload);
       }
+      toast.success(editingSection ? 'Section updated' : 'Section created');
       fetchData();
       closeModal();
     } catch (error) {
-      console.error('Error saving section:', error);
-      alert(error.response?.data?.message || 'Error saving section');
+      toast.error(error.response?.data?.message || 'Could not save the section');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this section?')) return;
+  const handleDelete = async (section) => {
+    const ok = await confirmDialog({
+      title: `Delete section ${section.name}?`,
+      message: 'Sections that students are enrolled in cannot be deleted.',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
-      await academicService.deleteSection(id);
+      await academicService.deleteSection(section.id);
+      toast.success(`Section ${section.name} deleted`);
       fetchData();
     } catch (error) {
-      console.error('Error deleting section:', error);
-      alert(error.response?.data?.message || 'Error deleting');
+      toast.error(error.response?.data?.message || 'Could not delete the section');
     }
   };
 
   const columns = [
-    { header: 'Section Name', accessor: 'name' },
-    { header: 'Capacity', accessor: 'capacity', render: (row) => row.capacity || 40 },
     {
-      header: 'Actions',
-      width: '120px',
+      header: 'Section',
       render: (row) => (
-        <div className="action-buttons">
-          <button className="btn-icon" onClick={() => openModal(row)}>
-            <Edit2 size={16} />
-          </button>
-          <button className="btn-icon btn-danger" onClick={() => handleDelete(row.id)}>
-            <Trash2 size={16} />
-          </button>
+        <div className="flex items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm font-semibold text-slate-700">
+            {String(row.name || '').slice(0, 2)}
+          </span>
+          <span className="font-medium text-slate-900">{row.name}</span>
+        </div>
+      ),
+    },
+    {
+      header: 'Capacity',
+      render: (row) => (
+        <span className="inline-flex items-center gap-1.5 text-slate-600">
+          <Users size={14} className="text-slate-400" aria-hidden="true" />
+          {row.capacity || 40} students
+        </span>
+      ),
+    },
+    {
+      header: <span className="sr-only">Actions</span>,
+      width: '96px',
+      render: (row) => (
+        <div className="flex justify-end gap-1">
+          <IconButton icon={Pencil} label={`Edit section ${row.name}`} onClick={() => openModal(row)} />
+          <IconButton icon={Trash2} label={`Delete section ${row.name}`} variant="danger-soft" onClick={() => handleDelete(row)} />
         </div>
       ),
     },
   ];
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1>Sections</h1>
-          <p className="text-muted">Manage global section labels (e.g. A, B, C)</p>
-        </div>
-      </div>
+    <div className="mx-auto max-w-4xl">
+      <PageHeader
+        icon={Layers}
+        title="Sections"
+        description="Reusable section labels (A, B, Rose, Lotus…) that you attach to classes when enrolling students."
+        actions={<Button icon={Plus} onClick={() => openModal()}>Add section</Button>}
+      />
 
-      <div className="card">
-        <DataTable
-          columns={columns}
-          data={sections}
-          loading={loading}
-          emptyMessage="No sections found"
-          actions={
-            <Button icon={Plus} onClick={() => openModal()}>
-              Add Section
-            </Button>
-          }
-        />
-      </div>
+      <DataTable
+        columns={columns}
+        data={sections}
+        loading={loading}
+        emptyMessage="No sections yet"
+        emptyDescription="Create labels such as A and B; every class can use them."
+        emptyIcon={Layers}
+      />
 
-      <Modal
-        isOpen={modalOpen}
-        onClose={closeModal}
-        title={editingSection ? 'Edit Section' : 'Add Section'}
-        size="md"
-      >
+      <Modal isOpen={modalOpen} onClose={closeModal} title={editingSection ? 'Edit section' : 'Add section'} size="sm">
         <form onSubmit={handleSubmit(onSubmit)}>
-          <Input
-            label="Section Name"
-            name="name"
-            placeholder="e.g., A, B, Rose, Lotus"
-            register={register}
-            error={errors.name?.message}
-            required
-            helperText="Create reusable section labels here. You will assign them to classes later."
-          />
-          <Input
-            label="Capacity"
-            name="capacity"
-            type="number"
-            placeholder="Default 40"
-            register={register}
-            error={errors.capacity?.message}
-            min={1}
-          />
-          <div className="modal-actions">
-            <Button type="button" variant="secondary" onClick={closeModal}>
-              Cancel
-            </Button>
-            <Button type="submit" loading={submitting}>
-              {editingSection ? 'Update' : 'Create'}
-            </Button>
-          </div>
+          <FormRow>
+            <Input
+              label="Section name"
+              name="name"
+              placeholder="e.g. A"
+              register={register}
+              error={errors.name?.message}
+              required
+            />
+            <Input
+              label="Capacity"
+              name="capacity"
+              type="number"
+              placeholder="40"
+              register={register}
+              error={errors.capacity?.message}
+              min={1}
+            />
+          </FormRow>
+          <p className="-mt-1 text-xs text-slate-500">Assign sections to classes when you enrol students.</p>
+          <DialogActions>
+            <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>
+            <Button type="submit" loading={submitting}>{editingSection ? 'Save changes' : 'Create section'}</Button>
+          </DialogActions>
         </form>
       </Modal>
     </div>

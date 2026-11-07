@@ -18,7 +18,7 @@ each tested in the browser and committed separately.
 | Wave | Scope | State |
 |---|---|---|
 | 1 | Tailwind, tokens, legacy layer + bridge, `ui/` kit, shared components, shell, login, error pages, per-school brand colour | **Done** (2026-11-08) |
-| 2 | All 18 admin pages | Next |
+| 2 | All 18 admin pages | **In progress** — 12 done (dashboard, academic years, classes, sections, subjects + Excel import, class subjects, teacher assignment, students, teachers, parents, fee types/structures/payments); left: exams, report cards, promotions, notices, school settings |
 | 3 | Teacher + exam officer | — |
 | 4 | Student, parent, accountant (real accountant dashboard) | — |
 | 5 | Charts + `/dashboard/*` summary endpoints | — |

@@ -213,7 +213,7 @@ const DashboardLayout = () => {
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden print:hidden" role="dialog" aria-modal="true" aria-label="Navigation">
           <div className="absolute inset-0 animate-fade-in bg-slate-900/40" onClick={() => setMobileOpen(false)} aria-hidden="true" />
-          <aside className="relative flex h-full w-72 max-w-[85vw] animate-slide-in flex-col bg-white shadow-[var(--shadow-pop)]">
+          <aside className="relative flex h-full w-72 max-w-[85vw] animate-slide-in flex-col bg-white shadow-pop">
             <div className="flex h-16 items-center justify-between gap-2 border-b border-slate-100 px-4">
               {brandBlock(false)}
               <button

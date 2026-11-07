@@ -34,7 +34,7 @@ const ToastItem = ({ t }) => {
   return (
     <div
       role={t.tone === "error" ? "alert" : "status"}
-      className="pointer-events-auto flex w-full animate-pop-in items-start gap-3 rounded-xl border border-slate-200 bg-white p-3.5 pr-2.5 text-sm shadow-[var(--shadow-pop)] sm:w-96"
+      className="pointer-events-auto flex w-full animate-pop-in items-start gap-3 rounded-xl border border-slate-200 bg-white p-3.5 pr-2.5 text-sm shadow-pop sm:w-96"
     >
       <Icon size={18} className={cn("mt-0.5 shrink-0", color)} aria-hidden="true" />
       <div className="min-w-0 flex-1">

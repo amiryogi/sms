@@ -1,46 +1,79 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "../../lib/cn";
 
 /**
  * Small dropdown menu. `trigger` is a render function receiving
- * { open, toggle, ref-able props }; `children` are <MenuItem>s.
+ * { open, toggle, "aria-expanded", "aria-haspopup" }; `children` are
+ * <MenuItem>s. The panel is portalled to <body> with fixed positioning, so
+ * tables and cards with overflow:hidden never clip it.
  */
 export const Menu = ({ trigger, align = "end", children, className }) => {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState(null);
   const rootRef = useRef(null);
+  const panelRef = useRef(null);
+
+  useLayoutEffect(() => {
+    if (!open || !rootRef.current) return;
+    const place = () => {
+      const r = rootRef.current.getBoundingClientRect();
+      const panelH = panelRef.current?.offsetHeight || 0;
+      const below = r.bottom + 8;
+      const flip = panelH && below + panelH > window.innerHeight - 8 && r.top - 8 - panelH > 8;
+      setPos({
+        top: flip ? r.top - 8 - panelH : below,
+        ...(align === "end" ? { right: Math.max(8, window.innerWidth - r.right) } : { left: Math.max(8, r.left) }),
+      });
+    };
+    place();
+    // Second pass once the panel has a height (for flipping above).
+    const raf = requestAnimationFrame(place);
+    return () => cancelAnimationFrame(raf);
+  }, [open, align]);
 
   useEffect(() => {
     if (!open) return undefined;
     const onDown = (e) => {
-      if (!rootRef.current?.contains(e.target)) setOpen(false);
+      if (!rootRef.current?.contains(e.target) && !panelRef.current?.contains(e.target)) setOpen(false);
     };
     const onKey = (e) => {
       if (e.key === "Escape") setOpen(false);
     };
+    const onScroll = (e) => {
+      if (!panelRef.current?.contains(e.target)) setOpen(false);
+    };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onScroll);
     return () => {
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onScroll);
     };
   }, [open]);
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className="relative inline-flex">
       {trigger({ open, toggle: () => setOpen((o) => !o), "aria-expanded": open, "aria-haspopup": "menu" })}
-      {open && (
-        <div
-          role="menu"
-          onClick={() => setOpen(false)}
-          className={cn(
-            "absolute z-40 mt-2 min-w-56 animate-pop-in rounded-xl border border-slate-200 bg-white p-1.5 shadow-[var(--shadow-pop)]",
-            align === "end" ? "right-0" : "left-0",
-            className,
-          )}
-        >
-          {children}
-        </div>
-      )}
+      {open &&
+        createPortal(
+          <div
+            ref={panelRef}
+            role="menu"
+            onClick={() => setOpen(false)}
+            style={{ position: "fixed", ...(pos || { top: -9999, left: -9999 }) }}
+            className={cn(
+              "z-[70] min-w-56 animate-pop-in rounded-xl border border-slate-200 bg-white p-1.5 shadow-pop",
+              className,
+            )}
+          >
+            {children}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };

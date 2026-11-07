@@ -78,7 +78,7 @@ const Dialog = ({ open, onClose, title, description, size = "md", footer, childr
         aria-describedby={description ? descId : undefined}
         tabIndex={-1}
         className={cn(
-          "relative flex max-h-[100dvh] w-full animate-pop-in flex-col bg-white shadow-[var(--shadow-pop)] outline-none",
+          "relative flex max-h-dvh w-full animate-pop-in flex-col bg-white shadow-pop outline-none",
           "rounded-t-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-2xl",
           SIZES[size] || SIZES.md,
           className,
@@ -113,5 +113,20 @@ const Dialog = ({ open, onClose, title, description, size = "md", footer, childr
     document.body,
   );
 };
+
+/**
+ * Button row for the end of a form rendered inside a Dialog body: bleeds to
+ * the dialog edges and matches the dialog footer look.
+ */
+export const DialogActions = ({ children, className }) => (
+  <div
+    className={cn(
+      "-mx-5 mt-6 -mb-5 flex flex-col-reverse gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-3.5 sm:-mx-6 sm:flex-row sm:justify-end sm:px-6",
+      className,
+    )}
+  >
+    {children}
+  </div>
+);
 
 export default Dialog;

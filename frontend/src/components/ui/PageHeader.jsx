@@ -9,7 +9,7 @@ const PageHeader = ({ title, description, actions, icon: Icon, className, childr
   <div className={cn("mb-6 flex flex-wrap items-end justify-between gap-4", className)}>
     <div className="flex min-w-0 items-center gap-3">
       {Icon && (
-        <span className="hidden size-11 shrink-0 items-center justify-center rounded-xl bg-white text-brand-600 shadow-[var(--shadow-card)] ring-1 ring-slate-200 sm:flex">
+        <span className="hidden size-11 shrink-0 items-center justify-center rounded-xl bg-white text-brand-600 shadow-card ring-1 ring-slate-200 sm:flex">
           <Icon size={22} aria-hidden="true" />
         </span>
       )}

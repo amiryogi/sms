@@ -140,7 +140,7 @@ const BrandColorSettings = () => {
         {/* Preview */}
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4" aria-label="Preview">
           <p className="mb-3 text-xs font-medium tracking-wide text-slate-500 uppercase">Preview</p>
-          <div className="space-y-3 rounded-lg bg-white p-4 shadow-[var(--shadow-card)]">
+          <div className="space-y-3 rounded-lg bg-white p-4 shadow-card">
             <div className="flex items-center gap-2 rounded-lg bg-brand-50 px-2.5 py-2 text-sm font-medium text-brand-700">
               <span className="size-2 rounded-full bg-brand-500" /> Active menu item
             </div>

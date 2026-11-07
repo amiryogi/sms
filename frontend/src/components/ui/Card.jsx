@@ -7,7 +7,7 @@ export const Card = ({ as = "div", padding = "md", className, children, ...props
   return (
   <Tag
     className={cn(
-      "rounded-[var(--radius-card)] border border-slate-200/80 bg-white shadow-[var(--shadow-card)]",
+      "rounded-card border border-slate-200/80 bg-white shadow-card",
       padding === "md" && "p-5",
       padding === "lg" && "p-6",
       padding === "sm" && "p-4",

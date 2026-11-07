@@ -57,7 +57,7 @@
 }
 
 .card {
-  @apply mb-6 rounded-[var(--radius-card)] border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)];
+  @apply mb-6 rounded-card border border-slate-200/80 bg-white p-5 shadow-card;
 }
 .card h3,
 .card-title {

@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import { Plus, Edit2, Trash2, BookOpen, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, Library, Upload, FlaskConical } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
-import { Input, Button } from '../../components/common/FormElements';
+import { Input, Button, FormRow } from '../../components/common/FormElements';
+import { PageHeader, Badge, IconButton, Checkbox, DialogActions, toast, confirmDialog } from '../../components/ui';
 import { academicService } from '../../api/academicService';
 import SubjectImportModal from '../../components/admin/SubjectImportModal';
 
@@ -14,6 +15,7 @@ const Subjects = () => {
   const [editingSubject, setEditingSubject] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [search, setSearch] = useState('');
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
 
@@ -27,25 +29,31 @@ const Subjects = () => {
       const response = await academicService.getSubjects();
       setSubjects(response.data || []);
     } catch (error) {
-      console.error('Error fetching subjects:', error);
+      toast.error(error.response?.data?.message || 'Could not load subjects');
     } finally {
       setLoading(false);
     }
   };
 
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return subjects;
+    return subjects.filter((s) => `${s.name} ${s.code}`.toLowerCase().includes(q));
+  }, [subjects, search]);
+
   const openModal = (subject = null) => {
     setEditingSubject(subject);
-    if (subject) {
-      reset({
-        name: subject.name,
-        code: subject.code,
-        description: subject.description,
-        creditHours: subject.creditHours,
-        hasPractical: subject.hasPractical
-      });
-    } else {
-      reset({ name: '', code: '', description: '', creditHours: 3.0, hasPractical: false });
-    }
+    reset(
+      subject
+        ? {
+            name: subject.name,
+            code: subject.code,
+            description: subject.description,
+            creditHours: subject.creditHours,
+            hasPractical: subject.hasPractical,
+          }
+        : { name: '', code: '', description: '', creditHours: 3.0, hasPractical: false },
+    );
     setModalOpen(true);
   };
 
@@ -63,24 +71,29 @@ const Subjects = () => {
       } else {
         await academicService.createSubject(data);
       }
+      toast.success(editingSubject ? 'Subject updated' : 'Subject created');
       fetchSubjects();
       closeModal();
     } catch (error) {
-      console.error('Error saving subject:', error);
-      alert(error.response?.data?.message || 'Error saving subject');
+      toast.error(error.response?.data?.message || 'Could not save the subject');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this subject?')) return;
+  const handleDelete = async (subject) => {
+    const ok = await confirmDialog({
+      title: `Delete ${subject.name}?`,
+      message: 'Subjects already taught in a class cannot be deleted. Remove them from Class Subjects first.',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
-      await academicService.deleteSubject(id);
+      await academicService.deleteSubject(subject.id);
+      toast.success(`${subject.name} deleted`);
       fetchSubjects();
     } catch (error) {
-      console.error('Error deleting subject:', error);
-      alert(error.response?.data?.message || 'Error deleting');
+      toast.error(error.response?.data?.message || 'Could not delete the subject');
     }
   };
 
@@ -88,94 +101,88 @@ const Subjects = () => {
     {
       header: 'Subject',
       render: (row) => (
-        <div className="subject-cell">
-          <BookOpen size={16} />
-          <span>{row.name}</span>
+        <div className="flex items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+            <Library size={16} aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate font-medium text-slate-900">{row.name}</p>
+            {row.description && <p className="max-w-xs truncate text-xs text-slate-500">{row.description}</p>}
+          </div>
         </div>
-      )
+      ),
     },
-    { header: 'Code', accessor: 'code' },
-    { header: 'Credit Hours', accessor: 'creditHours', width: '120px' },
+    {
+      header: 'Code',
+      render: (row) => <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-700">{row.code}</code>,
+    },
+    { header: 'Credit hours', render: (row) => <span className="tabular-nums">{row.creditHours}</span> },
     {
       header: 'Practical',
-      width: '100px',
-      render: (row) => (
-        <span className={`badge ${row.hasPractical ? 'badge-success' : 'badge-secondary'}`}>
-          {row.hasPractical ? 'Yes' : 'No'}
-        </span>
-      )
+      render: (row) =>
+        row.hasPractical ? <Badge tone="info" icon={FlaskConical}>Theory + practical</Badge> : <Badge>Theory only</Badge>,
     },
-    { header: 'Description', render: (row) => row.description || '-' },
     {
-      header: 'Actions',
-      width: '120px',
+      header: <span className="sr-only">Actions</span>,
+      width: '96px',
       render: (row) => (
-        <div className="action-buttons">
-          <button className="btn-icon" onClick={() => openModal(row)}>
-            <Edit2 size={16} />
-          </button>
-          <button className="btn-icon btn-danger" onClick={() => handleDelete(row.id)}>
-            <Trash2 size={16} />
-          </button>
+        <div className="flex justify-end gap-1">
+          <IconButton icon={Pencil} label={`Edit ${row.name}`} onClick={() => openModal(row)} />
+          <IconButton icon={Trash2} label={`Delete ${row.name}`} variant="danger-soft" onClick={() => handleDelete(row)} />
         </div>
       ),
     },
   ];
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1>Subjects</h1>
-          <p className="text-muted">Manage the master list of subjects</p>
-        </div>
-      </div>
+    <div className="mx-auto max-w-6xl">
+      <PageHeader
+        icon={Library}
+        title="Subjects"
+        description="The master list of subjects. Attach them to classes on the Class Subjects page."
+        actions={
+          <>
+            <Button variant="secondary" icon={Upload} onClick={() => setImportModalOpen(true)}>Import from Excel</Button>
+            <Button icon={Plus} onClick={() => openModal()}>Add subject</Button>
+          </>
+        }
+      />
 
-      <div className="card">
-        <DataTable
-          columns={columns}
-          data={subjects}
-          loading={loading}
-          emptyMessage="No subjects found"
-          actions={
-            <div className="flex gap-2">
-              <Button variant="secondary" icon={Upload} onClick={() => setImportModalOpen(true)}>
-                Import Excel
-              </Button>
-              <Button icon={Plus} onClick={() => openModal()}>
-                Add Subject
-              </Button>
-            </div>
-          }
-        />
-      </div>
+      <DataTable
+        columns={columns}
+        data={visible}
+        loading={loading}
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search by name or code…"
+        emptyMessage={search ? 'No subjects match your search' : 'No subjects yet'}
+        emptyDescription={search ? undefined : 'Add subjects one by one or import them from an Excel sheet.'}
+        emptyIcon={Library}
+      />
 
-      <Modal
-        isOpen={modalOpen}
-        onClose={closeModal}
-        title={editingSubject ? 'Edit Subject' : 'Add Subject'}
-        size="md"
-      >
+      <Modal isOpen={modalOpen} onClose={closeModal} title={editingSubject ? 'Edit subject' : 'Add subject'} size="md">
         <form onSubmit={handleSubmit(onSubmit)}>
-          <Input
-            label="Subject Name"
-            name="name"
-            placeholder="e.g., Mathematics, English"
-            register={register}
-            error={errors.name?.message}
-            required
-          />
-          <Input
-            label="Subject Code"
-            name="code"
-            placeholder="e.g., MATH, ENG"
-            register={register}
-            error={errors.code?.message}
-            required
-          />
-          <div className="grid grid-cols-2 gap-4">
+          <FormRow>
             <Input
-              label="Credit Hours"
+              label="Subject name"
+              name="name"
+              placeholder="e.g. Mathematics"
+              register={register}
+              error={errors.name?.message}
+              required
+            />
+            <Input
+              label="Code"
+              name="code"
+              placeholder="e.g. MATH"
+              register={register}
+              error={errors.code?.message}
+              required
+            />
+          </FormRow>
+          <FormRow>
+            <Input
+              label="Credit hours"
               name="creditHours"
               type="number"
               step="0.1"
@@ -183,40 +190,24 @@ const Subjects = () => {
               error={errors.creditHours?.message}
               required
             />
-            <div className="form-group" style={{ marginTop: '30px' }}>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  {...register('hasPractical')}
-                  style={{ marginRight: '8px' }}
-                />
-                Has Practical?
-              </label>
+            <div className="mb-4 flex items-end pb-2">
+              <Checkbox
+                id="hasPractical"
+                label="Has a practical part"
+                description="Marks are entered for theory and practical separately."
+                {...register('hasPractical')}
+              />
             </div>
-          </div>
-          <Input
-            label="Description (Optional)"
-            name="description"
-            placeholder="Brief description"
-            register={register}
-          />
-          <div className="modal-actions">
-            <Button type="button" variant="secondary" onClick={closeModal}>
-              Cancel
-            </Button>
-            <Button type="submit" loading={submitting}>
-              {editingSubject ? 'Update' : 'Create'}
-            </Button>
-          </div>
+          </FormRow>
+          <Input label="Description" name="description" placeholder="Optional" register={register} />
+          <DialogActions>
+            <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>
+            <Button type="submit" loading={submitting}>{editingSubject ? 'Save changes' : 'Create subject'}</Button>
+          </DialogActions>
         </form>
       </Modal>
 
-      {/* Import Modal */}
-      <SubjectImportModal
-        isOpen={importModalOpen}
-        onClose={() => setImportModalOpen(false)}
-        onSuccess={fetchSubjects}
-      />
+      <SubjectImportModal isOpen={importModalOpen} onClose={() => setImportModalOpen(false)} onSuccess={fetchSubjects} />
     </div>
   );
 };

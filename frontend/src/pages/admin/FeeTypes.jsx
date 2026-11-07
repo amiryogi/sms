@@ -1,16 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import {
-  Plus,
-  Edit2,
-  Trash2,
-  Banknote,
-  ToggleLeft,
-  ToggleRight,
-} from "lucide-react";
+import { Plus, Pencil, Trash2, Tags } from "lucide-react";
 import DataTable from "../../components/common/DataTable";
 import Modal from "../../components/common/Modal";
 import { Input, Button } from "../../components/common/FormElements";
+import { PageHeader, IconButton, Checkbox, Switch, DialogActions, toast, confirmDialog } from "../../components/ui";
 import { feeService } from "../../api/feeService";
 import RoleGuard from "../../components/auth/RoleGuard";
 
@@ -20,6 +14,7 @@ const FeeTypes = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingFeeType, setEditingFeeType] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [togglingId, setTogglingId] = useState(null);
 
   const {
     register,
@@ -38,7 +33,7 @@ const FeeTypes = () => {
       const response = await feeService.getFeeTypes();
       setFeeTypes(response.data || []);
     } catch (error) {
-      console.error("Error fetching fee types:", error);
+      toast.error(error.response?.data?.message || "Could not load fee types");
     } finally {
       setLoading(false);
     }
@@ -46,15 +41,11 @@ const FeeTypes = () => {
 
   const openModal = (feeType = null) => {
     setEditingFeeType(feeType);
-    if (feeType) {
-      reset({
-        name: feeType.name,
-        description: feeType.description || "",
-        isActive: feeType.isActive,
-      });
-    } else {
-      reset({ name: "", description: "", isActive: true });
-    }
+    reset(
+      feeType
+        ? { name: feeType.name, description: feeType.description || "", isActive: feeType.isActive }
+        : { name: "", description: "", isActive: true },
+    );
     setModalOpen(true);
   };
 
@@ -72,98 +63,80 @@ const FeeTypes = () => {
       } else {
         await feeService.createFeeType(data);
       }
+      toast.success(editingFeeType ? "Fee type updated" : "Fee type created");
       fetchFeeTypes();
       closeModal();
     } catch (error) {
-      console.error("Error saving fee type:", error);
-      alert(error.response?.data?.message || "Error saving fee type");
+      toast.error(error.response?.data?.message || "Could not save the fee type");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this fee type?")) return;
+  const handleDelete = async (feeType) => {
+    const ok = await confirmDialog({
+      title: `Delete ${feeType.name}?`,
+      message: "Fee types used in a fee structure cannot be deleted. Make it inactive instead.",
+      tone: "danger",
+    });
+    if (!ok) return;
     try {
-      await feeService.deleteFeeType(id);
+      await feeService.deleteFeeType(feeType.id);
+      toast.success(`${feeType.name} deleted`);
       fetchFeeTypes();
     } catch (error) {
-      console.error("Error deleting fee type:", error);
-      alert(error.response?.data?.message || "Cannot delete fee type");
+      toast.error(error.response?.data?.message || "Could not delete the fee type");
     }
   };
 
   const toggleStatus = async (feeType) => {
+    setTogglingId(feeType.id);
     try {
-      await feeService.updateFeeType(feeType.id, {
-        isActive: !feeType.isActive,
-      });
-      fetchFeeTypes();
+      await feeService.updateFeeType(feeType.id, { isActive: !feeType.isActive });
+      setFeeTypes((list) => list.map((f) => (f.id === feeType.id ? { ...f, isActive: !f.isActive } : f)));
     } catch (error) {
-      console.error("Error toggling status:", error);
-      alert(error.response?.data?.message || "Error updating status");
+      toast.error(error.response?.data?.message || "Could not update the status");
+    } finally {
+      setTogglingId(null);
     }
   };
 
   const columns = [
     {
-      header: "Fee Type",
+      header: "Fee type",
       render: (row) => (
-        <div className="flex items-center gap-2">
-          <Banknote size={16} className="text-primary" />
-          <span className="font-medium">{row.name}</span>
+        <div className="flex items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+            <Tags size={16} aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate font-medium text-slate-900">{row.name}</p>
+            {row.description && <p className="max-w-md truncate text-xs text-slate-500">{row.description}</p>}
+          </div>
         </div>
       ),
     },
     {
-      header: "Description",
-      render: (row) => row.description || "-",
-    },
-    {
-      header: "Status",
-      width: "100px",
+      header: "Active",
+      width: "120px",
       render: (row) => (
-        <span
-          className={`badge ${
-            row.isActive ? "badge-success" : "badge-secondary"
-          }`}
-        >
-          {row.isActive ? "Active" : "Inactive"}
-        </span>
+        <Switch
+          checked={row.isActive}
+          disabled={togglingId === row.id}
+          onChange={() => toggleStatus(row)}
+          id={`fee-type-active-${row.id}`}
+        />
       ),
     },
     {
-      header: "Actions",
-      width: "150px",
+      header: <span className="sr-only">Actions</span>,
+      width: "96px",
       render: (row) => (
-        <div className="action-buttons">
-          <button
-            className="btn-icon"
-            onClick={() => toggleStatus(row)}
-            title={row.isActive ? "Deactivate" : "Activate"}
-          >
-            {row.isActive ? (
-              <ToggleRight size={16} className="text-success" />
-            ) : (
-              <ToggleLeft size={16} />
-            )}
-          </button>
-          <button
-            className="btn-icon"
-            onClick={() => openModal(row)}
-            title="Edit"
-          >
-            <Edit2 size={16} />
-          </button>
+        <div className="flex justify-end gap-1">
+          <IconButton icon={Pencil} label={`Edit ${row.name}`} onClick={() => openModal(row)} />
           {/* Delete is admin-only on the backend; accountants never see it. */}
           <RoleGuard roles={["ADMIN"]}>
-            <button
-              className="btn-icon btn-danger"
-              onClick={() => handleDelete(row.id)}
-              title="Delete"
-            >
-              <Trash2 size={16} />
-            </button>
+            <IconButton icon={Trash2} label={`Delete ${row.name}`} variant="danger-soft" onClick={() => handleDelete(row)} />
           </RoleGuard>
         </div>
       ),
@@ -171,69 +144,44 @@ const FeeTypes = () => {
   ];
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1>Fee Types</h1>
-          <p className="text-muted">
-            Manage fee categories (Tuition, Lab, Sports, etc.)
-          </p>
-        </div>
-      </div>
+    <div className="mx-auto max-w-5xl">
+      <PageHeader
+        icon={Tags}
+        title="Fee Types"
+        description="Fee categories such as tuition, lab, sports or transport. Inactive types can't be added to new fee structures."
+        actions={<Button icon={Plus} onClick={() => openModal()}>Add fee type</Button>}
+      />
 
-      <div className="card">
-        <DataTable
-          columns={columns}
-          data={feeTypes}
-          loading={loading}
-          emptyMessage="No fee types found. Create one to get started."
-          actions={
-            <Button icon={Plus} onClick={() => openModal()}>
-              Add Fee Type
-            </Button>
-          }
-        />
-      </div>
+      <DataTable
+        columns={columns}
+        data={feeTypes}
+        loading={loading}
+        emptyMessage="No fee types yet"
+        emptyDescription="Create categories like Tuition Fee before setting up fee structures."
+        emptyIcon={Tags}
+      />
 
-      <Modal
-        isOpen={modalOpen}
-        onClose={closeModal}
-        title={editingFeeType ? "Edit Fee Type" : "Add Fee Type"}
-        size="md"
-      >
+      <Modal isOpen={modalOpen} onClose={closeModal} title={editingFeeType ? "Edit fee type" : "Add fee type"} size="md">
         <form onSubmit={handleSubmit(onSubmit)}>
           <Input
-            label="Fee Type Name"
+            label="Name"
             name="name"
-            placeholder="e.g., Tuition Fee, Lab Fee, Sports Fee"
+            placeholder="e.g. Tuition Fee"
             register={register}
-            rules={{ required: "Name is required" }}
             error={errors.name?.message}
+            required
           />
-          <Input
-            label="Description (Optional)"
-            name="description"
-            placeholder="Brief description of this fee type"
-            register={register}
+          <Input label="Description" name="description" placeholder="Optional" register={register} />
+          <Checkbox
+            id="isActive"
+            label="Active"
+            description="Available when creating fee structures."
+            {...register("isActive")}
           />
-          <div className="form-group" style={{ marginTop: "16px" }}>
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                {...register("isActive")}
-                style={{ marginRight: "8px" }}
-              />
-              Active (visible for fee structure creation)
-            </label>
-          </div>
-          <div className="modal-actions">
-            <Button type="button" variant="secondary" onClick={closeModal}>
-              Cancel
-            </Button>
-            <Button type="submit" loading={submitting}>
-              {editingFeeType ? "Update" : "Create"}
-            </Button>
-          </div>
+          <DialogActions>
+            <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>
+            <Button type="submit" loading={submitting}>{editingFeeType ? "Save changes" : "Create fee type"}</Button>
+          </DialogActions>
         </form>
       </Modal>
     </div>

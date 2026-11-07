@@ -12,7 +12,7 @@ const COLORS = {
 
 /** Headline number with an icon; optional trend line. Props unchanged. */
 const StatCard = ({ title, value, icon: Icon, trend = null, trendValue = null, color = "primary", hint, className }) => (
-  <div className={cn("flex items-start gap-4 rounded-[var(--radius-card)] border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]", className)}>
+  <div className={cn("flex items-start gap-4 rounded-card border border-slate-200/80 bg-white p-5 shadow-card", className)}>
     <div className="min-w-0 flex-1">
       <p className="truncate text-sm font-medium text-slate-500">{title}</p>
       <p className="mt-1.5 truncate text-2xl font-semibold tracking-tight text-slate-900 tabular-nums">{value ?? "—"}</p>

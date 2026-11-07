@@ -35,7 +35,7 @@ const DataTable = ({
   const to = pagination ? Math.min(pagination.page * pagination.limit, pagination.total) : 0;
 
   return (
-    <div className={cn(!bare && "overflow-hidden rounded-[var(--radius-card)] border border-slate-200/80 bg-white shadow-[var(--shadow-card)]", className)}>
+    <div className={cn(!bare && "overflow-hidden rounded-card border border-slate-200/80 bg-white shadow-card", className)}>
       {hasToolbar && (
         <div className="flex flex-col gap-3 border-b border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">

@@ -15,17 +15,38 @@ import {
  * only the rendering moved to the Tailwind kit in components/ui.
  */
 
-const reg = (register, name) => (register && name ? register(name) : {});
+/**
+ * react-hook-form props for a field, merged with the page's own handlers. A
+ * page that passes both `register` and its own onChange (e.g. to load
+ * sections when the class changes) must not silently drop the form's handler.
+ */
+const bind = (register, name, { onChange, onBlur, rules, ...rest }) => {
+  if (!register || !name) return { onChange, onBlur, ...rest };
+  // `rules` are react-hook-form validation options, e.g. { required: "…" }.
+  const field = register(name, rules);
+  return {
+    ...rest,
+    ...field,
+    onChange: (e) => {
+      field.onChange(e);
+      onChange?.(e);
+    },
+    onBlur: (e) => {
+      field.onBlur(e);
+      onBlur?.(e);
+    },
+  };
+};
 
 export const Input = ({ label, error, icon, register, name, hint, className, ...props }) => (
   <Field label={label} htmlFor={name} error={error} hint={hint} required={props.required} className={cn("mb-4", className)}>
-    <TextInput id={name} name={name} icon={icon} invalid={Boolean(error)} {...reg(register, name)} {...props} />
+    <TextInput id={name} name={name} icon={icon} invalid={Boolean(error)} {...bind(register, name, props)} />
   </Field>
 );
 
 export const Select = ({ label, error, options = [], register, name, placeholder = "Select...", hint, className, ...props }) => (
   <Field label={label} htmlFor={name} error={error} hint={hint} required={props.required} className={cn("mb-4", className)}>
-    <SelectInput id={name} name={name} invalid={Boolean(error)} {...reg(register, name)} {...props}>
+    <SelectInput id={name} name={name} invalid={Boolean(error)} {...bind(register, name, props)}>
       {placeholder !== null && <option value="">{placeholder}</option>}
       {options.map((opt) => (
         <option key={opt.value} value={opt.value}>
@@ -38,7 +59,7 @@ export const Select = ({ label, error, options = [], register, name, placeholder
 
 export const Textarea = ({ label, error, register, name, hint, className, ...props }) => (
   <Field label={label} htmlFor={name} error={error} hint={hint} required={props.required} className={cn("mb-4", className)}>
-    <TextArea id={name} name={name} invalid={Boolean(error)} {...reg(register, name)} {...props} />
+    <TextArea id={name} name={name} invalid={Boolean(error)} {...bind(register, name, props)} />
   </Field>
 );
 
