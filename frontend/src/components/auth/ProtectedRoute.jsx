@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { LoadingBlock } from '../ui/Spinner';
 
 const ProtectedRoute = ({ children, roles = [], permission = null }) => {
   const { user, loading, hasRole, hasPermission } = useAuth();
@@ -7,9 +8,8 @@ const ProtectedRoute = ({ children, roles = [], permission = null }) => {
 
   if (loading) {
     return (
-      <div className="loading-screen">
-        <div className="loader"></div>
-        <p>Verifying session...</p>
+      <div className="flex min-h-dvh items-center justify-center bg-slate-50">
+        <LoadingBlock text="Verifying session…" />
       </div>
     );
   }

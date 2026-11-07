@@ -1,0 +1,128 @@
+/*
+ * App stylesheet: Tailwind CSS 4 + design tokens.
+ *
+ * Layer order matters:
+ *   legacy     — the old src/index.css, kept while pages are converted wave by
+ *                wave. It sits *below* utilities, so a Tailwind class always
+ *                beats an old rule.
+ *   unlayered  — the report-card print components keep their own local
+ *                <style> blocks (NepalReportCard, BulkReportCardPrint,
+ *                PerformanceSheet, GradeLegend). Unlayered CSS beats every
+ *                layer, so A4 output is unaffected by Tailwind.
+ */
+@layer theme, base, legacy, components, utilities;
+
+@import "tailwindcss";
+@import "../index.css" layer(legacy);
+@import "./bridge.css" layer(components);
+
+/* Fixed tokens */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+
+  --radius-card: 0.875rem;
+  --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.04);
+  --shadow-pop: 0 10px 30px -10px rgb(15 23 42 / 0.25), 0 4px 10px -4px rgb(15 23 42 / 0.1);
+
+  --animate-fade-in: fade-in 160ms ease-out;
+  --animate-pop-in: pop-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-in: slide-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes pop-in {
+    from { opacity: 0; transform: translateY(4px) scale(0.98); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes slide-in {
+    from { transform: translateX(-100%); }
+    to { transform: none; }
+  }
+}
+
+/*
+ * School brand colour. lib/brand.js writes --brand-50 … --brand-950 and
+ * --brand-fg on <html> from School.brandColor; the fallbacks are Tailwind's
+ * indigo, the default. Use as bg-brand-600, text-brand-700, ring-brand-500…
+ */
+@theme inline {
+  --color-brand-50: var(--brand-50, oklch(96.2% 0.018 272.314));
+  --color-brand-100: var(--brand-100, oklch(93% 0.034 272.788));
+  --color-brand-200: var(--brand-200, oklch(87% 0.065 274.039));
+  --color-brand-300: var(--brand-300, oklch(78.5% 0.115 274.713));
+  --color-brand-400: var(--brand-400, oklch(67.3% 0.182 276.935));
+  --color-brand-500: var(--brand-500, oklch(58.5% 0.233 277.117));
+  --color-brand-600: var(--brand-600, oklch(51.1% 0.262 276.966));
+  --color-brand-700: var(--brand-700, oklch(45.7% 0.24 277.023));
+  --color-brand-800: var(--brand-800, oklch(39.8% 0.195 277.366));
+  --color-brand-900: var(--brand-900, oklch(35.9% 0.144 278.697));
+  --color-brand-950: var(--brand-950, oklch(25.7% 0.09 281.288));
+  /* Text/icon colour that is readable on bg-brand-600 */
+  --color-brand-fg: var(--brand-fg, #ffffff);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-slate-50 font-sans text-slate-900;
+  }
+
+  ::selection {
+    @apply bg-brand-100 text-brand-900;
+  }
+
+  /*
+   * Sensible defaults for markup that has no classes of its own (pages not yet
+   * converted rely on browser defaults that preflight removes). Anything with
+   * utilities or legacy rules overrides these.
+   */
+  h1 { @apply text-2xl font-semibold tracking-tight; }
+  h2 { @apply text-xl font-semibold tracking-tight; }
+  h3 { @apply text-lg font-semibold; }
+  h4 { @apply text-base font-semibold; }
+  h5, h6 { @apply text-sm font-semibold; }
+
+  /* Lucide icons sit inline in text and buttons */
+  svg { display: inline-block; vertical-align: middle; }
+
+  :where(input:not([type="checkbox"], [type="radio"], [type="file"], [type="range"], [type="color"]), select, textarea) {
+    @apply rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400;
+    @apply focus:border-brand-500 focus:ring-3 focus:ring-brand-500/15 focus:outline-none;
+    @apply disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500;
+  }
+  :where(input[type="checkbox"], input[type="radio"]) {
+    @apply size-4 accent-brand-600;
+  }
+  :where(button, [role="button"]) { cursor: pointer; }
+  :where(button:disabled) { cursor: not-allowed; }
+  :where(ul.list-disc, ol.list-decimal) { padding-left: 1.25rem; }
+  :where(a) { @apply text-brand-700; }
+
+  /*
+   * Report-card sheets were written against browser defaults. Preflight
+   * flattens headings, makes images block-level and raises line-height; give
+   * the sheets their defaults back so A4 output (and page count) is unchanged.
+   * Their own unlayered rules still win wherever they set a property.
+   */
+  :where(.report-card-a4, .report-a4, .perf-sheet, .rc-grade-legend) {
+    line-height: normal;
+  }
+  :where(.report-card-a4, .report-a4, .perf-sheet) :where(h1, h2, h3, h4, h5, h6) {
+    font-weight: bold;
+  }
+  :where(.report-card-a4, .report-a4, .perf-sheet) :where(h1) { font-size: 2em; }
+  :where(.report-card-a4, .report-a4, .perf-sheet) :where(h2) { font-size: 1.5em; }
+  :where(.report-card-a4, .report-a4, .perf-sheet) :where(h3) { font-size: 1.17em; }
+  :where(.report-card-a4, .report-a4, .perf-sheet) :where(img, svg) {
+    display: inline-block;
+    max-width: none;
+  }
+}

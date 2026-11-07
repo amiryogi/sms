@@ -149,6 +149,8 @@ model School {
   youtubeUrl      String?  @map("youtube_url") @db.VarChar(500)
   principalName   String?  @map("principal_name") @db.VarChar(255)
   establishedYear Int?     @map("established_year")
+  /// Accent colour for the app UI ("#rrggbb"). Null = the default indigo.
+  brandColor      String?  @map("brand_color") @db.VarChar(7)
 
   /// What the printed report card shows (utils/reportCardLayout.js).
   /// Null = the original NEB grade sheet.

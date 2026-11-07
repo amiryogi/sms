@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import { authService } from "../api/authService";
 import { API_EVENTS, clearAuthStorage } from "../api/apiClient";
+import { applyBrand } from "../lib/brand";
 
 const AuthContext = createContext(null);
 
@@ -28,6 +29,12 @@ export const AuthProvider = ({ children }) => {
   const initializingRef = useRef(true);
   const autoRefreshInFlightRef = useRef(false);
   const lastAutoRefreshRef = useRef(0);
+
+  // The whole UI follows the school's brand colour (School Settings).
+  const brandColor = user?.school?.brandColor || null;
+  useEffect(() => {
+    if (user) applyBrand(brandColor);
+  }, [user, brandColor]);
 
   const initializeAuth = useCallback(async () => {
     initializingRef.current = true;

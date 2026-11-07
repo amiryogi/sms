@@ -253,6 +253,7 @@ const login = asyncHandler(async (req, res) => {
           facebookUrl: user.school.facebookUrl,
           instagramUrl: user.school.instagramUrl,
           youtubeUrl: user.school.youtubeUrl,
+          brandColor: user.school.brandColor,
         },
         student: user.student
           ? {
@@ -582,6 +583,7 @@ const getMe = asyncHandler(async (req, res) => {
       facebookUrl: user.school.facebookUrl,
       instagramUrl: user.school.instagramUrl,
       youtubeUrl: user.school.youtubeUrl,
+      brandColor: user.school.brandColor,
     },
     student: user.student
       ? {

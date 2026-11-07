@@ -1,48 +1,20 @@
-import React, { useEffect, useRef, useState } from "react";
-import { ShieldAlert, X } from "lucide-react";
+import { useEffect } from "react";
 import { API_EVENTS } from "../../api/apiClient";
-
-const DISPLAY_MS = 5000;
-const DEFAULT_MESSAGE = "You don't have permission to do that.";
+import { toast } from "../ui/toastStore";
 
 /**
- * App-wide notice shown when the API answers 403. Mounted once in
- * DashboardLayout; apiClient dispatches API_EVENTS.FORBIDDEN on window.
- * Several 403s in a row collapse into one notice (the timer restarts).
+ * When the API answers 403, show one "no permission" toast. apiClient
+ * dispatches API_EVENTS.FORBIDDEN on window; repeated 403s reuse the same
+ * toast id, so they collapse into one. Mounted once in DashboardLayout.
  */
 const PermissionNotice = () => {
-  const [visible, setVisible] = useState(false);
-  const timerRef = useRef(null);
-
   useEffect(() => {
-    const onForbidden = () => {
-      setVisible(true);
-      clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => setVisible(false), DISPLAY_MS);
-    };
+    const onForbidden = () =>
+      toast.error("You don't have permission to do that.", { id: "forbidden" });
     window.addEventListener(API_EVENTS.FORBIDDEN, onForbidden);
-    return () => {
-      window.removeEventListener(API_EVENTS.FORBIDDEN, onForbidden);
-      clearTimeout(timerRef.current);
-    };
+    return () => window.removeEventListener(API_EVENTS.FORBIDDEN, onForbidden);
   }, []);
-
-  if (!visible) return null;
-
-  return (
-    <div className="permission-notice" role="status" aria-live="polite">
-      <ShieldAlert size={18} className="permission-notice-icon" />
-      <span>{DEFAULT_MESSAGE}</span>
-      <button
-        type="button"
-        className="permission-notice-close"
-        onClick={() => setVisible(false)}
-        aria-label="Dismiss"
-      >
-        <X size={16} />
-      </button>
-    </div>
-  );
+  return null;
 };
 
 export default PermissionNotice;

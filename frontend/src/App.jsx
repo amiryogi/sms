@@ -8,6 +8,7 @@ import {
   useNavigate,
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { Toaster, LoadingBlock, buttonClasses } from "./components/ui";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import DashboardLayout from "./layouts/DashboardLayout";
 
@@ -70,12 +71,24 @@ const ParentFees = React.lazy(() => import("./pages/parent/Fees"));
 // Shared Pages
 const NoticesView = React.lazy(() => import("./pages/shared/NoticesView"));
 
-// Error Pages
-const NotFound = () => (
-  <div className="card error-page">
-    <h1>404 - Page Not Found</h1>
+// Error pages (403 / 404) and the route-level loading screen
+const ErrorScreen = ({ code, title, message, children }) => (
+  <div className="flex min-h-dvh items-center justify-center bg-slate-50 px-6">
+    <div className="w-full max-w-md text-center">
+      <p className="text-sm font-semibold text-brand-600">{code}</p>
+      <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{title}</h1>
+      <p className="mt-3 text-sm text-slate-500">{message}</p>
+      <div className="mt-8 flex flex-wrap items-center justify-center gap-3">{children}</div>
+    </div>
   </div>
 );
+
+const NotFound = () => (
+  <ErrorScreen code="404" title="Page not found" message="The page you're looking for doesn't exist or has moved.">
+    <Link to="/dashboard" className={buttonClasses()}>Back to dashboard</Link>
+  </ErrorScreen>
+);
+
 // Reached when a signed-in user opens a page their role does not allow (403).
 const Unauthorized = () => {
   const { user, logout } = useAuth();
@@ -87,34 +100,20 @@ const Unauthorized = () => {
   };
 
   return (
-    <div className="card error-page">
-      <h1>403 — Access denied</h1>
-      <p className="text-muted">
-        Your account doesn&apos;t have access to this page.
-      </p>
-      <div className="error-page-actions">
-        <Link to="/dashboard" className="btn btn-primary">
-          Back to dashboard
-        </Link>
-        {user && (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={handleLogout}
-          >
-            Log out
-          </button>
-        )}
-      </div>
-    </div>
+    <ErrorScreen code="403" title="Access denied" message="Your account doesn't have access to this page.">
+      <Link to="/dashboard" className={buttonClasses()}>Back to dashboard</Link>
+      {user && (
+        <button type="button" className={buttonClasses({ variant: "secondary" })} onClick={handleLogout}>
+          Log out
+        </button>
+      )}
+    </ErrorScreen>
   );
 };
 
-// Loading Component
 const LoadingFallback = () => (
-  <div className="loading-screen">
-    <div className="loader"></div>
-    <p>Loading...</p>
+  <div className="flex min-h-[60dvh] items-center justify-center">
+    <LoadingBlock text="" />
   </div>
 );
 
@@ -122,6 +121,7 @@ function App() {
   return (
     <Router>
       <AuthProvider>
+        <Toaster />
         <React.Suspense fallback={<LoadingFallback />}>
           <Routes>
             {/* Public Routes */}

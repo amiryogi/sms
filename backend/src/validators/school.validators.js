@@ -153,6 +153,16 @@ const updateSchoolRules = [
     .isLength({ max: 500 })
     .withMessage("YouTube URL must be less than 500 characters"),
 
+  body("brandColor")
+    .optional({ nullable: true })
+    .custom((value) => {
+      if (skipIfEmpty(value)) return true;
+      if (!/^#[0-9a-fA-F]{6}$/.test(value)) {
+        throw new Error("Brand colour must be a hex colour like #4f46e5");
+      }
+      return true;
+    }),
+
   body("principalName")
     .optional({ nullable: true })
     .trim()

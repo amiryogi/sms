@@ -1,27 +1,16 @@
-import React from 'react';
+import React from "react";
+import Spinner, { LoadingBlock } from "../ui/Spinner";
 
-const LoadingSpinner = ({ size = 'md', text = '' }) => {
-  const sizes = {
-    sm: { width: 24, height: 24, border: 2 },
-    md: { width: 40, height: 40, border: 3 },
-    lg: { width: 60, height: 60, border: 4 },
-  };
+const SIZES = { sm: 18, md: 24, lg: 36 };
 
-  const s = sizes[size];
-
-  return (
-    <div className="loading-container">
-      <div 
-        className="spinner"
-        style={{
-          width: s.width,
-          height: s.height,
-          borderWidth: s.border,
-        }}
-      />
-      {text && <p className="loading-text">{text}</p>}
+/** Kept for compatibility; prefer ui/LoadingBlock. */
+const LoadingSpinner = ({ size = "md", text = "" }) =>
+  text ? (
+    <LoadingBlock text={text} />
+  ) : (
+    <div className="flex items-center justify-center py-6">
+      <Spinner size={SIZES[size] || 24} className="text-brand-600" label="Loading" />
     </div>
   );
-};
 
 export default LoadingSpinner;
