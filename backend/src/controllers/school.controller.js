@@ -26,6 +26,7 @@ const getMySchool = asyncHandler(async (req, res) => {
       facebookUrl: true,
       instagramUrl: true,
       youtubeUrl: true,
+      brandColor: true,
       principalName: true,
       establishedYear: true,
       isActive: true,
@@ -59,6 +60,7 @@ const updateMySchool = asyncHandler(async (req, res) => {
     instagramUrl,
     youtubeUrl,
     principalName,
+    brandColor,
     establishedYear,
   } = req.body;
 
@@ -78,6 +80,9 @@ const updateMySchool = asyncHandler(async (req, res) => {
   if (youtubeUrl !== undefined) updateData.youtubeUrl = youtubeUrl || null;
   if (principalName !== undefined)
     updateData.principalName = principalName || null;
+  // "#rrggbb", or empty/null to go back to the default colour
+  if (brandColor !== undefined)
+    updateData.brandColor = brandColor ? brandColor.toLowerCase() : null;
   if (establishedYear !== undefined)
     updateData.establishedYear = establishedYear
       ? parseInt(establishedYear)
@@ -101,6 +106,7 @@ const updateMySchool = asyncHandler(async (req, res) => {
       facebookUrl: true,
       instagramUrl: true,
       youtubeUrl: true,
+      brandColor: true,
       principalName: true,
       establishedYear: true,
       isActive: true,
@@ -258,6 +264,7 @@ const getPublicSchoolByCode = asyncHandler(async (req, res) => {
       facebookUrl: true,
       instagramUrl: true,
       youtubeUrl: true,
+      brandColor: true,
       establishedYear: true,
       isActive: true,
     },

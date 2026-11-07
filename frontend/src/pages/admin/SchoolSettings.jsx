@@ -3,6 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { schoolService } from "../../api/schoolService";
 import { resolveAssetUrl } from "../../utils/assets";
 import GradeScaleSettings from "../../components/admin/GradeScaleSettings";
+import BrandColorSettings from "../../components/admin/BrandColorSettings";
 import ReportCardLayoutSettings from "../../components/admin/ReportCardLayoutSettings";
 import {
   Building2,
@@ -742,6 +743,9 @@ const SchoolSettings = () => {
             </div>
           </div>
         </div>
+
+        {/* Brand colour: own card, own save flow */}
+        <BrandColorSettings />
 
         {/* Grade scales: own card, own save flow */}
         <GradeScaleSettings />

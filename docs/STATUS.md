@@ -10,6 +10,30 @@ are done** and on `main`.
 
 ---
 
+## UI redesign on Tailwind CSS 4 — in progress
+
+Plan: [plans/ui-redesign-tailwind.md](plans/ui-redesign-tailwind.md). Phased waves,
+each tested in the browser and committed separately.
+
+| Wave | Scope | State |
+|---|---|---|
+| 1 | Tailwind, tokens, legacy layer + bridge, `ui/` kit, shared components, shell, login, error pages, per-school brand colour | **Done** (2026-11-08) |
+| 2 | All 18 admin pages | Next |
+| 3 | Teacher + exam officer | — |
+| 4 | Student, parent, accountant (real accountant dashboard) | — |
+| 5 | Charts + `/dashboard/*` summary endpoints | — |
+| 6 | Delete `index.css` / `bridge.css`, final docs | — |
+
+Wave 1 verified: build and lint clean; all 47 pages across 7 roles load with no
+console errors or failed calls; screenshots at 1440 and 390 px (shell, drawer,
+login, tables); print regression — NEB single/bulk, Performance Report
+single/bulk/student and the all-options card render as before with the same
+page counts; brand colour API (hex validation, admin only, reaches the session
+and the public login endpoint, reset) and live preview with the light-colour
+contrast fallback.
+
+Migration `20261108090000_school_brand_color` adds `schools.brand_color`.
+
 ## Do this next
 
 **1. Optional: hold a printed Performance Report against `marksheetformat1.jpeg`.**

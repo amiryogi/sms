@@ -23,7 +23,7 @@ has `school_id`) but only one school is seeded and used.
 | -------- | ---------------------------------------------------------------------- |
 | Backend  | Node.js ≥18, Express 4, Prisma 5.22, MySQL 8, JWT (access + refresh)    |
 | Frontend | React 19 + Vite 7, React Router 7, Axios, react-hook-form, lucide-react |
-| Styling  | **Vanilla CSS** with CSS variables in `frontend/src/index.css`. No Tailwind, no CSS-in-JS |
+| Styling  | **Tailwind CSS 4** (`@tailwindcss/vite`), tokens in `frontend/src/styles/app.css`, kit in `src/components/ui/`. No CSS-in-JS |
 | Dates    | AD stored in DB; BS (Bikram Sambat) rendered via `backend/src/utils/dateConverter.js` |
 
 Repo layout:
@@ -320,9 +320,27 @@ see `docs/STATUS.md`.
 
 ## 9. Frontend-specific rules
 
-- **Vanilla CSS only.** Add styles to `frontend/src/index.css` using the existing variables (`var(--primary)`, `var(--text-muted)`) and classes (`.card`, `.btn`, `.badge`, `.data-table`, `.form-group`). The print components keep a local `<style>` block for A4 output — that is deliberate; follow it for print work.
+- **Tailwind CSS 4.** Style with utilities in JSX and the kit in `src/components/ui/`
+  (`Button`, `Field`/`TextInput`/`SelectInput`, `Card`, `Badge`, `PageHeader`,
+  `Dialog`, `Tabs`, `Menu`, `EmptyState`, `Alert`, `Avatar`, `toast` /
+  `confirmDialog` instead of `alert()` / `confirm()`). Merge classes with `cn()` from
+  `src/lib/cn.js`. Use tokens, never hex: `bg-brand-600`, `text-brand-700`,
+  `text-slate-500`. `brand-*` is the school's colour (`School.brandColor`, set in
+  School Settings, applied by `src/lib/brand.js`; default indigo).
+- **Layers** (`styles/app.css`): `theme, base, legacy, components, utilities`. The old
+  `src/index.css` sits in `legacy` and `styles/bridge.css` restyles its class names
+  (`.card`, `.btn`, `.badge`, `.form-group`…) in `components` while pages are converted
+  wave by wave (plan: `docs/plans/ui-redesign-tailwind.md`; progress in
+  STATUS.md). Converted pages use no legacy class names; both files are deleted at the end.
+- **Print exception.** The report-card sheets (`NepalReportCard`, `BulkReportCardPrint`,
+  `reportcard/*`) keep their local, unlayered `<style>` blocks for A4 output. Unlayered CSS
+  beats every Tailwind layer, so to override them from outside you need `!important`
+  (see the `.rc-layout-preview` rule in `bridge.css`). Check page counts with a print-to-PDF
+  after touching them.
+- Shared shell: `layouts/DashboardLayout.jsx` (sidebar, mobile drawer, top bar) reads
+  its menus from `layouts/navigation.js`. A new page also needs an entry there.
 - Table columns are targeted by semantic class (`.col-roll`, `.col-name`, `.col-marks`, `.col-remarks`), **not** `nth-child`.
-- Pages are lazy-loaded in `App.jsx` and wrapped in `ProtectedRoute roles={[...]}`. A new page needs three things: the lazy import, a `<Route>` inside the right role block, and a sidebar entry in `DashboardLayout.jsx`.
+- Pages are lazy-loaded in `App.jsx` and wrapped in `ProtectedRoute roles={[...]}`. A new page needs three things: the lazy import, a `<Route>` inside the right role block, and a menu entry in `layouts/navigation.js`.
 - Use `<Link>` / `<NavLink>` for internal navigation, never `<a href>`, and `useLocation()` rather than `window.location.pathname`.
 - **No academic inference in the frontend.** The `gradeLevel >= 11` heuristics that used to live in `admin/Programs.jsx`, `admin/Students.jsx` and `teacher/MarksEntry.jsx` are gone with the section 7 removal. Don't add new ones: the backend returns the flags, the frontend renders them.
 

@@ -1,30 +1,44 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
 import {
-  LogIn,
-  Mail,
-  Lock,
-  AlertCircle,
-  School,
-  Phone,
-  Facebook,
-  Instagram,
-  Youtube,
-  Globe,
+  AtSign,
   Building2,
+  Eye,
+  EyeOff,
+  Facebook,
+  Globe,
+  Instagram,
+  Lock,
+  Mail,
+  MapPin,
+  Phone,
+  Youtube,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { useAuth } from "../context/AuthContext";
 import { schoolService } from "../api/schoolService";
+import { resolveAssetUrl } from "../utils/assets";
+import { applyBrand } from "../lib/brand";
+import { Alert, Button, Field, TextInput } from "../components/ui";
 
-const resolveAssetUrl = (url) => {
-  if (!url) return "";
-  if (url.startsWith("http")) return url;
-  const base = import.meta.env.VITE_API_URL
-    ? import.meta.env.VITE_API_URL.replace(/\/api\/v1$/, "")
-    : window.location.origin;
-  return `${base}/${url.replace(/^\\?/, "").replace(/^\//, "").replace(/\\/g, "/")}`;
+// After login always land on /dashboard, which redirects by role. Returning
+// to the pre-login `from` page could send a user to another role's page.
+const POST_LOGIN_PATH = "/dashboard";
+
+const SchoolLogo = ({ school, className }) => {
+  const [failed, setFailed] = useState(false);
+  const logo = school?.logoUrl ? resolveAssetUrl(school.logoUrl) : null;
+  if (logo && !failed) {
+    return <img src={logo} alt={`${school?.name || "School"} logo`} className={className} onError={() => setFailed(true)} />;
+  }
+  // No logo: a brand-coloured tile with a building icon. Only the size and
+  // corner classes are kept from `className`, so it never renders white-on-white.
+  const shape = (className || "").split(/s+/).filter((c) => /^(size-|rounded)/.test(c)).join(" ");
+  return (
+    <span className={`flex items-center justify-center bg-brand-500 text-white ring-1 ring-white/30 ${shape}`}>
+      <Building2 size={22} aria-hidden="true" />
+    </span>
+  );
 };
 
 const Login = () => {
@@ -33,38 +47,30 @@ const Login = () => {
   const [searchParams] = useSearchParams();
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [schoolInfo, setSchoolInfo] = useState(null);
-  const [loadingSchool, setLoadingSchool] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [school, setSchool] = useState(null);
 
-  // After login always land on /dashboard, which redirects by role. Returning
-  // to the pre-login `from` page could send a user to another role's page.
-  const POST_LOGIN_PATH = "/dashboard";
-
-  // Get school code from URL params or environment variable
-  // Usage: /login?school=DEMO001 or set VITE_DEFAULT_SCHOOL_CODE in .env
-  const schoolCode =
-    searchParams.get("school") ||
-    import.meta.env.VITE_DEFAULT_SCHOOL_CODE ||
-    "DEMO001";
+  // School from ?school=CODE, else VITE_DEFAULT_SCHOOL_CODE, else the demo school.
+  const schoolCode = searchParams.get("school") || import.meta.env.VITE_DEFAULT_SCHOOL_CODE || "DEMO001";
 
   useEffect(() => {
-    if (schoolCode) {
-      fetchPublicSchoolInfo(schoolCode);
-    }
+    let alive = true;
+    schoolService
+      .getPublicSchoolByCode(schoolCode)
+      .then((res) => {
+        if (!alive) return;
+        const info = res.data.data;
+        setSchool(info);
+        applyBrand(info?.brandColor);
+        if (info?.name) document.title = `Sign in · ${info.name}`;
+      })
+      .catch(() => {
+        // Unknown school code: keep the default branding.
+      });
+    return () => {
+      alive = false;
+    };
   }, [schoolCode]);
-
-  const fetchPublicSchoolInfo = async (code) => {
-    setLoadingSchool(true);
-    try {
-      const response = await schoolService.getPublicSchoolByCode(code);
-      setSchoolInfo(response.data.data);
-    } catch (err) {
-      console.error("Failed to fetch school info:", err);
-      // Don't show error - just use default branding
-    } finally {
-      setLoadingSchool(false);
-    }
-  };
 
   const {
     register,
@@ -79,288 +85,148 @@ const Login = () => {
       await login(data);
       navigate(POST_LOGIN_PATH, { replace: true });
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-          "Login failed. Please check your credentials.",
-      );
+      setError(err.response?.data?.message || "Login failed. Please check your email and password.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logoSrc = schoolInfo?.logoUrl
-    ? resolveAssetUrl(schoolInfo.logoUrl)
-    : null;
-  const bannerSrc = schoolInfo?.bannerUrl
-    ? resolveAssetUrl(schoolInfo.bannerUrl)
-    : null;
+  const banner = school?.bannerUrl ? resolveAssetUrl(school.bannerUrl) : null;
+  const contacts = [
+    school?.address && { icon: MapPin, text: school.address },
+    (school?.landlineNumber || school?.phone) && { icon: Phone, text: [school.landlineNumber, school.phone].filter(Boolean).join(" · ") },
+    school?.email && { icon: Mail, text: school.email },
+  ].filter(Boolean);
+  const socials = [
+    school?.website && { href: school.website, label: "Website", icon: Globe },
+    school?.facebookUrl && { href: school.facebookUrl, label: "Facebook", icon: Facebook },
+    school?.instagramUrl && { href: school.instagramUrl, label: "Instagram", icon: Instagram },
+    school?.youtubeUrl && { href: school.youtubeUrl, label: "YouTube", icon: Youtube },
+  ].filter(Boolean);
 
   return (
-    <div
-      className="login-page"
-      style={
-        bannerSrc
-          ? {
-              backgroundImage: `linear-gradient(rgba(241,245,249,0.92), rgba(226,232,240,0.95)), url(${bannerSrc})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }
-          : {}
-      }
-    >
-      <motion.div
-        className="login-card"
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4 }}
-      >
-        <div className="login-header">
-          <div className="logo-icon">
-            {logoSrc ? (
-              <img
-                src={logoSrc}
-                alt="School Logo"
-                style={{
-                  width: 64,
-                  height: 64,
-                  objectFit: "contain",
-                  borderRadius: 12,
-                }}
-              />
-            ) : (
-              <Building2 size={48} color="#6366f1" />
-            )}
+    <div className="flex min-h-dvh bg-white">
+      {/* Brand panel */}
+      <aside className="relative hidden w-[46%] max-w-2xl flex-col justify-between overflow-hidden bg-brand-700 p-10 text-white lg:flex xl:p-14">
+        {banner && <img src={banner} alt="" className="absolute inset-0 size-full object-cover opacity-25 mix-blend-luminosity" />}
+        <div className="absolute inset-0 bg-gradient-to-br from-brand-600/90 via-brand-700/90 to-brand-950/95" aria-hidden="true" />
+        <div className="pointer-events-none absolute -top-24 -right-24 size-80 rounded-full bg-white/10 blur-3xl" aria-hidden="true" />
+
+        <div className="relative flex items-center gap-3">
+          <SchoolLogo school={school} className="size-12 rounded-xl bg-white object-contain p-1 ring-1 ring-white/30" />
+          <div>
+            <p className="text-lg font-semibold">{school?.name || "School Management"}</p>
+            {school?.establishedYear && <p className="text-sm text-white/70">Since {school.establishedYear}</p>}
           </div>
-          <h1>{schoolInfo?.name || "Welcome Back"}</h1>
-          <p>
-            {schoolInfo?.tagline || "Sign in to your School Management Portal"}
-          </p>
-
-          {/* School Contact Info */}
-          {schoolInfo &&
-            (schoolInfo.phone ||
-              schoolInfo.landlineNumber ||
-              schoolInfo.email) && (
-              <div className="school-contact-info">
-                {schoolInfo.landlineNumber && (
-                  <span>
-                    <Phone size={14} /> {schoolInfo.landlineNumber}
-                  </span>
-                )}
-                {schoolInfo.phone && (
-                  <span>
-                    <Phone size={14} /> {schoolInfo.phone}
-                  </span>
-                )}
-                {schoolInfo.email && (
-                  <span>
-                    <Mail size={14} /> {schoolInfo.email}
-                  </span>
-                )}
-              </div>
-            )}
-
-          {/* Social Links */}
-          {schoolInfo &&
-            (schoolInfo.facebookUrl ||
-              schoolInfo.instagramUrl ||
-              schoolInfo.youtubeUrl) && (
-              <div className="school-social-links">
-                {schoolInfo.facebookUrl && (
-                  <a
-                    href={schoolInfo.facebookUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Facebook"
-                  >
-                    <Facebook size={20} />
-                  </a>
-                )}
-                {schoolInfo.instagramUrl && (
-                  <a
-                    href={schoolInfo.instagramUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Instagram"
-                  >
-                    <Instagram size={20} />
-                  </a>
-                )}
-                {schoolInfo.youtubeUrl && (
-                  <a
-                    href={schoolInfo.youtubeUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="YouTube"
-                  >
-                    <Youtube size={20} />
-                  </a>
-                )}
-                {schoolInfo.website && (
-                  <a
-                    href={schoolInfo.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Website"
-                  >
-                    <Globe size={20} />
-                  </a>
-                )}
-              </div>
-            )}
         </div>
 
-        {error && (
-          <div className="error-alert">
-            <AlertCircle size={18} />
-            <span>{error}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit(onSubmit)} className="login-form">
-          <div className="input-group">
-            <label htmlFor="email">Email Address</label>
-            <div className="input-with-icon">
-              <Mail size={18} className="icon" />
-              <input
-                id="email"
-                type="email"
-                placeholder="admin@school.com"
-                {...register("email", { required: "Email is required" })}
-              />
-            </div>
-            {errors.email && (
-              <span className="error-text">{errors.email.message}</span>
-            )}
-          </div>
-
-          <div className="input-group">
-            <label htmlFor="password">Password</label>
-            <div className="input-with-icon">
-              <Lock size={18} className="icon" />
-              <input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                {...register("password", { required: "Password is required" })}
-              />
-            </div>
-            {errors.password && (
-              <span className="error-text">{errors.password.message}</span>
-            )}
-          </div>
-
-          <button type="submit" className="login-submit" disabled={isLoading}>
-            {isLoading ? (
-              <div className="spinner"></div>
-            ) : (
-              <>
-                <LogIn size={18} />
-                <span>Sign In</span>
-              </>
-            )}
-          </button>
-        </form>
-
-        <div className="login-footer">
-          <p>
-            © {new Date().getFullYear()}{" "}
-            {schoolInfo?.name || "K-12 School Management System"}
+        <div className="relative">
+          <h2 className="max-w-md text-4xl leading-tight font-semibold tracking-tight">
+            {school?.tagline || "Everything your school runs on, in one place."}
+          </h2>
+          <p className="mt-4 max-w-md text-base text-white/75">
+            Attendance, exams, report cards, fees and notices for staff, students and parents.
           </p>
-          {schoolInfo?.address && (
-            <p className="school-address">{schoolInfo.address}</p>
+        </div>
+
+        <div className="relative space-y-4">
+          {contacts.length > 0 && (
+            <ul className="space-y-2 text-sm text-white/80">
+              {contacts.map((c) => (
+                <li key={c.text} className="flex items-center gap-2.5">
+                  <c.icon size={15} className="shrink-0 text-white/60" aria-hidden="true" />
+                  <span>{c.text}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {socials.length > 0 && (
+            <div className="flex gap-2">
+              {socials.map((s) => (
+                <a
+                  key={s.label}
+                  href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={s.label}
+                  title={s.label}
+                  className="inline-flex size-9 items-center justify-center rounded-lg bg-white/10 text-white transition-colors hover:bg-white/20"
+                >
+                  <s.icon size={16} aria-hidden="true" />
+                </a>
+              ))}
+            </div>
           )}
         </div>
-      </motion.div>
+      </aside>
 
-      <style>{`
-        .login-page {
-          min-height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-          padding: 1rem;
-        }
-        .login-card {
-          background: white;
-          padding: 2.5rem;
-          border-radius: 20px;
-          box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
-          width: 100%;
-          max-width: 440px;
-        }
-        .login-header { text-align: center; margin-bottom: 2rem; }
-        .logo-icon { margin-bottom: 1rem; display: flex; justify-content: center; }
-        .login-header h1 { font-size: 1.5rem; font-weight: 800; color: #1e293b; margin-bottom: 0.5rem; }
-        .login-header p { color: #64748b; font-size: 0.95rem; margin: 0; }
-        .school-contact-info {
-          display: flex;
-          flex-wrap: wrap;
-          justify-content: center;
-          gap: 1rem;
-          margin-top: 0.75rem;
-          font-size: 0.8rem;
-          color: #64748b;
-        }
-        .school-contact-info span {
-          display: flex;
-          align-items: center;
-          gap: 0.25rem;
-        }
-        .school-social-links {
-          display: flex;
-          justify-content: center;
-          gap: 0.75rem;
-          margin-top: 1rem;
-        }
-        .school-social-links a {
-          color: #6366f1;
-          padding: 0.5rem;
-          border-radius: 50%;
-          background: #f1f5f9;
-          transition: all 0.2s;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .school-social-links a:hover {
-          background: #6366f1;
-          color: white;
-        }
-        .input-group { margin-bottom: 1.25rem; }
-        .input-group label { display: block; font-size: 0.9rem; font-weight: 600; color: #475569; margin-bottom: 0.5rem; }
-        .input-with-icon { position: relative; }
-        .input-with-icon .icon { position: absolute; left: 12px; top: 12px; color: #94a3b8; }
-        .input-with-icon input {
-          width: 100%; padding: 0.75rem 0.75rem 0.75rem 2.5rem;
-          border: 1px solid #e2e8f0; border-radius: 10px; font-size: 1rem;
-          transition: border-color 0.2s;
-        }
-        .input-with-icon input:focus { outline: none; border-color: #6366f1; }
-        .error-alert {
-          background: #fef2f2; color: #b91c1c; padding: 0.75rem; border-radius: 8px;
-          display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; font-size: 0.9rem;
-        }
-        .error-text { color: #dc2626; font-size: 0.8rem; margin-top: 0.25rem; }
-        .login-submit {
-          width: 100%; background: #6366f1; color: white; border: none; padding: 0.85rem;
-          border-radius: 10px; font-weight: 600; cursor: pointer; transition: background 0.2s;
-          display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-        }
-        .login-submit:hover { background: #4f46e5; }
-        .login-submit:disabled { opacity: 0.7; cursor: not-allowed; }
-        .login-footer { margin-top: 2rem; text-align: center; font-size: 0.8rem; color: #94a3b8; }
-        .login-footer .school-address { margin-top: 0.25rem; font-size: 0.75rem; }
-        .spinner {
-          width: 20px; height: 20px; border: 2px solid white; border-bottom-color: transparent;
-          border-radius: 50%; animation: rotation 1s linear infinite;
-        }
-        @keyframes rotation {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+      {/* Form */}
+      <main className="flex flex-1 items-center justify-center px-5 py-12 sm:px-10">
+        <div className="w-full max-w-sm animate-pop-in">
+          <div className="mb-8 flex items-center gap-3 lg:hidden">
+            <SchoolLogo school={school} className="size-11 rounded-xl object-contain ring-1 ring-slate-200" />
+            <div className="min-w-0">
+              <p className="truncate font-semibold text-slate-900">{school?.name || "School Management"}</p>
+              {school?.tagline && <p className="truncate text-sm text-slate-500">{school.tagline}</p>}
+            </div>
+          </div>
+
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Sign in</h1>
+          <p className="mt-1.5 text-sm text-slate-500">Welcome back. Use the email and password your school gave you.</p>
+
+          {error && (
+            <Alert tone="danger" className="mt-6">
+              {error}
+            </Alert>
+          )}
+
+          <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4" noValidate>
+            <Field label="Email" htmlFor="email" error={errors.email?.message}>
+              <TextInput
+                id="email"
+                type="email"
+                icon={AtSign}
+                autoComplete="username"
+                placeholder="you@school.edu.np"
+                invalid={Boolean(errors.email)}
+                className="h-11"
+                {...register("email", { required: "Email is required" })}
+              />
+            </Field>
+
+            <Field label="Password" htmlFor="password" error={errors.password?.message}>
+              <div className="relative">
+                <TextInput
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  icon={Lock}
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  invalid={Boolean(errors.password)}
+                  className="h-11 pr-11"
+                  {...register("password", { required: "Password is required" })}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute top-1/2 right-2 inline-flex size-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                >
+                  {showPassword ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
+                </button>
+              </div>
+            </Field>
+
+            <Button type="submit" size="lg" loading={isLoading} className="w-full">
+              {isLoading ? "Signing in…" : "Sign in"}
+            </Button>
+          </form>
+
+          <p className="mt-10 text-center text-xs text-slate-400">
+            © {new Date().getFullYear()} {school?.name || "School Management System"}
+          </p>
+        </div>
+      </main>
     </div>
   );
 };
