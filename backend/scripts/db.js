@@ -18,6 +18,7 @@
 require("dotenv").config();
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
+const { run: spawn } = require("./spawn");
 const { resolveDatabaseConfig, DatabaseConfigError } = require("../src/database/config");
 
 const ROOT = path.join(__dirname, "..");
@@ -34,7 +35,7 @@ const OFFLINE_ENV = {
 };
 
 const run = (args, env = process.env) => {
-  const r = spawnSync("npx", ["prisma", ...args], { stdio: "inherit", cwd: ROOT, shell: process.platform === "win32", env });
+  const r = spawn("npx", ["prisma", ...args], { cwd: ROOT, env });
   if (r.status !== 0) process.exit(r.status ?? 1);
 };
 const node = (script, args = []) => {

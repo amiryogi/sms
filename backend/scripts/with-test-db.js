@@ -17,7 +17,7 @@
  * the same host and database as a configured app URL.
  */
 require("dotenv").config();
-const { spawnSync } = require("node:child_process");
+const { run } = require("./spawn");
 
 const fail = (msg) => {
   console.error(`with-test-db: ${msg}`);
@@ -49,10 +49,9 @@ const guard = (name, url) => {
   if (appUrls.some((u) => sameDb(u, url))) fail(`${name} points at a database the app is configured to use. Refusing to run.`);
 };
 
-const env = { ...process.env, SMS_TEST_DB: "1" };
-delete env.MYSQL_DATABASE_URL;
-delete env.SUPABASE_DATABASE_URL;
-delete env.SUPABASE_DIRECT_URL;
+// Blank (not delete) the app URLs: dotenv never overrides a variable that is
+// already set, so a deleted one would come straight back from .env.
+const env = { ...process.env, SMS_TEST_DB: "1", MYSQL_DATABASE_URL: "", SUPABASE_DATABASE_URL: "", SUPABASE_DIRECT_URL: "" };
 
 if (provider === "mysql") {
   let url = process.env.MYSQL_TEST_DATABASE_URL;
@@ -73,5 +72,5 @@ if (provider === "mysql") {
   Object.assign(env, { DATABASE_PROVIDER: "supabase", SUPABASE_DATABASE_URL: url, SUPABASE_DIRECT_URL: direct });
 }
 
-const result = spawnSync(cmd, args, { stdio: "inherit", shell: process.platform === "win32", env });
+const result = run(cmd, args, { env });
 process.exit(result.status ?? 1);

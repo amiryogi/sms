@@ -53,8 +53,11 @@ npm run seed                   # roles, permissions, demo school, presets (idemp
 ```
 
 **Supabase client:**
-1. Create a Supabase project. Copy the pooled connection string (port 6543) and the direct
-   one (port 5432) from Project Settings → Database.
+1. Create a Supabase project. Copy the **Transaction pooler** string (port 6543) for
+   `SUPABASE_DATABASE_URL` and the **Direct connection** string (port 5432) for
+   `SUPABASE_DIRECT_URL`. The direct host is IPv6-only: if the machine has no IPv6, use the
+   **Session pooler** string (pooler host, port 5432) as `SUPABASE_DIRECT_URL`. Migrations
+   work through it.
 2. Run:
    ```bash
    DATABASE_PROVIDER=supabase  SUPABASE_DATABASE_URL=...pooled...  SUPABASE_DIRECT_URL=...direct...

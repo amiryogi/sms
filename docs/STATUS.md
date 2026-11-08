@@ -20,7 +20,7 @@ per deployment with `DATABASE_PROVIDER`.
 | 1 | Read-only audit + 5 docs | **Done** (2026-11-08) |
 | 2 | Architecture approval | **Approved** (2026-11-08) |
 | 3 | MySQL preserved on the new layer: `src/database`, shared `models.prisma` → two schemas, migrations moved, `db:*` scripts, regression tests | **Done** (2026-11-08) |
-| 4 | PostgreSQL baseline migration, client, seed on a Supabase test project | — needs the Supabase test project URLs in `backend/.env` |
+| 4 | PostgreSQL baseline migration, client, seed on a Supabase test project | **Done** (2026-11-08) |
 | 5 | Dialect fixes (receipt sequence, text search/equality, ordering) | — |
 | 6 | Both integration runs + browser sweep on PostgreSQL | — |
 | 7 | Deployment docs (Supabase guide) | — |
@@ -35,6 +35,19 @@ per deployment with `DATABASE_PROVIDER`.
   migrations to `prisma/mysql/migrations`.
 - **Other checks:** `reconcile` is OK on both databases; the browser sweep of 7 roles shows no
   console errors or failed calls.
+
+**Phase 4 verified (Supabase test project, PostgreSQL 17, collation en_US.UTF-8):**
+- **Baseline:** `prisma/postgresql/migrations/0_init` (45 tables, 21 enum types) applied; the
+  drift check finds no difference; `db:status` is up to date.
+- **Receipt numbering:** the ledger's MySQL-only `INSERT IGNORE` is now Prisma
+  `createMany({ skipDuplicates })` (compatibility C1). It still passes 79/79 on MySQL.
+- **Seed:** `npm run seed` completes on PostgreSQL, including the demo fee data through the
+  ledger. `reconcile` is OK.
+- **Connection:** the direct host is IPv6-only and this PC has no IPv6, so
+  `SUPABASE_TEST_DIRECT_URL` uses the **session pooler** (port 5432 on the pooler host).
+  Migrations work through it.
+- **Speed:** the seed takes about 16 minutes over the internet (hundreds of sequential round
+  trips to ap-southeast-1); locally it takes seconds.
 
 **Upgrade note for any existing MySQL install:** add `DATABASE_PROVIDER=mysql` and rename
 `DATABASE_URL` to `MYSQL_DATABASE_URL`. The database needs no change.

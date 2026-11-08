@@ -39,11 +39,30 @@ describe("provider schemas", () => {
     expect(read(MODELS)).not.toMatch(/^\s*(datasource|generator)\s+\w+\s*\{/m);
   });
 
-  test("each provider keeps its own migration history", () => {
-    const lock = read(path.join(BACKEND, "prisma/mysql/migrations/migration_lock.toml"));
-    expect(lock).toMatch(/provider = "mysql"/);
-    expect(fs.existsSync(path.join(BACKEND, "prisma/mysql/migrations/0_init/migration.sql"))).toBe(true);
+  test.each(["mysql", "postgresql"])("%s keeps its own migration history", (provider) => {
+    const dir = path.join(BACKEND, "prisma", provider, "migrations");
+    expect(read(path.join(dir, "migration_lock.toml"))).toMatch(new RegExp(`provider = "${provider}"`));
+    expect(fs.existsSync(path.join(dir, "0_init", "migration.sql"))).toBe(true);
     expect(fs.existsSync(path.join(BACKEND, "prisma/migrations"))).toBe(false);
+  });
+
+  test("the PostgreSQL baseline creates every model and enum, with no MySQL syntax", () => {
+    const sql = read(path.join(BACKEND, "prisma/postgresql/migrations/0_init/migration.sql"));
+    const models = read(MODELS);
+    expect((sql.match(/^CREATE TABLE /gm) || []).length).toBe((models.match(/^model /gm) || []).length);
+    expect((sql.match(/^CREATE TYPE .* AS ENUM/gm) || []).length).toBe((models.match(/^enum /gm) || []).length);
+    expect(sql).not.toMatch(/`|AUTO_INCREMENT|ENGINE=|INSERT IGNORE/);
+  });
+
+  test("every later migration exists for both providers (same folder names after 0_init)", () => {
+    const names = (provider) =>
+      fs.readdirSync(path.join(BACKEND, "prisma", provider, "migrations"), { withFileTypes: true })
+        .filter((e) => e.isDirectory() && e.name !== "0_init")
+        .map((e) => e.name);
+    // The MySQL history before the PostgreSQL baseline is folded into its 0_init.
+    const BASELINE_COVERS = "20261108180000_drop_legacy_fee_columns";
+    const mysqlAfter = names("mysql").filter((n) => n > BASELINE_COVERS);
+    expect(names("postgresql")).toEqual(mysqlAfter);
   });
 });
 

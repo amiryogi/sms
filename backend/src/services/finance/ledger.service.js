@@ -41,7 +41,9 @@ const RECEIPT_INCLUDE = {
 
 /** Take the next number of a series in a fiscal year (locks the sequence row). */
 const nextReceiptNumber = async (tx, schoolId, series, fiscalYear) => {
-  await tx.$executeRaw`INSERT IGNORE INTO receipt_sequences (school_id, series, fiscal_year, next_number) VALUES (${schoolId}, ${series}, ${fiscalYear}, 1)`;
+  // Create the counter row if missing. skipDuplicates is INSERT IGNORE on MySQL
+  // and ON CONFLICT DO NOTHING on PostgreSQL; the row lock below does the rest.
+  await tx.receiptSequence.createMany({ data: [{ schoolId, series, fiscalYear, nextNumber: 1 }], skipDuplicates: true });
   const [row] = await tx.$queryRaw`SELECT next_number FROM receipt_sequences WHERE school_id = ${schoolId} AND series = ${series} AND fiscal_year = ${fiscalYear} FOR UPDATE`;
   await tx.$executeRaw`UPDATE receipt_sequences SET next_number = next_number + 1 WHERE school_id = ${schoolId} AND series = ${series} AND fiscal_year = ${fiscalYear}`;
   return formatReceiptNumber(series, fiscalYear, Number(row.next_number));
