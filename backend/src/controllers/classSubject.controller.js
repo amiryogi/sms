@@ -24,6 +24,7 @@ const getClassSubjects = asyncHandler(async (req, res) => {
   }
 
   const classSubjects = await prisma.classSubject.findMany({
+    orderBy: { id: "asc" },
     where,
     include: {
       subject: true,

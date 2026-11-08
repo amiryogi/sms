@@ -19,6 +19,7 @@ const loadTeacherContext = asyncHandler(async (req, res, next) => {
 
   // Load all teacher assignments for current academic year
   const assignments = await prisma.teacherSubject.findMany({
+    orderBy: { id: "asc" },
     where: {
       userId: req.user.id,
       classSubject: {
@@ -128,6 +129,7 @@ const loadStudentContext = asyncHandler(async (req, res, next) => {
 
   // Get subjects for current class
   const classSubjects = await prisma.classSubject.findMany({
+    orderBy: { id: "asc" },
     where: {
       classId: enrollment.classId,
       academicYearId: enrollment.academicYearId,
@@ -170,6 +172,7 @@ const loadParentContext = asyncHandler(async (req, res, next) => {
 
   // Load parent's children
   const studentParents = await prisma.studentParent.findMany({
+    orderBy: { id: "asc" },
     where: {
       parentId: req.user.parentId,
     },

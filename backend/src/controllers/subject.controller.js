@@ -1,4 +1,5 @@
 const prisma = require('../config/database');
+const { dialect } = require('../database');
 const { ApiError, ApiResponse, asyncHandler, buildSearchQuery } = require('../utils');
 
 /**
@@ -12,7 +13,7 @@ const getSubjects = asyncHandler(async (req, res) => {
   const where = { schoolId: req.user.schoolId };
 
   if (search) {
-    const searchQuery = buildSearchQuery(search, ['name', 'code']);
+    const searchQuery = buildSearchQuery(search, ['name', 'code'], dialect.text.search);
     if (searchQuery) where.OR = searchQuery.OR;
   }
 
@@ -52,7 +53,7 @@ const createSubject = asyncHandler(async (req, res) => {
   const { name, code, description, isOptional, creditHours, hasPractical } = req.body;
 
   const existingSubject = await prisma.subject.findFirst({
-    where: { schoolId: req.user.schoolId, code },
+    where: { schoolId: req.user.schoolId, code: dialect.text.equals(code) },
   });
 
   if (existingSubject) {
@@ -94,7 +95,7 @@ const updateSubject = asyncHandler(async (req, res) => {
   // Check code uniqueness if changed
   if (code && code !== subject.code) {
     const existingSubject = await prisma.subject.findFirst({
-      where: { schoolId: req.user.schoolId, code, NOT: { id: parseInt(id) } },
+      where: { schoolId: req.user.schoolId, code: dialect.text.equals(code), NOT: { id: parseInt(id) } },
     });
 
     if (existingSubject) {

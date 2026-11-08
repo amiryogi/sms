@@ -3,6 +3,7 @@
  * account lists, waivers and the reconciliation check.
  */
 const prisma = require("../../config/database");
+const { dialect } = require("../../database");
 const { ApiError } = require("../../utils");
 const m = require("../../utils/money");
 const { installmentBalance, isOverdue } = require("../../utils/feeStatus");
@@ -24,6 +25,7 @@ const scheduleFor = (structure) => {
  */
 const generate = async ({ schoolId, userId, actorRole, studentClassIds, classId, academicYearId }) => {
   const structures = await prisma.feeStructure.findMany({
+    orderBy: { id: "asc" },
     where: { schoolId, classId, academicYearId },
     include: { installmentPlan: true },
   });
@@ -217,15 +219,15 @@ const accounts = async ({ schoolId, academicYearId, classId, sectionId, search, 
   if (search) {
     where.student = {
       OR: [
-        { admissionNumber: { contains: search } },
-        { user: { firstName: { contains: search } } },
-        { user: { lastName: { contains: search } } },
+        { admissionNumber: dialect.text.search(search) },
+        { user: { firstName: dialect.text.search(search) } },
+        { user: { lastName: dialect.text.search(search) } },
       ],
     };
   }
   const enrolments = await prisma.studentClass.findMany({
     where,
-    orderBy: [{ class: { displayOrder: "asc" } }, { section: { name: "asc" } }, { rollNumber: "asc" }],
+    orderBy: [{ class: { displayOrder: "asc" } }, { section: { name: "asc" } }, { rollNumber: { sort: "asc", nulls: "first" } }],
     select: {
       id: true,
       rollNumber: true,

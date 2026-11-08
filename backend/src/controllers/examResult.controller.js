@@ -89,6 +89,7 @@ const getExamsForMarksEntry = asyncHandler(async (req, res) => {
           exam.examSubjects.map(async (es) => {
             // Get all sections that have students enrolled in this class
             const sections = await prisma.section.findMany({
+              orderBy: { id: "asc" },
               where: {
                 schoolId: req.user.schoolId,
                 studentClasses: {
@@ -117,6 +118,7 @@ const getExamsForMarksEntry = asyncHandler(async (req, res) => {
 
   // TEACHER: Can only see exams for assigned subjects
   const teacherSubjects = await prisma.teacherSubject.findMany({
+    orderBy: { id: "asc" },
     where: {
       userId,
       ...yearFilter,
@@ -222,6 +224,7 @@ const getTeacherExams = asyncHandler(async (req, res) => {
 
   // Get teacher's assigned subjects for the academic year
   const teacherSubjects = await prisma.teacherSubject.findMany({
+    orderBy: { id: "asc" },
     where: {
       userId,
       ...yearFilter,
@@ -361,6 +364,7 @@ const getResultsByExamSubject = asyncHandler(async (req, res) => {
 
   // Get existing results with student info
   const results = await prisma.examResult.findMany({
+    orderBy: { id: "asc" },
     where: {
       examSubjectId: parseInt(examSubjectId),
       schoolId: req.user.schoolId, // Fix Issue #6: Add schoolId filter
@@ -678,7 +682,7 @@ const getStudentsForMarksEntry = asyncHandler(async (req, res) => {
         },
       },
     },
-    orderBy: { rollNumber: "asc" },
+    orderBy: { rollNumber: { sort: "asc", nulls: "first" } },
   });
 
   // Transform data

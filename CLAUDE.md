@@ -175,7 +175,8 @@ a component without going through a service.
 9. **Never trust names, only flags.** No `className.includes('10')`, no grade-level string parsing in the frontend. The backend decides academic rules and returns booleans; the frontend renders them.
 10. **MySQL reserved words:** `rank` is mapped as `classRank` -> `class_rank`. Watch for similar collisions when adding columns.
 11. **Money goes through the ledger only** (`services/finance/*`, plan `docs/plans/finance-and-portals.md`). `FeeTransaction` rows are never updated or deleted; a mistake is undone by a REVERSAL (admin only, never self-approved). Payments never exceed what is owed. `FeeObligation` (table `fee_payments`) and `FeeInstallment` totals are caches rewritten in the same DB transaction (READ COMMITTED, rows locked `FOR UPDATE`). Do maths with `utils/money.js` (Prisma Decimal), never `parseFloat`. Do not write `prisma.feeObligation.update({ amountPaid })` or similar by hand.
-12. **Two database providers, one codebase** (`docs/database/`).
+12. **Two database providers, one codebase** (`docs/database/`; Supabase setup in
+    `docs/database/supabase-deployment.md`).
     - **Models:** they live only in `prisma/schema/models.prisma`. `npm run db:schemas`
       writes `prisma/mysql/schema.prisma` and `prisma/postgresql/schema.prisma`, so never
       edit those, and use only types and `@db` attributes valid on both engines.
@@ -185,6 +186,17 @@ a component without going through a service.
       `dialect`. Never `require("@prisma/client")` (a unit test enforces it).
     - **Provider differences** (case-insensitive search and equality, table resets, unique-key
       checks) go through `dialect` helpers. Never `if (provider === ...)` in controllers.
+    - **Text matching:** search with `dialect.text.search(v)` (or pass it to
+      `buildSearchQuery`), and look up codes with `dialect.text.equals(v)`. A bare
+      `contains` / `equals` is case-sensitive on PostgreSQL.
+    - **Order is never implicit:**
+      - every list shown to users, or processed in order, gets an explicit `orderBy` (at least
+        `{ id: "asc" }`), because PostgreSQL has no default row order;
+      - a nullable sort key says where NULLs go (`{ rollNumber: { sort: "asc", nulls: "first" } }`),
+        because the engines disagree.
+    - **No database-specific SQL in raw queries.** Use Prisma for inserts
+      (`createMany({ skipDuplicates })` instead of `INSERT IGNORE`). Plain `SELECT ... FOR UPDATE`
+      on snake_case table names is portable.
 
 ---
 

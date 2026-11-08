@@ -3,6 +3,7 @@
  * only checks access, shapes requests and responses.
  */
 const prisma = require("../config/database");
+const { dialect } = require("../database");
 const { ApiError, ApiResponse, asyncHandler, parsePagination } = require("../utils");
 const { getFeeManagementRole } = require("../middleware");
 const ledger = require("../services/finance/ledger.service");
@@ -66,11 +67,11 @@ const listTransactions = asyncHandler(async (req, res) => {
   if (from || to) where.paidOn = { ...(from ? { gte: new Date(`${from.slice(0, 10)}T00:00:00Z`) } : {}), ...(to ? { lte: new Date(`${to.slice(0, 10)}T00:00:00Z`) } : {}) };
   if (search) {
     where.OR = [
-      { receiptNumber: { contains: search } },
-      { reference: { contains: search } },
-      { student: { admissionNumber: { contains: search } } },
-      { student: { user: { firstName: { contains: search } } } },
-      { student: { user: { lastName: { contains: search } } } },
+      { receiptNumber: dialect.text.search(search) },
+      { reference: dialect.text.search(search) },
+      { student: { admissionNumber: dialect.text.search(search) } },
+      { student: { user: { firstName: dialect.text.search(search) } } },
+      { student: { user: { lastName: dialect.text.search(search) } } },
     ];
   }
   const [rows, total] = await Promise.all([
@@ -183,7 +184,7 @@ const generateForEnrolment = asyncHandler(async (req, res) => {
 const generateForClass = asyncHandler(async (req, res) => {
   const schoolId = req.user.schoolId;
   const { classId, academicYearId } = req.body;
-  const enrolments = await prisma.studentClass.findMany({ where: { schoolId, classId, academicYearId, status: "active" }, select: { id: true } });
+  const enrolments = await prisma.studentClass.findMany({ orderBy: { id: "asc" }, where: { schoolId, classId, academicYearId, status: "active" }, select: { id: true } });
   if (enrolments.length === 0) throw ApiError.badRequest("No active students found in this class for the selected year");
 
   const count = await obligations.generate({

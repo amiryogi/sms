@@ -1,4 +1,5 @@
 const prisma = require("../config/database");
+const { dialect } = require("../database");
 const { ApiResponse, ApiError, asyncHandler } = require("../utils");
 const fs = require("fs");
 const path = require("path");
@@ -247,8 +248,10 @@ const uploadBanner = asyncHandler(async (req, res) => {
 const getPublicSchoolByCode = asyncHandler(async (req, res) => {
   const { code } = req.params;
 
-  const school = await prisma.school.findUnique({
-    where: { code },
+  // findFirst + insensitive equality: the code matches regardless of case on
+  // both providers (MySQL's collation already did this; PostgreSQL does not).
+  const school = await prisma.school.findFirst({
+    where: { code: dialect.text.equals(code) },
     select: {
       // Only expose non-sensitive branding info
       name: true,

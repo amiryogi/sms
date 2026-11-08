@@ -58,18 +58,19 @@ const parseFilters = (query, filterableFields = []) => {
 };
 
 /**
- * Build Prisma where clause for search
+ * Build Prisma where clause for search. `textFilter` builds the per-field
+ * filter; controllers pass `dialect.text.search` (src/database) so the search
+ * ignores case on PostgreSQL as it already does on MySQL. The default keeps
+ * this helper free of any database dependency.
  */
-const buildSearchQuery = (searchTerm, searchFields = []) => {
+const buildSearchQuery = (searchTerm, searchFields = [], textFilter = (value) => ({ contains: value })) => {
   if (!searchTerm || searchFields.length === 0) {
     return undefined;
   }
 
   return {
     OR: searchFields.map((field) => ({
-      [field]: {
-        contains: searchTerm,
-      },
+      [field]: textFilter(searchTerm),
     })),
   };
 };

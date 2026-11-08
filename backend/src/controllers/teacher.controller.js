@@ -1,4 +1,5 @@
 const prisma = require("../config/database");
+const { dialect } = require("../database");
 const {
   ApiError,
   ApiResponse,
@@ -52,7 +53,7 @@ const getTeachers = asyncHandler(async (req, res) => {
       "firstName",
       "lastName",
       "email",
-    ]);
+    ], dialect.text.search);
     if (searchQuery) where.OR = searchQuery.OR;
   }
 
@@ -277,6 +278,7 @@ const getMyStudents = asyncHandler(async (req, res) => {
 
   // Step 1: Get teacher's assignments (class/section combinations)
   const teacherAssignments = await prisma.teacherSubject.findMany({
+    orderBy: { id: "asc" },
     where: {
       userId: teacherId,
       ...yearFilter,
@@ -349,7 +351,7 @@ const getMyStudents = asyncHandler(async (req, res) => {
     orderBy: [
       { class: { displayOrder: "asc" } },
       { section: { name: "asc" } },
-      { rollNumber: "asc" },
+      { rollNumber: { sort: "asc", nulls: "first" } },
     ],
   });
 

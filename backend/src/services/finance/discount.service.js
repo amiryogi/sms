@@ -208,7 +208,7 @@ const list = async ({ schoolId, status, studentId, academicYearId }) => {
  * discounts for that year to them. Runs inside the caller's transaction.
  */
 const applyApprovedToNewObligations = async (tx, { schoolId, studentId, academicYearId, obligations }) => {
-  const discounts = await tx.feeDiscount.findMany({ where: { schoolId, studentId, academicYearId, status: "APPROVED" } });
+  const discounts = await tx.feeDiscount.findMany({ orderBy: { id: "asc" }, where: { schoolId, studentId, academicYearId, status: "APPROVED" } });
   for (const d of discounts) {
     const ids = obligations.filter((o) => !d.feeTypeId || o.feeTypeId === d.feeTypeId).map((o) => o.id);
     await applyToObligations(tx, d, ids);

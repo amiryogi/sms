@@ -172,6 +172,25 @@ describe("queries", () => {
     expect(hit?.code).toBe("MAT0");
   });
 
+  test("NULLs sort first when the code asks for it (MySQL's default, PostgreSQL's opposite)", async () => {
+    const year = await prisma.academicYear.findFirst({ where: { schoolId: ctx.schoolId } });
+    const user = await prisma.user.findFirst({ orderBy: { id: "asc" }, select: { id: true } });
+    const base = { schoolId: ctx.schoolId, academicYearId: year.id, examType: "unit_test", createdBy: user.id };
+    await prisma.exam.createMany({
+      data: [
+        { ...base, name: "Dated", startDate: new Date("2026-08-01") },
+        { ...base, name: "Undated", startDate: null },
+      ],
+    });
+    const rows = await prisma.exam.findMany({
+      where: { schoolId: ctx.schoolId },
+      orderBy: [{ startDate: { sort: "asc", nulls: "first" } }, { id: "asc" }],
+      select: { name: true },
+    });
+    expect(rows.map((r) => r.name)).toEqual(["Undated", "Dated"]);
+    await prisma.exam.deleteMany({ where: { schoolId: ctx.schoolId } });
+  });
+
   test("groupBy and aggregate", async () => {
     const groups = await prisma.subject.groupBy({ by: ["schoolId"], where: { schoolId: ctx.schoolId }, _count: { _all: true } });
     expect(groups).toEqual([{ schoolId: ctx.schoolId, _count: { _all: 5 } }]);

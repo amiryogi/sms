@@ -1,5 +1,6 @@
 const bcrypt = require("bcryptjs");
 const prisma = require("../config/database");
+const { dialect } = require("../database");
 const { ApiError, parsePagination, buildSearchQuery } = require("../utils");
 
 const RELATIONSHIPS = ["father", "mother", "guardian"];
@@ -207,7 +208,7 @@ const listParents = async (schoolId, query) => {
       "lastName",
       "email",
       "phone",
-    ]);
+    ], dialect.text.search);
     if (searchQuery) userWhere.OR = searchQuery.OR;
   }
 

@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const prisma = require('../config/database');
+const { dialect } = require('../database');
 const { ApiError, ApiResponse, asyncHandler, parsePagination, parseSort, buildSearchQuery } = require('../utils');
 
 // Roles that need a profile row (Student / Parent). They are created through
@@ -43,7 +44,7 @@ const getUsers = asyncHandler(async (req, res) => {
 
   // Add search filter
   if (search) {
-    const searchQuery = buildSearchQuery(search, ['firstName', 'lastName', 'email']);
+    const searchQuery = buildSearchQuery(search, ['firstName', 'lastName', 'email'], dialect.text.search);
     if (searchQuery) {
       where.OR = searchQuery.OR;
     }
@@ -508,6 +509,7 @@ const deleteUser = asyncHandler(async (req, res) => {
  */
 const getRoles = asyncHandler(async (req, res) => {
   const roles = await prisma.role.findMany({
+    orderBy: { id: "asc" },
     include: {
       rolePermissions: {
         include: {

@@ -62,7 +62,7 @@ Then edit `backend/.env`:
 - `DATABASE_PROVIDER=mysql` and `MYSQL_DATABASE_URL` — your new user and password.
   URL-encode any `@ : / #` in the password (`@` → `%40`, and so on). For a Supabase
   (PostgreSQL) install use `DATABASE_PROVIDER=supabase` with `SUPABASE_DATABASE_URL` and
-  `SUPABASE_DIRECT_URL` instead (see `.env.example` and `docs/database/`). The server refuses
+  `SUPABASE_DIRECT_URL` instead: follow `docs/database/supabase-deployment.md`. The server refuses
   to start without a valid provider and URL.
 - `JWT_SECRET` and `JWT_REFRESH_SECRET` — generate fresh ones, never copy them
   between machines:

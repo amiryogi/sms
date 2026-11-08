@@ -1,4 +1,5 @@
 const prisma = require("../config/database");
+const { dialect } = require("../database");
 const {
   ApiError,
   ApiResponse,
@@ -18,7 +19,7 @@ const getFeeTypes = asyncHandler(async (req, res) => {
   const where = { schoolId: req.user.schoolId };
 
   if (search) {
-    const searchQuery = buildSearchQuery(search, ["name", "description"]);
+    const searchQuery = buildSearchQuery(search, ["name", "description"], dialect.text.search);
     if (searchQuery) where.OR = searchQuery.OR;
   }
 

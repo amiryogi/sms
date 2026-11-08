@@ -22,6 +22,7 @@ const resolveYear = async (schoolId, academicYearId) => {
 /** Live installments (cancelled fees excluded) for a year, flattened for the helpers. */
 const loadInstallments = async ({ schoolId, academicYearId, classId, feeTypeId }) => {
   const rows = await prisma.feeInstallment.findMany({
+    orderBy: { id: "asc" },
     where: {
       schoolId,
       status: { not: "cancelled" },
@@ -68,6 +69,7 @@ const loadInstallments = async ({ schoolId, academicYearId, classId, feeTypeId }
  */
 const loadAllocations = async ({ schoolId, academicYearId, classId, feeTypeId, method, from, to }) => {
   const rows = await prisma.feeAllocation.findMany({
+    orderBy: { id: "asc" },
     where: {
       transaction: {
         schoolId,

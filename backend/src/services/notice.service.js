@@ -20,6 +20,7 @@
  */
 
 const prisma = require("../config/database");
+const { dialect } = require("../database");
 const { ApiError, parsePagination } = require("../utils");
 
 // =============================================================================
@@ -52,6 +53,7 @@ const getCurrentAcademicYear = async (schoolId) => {
 
 const getUserRoles = async (userId) => {
   const userRoles = await prisma.userRole.findMany({
+    orderBy: { id: "asc" },
     where: { userId },
     include: { role: { select: { name: true, id: true } } },
   });
@@ -72,6 +74,7 @@ const hasRole = (userRoles, roleNames) => {
 
 const getTeacherAssignedClasses = async (userId, academicYearId) => {
   const assignments = await prisma.teacherSubject.findMany({
+    orderBy: { id: "asc" },
     where: {
       userId,
       academicYearId,
@@ -931,8 +934,8 @@ const listNotices = async (user, query = {}) => {
   // Search filter
   if (search) {
     baseWhere.OR = [
-      { title: { contains: search } },
-      { content: { contains: search } },
+      { title: dialect.text.search(search) },
+      { content: dialect.text.search(search) },
     ];
   }
 
@@ -1024,7 +1027,7 @@ const listNotices = async (user, query = {}) => {
   if (search) {
     candidateWhere.AND = candidateWhere.AND || [];
     candidateWhere.AND.push({
-      OR: [{ title: { contains: search } }, { content: { contains: search } }],
+      OR: [{ title: dialect.text.search(search) }, { content: dialect.text.search(search) }],
     });
   }
 

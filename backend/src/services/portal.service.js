@@ -83,7 +83,7 @@ const overview = async ({ schoolId, studentId }) => {
         examSubjects: { some: { classSubject: { classId: enrolment.classId } } },
       },
       select: { id: true, name: true, examType: true, startDate: true, endDate: true, status: true },
-      orderBy: [{ startDate: "asc" }],
+      orderBy: [{ startDate: { sort: "asc", nulls: "first" } }, { id: "asc" }],
       take: 5,
     }),
     prisma.assignment.findMany({

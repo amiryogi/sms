@@ -46,6 +46,7 @@ const importSubjects = asyncHandler(async (req, res) => {
 
   // The school's classes, by grade level (K-10 scope: whatever exists)
   const classes = await prisma.class.findMany({
+    orderBy: { id: "asc" },
     where: { schoolId: req.user.schoolId },
     select: { id: true, gradeLevel: true, name: true },
   });

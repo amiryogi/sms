@@ -119,7 +119,7 @@ const getEligibleStudents = asyncHandler(async (req, res) => {
       class: { select: { id: true, name: true, gradeLevel: true } },
       section: { select: { id: true, name: true } },
     },
-    orderBy: [{ section: { name: 'asc' } }, { rollNumber: 'asc' }],
+    orderBy: [{ section: { name: 'asc' } }, { rollNumber: { sort: 'asc', nulls: 'first' } }],
   });
 
   // Mark students as already promoted or eligible

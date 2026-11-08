@@ -170,13 +170,14 @@ const getReportCards = asyncHandler(async (req, res) => {
       class: true,
       section: true,
     },
-    orderBy: { rollNumber: "asc" },
+    orderBy: { rollNumber: { sort: "asc", nulls: "first" } },
   });
 
   // Get all exam results for these students
   const studentIds = enrollments.map((e) => e.studentId);
 
   const examResults = await prisma.examResult.findMany({
+    orderBy: { id: "asc" },
     where: {
       studentId: { in: studentIds },
       examSubject: {
@@ -326,6 +327,7 @@ const generateReportCards = asyncHandler(async (req, res) => {
 
   // Get all students in this class-section
   const enrollments = await prisma.studentClass.findMany({
+    orderBy: { id: "asc" },
     where: {
       classId: parseInt(classId),
       sectionId: parseInt(sectionId),
@@ -369,6 +371,7 @@ const generateReportCards = asyncHandler(async (req, res) => {
     for (const enrollment of enrollments) {
       // Get all results for this student in this exam
       const studentResults = await tx.examResult.findMany({
+        orderBy: { id: "asc" },
         where: {
           studentId: enrollment.studentId,
           examSubject: { examId: parseInt(examId) },
@@ -869,7 +872,7 @@ const getBulkReportCards = asyncHandler(async (req, res) => {
       },
     },
     orderBy: {
-      studentClass: { rollNumber: "asc" },
+      studentClass: { rollNumber: { sort: "asc", nulls: "first" } },
     },
   });
 

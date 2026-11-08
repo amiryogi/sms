@@ -113,7 +113,7 @@ const getResultsBySubject = asyncHandler(async (req, res) => {
         },
       },
     },
-    orderBy: { rollNumber: "asc" },
+    orderBy: { rollNumber: { sort: "asc", nulls: "first" } },
   });
 
   const formattedResults = students.map((enrollment) => ({
@@ -362,6 +362,7 @@ const getStudentExamResults = asyncHandler(async (req, res) => {
   }
 
   const results = await prisma.examResult.findMany({
+    orderBy: { id: "asc" },
     where: {
       studentId,
       examSubject: {

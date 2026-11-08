@@ -156,6 +156,7 @@ const createExam = asyncHandler(async (req, res) => {
   // 2. Auto-link subjects for the selected classes (if provided)
   if (classIdList.length > 0) {
     const classSubjects = await prisma.classSubject.findMany({
+      orderBy: { id: "asc" },
       where: {
         academicYearId: yearId,
         classId: { in: classIdList },

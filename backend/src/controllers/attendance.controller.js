@@ -96,7 +96,7 @@ const getAttendance = asyncHandler(async (req, res) => {
         where: { attendanceDate },
       },
     },
-    orderBy: { rollNumber: "asc" },
+    orderBy: { rollNumber: { sort: "asc", nulls: "first" } },
   });
 
   const formattedAttendance = enrollments.map((e) => ({

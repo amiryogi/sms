@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const prisma = require('../config/database');
+const { dialect } = require('../database');
 const { ApiError, ApiResponse, asyncHandler, parsePagination, parseSort, buildSearchQuery } = require('../utils');
 
 const isAdminUser = (user) => user.roles.includes('ADMIN') || user.roles.includes('SUPER_ADMIN');
@@ -107,7 +108,7 @@ const getStudents = asyncHandler(async (req, res) => {
   };
 
   if (search) {
-    const searchQuery = buildSearchQuery(search, ['firstName', 'lastName', 'email']);
+    const searchQuery = buildSearchQuery(search, ['firstName', 'lastName', 'email'], dialect.text.search);
     if (searchQuery) userWhere.OR = searchQuery.OR;
   }
 

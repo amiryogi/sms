@@ -9,6 +9,7 @@
  * - Receipt numbers are sequential per school, series and Nepali fiscal year.
  */
 const prisma = require("../../config/database");
+const { dialect } = require("../../database");
 const { ApiError } = require("../../utils");
 const m = require("../../utils/money");
 const { allocatePayment, checkAllocations } = require("../../utils/feeAllocation");
@@ -156,7 +157,7 @@ const recordPayment = async (input) => {
     return { transaction: await getReceipt(schoolId, id), replayed: false };
   } catch (error) {
     // Two requests with the same key raced: the loser returns the winner's receipt.
-    if (error?.code === "P2002" && idempotencyKey && String(error.meta?.target || "").includes("idempotency")) {
+    if (idempotencyKey && dialect.isUniqueViolationOn(error, "idempotency")) {
       const again = await replay();
       if (again) return again;
     }

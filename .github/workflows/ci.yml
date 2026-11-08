@@ -1,0 +1,129 @@
+# CI: proves the app on BOTH database providers (docs/database/testing-plan.md).
+# Throwaway MySQL 8 and PostgreSQL 16 containers; never a real or Supabase database.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  checks:
+    name: Schemas, unit tests, lint, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Backend install (generates both Prisma clients; fails if provider schemas are stale)
+        working-directory: backend
+        run: npm ci
+      - name: Validate both Prisma schemas
+        working-directory: backend
+        run: npm run db:validate
+      - name: Backend unit tests
+        working-directory: backend
+        run: npm test
+      - name: Backend lint
+        working-directory: backend
+        run: npm run lint
+
+      - name: Frontend install
+        working-directory: frontend
+        run: npm ci
+      - name: Frontend lint
+        working-directory: frontend
+        run: npm run lint
+      - name: Frontend build
+        working-directory: frontend
+        run: npm run build
+
+  mysql:
+    name: Integration — MySQL 8
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: sms_test
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      MYSQL_TEST_DATABASE_URL: mysql://root:root@127.0.0.1:3306/sms_test
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Apply MySQL migrations
+        run: node scripts/with-test-db.js --provider mysql npm run db:migrate:deploy
+      - name: Drift check (migrations reproduce the schema)
+        run: node scripts/with-test-db.js --provider mysql npx prisma migrate diff --from-schema-datasource prisma/mysql/schema.prisma --to-schema-datamodel prisma/mysql/schema.prisma --exit-code
+      - name: Seed
+        run: node scripts/with-test-db.js --provider mysql npm run seed
+      - name: Integration tests
+        run: npm run test:integration:mysql
+      - name: Reconcile fee balances
+        run: node scripts/with-test-db.js --provider mysql node scripts/reconcile.js
+
+  postgresql:
+    name: Integration — PostgreSQL 16
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sms_test
+          # Linguistic collation, as on Supabase (the tests rely on case-insensitive sorting).
+          POSTGRES_INITDB_ARGS: --locale=en_US.UTF-8
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      SUPABASE_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/sms_test
+      SUPABASE_TEST_DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:5432/sms_test
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Apply PostgreSQL migrations
+        run: node scripts/with-test-db.js --provider pg npm run db:migrate:deploy
+      - name: Drift check (migrations reproduce the schema)
+        run: node scripts/with-test-db.js --provider pg npx prisma migrate diff --from-schema-datasource prisma/postgresql/schema.prisma --to-schema-datamodel prisma/postgresql/schema.prisma --exit-code
+      - name: Seed
+        run: node scripts/with-test-db.js --provider pg npm run seed
+      - name: Integration tests
+        run: npm run test:integration:pg
+      - name: Reconcile fee balances
+        run: node scripts/with-test-db.js --provider pg node scripts/reconcile.js

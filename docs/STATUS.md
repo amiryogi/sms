@@ -10,7 +10,7 @@ are done** and on `main`.
 
 ---
 
-## Dual database support (MySQL 8 + Supabase PostgreSQL) — in progress
+## Dual database support (MySQL 8 + Supabase PostgreSQL) — done
 
 Brief pasted 2026-11-08. Docs: [database/](database/). One codebase; the provider is chosen
 per deployment with `DATABASE_PROVIDER`.
@@ -21,9 +21,9 @@ per deployment with `DATABASE_PROVIDER`.
 | 2 | Architecture approval | **Approved** (2026-11-08) |
 | 3 | MySQL preserved on the new layer: `src/database`, shared `models.prisma` → two schemas, migrations moved, `db:*` scripts, regression tests | **Done** (2026-11-08) |
 | 4 | PostgreSQL baseline migration, client, seed on a Supabase test project | **Done** (2026-11-08) |
-| 5 | Dialect fixes (receipt sequence, text search/equality, ordering) | — |
-| 6 | Both integration runs + browser sweep on PostgreSQL | — |
-| 7 | Deployment docs (Supabase guide) | — |
+| 5 | Dialect fixes (receipt sequence, text search/equality, ordering) | **Done** (2026-11-08) |
+| 6 | Both integration runs + browser sweep on PostgreSQL | **Done** (2026-11-08) |
+| 7 | Deployment docs ([database/supabase-deployment.md](database/supabase-deployment.md)) + CI | **Done** (2026-11-08) |
 
 **Phase 3 verified (MySQL):**
 - **Unit tests:** 439 pass: the 410 existing ones, unchanged, plus 29 for the database layer
@@ -48,6 +48,32 @@ per deployment with `DATABASE_PROVIDER`.
   Migrations work through it.
 - **Speed:** the seed takes about 16 minutes over the internet (hundreds of sequential round
   trips to ap-southeast-1); locally it takes seconds.
+
+**Phase 5 (shared code, no provider `if`s outside `src/database/dialect.js`):**
+- **Case-insensitive text:** 12 search filters and `buildSearchQuery` use `dialect.text.search`; the
+  school-code and subject-code lookups use `dialect.text.equals`.
+- **Unique-key check:** the idempotency replay check uses `dialect.isUniqueViolationOn`.
+- **Explicit order:**
+  - 24 queries whose order users see, or which decide an outcome, got `orderBy: { id: "asc" }`,
+    which is MySQL's order today;
+  - the other 35 unordered queries are lookups, sets or sums.
+- **NULL order:** 8 roll-number sorts and the portal's "upcoming exams" pin NULLs first, matching
+  MySQL.
+
+**Phase 6 verified:**
+- **MySQL:** 442 unit and 80 integration tests pass.
+- **PostgreSQL (Supabase test project):** all 80 integration tests pass. In one run, 10
+  database-level tests failed with `P1017` (the free pooler dropped connections while a
+  browser sweep and a server shared it); the suite then passed 17/17 on its own.
+- **Browser:** the sweep of all 7 roles against a PostgreSQL-backed server shows no console
+  errors or failed API calls.
+- **Reconcile:** OK on both.
+
+**Phase 7:**
+- `docs/database/supabase-deployment.md` covers project setup, connection strings (IPv6 note),
+  migrate, seed, upgrades, backups and performance.
+- `.github/workflows/ci.yml` runs schemas, unit tests, lint and build, plus migrations, a drift
+  check, the seed, integration tests and reconcile on MySQL 8 and PostgreSQL 16 containers.
 
 **Upgrade note for any existing MySQL install:** add `DATABASE_PROVIDER=mysql` and rename
 `DATABASE_URL` to `MYSQL_DATABASE_URL`. The database needs no change.

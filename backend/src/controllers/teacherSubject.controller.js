@@ -32,6 +32,7 @@ const getTeacherAssignments = asyncHandler(async (req, res) => {
   }
 
   const assignments = await prisma.teacherSubject.findMany({
+    orderBy: { id: "asc" },
     where,
     include: {
       user: {
