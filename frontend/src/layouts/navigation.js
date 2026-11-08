@@ -25,6 +25,7 @@ import {
   HandCoins,
   ScrollText,
   BadgePercent,
+  UserRound,
   ChartColumn,
   FileSpreadsheet,
 } from "lucide-react";
@@ -130,11 +131,13 @@ const STUDENT = [
     label: "My school",
     items: [
       { title: "Dashboard", icon: LayoutDashboard, path: "/student/dashboard" },
+      { title: "Attendance", icon: CalendarCheck, path: "/student/attendance" },
       { title: "Assignments", icon: NotebookPen, path: "/student/assignments" },
       { title: "Results", icon: FileBarChart, path: "/student/results" },
       { title: "Report Card", icon: Award, path: "/student/report-card" },
       { title: "Fees", icon: Wallet, path: "/student/fees" },
       { title: "Notices", icon: Megaphone, path: "/student/notices" },
+      { title: "My Profile", icon: UserRound, path: "/student/profile" },
     ],
   },
 ];

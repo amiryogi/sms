@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Command } from "cmdk";
-import * as Popover from "@radix-ui/react-popover";
+import { Popover } from "radix-ui";
 import { ChevronsUpDown, Search, Loader2, UserRound } from "lucide-react";
 import { feeService } from "../../api/feeService";
 import { Avatar } from "../ui";

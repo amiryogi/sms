@@ -2,6 +2,7 @@ const prisma = require("../config/database");
 const { ApiError, ApiResponse, asyncHandler } = require("../utils");
 const { normalizeLayout } = require("../utils/reportCardLayout");
 const { tally, rateOf, byBsMonth } = require("../utils/attendanceRate");
+const { convertADToBS } = require("../utils/dateConverter");
 
 const isAdminUser = (user) =>
   user.roles.includes("ADMIN") || user.roles.includes("SUPER_ADMIN");
@@ -355,7 +356,9 @@ const getStudentAttendanceSummary = asyncHandler(async (req, res) => {
   const { attended, percentage } = rateOf(counts, rule);
   const summary = { ...counts, attended, percentage: percentage.toFixed(2), countLateAsPresent: rule.countLateAsPresent };
 
-  ApiResponse.success(res, { summary, byMonth: byBsMonth(attendances, rule), attendances });
+  // Each day also carries its BS date, so portals can draw a Nepali-month calendar.
+  const withBs = attendances.map((a) => ({ ...a, bsDate: convertADToBS(a.attendanceDate)?.formatted || null }));
+  ApiResponse.success(res, { summary, byMonth: byBsMonth(attendances, rule), attendances: withBs });
 });
 
 module.exports = {

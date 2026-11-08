@@ -548,3 +548,55 @@ The fee screens are under `/finance/*`, for both ADMIN and ACCOUNTANT:
   outstanding report).
 - Screenshots at 1440 and 390 px.
 - The all-roles sweep is clean.
+
+### Phase 6 — done (2026-11-08)
+
+**shadcn/ui, evaluated and adopted selectively**
+- **Set up:** `components.json` with `cssVariables: false`, `@/` alias, `radix-ui`,
+  `tw-animate-css`. No global theme tokens, because they would collide with the legacy
+  `.text-muted` etc. until UI wave 6.
+- **Components:** Tooltip, Accordion and Progress, added with the CLI into
+  `src/components/shadcn/` and restyled to our tokens.
+- **CLI quirk:** it rewrote the `utils` alias as an npm package named `cn`. That package was
+  removed and the import fixed; CLAUDE.md §9 warns about it.
+- **Radix consolidated:** the student combobox moved from `@radix-ui/react-popover` to the
+  single `radix-ui` package.
+- **Where it pays off:** Radix behaviour the kit lacked: accessible tooltips (attendance
+  calendar), an accordion (assignments) and an ARIA progress bar.
+- **Not adopted:** a full switch to shadcn's Button / Dialog / Tabs. It would duplicate the
+  kit for no gain.
+
+**Backend**
+- `GET /portal/students/:studentId/overview` (`isOwnStudent`) returns:
+  - profile and enrolment (class teacher);
+  - subjects with their teachers;
+  - attendance with the school's late rule;
+  - the latest **published** report card;
+  - upcoming PUBLISHED / LOCKED exams for the class;
+  - due assignments with submission state;
+  - fee totals with the next due installment.
+- `GET /attendance/student/:id` now also returns each day's BS date.
+
+**Frontend (student)**
+- Pages: dashboard, attendance, assignments, results, report card, fees, profile, plus
+  `/student/receipts/:id` (the shared receipt page).
+- The views live in `components/portal/` (AttendanceView, ResultsView, ReportCardView,
+  FeesView, ProfileView, OverviewCards, useStudentOverview).
+
+**Fixed on the way**
+- **Assignments:** the old student page read fields the API doesn't send, so the teacher's
+  attachments, the subject and max marks never showed, and feedback was ignored. It also
+  supports a written answer now.
+- **Results:** the old page showed each subject's grade from `ExamResult.grade`, which saving
+  marks never fills. The new view takes grades from the published report card, graded on the
+  school's scale.
+
+**Verified**
+- API: students and parents only reach their own or their child's overview, attendance and
+  receipts (403 otherwise).
+- Browser on the test stack:
+  - every page loads with no errors;
+  - the tooltip opens on hover and keyboard focus;
+  - an assignment hand-in works;
+  - the report card prints on 1 page;
+  - screenshots at 1440 and 390 px.

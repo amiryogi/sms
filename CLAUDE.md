@@ -23,7 +23,7 @@ has `school_id`) but only one school is seeded and used.
 | -------- | ---------------------------------------------------------------------- |
 | Backend  | Node.js ≥18, Express 4, Prisma 5.22, MySQL 8, JWT (access + refresh)    |
 | Frontend | React 19 + Vite 7, React Router 7, Axios, react-hook-form, lucide-react |
-| Styling  | **Tailwind CSS 4** (`@tailwindcss/vite`), tokens in `frontend/src/styles/app.css`, kit in `src/components/ui/`. No CSS-in-JS. `cmdk` + `@radix-ui/react-popover` (shadcn-style copy-in) only for the student search combobox. Charts: `recharts`, colours in `components/finance/charts/chartTheme.js` |
+| Styling  | **Tailwind CSS 4** (`@tailwindcss/vite`), tokens in `frontend/src/styles/app.css`, kit in `src/components/ui/`. No CSS-in-JS. shadcn/ui pieces in `src/components/shadcn/` (see §9). Charts: `recharts`, colours in `components/finance/charts/chartTheme.js` |
 | Dates    | AD stored in DB; BS (Bikram Sambat) rendered via `backend/src/utils/dateConverter.js` |
 
 Repo layout:
@@ -264,6 +264,17 @@ in every report-card payload as `layout`. Two templates: `nebGradeSheet`
 layout change goes through `normalizeLayout`/`validateLayout`; the frontend only
 renders the flags. Plan: `docs/plans/configurable-report-card.md`.
 
+**Student portal (Phase 6):**
+- Dashboard, Attendance (Nepali-month register), Assignments (hand in text or files),
+  Results (from published report cards), Report Card (print), Fees (statement, receipts,
+  discounts), Profile.
+- One read feeds the dashboard and profile: `GET /portal/students/:studentId/overview`
+  (`isOwnStudent`; `services/portal.service.js`).
+- The views are shared components in `src/components/portal/` that take a `studentId`, so
+  the parent portal (Phase 7) reuses them.
+- The embedded report card uses the `.rc-embedded` wrapper in `styles/bridge.css`; move
+  that rule to `app.css` when `bridge.css` is deleted.
+
 **Report-card attendance** ("61/70"): the admin sets `Exam.workingDays` on the
 Report Cards page (`PUT /exams/:id/working-days`, any exam status); Generate
 counts present (+ late, per the layout's `countLateAsPresent`) days from the
@@ -363,6 +374,26 @@ see `docs/STATUS.md`.
   beats every Tailwind layer, so to override them from outside you need `!important`
   (see the `.rc-layout-preview` rule in `bridge.css`). Check page counts with a print-to-PDF
   after touching them.
+- **shadcn/ui is used selectively, not as a second kit.**
+  - `components.json` sets `cssVariables: false`, so the CLI writes components with plain
+    slate/white classes and **no global theme tokens**. shadcn's `muted` / `primary` /
+    `border` tokens would generate utilities like `.text-muted` that clash with legacy
+    class names still in use.
+  - Add a component with `npx shadcn@4.23.0 add <name>` from `frontend/`. It lands in
+    `src/components/shadcn/` (alias `@/` = `src/`, set in `vite.config.js` /
+    `jsconfig.json`).
+  - **Check the generated import:** the CLI writes `import { cn } from "cn"` and installs an
+    unrelated npm package called `cn`. Change the import to `@/lib/cn`, then
+    `npm uninstall cn`.
+  - Restyle the component to our tokens (brand focus rings etc.) and give it a header comment.
+  - Behaviour comes from the single `radix-ui` package; animations from `tw-animate-css`
+    (imported in `styles/app.css`).
+  - In use: Tooltip (`TooltipProvider` wraps the app in `App.jsx`), Accordion (student
+    assignments), Progress. The student search combobox uses `cmdk` + Radix Popover in the
+    same way.
+  - Prefer the existing kit (`components/ui/`) for anything it already covers (buttons,
+    dialogs, tabs, menus, fields); reach for shadcn when you need a Radix behaviour the kit
+    lacks.
 - Shared shell: `layouts/DashboardLayout.jsx` (sidebar, mobile drawer, top bar) reads
   its menus from `layouts/navigation.js`. A new page also needs an entry there.
 - Table columns are targeted by semantic class (`.col-roll`, `.col-name`, `.col-marks`, `.col-remarks`), **not** `nth-child`.

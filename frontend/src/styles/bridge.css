@@ -245,3 +245,30 @@ textarea.input-error {
 .rc-layout-preview .report-card-container {
   display: block !important;
 }
+
+/*
+ * Student/parent portal: the report card shown inline on the page
+ * (components/portal/ReportCardView). Same reason for !important as the
+ * settings preview above: the sheet's own unlayered <style> would otherwise
+ * make it a full-screen overlay.
+ */
+.rc-embedded .report-card-overlay {
+  position: static !important;
+  inset: auto !important;
+  background: none !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  z-index: auto !important;
+}
+.rc-embedded .report-actions {
+  display: none !important;
+}
+.rc-embedded .report-card-container {
+  display: block !important;
+}
+@media screen {
+  .rc-embedded .report-card-a4 {
+    margin: 0 auto;
+    box-shadow: 0 1px 3px rgb(15 23 42 / 0.12) !important;
+  }
+}

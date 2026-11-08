@@ -1,132 +1,79 @@
-import React, { useState, useEffect } from "react";
-import { useAuth } from "../../context/AuthContext";
+import React from "react";
 import { Link } from "react-router-dom";
-import StatCard from "../../components/common/StatCard";
+import { ArrowRight, UserRound } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
+import { Card, CardHeader, EmptyState, Skeleton, Avatar } from "../../components/ui";
 import NoticesFeed from "../../components/common/NoticesFeed";
-import { BookOpen, ClipboardList, Award, Calendar } from "lucide-react";
-import { assignmentService } from "../../api/assignmentService";
-import { attendanceService } from "../../api/attendanceService";
+import useStudentOverview from "../../components/portal/useStudentOverview";
+import { SummaryTiles, UpcomingExamsCard, AssignmentsDueCard, SubjectsCard } from "../../components/portal/OverviewCards";
+import { formatDate } from "../../utils/format";
 
+const greeting = () => {
+  const h = new Date().getHours();
+  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+};
+
+/** A student's home: attendance, latest result, fees, assignments, exams, notices. */
 const StudentDashboard = () => {
   const { user } = useAuth();
-  const [stats, setStats] = useState({
-    assignments: 0,
-    attendance: 0,
-  });
-  const [recentAssignments, setRecentAssignments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const studentId = user?.student?.id;
+  const { data, error } = useStudentOverview(studentId);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
+  if (!studentId) return <Card><EmptyState icon={UserRound} title="No student profile" description="This account is not linked to a student record. Ask the school office." /></Card>;
+  if (error) return <Card><EmptyState icon={UserRound} title="Couldn't load your dashboard" description={error} /></Card>;
 
-  const fetchDashboardData = async () => {
-    try {
-      const [assignmentsRes] = await Promise.all([
-        assignmentService.getAssignments(),
-      ]);
-
-      const assignments = assignmentsRes.data || [];
-      setStats((prev) => ({ ...prev, assignments: assignments.length }));
-      setRecentAssignments(assignments.slice(0, 5));
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const enrollment = user?.student?.enrollments?.[0];
-
+  const e = data?.enrolment;
   return (
-    <div className="student-dashboard">
-      <div className="page-header">
-        <div>
-          <h1>Welcome, {user?.firstName}!</h1>
-          <p className="text-muted">
-            {enrollment
-              ? `${enrollment.class?.name} - Section ${enrollment.section?.name}`
-              : "Student Dashboard"}
-          </p>
-        </div>
-      </div>
-
-      <div className="stats-grid">
-        <StatCard
-          title="Pending Assignments"
-          value={loading ? "..." : stats.assignments}
-          icon={ClipboardList}
-          color="primary"
-        />
-        <StatCard
-          title="Current Class"
-          value={enrollment?.class?.name || "N/A"}
-          icon={BookOpen}
-          color="success"
-        />
-        <StatCard
-          title="Roll Number"
-          value={user?.student?.rollNumber || enrollment?.rollNumber || "N/A"}
-          icon={Award}
-          color="info"
-        />
-      </div>
-
-      <div className="dashboard-grid">
-        <div className="card">
-          <h3>Recent Assignments</h3>
-          {loading ? (
-            <p>Loading...</p>
-          ) : recentAssignments.length === 0 ? (
-            <p className="text-muted">No assignments found.</p>
+    <div className="mx-auto max-w-7xl space-y-6">
+      <div className="flex flex-wrap items-center gap-4">
+        <Avatar src={user?.avatarUrl} name={`${user?.firstName} ${user?.lastName}`} size="lg" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm text-slate-500">{formatDate(new Date())}</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+            {greeting()}, {user?.firstName}
+          </h1>
+          {e ? (
+            <p className="mt-0.5 text-sm text-slate-500">
+              {e.class.name} {e.section.name}
+              {e.rollNumber ? ` · Roll ${e.rollNumber}` : ""} · {e.academicYear.name}
+              {e.classTeacher ? ` · Class teacher ${e.classTeacher}` : ""}
+            </p>
           ) : (
-            <div className="assignments-list">
-              {recentAssignments.map((assignment) => (
-                <div key={assignment.id} className="assignment-item">
-                  <div className="assignment-info">
-                    <strong>{assignment.title}</strong>
-                    <span>{assignment.classSubject?.subject?.name}</span>
-                  </div>
-                  <span className="due-date">
-                    Due: {new Date(assignment.dueDate).toLocaleDateString()}
-                  </span>
-                </div>
-              ))}
-            </div>
+            data && <p className="mt-0.5 text-sm text-amber-700">Not enrolled in a class this year</p>
           )}
-          <Link to="/student/assignments" className="view-all-link">
-            View All Assignments →
-          </Link>
         </div>
-
-        <div className="card">
-          <h3>Quick Links</h3>
-          <div className="quick-actions">
-            <Link to="/student/assignments" className="action-btn">
-              <ClipboardList size={20} />
-              <span>My Assignments</span>
-            </Link>
-            <Link to="/student/results" className="action-btn">
-              <Award size={20} />
-              <span>View Results</span>
-            </Link>
-            <Link to="/student/report-card" className="action-btn">
-              <BookOpen size={20} />
-              <span>Report Card</span>
-            </Link>
-          </div>
-        </div>
-
-        {/* Notices Feed */}
-        <div className="card">
-          <NoticesFeed
-            limit={4}
-            showViewAll={true}
-            viewAllPath="/student/notices"
-            compact={true}
-          />
-        </div>
+        <Link to="/student/profile" className="inline-flex items-center gap-1 text-sm font-medium text-brand-700 hover:text-brand-800">
+          My profile <ArrowRight size={14} aria-hidden="true" />
+        </Link>
       </div>
+
+      {!data ? (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-32 rounded-card" />)}</div>
+      ) : (
+        <>
+          <SummaryTiles overview={data} base="/student" />
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="space-y-6 lg:col-span-2">
+              <AssignmentsDueCard assignments={data.assignments} to="/student/assignments" />
+              {data.subjects.length > 0 && <SubjectsCard subjects={data.subjects} />}
+            </div>
+            <div className="space-y-6">
+              <UpcomingExamsCard exams={data.upcomingExams} />
+              <Card>
+                <CardHeader
+                  title="Notices"
+                  actions={
+                    <Link to="/student/notices" className="inline-flex items-center gap-1 text-sm font-medium text-brand-700 hover:text-brand-800">
+                      All <ArrowRight size={14} aria-hidden="true" />
+                    </Link>
+                  }
+                />
+                <NoticesFeed limit={4} showViewAll={false} compact />
+              </Card>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

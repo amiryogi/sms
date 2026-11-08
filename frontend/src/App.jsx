@@ -9,6 +9,7 @@ import {
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { Toaster, LoadingBlock, buttonClasses } from "./components/ui";
+import { TooltipProvider } from "./components/shadcn/tooltip";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import DashboardLayout from "./layouts/DashboardLayout";
 
@@ -68,6 +69,8 @@ const StudentReportCard = React.lazy(
   () => import("./pages/student/ReportCard"),
 );
 const StudentFees = React.lazy(() => import("./pages/student/Fees"));
+const StudentAttendance = React.lazy(() => import("./pages/student/Attendance"));
+const StudentProfile = React.lazy(() => import("./pages/student/Profile"));
 
 // Parent Pages
 const ParentDashboard = React.lazy(() => import("./pages/parent/Dashboard"));
@@ -129,6 +132,7 @@ function App() {
   return (
     <Router>
       <AuthProvider>
+        <TooltipProvider delayDuration={150}>
         <Toaster />
         <React.Suspense fallback={<LoadingFallback />}>
           <Routes>
@@ -234,6 +238,10 @@ function App() {
                 element={<StudentReportCard />}
               />
               <Route path="/student/fees" element={<StudentFees />} />
+              <Route path="/student/attendance" element={<StudentAttendance />} />
+              <Route path="/student/profile" element={<StudentProfile />} />
+              {/* Same receipt page as the finance screens; the API returns only the student's own receipts. */}
+              <Route path="/student/receipts/:id" element={<FinanceReceipt />} />
             </Route>
 
             {/* Parent Routes */}
@@ -314,6 +322,7 @@ function App() {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </React.Suspense>
+        </TooltipProvider>
       </AuthProvider>
     </Router>
   );

@@ -13,6 +13,8 @@
 @layer theme, base, legacy, components, utilities;
 
 @import "tailwindcss";
+/* animate-in / animate-out / accordion-down utilities used by the shadcn/ui components */
+@import "tw-animate-css";
 @import "../index.css" layer(legacy);
 @import "./bridge.css" layer(components);
 
