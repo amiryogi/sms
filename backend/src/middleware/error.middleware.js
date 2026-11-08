@@ -21,7 +21,7 @@ const errorHandler = (err, req, res, next) => {
   // Handle Prisma errors
   if (err.code) {
     switch (err.code) {
-      case 'P2002':
+      case 'P2002': {
         // Unique constraint violation
         statusCode = 409;
         message = 'A record with this value already exists';
@@ -30,6 +30,7 @@ const errorHandler = (err, req, res, next) => {
           message = `A record with this ${Array.isArray(target) ? target.join(', ') : target} already exists`;
         }
         break;
+      }
       case 'P2025':
         // Record not found
         statusCode = 404;

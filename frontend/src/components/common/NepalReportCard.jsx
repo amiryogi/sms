@@ -104,6 +104,10 @@ const ReportCardOverlay = ({ data, onClose, showActions = true }) => {
           cursor: pointer;
           border: none;
           font-size: 0.9rem;
+          line-height: 1.4286;
+          white-space: nowrap;
+          justify-content: center;
+          box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
         }
 
         .report-actions .btn-primary {

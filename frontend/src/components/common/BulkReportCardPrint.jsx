@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Printer, X, Loader2 } from "lucide-react";
 import ReportSheet from "./reportcard/ReportSheet";
 import usePrintIsolation from "./reportcard/usePrintIsolation";
+import { Button } from "../ui/Button";
 
 /**
  * Bulk Report Card Print Component
@@ -36,9 +37,9 @@ const BulkPrintOverlay = ({ data, onClose, loading = false }) => {
         <div className="bulk-print-loading">
           <Loader2 className="spin" size={48} />
           <p>Loading Report Cards...</p>
-          <button className="btn btn-outline" onClick={onClose}>
-            <X size={16} /> Cancel
-          </button>
+          <Button variant="secondary" icon={X} onClick={onClose}>
+            Cancel
+          </Button>
         </div>
       </div>
     );
@@ -49,9 +50,9 @@ const BulkPrintOverlay = ({ data, onClose, loading = false }) => {
       <div className="bulk-print-overlay">
         <div className="bulk-print-loading">
           <p>No report cards to display</p>
-          <button className="btn btn-outline" onClick={onClose}>
-            <X size={16} /> Close
-          </button>
+          <Button variant="secondary" icon={X} onClick={onClose}>
+            Close
+          </Button>
         </div>
       </div>
     );
@@ -166,6 +167,10 @@ const BulkPrintOverlay = ({ data, onClose, loading = false }) => {
           cursor: pointer;
           font-size: 0.875rem;
           border: none;
+          line-height: 1.4286;
+          white-space: nowrap;
+          justify-content: center;
+          box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
         }
 
         .bulk-print-buttons .btn-primary {

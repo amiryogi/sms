@@ -1,6 +1,6 @@
 # Where this project is
 
-Updated 2026-11-07. Keep this current when you stop work — it is the handover
+Updated 2026-11-08. Keep this current when you stop work — it is the handover
 between machines and between sessions.
 
 New machine? Start with [SETUP-NEW-MACHINE.md](SETUP-NEW-MACHINE.md).
@@ -10,7 +10,7 @@ are done** and on `main`.
 
 ---
 
-## Finance ledger and portals — in progress
+## Finance ledger and portals — done
 
 Plan: [plans/finance-and-portals.md](plans/finance-and-portals.md) (approved 2026-11-08).
 Business rules decided:
@@ -26,7 +26,22 @@ Business rules decided:
 | 5 | Dashboard KPIs, charts, reports, CSV / print | **Done** (2026-11-08) |
 | 6 | Student portal | **Done** (2026-11-08) |
 | 7 | Parent portal | **Done** (2026-11-08) |
-| 8 | QA, drop old fee columns and alias routes, UI wave 6 cleanup, docs | — |
+| 8 | QA, drop old fee columns and alias routes, UI wave 6 cleanup, docs | **Done** (2026-11-08) |
+
+Phase 8 verified:
+- **Backend:** 410 unit tests and 33 ledger integration tests pass; `reconcile` is clean on the
+  dev and test databases; lint 0 errors (the two old ones are fixed).
+- **API probes against the test database:** RBAC (39), super admin (30), finance (incl. the
+  removed `/fees/payments*` routes now 404), student portal, parent portal (18) and Phase 8
+  (moved generate endpoints, 403/404/409 paths). The RBAC probe's "marks hidden before
+  publication" check was rerun with exam 1 briefly unpublished, then republished.
+- **Styles:** every page for admin, teacher, student, parent and accountant, plus every
+  report-card print path (NEB and Performance; single, bulk, settings preview, student page),
+  was snapshotted element by element (computed styles, screen and print) before and after
+  deleting the old stylesheets, then diffed. All intended differences were reviewed (list in
+  `plans/finance-and-portals.md`). PDF page counts are unchanged: single 1, bulk 5, embedded 1.
+- **Browser:** super admin and exam officer pages load with no console errors or failed calls;
+  the session-retry screen renders and recovers.
 
 **After pulling Phase 3 on another machine:**
 1. Stop the backend.
@@ -51,9 +66,9 @@ each tested in the browser and committed separately.
 | 1 | Tailwind, tokens, legacy layer + bridge, `ui/` kit, shared components, shell, login, error pages, per-school brand colour | **Done** (2026-11-08) |
 | 2 | All 18 admin pages | **Done** (2026-11-08) |
 | 3 | Teacher + exam officer | **Done** (2026-11-08) |
-| 4 | Student, parent, accountant (real accountant dashboard) | — |
-| 5 | Charts + `/dashboard/*` summary endpoints | — |
-| 6 | Delete `index.css` / `bridge.css`, final docs | — |
+| 4 | Student, parent, accountant (real accountant dashboard) | **Done** as finance Phases 4–7 |
+| 5 | Charts + `/dashboard/*` summary endpoints | Partly: finance dashboard charts (Phase 5). Admin and teacher charts not built |
+| 6 | Delete `index.css` / `bridge.css`, final docs | **Done** (2026-11-08, finance Phase 8) |
 
 Wave 1 verified: build and lint clean; all 47 pages across 7 roles load with no
 console errors or failed calls; screenshots at 1440 and 390 px (shell, drawer,
@@ -367,17 +382,14 @@ A4 page.
 
 ## Known issues, not yet fixed
 
-- The NEB grade sheet asks for Times New Roman but prints in Inter: `index.css`
-  sets Inter on `*`, which beats inheritance. The Performance Report overrides
+- The NEB grade sheet asks for Times New Roman but prints in Inter: `styles/app.css`
+  sets the app font on `*` (kept from the old stylesheets), which beats inheritance. The Performance Report overrides
   it; the NEB sheet was left alone so its look doesn't change unasked. Its
   "Date of Issue" also prints only the BS year (`2082`), not a date —
   `meta.issueDateBS` now exists if you want it.
 
-- 2 backend lint errors: a duplicated `description` key in a Prisma `create()`
-  (`subject.controller.js:68`) and a `const` inside an unbraced `case`
-  (`error.middleware.js:28`).
-- 41 frontend lint findings (19 errors, 22 warnings) — dead locals and
-  `useEffect` dependency gaps.
+- Lint: no errors. Warnings only — backend 7 (unused locals), frontend 5
+  (`react-hooks/exhaustive-deps`).
 - 6 `test.failing` markers pin real unfixed bugs in `gradeCalculator`: `NaN`
   leaking into `percentage`, 150/100 accepted and printed as "150%",
   `fullMarks: 0` silently becoming 100, the absent-student branch concatenating

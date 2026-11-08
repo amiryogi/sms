@@ -9,6 +9,7 @@ import React, {
 import { authService } from "../api/authService";
 import { API_EVENTS, clearAuthStorage } from "../api/apiClient";
 import { applyBrand } from "../lib/brand";
+import { Button } from "../components/ui/Button";
 
 const AuthContext = createContext(null);
 
@@ -160,28 +161,17 @@ export const AuthProvider = ({ children }) => {
 
   if (initError && !user) {
     return (
-      <div className="loading-screen auth-retry" role="alert">
-        <h2>Can't restore your session</h2>
-        <p className="text-muted">{initError}</p>
-        <p className="text-muted">
-          You are still signed in. Check your connection and try again.
-        </p>
-        <div className="auth-retry-actions">
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={initializeAuth}
-            disabled={loading}
-          >
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-3 px-4 text-center text-sm text-slate-500" role="alert">
+        <h2 className="text-slate-900">Can't restore your session</h2>
+        <p>{initError}</p>
+        <p>You are still signed in. Check your connection and try again.</p>
+        <div className="mt-2 flex gap-2">
+          <Button onClick={initializeAuth} loading={loading}>
             {loading ? "Retrying..." : "Retry"}
-          </button>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={signOutLocally}
-          >
+          </Button>
+          <Button variant="secondary" onClick={signOutLocally}>
             Sign out
-          </button>
+          </Button>
         </div>
       </div>
     );

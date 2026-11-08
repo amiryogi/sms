@@ -82,7 +82,7 @@ const StudentPicker = ({ value, onChange, academicYearId, placeholder = "Find a 
                 value={query}
                 onValueChange={setQuery}
                 placeholder="Name, admission no. or roll…"
-                className="h-11 w-full border-0 bg-transparent text-sm outline-none placeholder:text-slate-400 focus:ring-0"
+                className="h-11 w-full border-0 bg-transparent p-0 text-sm outline-none placeholder:text-slate-400 focus:ring-0"
               />
               {loading && <Loader2 size={16} className="shrink-0 animate-spin text-slate-400" aria-hidden="true" />}
             </div>

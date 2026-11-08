@@ -76,7 +76,7 @@ Then edit `backend/.env`:
 ```bash
 cd backend
 npx prisma generate
-npx prisma migrate deploy    # applies 0_init and 6 later migrations: 45 tables
+npx prisma migrate deploy    # applies 0_init and 7 later migrations: 45 tables
 npm run seed                 # demo school, roles, classes 1-10, students, exams
 ```
 
@@ -87,19 +87,24 @@ the extra `GRANT`.
 ## 6. If `prisma migrate dev` fails with P3014
 
 That error means the MySQL user cannot create the shadow database. Either run
-the `GRANT ALL PRIVILEGES ON *.*` from section 3, or use the baseline workaround
-to record a schema change without a shadow database:
+the `GRANT ALL PRIVILEGES ON *.*` from section 3, or write the migration as a
+diff between the committed schema and your edited one (no database needed), then
+apply it like any other:
 
 ```bash
 cd backend
+git show HEAD:backend/prisma/schema.prisma > /tmp/schema-before.prisma
 mkdir -p prisma/migrations/<timestamp>_<name>
 npx prisma migrate diff \
-  --from-schema-datasource prisma/schema.prisma \
-  --to-schema-datamodel  prisma/schema.prisma \
+  --from-schema-datamodel /tmp/schema-before.prisma \
+  --to-schema-datamodel   prisma/schema.prisma \
   --script > prisma/migrations/<timestamp>_<name>/migration.sql
-npx prisma db push
-npx prisma migrate resolve --applied <timestamp>_<name>
+node scripts/with-test-db.js npx prisma migrate deploy   # try it on the test DB first
+npx prisma migrate deploy
 ```
+
+Read the generated SQL before applying it, and never use `db push`: the change
+would not travel to other machines.
 
 The `GRANT` is much less trouble. Do that instead if you can.
 

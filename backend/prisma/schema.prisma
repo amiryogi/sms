@@ -387,7 +387,6 @@ model User {
   feeStructuresUpdated FeeStructure[] @relation("FeeStructureUpdatedBy")
   feePaymentsCreated   FeeObligation[] @relation("FeePaymentCreatedBy")
   feePaymentsUpdated   FeeObligation[] @relation("FeePaymentUpdatedBy")
-  feePaymentsRecorded  FeeObligation[] @relation("FeePaymentRecordedBy")
   feeObligationsCancelled FeeObligation[] @relation("FeeObligationCancelledBy")
   feeTransactionsRecorded FeeTransaction[] @relation("FeeTransactionRecordedBy")
   feeReversalsRequested FeeReversalRequest[] @relation("FeeReversalRequestedBy")
@@ -1261,15 +1260,10 @@ model FeeObligation {
   cancelledById   Int?          @map("cancelled_by_id")
   cancelReason    String?       @map("cancel_reason") @db.VarChar(500)
   status          PaymentStatus @default(pending)
-  paymentDate     DateTime?     @map("payment_date") @db.Date
-  receiptNumber   String?       @map("receipt_number") @db.VarChar(50)
-  paymentMethod   String?       @map("payment_method") @db.VarChar(50)
-  remarks         String?       @db.Text
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
   createdByUserId Int?          @map("created_by_user_id")
   updatedByUserId Int?          @map("updated_by_user_id")
-  recordedByUserId Int?         @map("recorded_by_user_id")
   actorRole       String?       @map("actor_role") @db.VarChar(50)
 
   // Relations
@@ -1278,7 +1272,6 @@ model FeeObligation {
   feeStructure   FeeStructure @relation(fields: [feeStructureId], references: [id], onDelete: Restrict)
   createdByUser  User?        @relation("FeePaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   updatedByUser  User?        @relation("FeePaymentUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
-  recordedByUser User?        @relation("FeePaymentRecordedBy", fields: [recordedByUserId], references: [id], onDelete: SetNull)
   cancelledBy    User?        @relation("FeeObligationCancelledBy", fields: [cancelledById], references: [id], onDelete: SetNull)
   installments   FeeInstallment[]
 
@@ -1287,8 +1280,6 @@ model FeeObligation {
   @@index([studentClassId])
   @@index([feeStructureId])
   @@index([status])
-  @@index([paymentDate])
-  @@index([recordedByUserId])
   @@map("fee_payments")
 }
 

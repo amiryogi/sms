@@ -465,7 +465,7 @@ What shipped, and where it differs from the plan above:
   `sms_test`), stable over repeated runs.
 - A 34-check HTTP probe against a test backend.
 - The migration backfill was checked on `sms_test` with paid, partial and unpaid legacy rows
-  (fixture `scripts/fixtures/legacy-fee-rows.js`, run before the migration).
+  (fixture `scripts/fixtures/legacy-fee-rows.js`, run before the migration; deleted in Phase 8 with the columns it wrote).
 - The development database was migrated and reconciles: `node scripts/reconcile.js`.
 
 ### Phase 4 — done (2026-11-08)
@@ -636,3 +636,37 @@ The fee screens are under `/finance/*`, for both ADMIN and ACCOUNTANT:
   - assignments are read-only;
   - a parent is refused the student and finance pages;
   - screenshots at 1440 and 390 px.
+
+### Phase 8 — done (2026-11-08)
+
+**Backend**
+- Migration C (`20261108180000_drop_legacy_fee_columns`) drops `fee_payments.payment_date`,
+  `receipt_number`, `payment_method`, `remarks` and `recorded_by_user_id` (with its FK and the
+  `payment_date` index). The ledger migration had already copied their data into
+  `fee_transactions`; nothing read them since Phase 3. Applied to the dev and test databases.
+- `feePayment.controller.js` and the `/fees/payments`, `/payments/student/:id` and
+  `/payments/:id/pay` routes are gone. Fee generation moved to
+  `POST /fees/obligations/generate/:studentClassId` and `/fees/obligations/generate-bulk`
+  (`finance.controller`), used by Collect and Accounts.
+- The two old backend lint errors are fixed.
+
+**Frontend (UI wave 6)**
+- `index.css`, `styles/bridge.css` and `App.css` are deleted; `app.css` has no legacy layer.
+- Kept in `app.css`: the app font on `*`, `body { overflow-x: hidden }`, `.attendance-row`
+  for the single NEB sheet, the `.rc-layout-preview` / `.rc-embedded` overrides and the
+  `.no-print` / print-isolation rules.
+- `bridge.css` had redefined `--radius-sm/md/lg`, which Tailwind's `rounded-*` read; the design
+  was built on those values, so they are now pinned in `@theme` (6 / 8 / 14 px).
+- The session-retry screen uses the kit; the bulk-print loading and empty states use `Button`.
+
+**Verified by a computed-style diff** of every page (5 roles) and every print path, before and
+after. With the stylesheets unchanged two runs differ by 0 elements. Differences left, all
+reviewed and accepted as fixes of rules that leaked from `index.css`:
+- NEB sheet footer is centred, as its own CSS says (a leaked `display: flex` had pushed it left).
+- Bulk NEB student line spans the full width (a leaked 3-column grid squeezed it into a third).
+- A leaked `.text-center { padding: 2rem }` no longer pads the pagination label, the login
+  footnote and the attendance counts.
+- The brand-colour hex field gets the normal input padding; the print toolbar buttons lose the
+  bridge's inset ring; the working-days box loses a stray top margin.
+
+PDF page counts unchanged (NEB and Performance single 1, bulk 5, student page 1).

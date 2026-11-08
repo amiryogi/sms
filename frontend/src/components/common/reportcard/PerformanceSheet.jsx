@@ -355,7 +355,7 @@ const PERF_STYLES = `
     margin: 0 auto;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
   }
-  /* index.css sets Inter on every element with "*", which beats inheritance. */
+  /* app.css sets the app font on every element with "*", which beats inheritance. */
   .perf-sheet,
   .perf-sheet * {
     font-family: 'Book Antiqua', Palatino, 'Palatino Linotype', 'Times New Roman', serif;

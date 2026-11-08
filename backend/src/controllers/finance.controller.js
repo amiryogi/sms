@@ -8,6 +8,8 @@ const { getFeeManagementRole } = require("../middleware");
 const ledger = require("../services/finance/ledger.service");
 const discounts = require("../services/finance/discount.service");
 const obligations = require("../services/finance/obligation.service");
+const reports = require("../services/finance/reports.service");
+const { toCsv } = require("../utils/csv");
 
 const FEE_STAFF = ["ADMIN", "SUPER_ADMIN", "ACCOUNTANT"];
 const isFeeStaff = (user) => user.roles.some((r) => FEE_STAFF.includes(r));
@@ -155,6 +157,47 @@ const revokeDiscount = asyncHandler(async (req, res) => {
 
 // ---------- obligations and templates ----------
 
+/** POST /fees/obligations/generate/:studentClassId — one student's fees for their enrolment. */
+const generateForEnrolment = asyncHandler(async (req, res) => {
+  const schoolId = req.user.schoolId;
+  const enrolment = await prisma.studentClass.findFirst({
+    where: { id: Number(req.params.studentClassId), schoolId },
+    include: { student: { include: { user: { select: { firstName: true, lastName: true } } } } },
+  });
+  if (!enrolment) throw ApiError.notFound("Student enrollment not found");
+
+  const count = await obligations.generate({
+    schoolId,
+    userId: req.user.id,
+    actorRole: getFeeManagementRole(req.user),
+    studentClassIds: [enrolment.id],
+    classId: enrolment.classId,
+    academicYearId: enrolment.academicYearId,
+  });
+  if (count === 0) throw ApiError.conflict("Fee records already exist for this enrollment");
+  const name = `${enrolment.student.user.firstName} ${enrolment.student.user.lastName}`;
+  ApiResponse.created(res, { count }, `${count} fee records generated for ${name}`);
+});
+
+/** POST /fees/obligations/generate-bulk { classId, academicYearId } — every active student in a class. */
+const generateForClass = asyncHandler(async (req, res) => {
+  const schoolId = req.user.schoolId;
+  const { classId, academicYearId } = req.body;
+  const enrolments = await prisma.studentClass.findMany({ where: { schoolId, classId, academicYearId, status: "active" }, select: { id: true } });
+  if (enrolments.length === 0) throw ApiError.badRequest("No active students found in this class for the selected year");
+
+  const count = await obligations.generate({
+    schoolId,
+    userId: req.user.id,
+    actorRole: getFeeManagementRole(req.user),
+    studentClassIds: enrolments.map((e) => e.id),
+    classId,
+    academicYearId,
+  });
+  if (count === 0) throw ApiError.conflict("Fee records already exist for all students");
+  ApiResponse.created(res, { count }, `${count} fee records generated for ${enrolments.length} students`);
+});
+
 const cancelObligation = asyncHandler(async (req, res) => {
   const o = await obligations.cancel({ schoolId: req.user.schoolId, userId: req.user.id, obligationId: req.params.id, reason: req.body.reason });
   ApiResponse.success(res, o, "Fee cancelled");
@@ -172,6 +215,27 @@ const setInstallmentTemplate = asyncHandler(async (req, res) => {
 const reconcile = asyncHandler(async (req, res) => {
   const r = await obligations.reconcile({ schoolId: req.user.schoolId });
   ApiResponse.success(res, r, r.ok ? "Every balance matches the ledger" : `${r.problems.length} difference(s) found`);
+});
+
+// ---------- dashboard and reports ----------
+
+const getDashboard = asyncHandler(async (req, res) => {
+  ApiResponse.success(res, await reports.dashboard({ schoolId: req.user.schoolId, ...req.query }), "Finance dashboard");
+});
+
+/**
+ * GET /fees/reports/:report — JSON by default; ?format=csv downloads the same
+ * rows as a spreadsheet (the one documented exception to the JSON envelope).
+ */
+const getReport = asyncHandler(async (req, res) => {
+  const data = await reports.report(req.params.report, { schoolId: req.user.schoolId, ...req.query });
+  if (req.query.format === "csv") {
+    const filename = `${data.report}-${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    return res.send(toCsv(data.columns, data.totals ? [...data.rows, data.totals] : data.rows));
+  }
+  return ApiResponse.success(res, data, data.title);
 });
 
 module.exports = {
@@ -193,34 +257,12 @@ module.exports = {
   approveDiscount,
   rejectDiscount,
   revokeDiscount,
+  generateForEnrolment,
+  generateForClass,
   cancelObligation,
   getInstallmentTemplate,
   setInstallmentTemplate,
   reconcile,
+  getDashboard,
+  getReport,
 };
-
-// ---------- dashboard and reports (Phase 5) ----------
-const reports = require("../services/finance/reports.service");
-const { toCsv } = require("../utils/csv");
-
-const getDashboard = asyncHandler(async (req, res) => {
-  ApiResponse.success(res, await reports.dashboard({ schoolId: req.user.schoolId, ...req.query }), "Finance dashboard");
-});
-
-/**
- * GET /fees/reports/:report — JSON by default; ?format=csv downloads the same
- * rows as a spreadsheet (the one documented exception to the JSON envelope).
- */
-const getReport = asyncHandler(async (req, res) => {
-  const data = await reports.report(req.params.report, { schoolId: req.user.schoolId, ...req.query });
-  if (req.query.format === "csv") {
-    const filename = `${data.report}-${new Date().toISOString().slice(0, 10)}.csv`;
-    res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    return res.send(toCsv(data.columns, data.totals ? [...data.rows, data.totals] : data.rows));
-  }
-  return ApiResponse.success(res, data, data.title);
-});
-
-module.exports.getDashboard = getDashboard;
-module.exports.getReport = getReport;

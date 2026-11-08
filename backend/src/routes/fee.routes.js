@@ -3,7 +3,6 @@ const router = express.Router();
 
 const feeTypeController = require("../controllers/feeType.controller");
 const feeStructureController = require("../controllers/feeStructure.controller");
-const feePaymentController = require("../controllers/feePayment.controller");
 const financeController = require("../controllers/finance.controller");
 const { body, param, query } = require("express-validator");
 const {
@@ -34,10 +33,7 @@ const {
   feeTypeUpdateRules,
   feeStructureRules,
   feeStructureUpdateRules,
-  feePaymentRules,
   feeStructureQueryRules,
-  studentFeeQueryRules,
-  feePaymentIdParamRule,
   studentClassIdParamRule,
   studentIdParamRule,
 } = require("../validators");
@@ -209,55 +205,6 @@ router.delete(
 );
 
 // =====================================================
-// FEE PAYMENTS
-// =====================================================
-
-// GET /api/v1/fees/payments - Get all payments (filtered by role)
-router.get(
-  "/payments",
-  canReadFees,
-  studentFeeQueryRules,
-  validate,
-  feePaymentController.getFeePayments
-);
-
-// GET /api/v1/fees/payments/student/:studentId - Get student fee summary
-router.get(
-  "/payments/student/:studentId",
-  canReadFees,
-  [studentIdParamRule],
-  validate,
-  feePaymentController.getStudentFeeSummary
-);
-
-// POST /api/v1/fees/payments/:feePaymentId/pay - Record payment (Admin or Accountant)
-router.post(
-  "/payments/:feePaymentId/pay",
-  canManageFees,
-  [feePaymentIdParamRule, ...feePaymentRules],
-  validate,
-  feePaymentController.recordPayment
-);
-
-// POST /api/v1/fees/payments/generate/:studentClassId - Generate fees for student (Admin or Accountant)
-router.post(
-  "/payments/generate/:studentClassId",
-  canManageFees,
-  [studentClassIdParamRule],
-  validate,
-  feePaymentController.generateStudentFees
-);
-
-// POST /api/v1/fees/payments/generate-bulk - Bulk generate fees (Admin or Accountant)
-router.post(
-  "/payments/generate-bulk",
-  canManageFees,
-  bulkGenerateFeesRules,
-  validate,
-  feePaymentController.bulkGenerateFees
-);
-
-// =====================================================
 // LEDGER (docs/plans/finance-and-portals.md §5)
 // Fee staff = ACCOUNTANT, ADMIN, SUPER_ADMIN (canManageFees).
 // Approvals, direct reversals, waivers and reconcile are admin only (isAdmin);
@@ -289,6 +236,8 @@ router.post("/discounts/:id/reject", isAdmin, [financeIdParam(), financeNote], v
 router.post("/discounts/:id/revoke", isAdmin, [financeIdParam(), financeReason()], validate, financeController.revokeDiscount);
 
 // Obligations and installment plans
+router.post("/obligations/generate/:studentClassId", canManageFees, [studentClassIdParamRule], validate, financeController.generateForEnrolment);
+router.post("/obligations/generate-bulk", canManageFees, bulkGenerateFeesRules, validate, financeController.generateForClass);
 router.post("/obligations/:id/cancel", isAdmin, [financeIdParam(), financeReason()], validate, financeController.cancelObligation);
 router.get("/structures/:id/installments", canManageFees, [financeIdParam()], validate, financeController.getInstallmentTemplate);
 router.put("/structures/:id/installments", canManageFees, templateRules, validate, financeController.setInstallmentTemplate);

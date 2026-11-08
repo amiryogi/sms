@@ -220,3 +220,10 @@ Each wave ends green on the verification below and is committed separately.
   `reportcard/PerformanceSheet.jsx`, `ReportSheet.jsx`, `GradeLegend.jsx`,
   `usePrintIsolation.js`. Their surrounding page chrome is converted; the sheets
   are not.
+
+## Outcome (2026-11-08)
+
+Waves 1–3 shipped as planned. Wave 4 was done as Phases 4–7 of
+`plans/finance-and-portals.md`. Wave 5 shipped only the finance dashboard charts (Phase 5);
+admin and teacher charts are not built. Wave 6 was done in that plan's Phase 8: the legacy
+stylesheets are deleted and verified by a computed-style diff (details there).

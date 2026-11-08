@@ -7,7 +7,7 @@ import NepalReportCard from "../common/NepalReportCard";
 /**
  * The printable report card (the school's own layout, unchanged) for one of
  * the student's PUBLISHED exams. The sheet keeps its own print styles; the
- * .rc-embedded wrapper (styles/bridge.css) shows it inline instead of as an
+ * .rc-embedded wrapper (styles/app.css) shows it inline instead of as an
  * overlay, and the app shell hides itself when printing.
  */
 const ReportCardView = ({ studentId }) => {

@@ -67,7 +67,7 @@ Demo logins (after seed, password `password123`):
 `superadmin@svi.edu.np`, `admin@svi.edu.np`, `admin@demo-school.edu.np`, `teacher@demo-school.edu.np`,
 `student@demo-school.edu.np`, `parent@demo-school.edu.np`. School code `DEMO001`.
 
-**Tests:** `npm test` (Jest) runs 397 unit tests over the pure utilities in
+**Tests:** `npm test` (Jest) runs 410 unit tests over the pure utilities in
 `backend/src/utils/__tests__/` — grade calculation, grade scales, report-card
 layouts and attendance, BS date conversion, pagination, the response helpers and the fee
 maths (`finance.test.js`: money, allocation, discounts, fiscal year, attendance rate) — plus the grade-scale service
@@ -249,11 +249,15 @@ payment dialog, receipt sheet, student picker, installment plan) in
 `src/components/finance/`. The old Fee Payments page is gone; its URLs redirect to
 `/finance/accounts`. Endpoints under `/api/v1/fees`: `accounts`, `transactions`
 (append-only), `reversal-requests`, `discounts` (request → admin approval),
+`obligations/generate/:studentClassId`, `obligations/generate-bulk`,
 `obligations/:id/cancel`, `structures/:id/installments`, `reconcile`. Receipt
 numbers run per school per Nepali fiscal year (`RCP-2083-84-00042`, reversals
-`REV-…`). The old `/fees/payments*` endpoints still work, running on the ledger,
-until Phase 8. Attendance % (`/attendance/student/:id`) now follows the
-layout's `countLateAsPresent`.
+`REV-…`). The old `/fees/payments*` endpoints and the per-row payment columns of
+`fee_payments` (`payment_date`, `receipt_number`, `payment_method`, `remarks`,
+`recorded_by_user_id`) were removed in Phase 8 (migration
+`20261108180000_drop_legacy_fee_columns`): a payment exists only as a
+`FeeTransaction`. Attendance % (`/attendance/student/:id`) follows the layout's
+`countLateAsPresent`.
 
 **Report card layout is per school** (School Settings → Report Card Layout,
 `/api/v1/report-card-layout`). `School.reportCardConfig` (JSON, null = the
@@ -281,8 +285,7 @@ renders the flags. Plan: `docs/plans/configurable-report-card.md`.
 - Each view is keyed by the child's id: switching never shows the previous child's data.
 - `GET /assignments?studentId=` narrows a parent's list to one linked child (403 otherwise)
   and includes that child's submissions.
-- The embedded report card uses the `.rc-embedded` wrapper in `styles/bridge.css`; move
-  that rule to `app.css` when `bridge.css` is deleted.
+- The embedded report card uses the `.rc-embedded` wrapper rule in `styles/app.css`.
 
 **Report-card attendance** ("61/70"): the admin sets `Exam.workingDays` on the
 Report Cards page (`PUT /exams/:id/working-days`, any exam status); Generate
@@ -293,11 +296,11 @@ academic-year start to the exam end and freezes them on `ReportCard`
 
 **Partial or rough:**
 - No admin-facing attendance report page (the API exists).
-- Dashboards are stat cards only; no charts or trends.
+- The admin and teacher dashboards are stat cards; only the finance dashboard has charts.
 
 **Not built:** timetable/routine, library, transport, hostel, SMS/email
 notifications, payroll, certificates and transfer certificates, audit-log UI,
-multi-school admin UI, any automated tests.
+multi-school admin UI, browser (end-to-end) tests.
 
 **Divergence from `.github/backend-rules.md`:** that file prescribes
 Routes -> Controllers -> **Services** -> Prisma, but only `notice.service.js`
@@ -373,21 +376,23 @@ see `docs/STATUS.md`.
   `src/lib/cn.js`. Use tokens, never hex: `bg-brand-600`, `text-brand-700`,
   `text-slate-500`. `brand-*` is the school's colour (`School.brandColor`, set in
   School Settings, applied by `src/lib/brand.js`; default indigo).
-- **Layers** (`styles/app.css`): `theme, base, legacy, components, utilities`. The old
-  `src/index.css` sits in `legacy` and `styles/bridge.css` restyles its class names
-  (`.card`, `.btn`, `.badge`, `.form-group`…) in `components` while pages are converted
-  wave by wave (plan: `docs/plans/ui-redesign-tailwind.md`; progress in
-  STATUS.md). Converted pages use no legacy class names; both files are deleted at the end.
+- **One stylesheet:** `styles/app.css`, layers `theme, base, components, utilities`. The old
+  `index.css` / `bridge.css` / `App.css` were deleted in UI wave 6 (Phase 8). The few rules
+  the report sheets still need sit in its last `@layer components` block (app font on `*`,
+  `.attendance-row`, the `.rc-layout-preview` / `.rc-embedded` overrides, print rules). Don't
+  add global class vocabularies (`.card`, `.btn`…) again; write utilities or a kit component.
+  `--radius-sm/md/lg` are pinned in `@theme` to 6 / 8 / 14 px (the values the design was built
+  with), so `rounded-lg` is 14 px here, not Tailwind's 8 px.
 - **Print exception.** The report-card sheets (`NepalReportCard`, `BulkReportCardPrint`,
   `reportcard/*`) keep their local, unlayered `<style>` blocks for A4 output. Unlayered CSS
   beats every Tailwind layer, so to override them from outside you need `!important`
-  (see the `.rc-layout-preview` rule in `bridge.css`). Check page counts with a print-to-PDF
-  after touching them.
+  (see the `.rc-layout-preview` rule in `app.css`). Their `.btn` / `.no-print` class names are
+  styled by those blocks, not globally. Check page counts with a print-to-PDF after touching them.
 - **shadcn/ui is used selectively, not as a second kit.**
   - `components.json` sets `cssVariables: false`, so the CLI writes components with plain
     slate/white classes and **no global theme tokens**. shadcn's `muted` / `primary` /
-    `border` tokens would generate utilities like `.text-muted` that clash with legacy
-    class names still in use.
+    `border` tokens would add a second theme next to `brand-*` (and `--radius` would fight the
+    pinned radii).
   - Add a component with `npx shadcn@4.23.0 add <name>` from `frontend/`. It lands in
     `src/components/shadcn/` (alias `@/` = `src/`, set in `vite.config.js` /
     `jsconfig.json`).
@@ -418,7 +423,7 @@ see `docs/STATUS.md`.
 2. Check `.github/` for an existing spec (`exam/`, `fee/`, `subjects/`, `task-playbook.md`). Most modules were specced before being built.
 3. Backend first: validator -> controller -> route (with middleware) -> register in `routes/index.js`.
 4. Secure it: `schoolId` filter, `academicYearId` scope, role/permission check, and seed the new permission.
-5. Frontend last: service in `api/`, page under `pages/{role}/`, route plus sidebar entry, CSS in `index.css`.
+5. Frontend last: service in `api/`, page under `pages/{role}/`, route plus sidebar entry; style with utilities and the `ui/` kit (no new global CSS).
 6. Verify by running both servers against seeded data, and state plainly what you did and did not verify.
 
 Never ship frontend without the backend behind it. Never bypass RBAC.

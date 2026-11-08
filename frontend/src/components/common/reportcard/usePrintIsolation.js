@@ -4,7 +4,7 @@ import { useEffect } from "react";
  * While a report-card overlay is open, print only the overlay.
  *
  * The overlays are portalled to <body>, outside #root. This hook marks <body>
- * so the print rule in index.css can hide #root. Without it the page behind the
+ * so the print rule in styles/app.css can hide #root. Without it the page behind the
  * overlay (e.g. the whole Report Cards admin screen) printed as an extra first
  * page before the report cards.
  *

@@ -65,7 +65,6 @@ const createSubject = asyncHandler(async (req, res) => {
       name,
       code,
       description,
-      description,
       isOptional: !!isOptional,
       creditHours: creditHours || 3.0,
       hasPractical: !!hasPractical,

@@ -55,33 +55,15 @@ export const feeService = {
     return response.data;
   },
 
-  // Fee Payments
-  getFeePayments: async (params = {}) => {
-    const response = await apiClient.get("/fees/payments", { params });
-    return response.data;
-  },
-  getStudentFeeSummary: async (studentId, params = {}) => {
-    const response = await apiClient.get(
-      `/fees/payments/student/${studentId}`,
-      { params }
-    );
-    return response.data;
-  },
-  recordPayment: async (feePaymentId, data) => {
-    const response = await apiClient.post(
-      `/fees/payments/${feePaymentId}/pay`,
-      data
-    );
-    return response.data;
-  },
+  // Fee generation: one enrolment, or every active student in a class
   generateStudentFees: async (studentClassId) => {
     const response = await apiClient.post(
-      `/fees/payments/generate/${studentClassId}`
+      `/fees/obligations/generate/${studentClassId}`
     );
     return response.data;
   },
   bulkGenerateFees: async (data) => {
-    const response = await apiClient.post("/fees/payments/generate-bulk", data);
+    const response = await apiClient.post("/fees/obligations/generate-bulk", data);
     return response.data;
   },
 
