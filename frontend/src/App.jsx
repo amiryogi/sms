@@ -36,7 +36,13 @@ const AdminFeeTypes = React.lazy(() => import("./pages/admin/FeeTypes"));
 const AdminFeeStructures = React.lazy(
   () => import("./pages/admin/FeeStructures"),
 );
-const AdminFeePayments = React.lazy(() => import("./pages/admin/FeePayments"));
+// Finance (shared by ADMIN and ACCOUNTANT; docs/plans/finance-and-portals.md)
+const FinanceCollect = React.lazy(() => import("./pages/finance/Collect"));
+const FinanceAccounts = React.lazy(() => import("./pages/finance/Accounts"));
+const FinanceAccountDetail = React.lazy(() => import("./pages/finance/AccountDetail"));
+const FinanceTransactions = React.lazy(() => import("./pages/finance/Transactions"));
+const FinanceDiscounts = React.lazy(() => import("./pages/finance/Discounts"));
+const FinanceReceipt = React.lazy(() => import("./pages/finance/Receipt"));
 const AdminPromotions = React.lazy(() => import("./pages/admin/Promotions"));
 
 // Teacher Pages
@@ -163,10 +169,8 @@ function App() {
                 path="/admin/fee-structures"
                 element={<AdminFeeStructures />}
               />
-              <Route
-                path="/admin/fee-payments"
-                element={<AdminFeePayments />}
-              />
+              {/* The old fee payments page became Finance -> Student accounts. */}
+              <Route path="/admin/fee-payments" element={<Navigate to="/finance/accounts" replace />} />
               <Route
                 path="/admin/promotions"
                 element={<AdminPromotions />}
@@ -257,19 +261,20 @@ function App() {
                 </ProtectedRoute>
               }
             >
-              <Route
-                path="/accountant/dashboard"
-                element={<AdminFeePayments />}
-              />
+              {/* Until the finance dashboard (Phase 5), the accountant starts at the counter. */}
+              <Route path="/accountant/dashboard" element={<Navigate to="/finance/collect" replace />} />
+              <Route path="/finance/collect" element={<FinanceCollect />} />
+              <Route path="/finance/accounts" element={<FinanceAccounts />} />
+              <Route path="/finance/accounts/:studentId" element={<FinanceAccountDetail />} />
+              <Route path="/finance/transactions" element={<FinanceTransactions />} />
+              <Route path="/finance/discounts" element={<FinanceDiscounts />} />
+              <Route path="/finance/receipts/:id" element={<FinanceReceipt />} />
               <Route path="/accountant/fee-types" element={<AdminFeeTypes />} />
               <Route
                 path="/accountant/fee-structures"
                 element={<AdminFeeStructures />}
               />
-              <Route
-                path="/accountant/fee-payments"
-                element={<AdminFeePayments />}
-              />
+              <Route path="/accountant/fee-payments" element={<Navigate to="/finance/accounts" replace />} />
               <Route path="/accountant/notices" element={<NoticesView />} />
             </Route>
 

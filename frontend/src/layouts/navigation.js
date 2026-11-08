@@ -22,6 +22,9 @@ import {
   Building2,
   NotebookPen,
   FileBarChart,
+  HandCoins,
+  ScrollText,
+  BadgePercent,
 } from "lucide-react";
 
 /*
@@ -63,7 +66,10 @@ const ADMIN = [
   {
     label: "Finance",
     items: [
-      { title: "Fee Payments", icon: Wallet, path: "/admin/fee-payments" },
+      { title: "Collect Fees", icon: HandCoins, path: "/finance/collect" },
+      { title: "Student Accounts", icon: Wallet, path: "/finance/accounts" },
+      { title: "Transactions", icon: ScrollText, path: "/finance/transactions" },
+      { title: "Discounts", icon: BadgePercent, path: "/finance/discounts" },
       { title: "Fee Structures", icon: ReceiptText, path: "/admin/fee-structures" },
       { title: "Fee Types", icon: Tags, path: "/admin/fee-types" },
     ],
@@ -101,8 +107,10 @@ const ACCOUNTANT = [
   {
     label: "Finance",
     items: [
-      { title: "Dashboard", icon: LayoutDashboard, path: "/accountant/dashboard" },
-      { title: "Fee Payments", icon: Wallet, path: "/accountant/fee-payments" },
+      { title: "Collect Fees", icon: HandCoins, path: "/finance/collect" },
+      { title: "Student Accounts", icon: Wallet, path: "/finance/accounts" },
+      { title: "Transactions", icon: ScrollText, path: "/finance/transactions" },
+      { title: "Discounts", icon: BadgePercent, path: "/finance/discounts" },
       { title: "Fee Structures", icon: ReceiptText, path: "/accountant/fee-structures" },
       { title: "Fee Types", icon: Tags, path: "/accountant/fee-types" },
       { title: "Students", icon: GraduationCap, path: "/staff/students" },
@@ -170,7 +178,14 @@ export const titleForPath = (pathname) => {
     const hit = section.items.find((i) => i.path === pathname);
     if (hit) return { title: hit.title, section: section.label };
   }
-  const last = pathname.split("/").filter(Boolean).pop() || "dashboard";
+  // A page under a menu item (/finance/accounts/12) takes that item's title.
+  for (const section of ALL) {
+    const parent = section.items.find((i) => pathname.startsWith(`${i.path}/`));
+    if (parent) return { title: parent.title, section: section.label };
+  }
+  // Otherwise the last word of the path, skipping ids (/finance/receipts/42 -> "Receipts").
+  const words = pathname.split("/").filter((w) => w && !/^\d+$/.test(w));
+  const last = words.pop() || "dashboard";
   return {
     title: last.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
     section: null,

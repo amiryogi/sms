@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
-import { Plus, Pencil, Trash2, ReceiptText } from "lucide-react";
+import { Plus, Pencil, Trash2, ReceiptText, CalendarRange } from "lucide-react";
 import DataTable from "../../components/common/DataTable";
 import Modal from "../../components/common/Modal";
 import { Input, Select, Button, FormRow } from "../../components/common/FormElements";
-import { PageHeader, IconButton, SelectInput, DialogActions, toast, confirmDialog } from "../../components/ui";
+import { PageHeader, IconButton, SelectInput, DialogActions, Badge, toast, confirmDialog } from "../../components/ui";
+import InstallmentPlanDialog from "../../components/finance/InstallmentPlanDialog";
 import { feeService } from "../../api/feeService";
 import { academicService } from "../../api/academicService";
 import RoleGuard from "../../components/auth/RoleGuard";
@@ -21,6 +22,7 @@ const FeeStructures = () => {
   const [submitting, setSubmitting] = useState(false);
   const [filterClassId, setFilterClassId] = useState("");
   const [filterYearId, setFilterYearId] = useState("");
+  const [planFor, setPlanFor] = useState(null);
 
   const {
     register,
@@ -158,14 +160,24 @@ const FeeStructures = () => {
     },
     { header: "Class", render: (row) => row.class?.name || "—" },
     {
+      header: "Paid in",
+      render: (row) =>
+        row._count?.installmentPlan ? (
+          <Badge tone="brand">{row._count.installmentPlan} installments</Badge>
+        ) : (
+          <span className="text-sm text-slate-500">One payment</span>
+        ),
+    },
+    {
       header: <span className="block text-right">Amount</span>,
       render: (row) => <p className="text-right font-semibold text-slate-900 tabular-nums">{formatCurrency(row.amount)}</p>,
     },
     {
       header: <span className="sr-only">Actions</span>,
-      width: "96px",
+      width: "132px",
       render: (row) => (
         <div className="flex justify-end gap-1">
+          <IconButton icon={CalendarRange} label="Installment plan" onClick={() => setPlanFor(row)} />
           <IconButton icon={Pencil} label="Edit amount" onClick={() => openModal(row)} />
           {/* Delete is admin-only on the backend; accountants never see it. */}
           <RoleGuard roles={["ADMIN"]}>
@@ -291,6 +303,17 @@ const FeeStructures = () => {
           </DialogActions>
         </form>
       </Modal>
+
+      {planFor && (
+        <InstallmentPlanDialog
+          structure={planFor}
+          onClose={() => setPlanFor(null)}
+          onSaved={() => {
+            setPlanFor(null);
+            fetchFeeStructures();
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -467,3 +467,37 @@ What shipped, and where it differs from the plan above:
 - The migration backfill was checked on `sms_test` with paid, partial and unpaid legacy rows
   (fixture `scripts/fixtures/legacy-fee-rows.js`, run before the migration).
 - The development database was migrated and reconciles: `node scripts/reconcile.js`.
+
+### Phase 4 — done (2026-11-08)
+
+The fee screens are under `/finance/*`, for both ADMIN and ACCOUNTANT:
+
+| Page | What it does |
+|---|---|
+| **Collect** | Student search → this year's fees → payment dialog → print the receipt. |
+| **Student accounts** | Status tabs, filters, "Generate fees" for a class. |
+| **Account** | Fees with their installments, payments and reversals, discounts; record a payment, request a discount, request or (admin) make a reversal, (admin) cancel an unpaid fee. |
+| **Transactions** | The ledger, plus the reversal-request queue. |
+| **Discounts** | Requests, plus admin approve / reject / revoke. |
+| **Receipt** | A4 print with amount in words and the BS date. |
+| **Fee Structures** | Gains an installment-plan editor ("Split evenly into N"). |
+
+- **Removed:** the old `pages/admin/FeePayments.jsx`. `/admin/fee-payments` and
+  `/accountant/fee-payments` redirect to `/finance/accounts`.
+- **Accountant landing:** `/accountant/dashboard` redirects to `/finance/collect` until the
+  Phase 5 dashboard exists.
+- **Dependencies added:** `cmdk` 1.1.1 and `@radix-ui/react-popover` 1.3.1, for the student
+  combobox only.
+- **Double payments:** the payment dialog creates its idempotency key when it opens, so a
+  double-click or a retry returns the same receipt.
+- **Backend tweaks:**
+  - `GET /fees/structures` returns `_count` (installment plan size and generated fees);
+  - `GET /fees/transactions/:id` returns `paidOnBs`.
+- **Verified** in a browser against a test stack (frontend on port 5174 → API on port 5002 →
+  `sms_test`):
+  - payment, receipt print (1 page);
+  - reversal request → admin approval;
+  - discount request → a second admin approves;
+  - installment plan save;
+  - screenshots at 1440 and 390 px.
+  - The sweep of every page × 7 roles on the development stack is clean.

@@ -197,7 +197,7 @@ const DashboardLayout = () => {
   );
 
   return (
-    <div className="flex min-h-dvh bg-slate-50">
+    <div className="flex min-h-dvh bg-slate-50 print:bg-white">
       {/* Desktop sidebar */}
       <aside
         className={cn(

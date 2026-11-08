@@ -22,6 +22,8 @@ const getFeeStructures = asyncHandler(async (req, res) => {
       feeType: { select: { id: true, name: true, isActive: true } },
       class: { select: { id: true, name: true, gradeLevel: true } },
       academicYear: { select: { id: true, name: true, isCurrent: true } },
+      // Installment plan size and generated fees, for the list's badges.
+      _count: { select: { installmentPlan: true, feeObligations: true } },
     },
     orderBy: [
       { academicYear: { name: "desc" } },

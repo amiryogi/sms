@@ -14,6 +14,7 @@ const m = require("../../utils/money");
 const { allocatePayment, checkAllocations } = require("../../utils/feeAllocation");
 const { fiscalYearOf, formatReceiptNumber, kathmanduToday, dateOnly } = require("../../utils/fiscalYear");
 const { lockInstallments, refreshBalances, withTransaction } = require("./balances");
+const { convertADToBS } = require("../../utils/dateConverter");
 
 const RECEIPT_INCLUDE = {
   student: { select: { id: true, admissionNumber: true, user: { select: { firstName: true, lastName: true } } } },
@@ -56,8 +57,11 @@ const findEnrolment = async (tx, schoolId, studentId, academicYearId) => {
   return enrolment;
 };
 
-const getReceipt = (schoolId, id, client = prisma) =>
-  client.feeTransaction.findFirst({ where: { id: Number(id), schoolId }, include: RECEIPT_INCLUDE });
+/** One transaction with everything a printed receipt needs, plus its BS date. */
+const getReceipt = async (schoolId, id, client = prisma) => {
+  const t = await client.feeTransaction.findFirst({ where: { id: Number(id), schoolId }, include: RECEIPT_INCLUDE });
+  return t ? { ...t, paidOnBs: convertADToBS(t.paidOn)?.formatted || null } : null;
+};
 
 /**
  * Record a payment.

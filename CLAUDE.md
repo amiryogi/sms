@@ -23,7 +23,7 @@ has `school_id`) but only one school is seeded and used.
 | -------- | ---------------------------------------------------------------------- |
 | Backend  | Node.js ≥18, Express 4, Prisma 5.22, MySQL 8, JWT (access + refresh)    |
 | Frontend | React 19 + Vite 7, React Router 7, Axios, react-hook-form, lucide-react |
-| Styling  | **Tailwind CSS 4** (`@tailwindcss/vite`), tokens in `frontend/src/styles/app.css`, kit in `src/components/ui/`. No CSS-in-JS |
+| Styling  | **Tailwind CSS 4** (`@tailwindcss/vite`), tokens in `frontend/src/styles/app.css`, kit in `src/components/ui/`. No CSS-in-JS. `cmdk` + `@radix-ui/react-popover` (shadcn-style copy-in) only for the student search combobox |
 | Dates    | AD stored in DB; BS (Bikram Sambat) rendered via `backend/src/utils/dateConverter.js` |
 
 Repo layout:
@@ -236,8 +236,13 @@ and grading; notices (global / role / class targeting); fees (types,
 structures, payments); promotions; school branding settings; subject Excel
 import.
 
-**Fee ledger (Phase 3 of `docs/plans/finance-and-portals.md`):** backend done, UI
-from Phase 4. Endpoints under `/api/v1/fees`: `accounts`, `transactions`
+**Fee ledger (Phases 3–4 of `docs/plans/finance-and-portals.md`):** backend and the
+fee-management UI are done; the finance dashboard and reports are Phase 5. Pages live in
+`frontend/src/pages/finance/` (Collect, Accounts, AccountDetail, Transactions, Discounts,
+Receipt) under `/finance/*`, shared by ADMIN and ACCOUNTANT; reusable pieces (statement,
+payment dialog, receipt sheet, student picker, installment plan) in
+`src/components/finance/`. The old Fee Payments page is gone; its URLs redirect to
+`/finance/accounts`. Endpoints under `/api/v1/fees`: `accounts`, `transactions`
 (append-only), `reversal-requests`, `discounts` (request → admin approval),
 `obligations/:id/cancel`, `structures/:id/installments`, `reconcile`. Receipt
 numbers run per school per Nepali fiscal year (`RCP-2083-84-00042`, reversals
