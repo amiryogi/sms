@@ -1,14 +1,16 @@
 /**
  * Exact money arithmetic for the fee ledger.
  *
- * Uses Prisma's Decimal (decimal.js, already a dependency of @prisma/client),
- * never JavaScript floats: 0.1 + 0.2 must be 0.30, not 0.30000000000000004.
+ * Uses Prisma's Decimal (decimal.js), never JavaScript floats: 0.1 + 0.2 must
+ * be 0.30, not 0.30000000000000004. Decimal comes from the Prisma runtime
+ * package, so this module needs no database or DATABASE_PROVIDER and the unit
+ * tests load it directly. Each generated client (MySQL, PostgreSQL) carries its
+ * own copy of that class; values read from the database are still Decimals
+ * (Decimal.isDecimal is true) and dec() converts them to this module's class.
  * Every function accepts a Decimal, a number or a numeric string and returns a
  * Decimal, except toNumber / toFixed2, which are for API responses only.
  */
-const { Prisma } = require("@prisma/client");
-
-const Decimal = Prisma.Decimal;
+const { Decimal } = require("@prisma/client/runtime/library");
 
 /** Any numeric input (or null/undefined, read as 0) as a Decimal. */
 const dec = (value) => {

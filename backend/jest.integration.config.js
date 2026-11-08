@@ -1,15 +1,17 @@
 /**
- * Integration tests: real MySQL, real Prisma, no HTTP server.
+ * Integration tests: a real database of either provider, real Prisma, and the
+ * Express app over supertest (no server is started).
  *
- * They write to the database, so they only run against the test database:
+ * They write to the database, so they only run against a test database:
  *
- *   npm run test:integration
+ *   npm run test:integration:mysql   (alias: npm run test:integration)
+ *   npm run test:integration:pg
  *
- * which goes through scripts/with-test-db.js (DATABASE_URL -> sms_test, or
- * TEST_DATABASE_URL). That database needs the migrations and the demo seed:
+ * which go through scripts/with-test-db.js --provider mysql|pg. That database
+ * needs the migrations and the demo seed:
  *
- *   node scripts/with-test-db.js npx prisma migrate deploy
- *   node scripts/with-test-db.js npm run seed
+ *   node scripts/with-test-db.js [--provider pg] npm run db:migrate:deploy
+ *   node scripts/with-test-db.js [--provider pg] npm run seed
  */
 process.env.TZ = "Asia/Kathmandu";
 

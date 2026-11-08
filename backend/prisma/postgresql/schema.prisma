@@ -1,24 +1,37 @@
 // =====================================================
-// K-10 SCHOOL MANAGEMENT SYSTEM - PRISMA SCHEMA
-// MySQL 8.0+ | Prisma 5.x
-// =====================================================
-// 
-// This schema supports:
-// - Single-school initially, expandable to multi-school
-// - Full RBAC (Roles, Permissions, RolePermissions, UserRoles)
-// - All K-10 academic management features
-// - JWT authentication with refresh tokens
-//
+// GENERATED for postgresql by prisma/build-schemas.js. DO NOT EDIT.
+// Edit prisma/schema/models.prisma, then run `npm run db:schemas`.
 // =====================================================
 
 generator client {
   provider = "prisma-client-js"
+  output   = "../../node_modules/.prisma-clients/postgresql"
 }
 
+// Supabase: the app connects through the pooler (SUPABASE_DATABASE_URL,
+// ?pgbouncer=true); migrations use the direct connection.
 datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("SUPABASE_DATABASE_URL")
+  directUrl = env("SUPABASE_DIRECT_URL")
 }
+
+// =====================================================
+// K-10 SCHOOL MANAGEMENT SYSTEM - SHARED PRISMA MODELS
+// =====================================================
+//
+// THE place to change the data model. Edit this file only, then run
+//   npm run db:schemas        (writes prisma/mysql/schema.prisma and
+//                              prisma/postgresql/schema.prisma)
+//   npm run db:migrate:new -- <name>   (one migration per provider)
+//
+// Every type and @db attribute here must be valid on BOTH MySQL 8 and
+// PostgreSQL (VarChar, Text, Date, Time, Decimal are). See
+// docs/database/architecture-proposal.md.
+//
+// Supports: single school (multi-school ready), full RBAC, K-10 academics,
+// the fee ledger and JWT refresh tokens.
+// =====================================================
 
 // =====================================================
 // ENUMS

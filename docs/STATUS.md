@@ -10,6 +10,41 @@ are done** and on `main`.
 
 ---
 
+## Dual database support (MySQL 8 + Supabase PostgreSQL) — in progress
+
+Brief pasted 2026-11-08. Docs: [database/](database/). One codebase; the provider is chosen
+per deployment with `DATABASE_PROVIDER`.
+
+| Phase | Scope | State |
+|---|---|---|
+| 1 | Read-only audit + 5 docs | **Done** (2026-11-08) |
+| 2 | Architecture approval | **Approved** (2026-11-08) |
+| 3 | MySQL preserved on the new layer: `src/database`, shared `models.prisma` → two schemas, migrations moved, `db:*` scripts, regression tests | **Done** (2026-11-08) |
+| 4 | PostgreSQL baseline migration, client, seed on a Supabase test project | — needs the Supabase test project URLs in `backend/.env` |
+| 5 | Dialect fixes (receipt sequence, text search/equality, ordering) | — |
+| 6 | Both integration runs + browser sweep on PostgreSQL | — |
+| 7 | Deployment docs (Supabase guide) | — |
+
+**Phase 3 verified (MySQL):**
+- **Unit tests:** 439 pass: the 410 existing ones, unchanged, plus 29 for the database layer
+  (config, dialect, schema sync, no direct `@prisma/client`).
+- **Integration tests:** 79 pass: the 33 ledger tests, plus 16 database-level and 30 API-level
+  tests (auth, RBAC, isolation, the exam lifecycle and snapshot, publication gating, fees,
+  promotions).
+- **Migrations:** `db:status` is "up to date" on the dev and test databases after moving the
+  migrations to `prisma/mysql/migrations`.
+- **Other checks:** `reconcile` is OK on both databases; the browser sweep of 7 roles shows no
+  console errors or failed calls.
+
+**Upgrade note for any existing MySQL install:** add `DATABASE_PROVIDER=mysql` and rename
+`DATABASE_URL` to `MYSQL_DATABASE_URL`. The database needs no change.
+
+**Found in Phase 3:**
+- Each generated client carries its own copy of Prisma's `Decimal` class; `money.js` converts
+  on entry.
+- The seed wipes only with `--clean`, and that flag is now refused outside a test database
+  unless `--yes-really` is added.
+
 ## Finance ledger and portals — done
 
 Plan: [plans/finance-and-portals.md](plans/finance-and-portals.md) (approved 2026-11-08).

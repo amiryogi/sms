@@ -1,4 +1,4 @@
-const { Prisma } = require("@prisma/client");
+const { Prisma } = require("../database");
 const prisma = require("../config/database");
 const {
   ApiError,

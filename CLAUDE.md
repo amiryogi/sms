@@ -1,7 +1,7 @@
 # CLAUDE.md — K‑10 School Management System (Nepal)
 
 Guidance for Claude Code working in this repo. Read this first, then
-`backend/prisma/schema.prisma` before touching any data logic.
+`backend/prisma/schema/models.prisma` before touching any data logic.
 
 > **Resuming work, or on a new machine?**
 > - [docs/STATUS.md](docs/STATUS.md) — what is done, what to do next, open decisions.
@@ -21,7 +21,7 @@ has `school_id`) but only one school is seeded and used.
 
 | Layer    | Stack                                                                  |
 | -------- | ---------------------------------------------------------------------- |
-| Backend  | Node.js ≥18, Express 4, Prisma 5.22, MySQL 8, JWT (access + refresh)    |
+| Backend  | Node.js ≥18, Express 4, Prisma 5.22, JWT (access + refresh). Database: **MySQL 8 or Supabase PostgreSQL**, one per deployment (`DATABASE_PROVIDER`; see §4.12 and `docs/database/`) |
 | Frontend | React 19 + Vite 7, React Router 7, Axios, react-hook-form, lucide-react |
 | Styling  | **Tailwind CSS 4** (`@tailwindcss/vite`), tokens in `frontend/src/styles/app.css`, kit in `src/components/ui/`. No CSS-in-JS. shadcn/ui pieces in `src/components/shadcn/` (see §9). Charts: `recharts`, colours in `components/finance/charts/chartTheme.js` |
 | Dates    | AD stored in DB; BS (Bikram Sambat) rendered via `backend/src/utils/dateConverter.js` |
@@ -30,9 +30,13 @@ Repo layout:
 
 ```
 backend/            Express API + Prisma
-  prisma/schema.prisma      ~1200 lines, 35 models — the source of truth
+  prisma/schema/models.prisma  ~1200 lines, 45 models — the source of truth (edit only this)
+  prisma/{mysql,postgresql}/  generated schema.prisma + that provider's migrations
+  prisma/build-schemas.js   models.prisma -> both provider schemas
   prisma/seed.js            roles, permissions, demo school, classes, students
-  prisma/seeds/             extra seeders + Excel import/export
+  prisma/seeds/             demo fee data (demoFinance.js)
+  scripts/db.js             provider-aware Prisma commands (npm run db:*)
+  src/database/             provider config, client loading, dialect helpers
   src/{routes,controllers,services,middleware,validators,utils,config}
 frontend/src/{api,pages,components,layouts,context}
 .github/                    feature specs written before implementation (read these)
@@ -47,11 +51,13 @@ database/schema.sql         raw SQL mirror of the Prisma schema
 ```bash
 # backend/  (port 5000)
 npm run dev              # nodemon
-npm run prisma:generate  # after ANY schema.prisma edit (stop the dev server first on Windows: EPERM)
-npx prisma migrate deploy  # apply committed migrations — how schema changes travel
-npm run prisma:migrate   # create a new migration (needs the shadow-DB grant; see docs/SETUP-NEW-MACHINE.md)
-npm run prisma:studio    # DB browser
-npm run seed             # node prisma/seed.js — wipes + reseeds demo data
+npm run db:schemas       # after editing prisma/schema/models.prisma: rebuild both provider schemas
+npm run db:generate      # generate BOTH Prisma clients (also on npm install; stop the dev server first on Windows: EPERM)
+npm run db:migrate:deploy  # apply committed migrations for DATABASE_PROVIDER — how schema changes travel
+npm run db:status        # migrate status for DATABASE_PROVIDER
+npm run db:studio        # DB browser
+npm run seed             # node prisma/seed.js — idempotent upserts of the demo data
+npm run seed -- --clean  # wipe first; refused outside a test database unless --yes-really is added
 npm run lint
 
 # frontend/  (port 5173)
@@ -67,24 +73,37 @@ Demo logins (after seed, password `password123`):
 `superadmin@svi.edu.np`, `admin@svi.edu.np`, `admin@demo-school.edu.np`, `teacher@demo-school.edu.np`,
 `student@demo-school.edu.np`, `parent@demo-school.edu.np`. School code `DEMO001`.
 
-**Tests:** `npm test` (Jest) runs 410 unit tests over the pure utilities in
+**Tests:** `npm test` (Jest) runs 439 unit tests over the pure utilities in
 `backend/src/utils/__tests__/` — grade calculation, grade scales, report-card
 layouts and attendance, BS date conversion, pagination, the response helpers and the fee
 maths (`finance.test.js`: money, allocation, discounts, fiscal year, attendance rate) — plus the grade-scale service
 in `backend/src/services/__tests__/` and the auth/ownership middleware in
-`backend/src/middleware/__tests__/` (Prisma mocked). They need no database, so they run
+`backend/src/middleware/__tests__/` (Prisma mocked) and the database layer in
+`backend/src/database/__tests__/` (provider config, dialect helpers, schema sync,
+no direct `@prisma/client` imports). They need no database, so they run
 anywhere. A handful are marked `test.failing`: those pin **known, unfixed** bugs
 and flip the suite red the moment someone fixes the source without removing the
 marker. Do not delete a marker to silence it.
 
-`npm run test:integration` runs the fee-ledger tests in `src/__integration__/`
-against a real MySQL **test database** (`sms_test`, or `TEST_DATABASE_URL`):
-payments, duplicates, racing payments, receipt numbering, reversals, discounts,
-cancellation and reconciliation. `scripts/with-test-db.js` points any command at
-that database and refuses to run against the development one. Set it up once with
-`node scripts/with-test-db.js npx prisma migrate deploy` and
-`node scripts/with-test-db.js npm run seed`. Nothing else has integration tests:
-controllers and routes outside the ledger are still verified by running both servers.
+`npm run test:integration:mysql` (alias `test:integration`) and `npm run test:integration:pg`
+run the same suites in `src/__integration__/` against a **test database** of each
+provider:
+- the fee ledger: payments, duplicates, racing payments, receipt numbering, reversals,
+  discounts, cancellation, reconciliation, dashboard KPIs;
+- the database layer (`database.test.js`): types, constraints, transactions, ordering,
+  case-insensitive search;
+- the HTTP API through supertest (`api.test.js`): auth, RBAC, school isolation, ownership,
+  the exam lifecycle and snapshot rule, result and report-card publication gating, fees,
+  promotions.
+
+`scripts/with-test-db.js --provider mysql|pg` points any command at the test database and
+refuses one the app is configured to use:
+- MySQL: `MYSQL_TEST_DATABASE_URL`, default `sms_test`;
+- PostgreSQL: `SUPABASE_TEST_DATABASE_URL` / `SUPABASE_TEST_DIRECT_URL`, a Supabase
+  project for tests only.
+
+Set one up with `node scripts/with-test-db.js [--provider pg] npm run db:migrate:deploy`, then
+the same with `npm run seed`.
 `node scripts/reconcile.js` checks every cached fee balance against the ledger.
 
 ---
@@ -156,6 +175,16 @@ a component without going through a service.
 9. **Never trust names, only flags.** No `className.includes('10')`, no grade-level string parsing in the frontend. The backend decides academic rules and returns booleans; the frontend renders them.
 10. **MySQL reserved words:** `rank` is mapped as `classRank` -> `class_rank`. Watch for similar collisions when adding columns.
 11. **Money goes through the ledger only** (`services/finance/*`, plan `docs/plans/finance-and-portals.md`). `FeeTransaction` rows are never updated or deleted; a mistake is undone by a REVERSAL (admin only, never self-approved). Payments never exceed what is owed. `FeeObligation` (table `fee_payments`) and `FeeInstallment` totals are caches rewritten in the same DB transaction (READ COMMITTED, rows locked `FOR UPDATE`). Do maths with `utils/money.js` (Prisma Decimal), never `parseFloat`. Do not write `prisma.feeObligation.update({ amountPaid })` or similar by hand.
+12. **Two database providers, one codebase** (`docs/database/`).
+    - **Models:** they live only in `prisma/schema/models.prisma`. `npm run db:schemas`
+      writes `prisma/mysql/schema.prisma` and `prisma/postgresql/schema.prisma`, so never
+      edit those, and use only types and `@db` attributes valid on both engines.
+    - **Migrations:** every schema change ships one migration per provider.
+    - **Database access:** code reaches the database only through `src/database`, via
+      `config/database.js` for `prisma` and `require("../database")` for `Prisma` and
+      `dialect`. Never `require("@prisma/client")` (a unit test enforces it).
+    - **Provider differences** (case-insensitive search and equality, table resets, unique-key
+      checks) go through `dialect` helpers. Never `if (provider === ...)` in controllers.
 
 ---
 
@@ -351,7 +380,7 @@ wired into any npm script (`npm run seed` uses `prisma/seed.js`). Strip its
 ## 8. Known issues, not yet fixed
 
 Fixed since this list was written: `.env` files are untracked and ignored;
-migrations are tracked in git (apply with `npx prisma migrate deploy`; never
+migrations are tracked in git (apply with `npm run db:migrate:deploy`; never
 `db push`); JWT secrets are required in production; `/auth/login` and
 `/auth/refresh-token` are rate limited. Old secrets remain in git history —
 see `docs/STATUS.md`.
@@ -419,7 +448,7 @@ see `docs/STATUS.md`.
 
 ## 10. Adding a feature
 
-1. Read `schema.prisma` and reuse existing tables. Propose schema changes before writing them — do not redefine `Student`, `Class`, `Section`, `Subject` or `Exam`.
+1. Read `prisma/schema/models.prisma` and reuse existing tables. Propose schema changes before writing them — do not redefine `Student`, `Class`, `Section`, `Subject` or `Exam`.
 2. Check `.github/` for an existing spec (`exam/`, `fee/`, `subjects/`, `task-playbook.md`). Most modules were specced before being built.
 3. Backend first: validator -> controller -> route (with middleware) -> register in `routes/index.js`.
 4. Secure it: `schoolId` filter, `academicYearId` scope, role/permission check, and seed the new permission.

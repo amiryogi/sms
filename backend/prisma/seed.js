@@ -1,4 +1,4 @@
-const { PrismaClient } = require("@prisma/client");
+const { prisma, dialect, label } = require("../src/database");
 const { seedDemoFinance } = require("./seeds/demoFinance");
 const bcrypt = require("bcryptjs");
 const {
@@ -8,10 +8,12 @@ const {
 } = require("../src/utils/gradeScale");
 const { calculateSubjectGrade } = require("../src/utils/gradeCalculator");
 
-const prisma = new PrismaClient();
-
-// Check for --clean flag
+// --clean wipes every table first. It is destructive, so it runs only against a
+// test database (scripts/with-test-db.js, or a database whose name ends in
+// _test) unless --yes-really is also given.
 const CLEAN_MODE = process.argv.includes("--clean");
+const CONFIRMED = process.argv.includes("--yes-really");
+const isTestTarget = () => process.env.SMS_TEST_DB === "1" || /_test$/.test(label);
 
 // =====================================================
 // CLEANUP FUNCTION
@@ -20,7 +22,7 @@ const CLEAN_MODE = process.argv.includes("--clean");
 /**
  * Cleans up all data from the database.
  * Tables are truncated in reverse dependency order to avoid FK constraint violations.
- * Run with: npm run seed -- --clean
+ * Run with: npm run seed -- --clean (plus --yes-really outside a test database)
  */
 async function cleanupDatabase() {
   console.log("🗑️  CLEANUP MODE: Wiping all existing data...\n");
@@ -81,29 +83,9 @@ async function cleanupDatabase() {
     "schools",
   ];
   
-  try {
-    // Disable foreign key checks
-    await prisma.$executeRaw`SET FOREIGN_KEY_CHECKS = 0`;
-    
-    for (const table of tablesToTruncate) {
-      try {
-        await prisma.$executeRawUnsafe(`TRUNCATE TABLE \`${table}\``);
-        console.log(`   ✓ Truncated ${table}`);
-      } catch (err) {
-        // Table might not exist yet, skip silently
-        console.log(`   ⚠ Skipped ${table} (may not exist)`);
-      }
-    }
-    
-    // Re-enable foreign key checks
-    await prisma.$executeRaw`SET FOREIGN_KEY_CHECKS = 1`;
-    
-    console.log("\n   ✅ Database cleanup complete!\n");
-  } catch (error) {
-    // Re-enable foreign key checks even on error
-    await prisma.$executeRaw`SET FOREIGN_KEY_CHECKS = 1`;
-    throw error;
-  }
+  const skipped = await dialect.resetTables(prisma, tablesToTruncate);
+  for (const t of tablesToTruncate) console.log(`   ${skipped.includes(t) ? "⚠ Skipped" : "✓ Emptied"} ${t}`);
+  console.log("\n   ✅ Database cleanup complete!\n");
 }
 
 // =====================================================
@@ -252,7 +234,13 @@ async function main() {
   console.log("🌱 Starting comprehensive database seed...\n");
 
   // Run cleanup if --clean flag is passed
+  console.log(`   Database: ${label}`);
   if (CLEAN_MODE) {
+    if (!isTestTarget() && !CONFIRMED) {
+      throw new Error(
+        "--clean wipes ALL data and this is not a test database. Re-run with --clean --yes-really if you mean it."
+      );
+    }
     await cleanupDatabase();
   }
 
@@ -1155,7 +1143,7 @@ async function main() {
   console.log(`   • ${notices.length} Notices`);
   console.log("\n💡 Usage:");
   console.log("   npm run seed           # Add/update data (keeps existing)");
-  console.log("   npm run seed -- --clean  # WIPE ALL DATA then seed fresh");
+  console.log("   npm run seed -- --clean --yes-really  # WIPE ALL DATA then seed fresh");
   console.log("\n");
 }
 

@@ -59,8 +59,11 @@ cp frontend/.env.example frontend/.env
 
 Then edit `backend/.env`:
 
-- `DATABASE_URL` — your new user and password. URL-encode any `@ : / #` in the
-  password (`@` → `%40`, and so on).
+- `DATABASE_PROVIDER=mysql` and `MYSQL_DATABASE_URL` — your new user and password.
+  URL-encode any `@ : / #` in the password (`@` → `%40`, and so on). For a Supabase
+  (PostgreSQL) install use `DATABASE_PROVIDER=supabase` with `SUPABASE_DATABASE_URL` and
+  `SUPABASE_DIRECT_URL` instead (see `.env.example` and `docs/database/`). The server refuses
+  to start without a valid provider and URL.
 - `JWT_SECRET` and `JWT_REFRESH_SECRET` — generate fresh ones, never copy them
   between machines:
   ```bash
@@ -75,14 +78,19 @@ Then edit `backend/.env`:
 
 ```bash
 cd backend
-npx prisma generate
-npx prisma migrate deploy    # applies 0_init and 7 later migrations: 45 tables
+npm install                  # also generates both Prisma clients (MySQL and PostgreSQL)
+npm run db:migrate:deploy    # MySQL: 0_init and 7 later migrations, 45 tables
 npm run seed                 # demo school, roles, classes 1-10, students, exams
 ```
 
-`migrate deploy` is the right command here: it applies committed migrations
-without trying to create a shadow database, so it works whether or not you ran
-the extra `GRANT`.
+`db:migrate:deploy` applies the committed migrations of the configured provider
+(`prisma/mysql/migrations` or `prisma/postgresql/migrations`) without trying to create a
+shadow database, so it works whether or not you ran the extra `GRANT`.
+
+**Upgrading an existing install** to the two-provider layout: add
+`DATABASE_PROVIDER=mysql` and rename `DATABASE_URL` to `MYSQL_DATABASE_URL` in
+`backend/.env`, run `npm install`, then `npm run db:status`. It reports "up to date"; the
+database itself does not change.
 
 ## 6. If `prisma migrate dev` fails with P3014
 
@@ -93,14 +101,17 @@ apply it like any other:
 
 ```bash
 cd backend
-git show HEAD:backend/prisma/schema.prisma > /tmp/schema-before.prisma
-mkdir -p prisma/migrations/<timestamp>_<name>
+# edit prisma/schema/models.prisma, then:
+npm run db:schemas
+git show HEAD:backend/prisma/mysql/schema.prisma > /tmp/schema-before.prisma
+mkdir -p prisma/mysql/migrations/<timestamp>_<name>
 npx prisma migrate diff \
   --from-schema-datamodel /tmp/schema-before.prisma \
-  --to-schema-datamodel   prisma/schema.prisma \
-  --script > prisma/migrations/<timestamp>_<name>/migration.sql
-node scripts/with-test-db.js npx prisma migrate deploy   # try it on the test DB first
-npx prisma migrate deploy
+  --to-schema-datamodel   prisma/mysql/schema.prisma \
+  --script > prisma/mysql/migrations/<timestamp>_<name>/migration.sql
+# ... and the same for prisma/postgresql/ (one migration per provider)
+node scripts/with-test-db.js npm run db:migrate:deploy   # try it on the test DB first
+npm run db:migrate:deploy
 ```
 
 Read the generated SQL before applying it, and never use `db push`: the change
@@ -156,12 +167,13 @@ git add -A && git commit -m "wip: <what you were doing>" && git push
 
 # arriving
 git pull
-cd backend && npx prisma migrate deploy && npx prisma generate
+cd backend && npm install && npm run db:migrate:deploy
 ```
 
-Run `migrate deploy` after every pull — if someone added a migration, this
-applies it. If the schema changed in a way that confuses your local data, the
-fastest reset is `npm run seed -- --clean`.
+Run `db:migrate:deploy` after every pull — if someone added a migration, this
+applies it (`npm install` regenerates the clients). If the schema changed in a way that
+confuses your local data, the fastest reset is `npm run seed -- --clean --yes-really`
+(`--clean` alone is refused outside a test database).
 
 ## Syncing the database
 
@@ -174,7 +186,7 @@ Pick whichever matches the data you have:
 
 ### While the data is seeded demo data — don't sync
 
-There is nothing to carry. `npx prisma migrate deploy && npm run seed` rebuilds
+There is nothing to carry. `npm run db:migrate:deploy && npm run seed` rebuilds
 an identical database in seconds on any machine and any supported MySQL
 version. This is the default and needs no setup.
 
@@ -200,8 +212,8 @@ backward compatible — so keep creating the database with the explicit
 
 ### Best once the data matters — one shared database
 
-Point every machine at the same hosted MySQL (Railway, Aiven and PlanetScale
-all have usable free tiers). Each machine keeps its own `.env`, with the same
-`DATABASE_URL`. No dumps, no drift, no question about which copy is newer, and
+Point every machine at the same hosted database: MySQL on your own host, or a Supabase
+project with `DATABASE_PROVIDER=supabase` (Aiven's and PlanetScale's free MySQL tiers are
+gone). Each machine keeps its own `.env`, with the same URL. No dumps, no drift, no question about which copy is newer, and
 it is how the system would run for a real school. The trade-off is needing
 internet to work and slower queries than localhost.

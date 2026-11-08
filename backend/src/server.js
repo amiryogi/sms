@@ -1,7 +1,6 @@
 const app = require('./app');
-const { PrismaClient } = require('@prisma/client');
+const { prisma, disconnect, label } = require('./database');
 
-const prisma = new PrismaClient();
 const PORT = process.env.PORT || 5000;
 
 // =====================================================
@@ -11,7 +10,7 @@ const PORT = process.env.PORT || 5000;
 async function checkDatabaseConnection() {
   try {
     await prisma.$connect();
-    console.log('✅ Database connected successfully');
+    console.log(`✅ Database connected successfully (${label})`);
     return true;
   } catch (error) {
     console.error('❌ Database connection failed:', error.message);
@@ -60,13 +59,13 @@ async function startServer() {
 
 process.on('SIGTERM', async () => {
   console.log('\n🛑 SIGTERM received. Shutting down gracefully...');
-  await prisma.$disconnect();
+  await disconnect();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('\n🛑 SIGINT received. Shutting down gracefully...');
-  await prisma.$disconnect();
+  await disconnect();
   process.exit(0);
 });
 

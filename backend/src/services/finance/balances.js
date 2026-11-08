@@ -11,7 +11,7 @@
  *   2. fee_installments rows, ascending id
  *   3. receipt_sequences row
  */
-const { Prisma } = require("@prisma/client");
+const { Prisma } = require("../../database");
 const { ApiError } = require("../../utils");
 const m = require("../../utils/money");
 const { deriveStatus } = require("../../utils/feeStatus");

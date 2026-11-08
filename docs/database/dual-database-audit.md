@@ -259,8 +259,9 @@ Candidates (file: line and model):
     raw SQL);
   - it creates every row with upserts or `create`, never with explicit ids, so PostgreSQL
     sequences stay correct;
-  - its reset step (`SET FOREIGN_KEY_CHECKS`, backtick `TRUNCATE`) is MySQL-only, and it
-    wipes the database every time it runs.
+  - its `--clean` reset step (`SET FOREIGN_KEY_CHECKS`, backtick `TRUNCATE`) is MySQL-only.
+    Without `--clean` the seed only upserts. An earlier draft of this audit said it always
+    wiped; that was wrong.
 - **`scripts/`:**
   - `with-test-db.js`: derives `sms_test` from `DATABASE_URL`, MySQL-shaped; refuses the dev
     database;

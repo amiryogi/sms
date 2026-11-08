@@ -28,8 +28,8 @@ Generating a client or passing `prisma validate` is not evidence.
   database:
   - it sets `DATABASE_PROVIDER` and the URL variables;
   - it refuses any URL equal to a configured app URL.
-- Each suite starts from a known state: `seed --reset` on the test database (allowed there),
-  then its own fixtures.
+- Each suite creates its own fixtures (its own school, exam or fee type) and removes them in
+  `afterAll`. `seed --clean` resets a test database when needed (allowed there).
 
 ## The shared integration suite
 

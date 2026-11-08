@@ -1,7 +1,7 @@
 # Architecture proposal: one codebase, MySQL or Supabase PostgreSQL
 
-**Status:** approved in outline on 2026-11-08 (plan review). Phases 3–7 implement it one at a
-time, each reported before the next.
+**Status:** approved 2026-11-08. Phase 3 (the database layer, on MySQL) is done; Phases 4–7
+add PostgreSQL. Progress is tracked in `docs/STATUS.md`.
 
 ## Goals and non-goals
 
@@ -86,9 +86,12 @@ apply a small, explicit per-provider substitution table. This is not needed toda
 - **The `Prisma` namespace** (`DbNull`, `TransactionIsolationLevel`, `join`, error classes)
   comes from the active client through the database layer. Nothing imports `@prisma/client`
   directly any more.
-- **`Decimal`** comes from `@prisma/client/runtime/library`, the runtime both generated
-  clients use. `utils/money.js` therefore stays a pure module that unit tests load without a
-  database or env.
+- **`Decimal`:** `utils/money.js` takes it from `@prisma/client/runtime/library`, so it
+  stays a pure module that unit tests load without a database or env.
+  - Note found in Phase 3: a client generated to a custom `output` gets **its own copy** of the
+    runtime. Each client's `Decimal` is therefore a different class from `money.js`'s.
+  - Values still interoperate: `Decimal.isDecimal(x)` is true across copies, and `money.dec()`
+    converts on entry. `database.test.js` checks this on each provider.
 - **Startup:** `server.js` stops creating a second `PrismaClient`; it uses the shared one and
   disconnects gracefully on `SIGTERM` / `SIGINT`.
 
@@ -139,13 +142,14 @@ provider themselves.
 | `npm run db:migrate:deploy` | `migrate deploy` for the configured provider (using the direct URL on Supabase) |
 | `npm run db:migrate:new -- <name>` | Write a new migration **for both providers** from the model change (see migration-plan.md) |
 | `npm run db:status` | `migrate status` for the configured provider |
-| `npm run seed` / `seed -- --reset` | Idempotent seed / wipe-and-reseed (guarded) |
+| `npm run seed` / `seed -- --clean` | Idempotent seed / wipe-and-reseed (`--clean` is refused outside a test database unless `--yes-really` is added) |
 | `npm run test:integration:mysql` / `:pg` | Same suites, each provider's test DB |
 
 `scripts/db.js` prints `provider` and `host/db` before running.
 - **Wrong engine:** it refuses when the URL scheme doesn't match the provider.
-- **Destructive commands** (`--reset`, `migrate reset`) need `--yes-really` and are refused
-  outright unless the database name ends in `_test` or the URL is one of the test URLs.
+- **Destructive commands:** `seed --clean` needs a test database (`with-test-db.js`, or a name
+  ending in `_test`) or `--yes-really`. The wrapper offers no `migrate reset` and no `db push`
+  at all.
 
 ## Risks and trade-offs
 

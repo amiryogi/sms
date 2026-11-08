@@ -76,22 +76,24 @@ lives only in `src/database/dialect.js`, as small helpers. There is no
 
 ## C4. Seed reset: `SET FOREIGN_KEY_CHECKS` and backtick `TRUNCATE`
 
-1. **MySQL today:** `seed.js` disables foreign-key checks, truncates every table (which resets
-   `AUTO_INCREMENT`), then re-enables them. It does this on **every** run.
+1. **MySQL today:** with `--clean`, `seed.js` disables foreign-key checks, truncates every
+   table (which resets `AUTO_INCREMENT`), then re-enables them. Without the flag the seed only
+   upserts. The audit first said it wiped on every run; that was wrong.
 2. **PostgreSQL:** `TRUNCATE t1, t2, ... RESTART IDENTITY CASCADE`. There is no session
    variable, and identifiers take double quotes, not backticks.
 3. **Schema:** none.
 4. **Code:**
    - `dialect.resetTables(names)` runs the right statement for each engine;
-   - the seed wipes only when called with `--reset` (and `--yes-really` against a non-test
-     URL);
-   - without `--reset` it runs idempotent upserts and refuses to touch a database that
-     already has demo data;
+   - the seed wipes only with `--clean`, and only against a test database unless
+     `--yes-really` is added;
+   - FK checks are switched off and on in one transaction, so all statements share one
+     connection (done in Phase 3);
+   - without `--clean` it runs idempotent upserts, as before;
    - `prisma/seeds/comprehensiveSeed.js` is deleted.
 5. **Risk:** wiping a real database by accident. The new guard is stricter than today's
    behaviour.
 6. **Test:**
-   - on both providers, `seed --reset` against the test database gives the same row counts
+   - on both providers, `seed --clean` against the test database gives the same row counts
      per table;
    - a second plain `seed` changes nothing;
    - `seed` against a URL that is not a test URL, without the flags, refuses.
@@ -179,8 +181,9 @@ lives only in `src/database/dialect.js`, as small helpers. There is no
 - **Decimals:** `@db.Decimal(p,s)` is exact on both. Prisma returns `Decimal` objects on both,
   and `utils/money.js` does all the maths.
 - **Code:**
-  - `money.js` takes `Decimal` from `@prisma/client/runtime/library`, which both generated
-    clients share. It stays usable in unit tests without a database.
+  - `money.js` takes `Decimal` from `@prisma/client/runtime/library`, so it stays usable in
+    unit tests without a database. Each generated client carries its own copy of the class;
+    `money.dec()` converts database values on entry (checked in `database.test.js`).
 - **Test:**
   - a round trip of each column type (date, time, datetime, decimal at its precision limit);
   - the fee KPI integration test, on both providers.

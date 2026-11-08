@@ -92,9 +92,9 @@ npm run seed                   # roles, permissions, demo school, presets (idemp
 - `scripts/db.js`:
   - prints the provider and `host/db` before running;
   - uses the direct URL for Supabase migrations;
-  - refuses `migrate reset`, `db push` and `seed --reset` unless both hold: `--yes-really`
-    is given, and the target is a test database (its name ends in `_test`, or it is one of the
-    `*_TEST_*` URLs).
+  - offers no `migrate reset` and no `db push` at all.
+- `seed --clean` is refused unless the target is a test database (through `with-test-db.js`, or
+  a name ending in `_test`) or `--yes-really` is given.
 - `scripts/with-test-db.js` refuses any test URL equal to a configured app URL (same host and
   database), for either provider.
 - **`db push` is not offered:** it changes a database without recording a migration.
