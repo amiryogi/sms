@@ -25,6 +25,8 @@ import {
   HandCoins,
   ScrollText,
   BadgePercent,
+  ChartColumn,
+  FileSpreadsheet,
 } from "lucide-react";
 
 /*
@@ -66,10 +68,12 @@ const ADMIN = [
   {
     label: "Finance",
     items: [
+      { title: "Finance Overview", icon: ChartColumn, path: "/finance/dashboard" },
       { title: "Collect Fees", icon: HandCoins, path: "/finance/collect" },
       { title: "Student Accounts", icon: Wallet, path: "/finance/accounts" },
       { title: "Transactions", icon: ScrollText, path: "/finance/transactions" },
       { title: "Discounts", icon: BadgePercent, path: "/finance/discounts" },
+      { title: "Reports", icon: FileSpreadsheet, path: "/finance/reports" },
       { title: "Fee Structures", icon: ReceiptText, path: "/admin/fee-structures" },
       { title: "Fee Types", icon: Tags, path: "/admin/fee-types" },
     ],
@@ -107,10 +111,12 @@ const ACCOUNTANT = [
   {
     label: "Finance",
     items: [
+      { title: "Dashboard", icon: LayoutDashboard, path: "/finance/dashboard" },
       { title: "Collect Fees", icon: HandCoins, path: "/finance/collect" },
       { title: "Student Accounts", icon: Wallet, path: "/finance/accounts" },
       { title: "Transactions", icon: ScrollText, path: "/finance/transactions" },
       { title: "Discounts", icon: BadgePercent, path: "/finance/discounts" },
+      { title: "Reports", icon: FileSpreadsheet, path: "/finance/reports" },
       { title: "Fee Structures", icon: ReceiptText, path: "/accountant/fee-structures" },
       { title: "Fee Types", icon: Tags, path: "/accountant/fee-types" },
       { title: "Students", icon: GraduationCap, path: "/staff/students" },

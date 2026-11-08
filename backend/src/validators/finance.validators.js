@@ -106,3 +106,25 @@ module.exports = {
   accountListRules,
   templateRules,
 };
+
+const dashboardRules = [
+  query("academicYearId").optional({ values: "falsy" }).isInt({ min: 1 }).toInt(),
+  query("classId").optional({ values: "falsy" }).isInt({ min: 1 }).toInt(),
+  query("feeTypeId").optional({ values: "falsy" }).isInt({ min: 1 }).toInt(),
+  query("method").optional({ values: "falsy" }).isIn(METHODS),
+  query("from").optional({ values: "falsy" }).isISO8601({ strict: true }).withMessage("from must be a date (YYYY-MM-DD)"),
+  query("to").optional({ values: "falsy" }).isISO8601({ strict: true }).withMessage("to must be a date (YYYY-MM-DD)"),
+];
+
+const reportRules = [
+  param("report").isIn(["collections", "outstanding", "discounts", "reversals"]).withMessage("Unknown report"),
+  ...dashboardRules,
+  query("sectionId").optional({ values: "falsy" }).isInt({ min: 1 }).toInt(),
+  query("groupBy").optional({ values: "falsy" }).isIn(["day", "month", "class", "feeType", "method"]),
+  query("status").optional({ values: "falsy" }).isIn(["PENDING", "APPROVED", "REJECTED", "REVOKED"]),
+  query("overdueOnly").optional({ values: "falsy" }).isIn(["true", "false"]),
+  query("format").optional({ values: "falsy" }).isIn(["json", "csv"]),
+];
+
+module.exports.dashboardRules = dashboardRules;
+module.exports.reportRules = reportRules;

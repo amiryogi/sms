@@ -115,4 +115,16 @@ export const feeService = {
   setInstallmentPlan: async (feeStructureId, installments) =>
     (await apiClient.put(`/fees/structures/${feeStructureId}/installments`, { installments })).data,
   reconcile: async () => (await apiClient.get("/fees/reconcile")).data,
+
+  // ---------- Dashboard and reports (Phase 5) ----------
+  /** KPIs and chart series; params: academicYearId, classId, feeTypeId, method, from, to. */
+  getDashboard: async (params = {}) => (await apiClient.get("/fees/dashboard", { params })).data,
+  /** { report, title, subtitle, columns, rows, totals } for collections | outstanding | discounts | reversals. */
+  getReport: async (name, params = {}) => (await apiClient.get(`/fees/reports/${name}`, { params })).data,
+  /** The same report as a CSV file: { blob, filename }. */
+  downloadReport: async (name, params = {}) => {
+    const response = await apiClient.get(`/fees/reports/${name}`, { params: { ...params, format: "csv" }, responseType: "blob" });
+    const match = /filename="([^"]+)"/.exec(response.headers["content-disposition"] || "");
+    return { blob: response.data, filename: match ? match[1] : `${name}.csv` };
+  },
 };

@@ -198,3 +198,29 @@ module.exports = {
   setInstallmentTemplate,
   reconcile,
 };
+
+// ---------- dashboard and reports (Phase 5) ----------
+const reports = require("../services/finance/reports.service");
+const { toCsv } = require("../utils/csv");
+
+const getDashboard = asyncHandler(async (req, res) => {
+  ApiResponse.success(res, await reports.dashboard({ schoolId: req.user.schoolId, ...req.query }), "Finance dashboard");
+});
+
+/**
+ * GET /fees/reports/:report — JSON by default; ?format=csv downloads the same
+ * rows as a spreadsheet (the one documented exception to the JSON envelope).
+ */
+const getReport = asyncHandler(async (req, res) => {
+  const data = await reports.report(req.params.report, { schoolId: req.user.schoolId, ...req.query });
+  if (req.query.format === "csv") {
+    const filename = `${data.report}-${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    return res.send(toCsv(data.columns, data.totals ? [...data.rows, data.totals] : data.rows));
+  }
+  return ApiResponse.success(res, data, data.title);
+});
+
+module.exports.getDashboard = getDashboard;
+module.exports.getReport = getReport;

@@ -23,7 +23,7 @@ has `school_id`) but only one school is seeded and used.
 | -------- | ---------------------------------------------------------------------- |
 | Backend  | Node.js ≥18, Express 4, Prisma 5.22, MySQL 8, JWT (access + refresh)    |
 | Frontend | React 19 + Vite 7, React Router 7, Axios, react-hook-form, lucide-react |
-| Styling  | **Tailwind CSS 4** (`@tailwindcss/vite`), tokens in `frontend/src/styles/app.css`, kit in `src/components/ui/`. No CSS-in-JS. `cmdk` + `@radix-ui/react-popover` (shadcn-style copy-in) only for the student search combobox |
+| Styling  | **Tailwind CSS 4** (`@tailwindcss/vite`), tokens in `frontend/src/styles/app.css`, kit in `src/components/ui/`. No CSS-in-JS. `cmdk` + `@radix-ui/react-popover` (shadcn-style copy-in) only for the student search combobox. Charts: `recharts`, colours in `components/finance/charts/chartTheme.js` |
 | Dates    | AD stored in DB; BS (Bikram Sambat) rendered via `backend/src/utils/dateConverter.js` |
 
 Repo layout:
@@ -236,8 +236,13 @@ and grading; notices (global / role / class targeting); fees (types,
 structures, payments); promotions; school branding settings; subject Excel
 import.
 
-**Fee ledger (Phases 3–4 of `docs/plans/finance-and-portals.md`):** backend and the
-fee-management UI are done; the finance dashboard and reports are Phase 5. Pages live in
+**Fee ledger (Phases 3–5 of `docs/plans/finance-and-portals.md`):** backend, the
+fee-management UI, the finance dashboard (`/finance/dashboard`, `GET /fees/dashboard`)
+and reports (`/finance/reports`, `GET /fees/reports/:report`, `?format=csv`) are done.
+KPI and report maths live in `utils/financeReports.js` (unit-tested); the dashboard only
+draws what the API returns. `npm run seed` adds demo fee data (plans, payments, a
+reversal, discounts) **only when the school has no fee transactions yet**
+(`prisma/seeds/demoFinance.js`). Pages live in
 `frontend/src/pages/finance/` (Collect, Accounts, AccountDetail, Transactions, Discounts,
 Receipt) under `/finance/*`, shared by ADMIN and ACCOUNTANT; reusable pieces (statement,
 payment dialog, receipt sheet, student picker, installment plan) in

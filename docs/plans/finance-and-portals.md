@@ -501,3 +501,50 @@ The fee screens are under `/finance/*`, for both ADMIN and ACCOUNTANT:
   - installment plan save;
   - screenshots at 1440 and 390 px.
   - The sweep of every page × 7 roles on the development stack is clean.
+
+### Phase 5 — done (2026-11-08)
+
+**Dashboard and reports API**
+- `GET /fees/dashboard`: KPIs, chart series, the most overdue students and the latest
+  transactions.
+  - Filters: year, class and fee type (apply to everything); method and date range
+    (collections only).
+- `GET /fees/reports/:report`: `collections` (grouped by day, Nepali month, class, fee
+  type or method), `outstanding`, `discounts`, `reversals`.
+  - Responses are JSON by default, or CSV with `?format=csv`.
+  - CSV cells that look like formulas get a leading apostrophe; the file starts with a BOM
+    so Excel reads it as UTF-8.
+- **Fee staff only:** students and teachers get 403.
+
+**Maths**
+- All in `utils/financeReports.js`: pure, 13 unit tests.
+- `services/finance/reports.service.js` only loads the rows.
+- Definitions as in §4. "This month" is the current Nepali month.
+- The monthly series runs from the year's start to its end, or to the last payment if
+  money for that year kept arriving afterwards.
+
+**Frontend**
+- `/finance/dashboard`: four headline numbers, a secondary strip, six charts, and the
+  overdue / latest lists. `/accountant/dashboard` redirects here.
+- `/finance/reports`: filters, a generic table with totals, print, and CSV.
+- Charts follow the dataviz rules:
+  - colours validated (blue/orange pair; status colours only for fee states, always with
+    a label);
+  - one axis, tidy ticks;
+  - a table view on every chart.
+- `recharts` 3.10.1 is loaded only with the dashboard page.
+
+**Demo data**
+- `prisma/seeds/demoFinance.js` gives a fresh database a populated dashboard.
+- It runs through the real services and never runs when fee transactions already exist.
+
+**Tests**
+- Integration test `financeDashboard.test.js`: known payments on known days, a reversal
+  recorded today and a discount. Every KPI, the daily / class / state series and three
+  reports are checked against hand-worked values.
+- 33 integration tests in total.
+- In a browser on the test stack: the dashboard's figures match the reports
+  (collected 39,250 = collections net; outstanding 36,675 and overdue 33,925 = the
+  outstanding report).
+- Screenshots at 1440 and 390 px.
+- The all-roles sweep is clean.

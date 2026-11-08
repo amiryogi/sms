@@ -37,6 +37,8 @@ const AdminFeeStructures = React.lazy(
   () => import("./pages/admin/FeeStructures"),
 );
 // Finance (shared by ADMIN and ACCOUNTANT; docs/plans/finance-and-portals.md)
+const FinanceDashboard = React.lazy(() => import("./pages/finance/Dashboard"));
+const FinanceReports = React.lazy(() => import("./pages/finance/Reports"));
 const FinanceCollect = React.lazy(() => import("./pages/finance/Collect"));
 const FinanceAccounts = React.lazy(() => import("./pages/finance/Accounts"));
 const FinanceAccountDetail = React.lazy(() => import("./pages/finance/AccountDetail"));
@@ -261,8 +263,9 @@ function App() {
                 </ProtectedRoute>
               }
             >
-              {/* Until the finance dashboard (Phase 5), the accountant starts at the counter. */}
-              <Route path="/accountant/dashboard" element={<Navigate to="/finance/collect" replace />} />
+              <Route path="/accountant/dashboard" element={<Navigate to="/finance/dashboard" replace />} />
+              <Route path="/finance/dashboard" element={<FinanceDashboard />} />
+              <Route path="/finance/reports" element={<FinanceReports />} />
               <Route path="/finance/collect" element={<FinanceCollect />} />
               <Route path="/finance/accounts" element={<FinanceAccounts />} />
               <Route path="/finance/accounts/:studentId" element={<FinanceAccountDetail />} />

@@ -18,6 +18,8 @@ const {
   discountListRules,
   accountListRules,
   templateRules,
+  dashboardRules,
+  reportRules,
 } = require("../validators/finance.validators");
 const {
   authenticate,
@@ -290,6 +292,10 @@ router.post("/discounts/:id/revoke", isAdmin, [financeIdParam(), financeReason()
 router.post("/obligations/:id/cancel", isAdmin, [financeIdParam(), financeReason()], validate, financeController.cancelObligation);
 router.get("/structures/:id/installments", canManageFees, [financeIdParam()], validate, financeController.getInstallmentTemplate);
 router.put("/structures/:id/installments", canManageFees, templateRules, validate, financeController.setInstallmentTemplate);
+
+// Dashboard and reports (Phase 5): fee staff only
+router.get("/dashboard", canManageFees, dashboardRules, validate, financeController.getDashboard);
+router.get("/reports/:report", canManageFees, reportRules, validate, financeController.getReport);
 
 // Integrity check: recompute every cached balance from the ledger (read-only)
 router.get("/reconcile", isAdmin, financeController.reconcile);

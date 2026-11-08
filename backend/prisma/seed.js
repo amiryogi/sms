@@ -1,4 +1,5 @@
 const { PrismaClient } = require("@prisma/client");
+const { seedDemoFinance } = require("./seeds/demoFinance");
 const bcrypt = require("bcryptjs");
 const {
   GRADE_SCALE_PRESETS,
@@ -980,6 +981,10 @@ async function main() {
     }
   }
   console.log(`   ✓ Created ${feeStructureCount} fee structures\n`);
+
+  // 18b. Demo fee data (skipped when the school already has fee transactions)
+  console.log("💳 Creating demo fee data...");
+  await seedDemoFinance(prisma, { school, academicYear, adminUser, superAdminUser, accountantUser });
 
   // 19. Create Notices
   console.log("📢 Creating notices...");

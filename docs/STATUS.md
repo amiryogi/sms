@@ -23,7 +23,7 @@ Business rules decided:
 |---|---|---|
 | 3 | Ledger data model, migration + backfill, payment / reversal / discount / installment services and endpoints, reconcile, cascade-delete fixes, attendance-% rule | **Done** (2026-11-08) |
 | 4 | Accountant + admin fee management UI | **Done** (2026-11-08) |
-| 5 | Dashboard KPIs, charts, reports, CSV / print | — |
+| 5 | Dashboard KPIs, charts, reports, CSV / print | **Done** (2026-11-08) |
 | 6 | Student portal | — |
 | 7 | Parent portal | — |
 | 8 | QA, drop old fee columns and alias routes, UI wave 6 cleanup, docs | — |
