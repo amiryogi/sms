@@ -38,6 +38,16 @@ const buildAssignmentScope = async (req) => {
     });
     if (!parent) throw ApiError.forbidden("Parent profile not found");
     studentIds = parent.studentParents.map((sp) => sp.studentId);
+    // ?studentId= narrows a parent's view to one linked child and returns that
+    // child's submissions too (the parent portal's per-child page).
+    if (req.query.studentId !== undefined) {
+      const wanted = Number.parseInt(req.query.studentId, 10);
+      if (!Number.isInteger(wanted) || !studentIds.includes(wanted)) {
+        throw ApiError.forbidden("You can only view your own children's assignments");
+      }
+      studentIds = [wanted];
+      req.scopedStudentId = wanted;
+    }
   } else {
     throw ApiError.forbidden("You are not allowed to view assignments");
   }
@@ -122,10 +132,10 @@ const getAssignments = asyncHandler(async (req, res) => {
       },
       assignmentFiles: true,
       _count: { select: { submissions: true } },
-      // Include own submission for students to track status
-      submissions: req.user.roles.includes("STUDENT")
+      // A student's own submission, or the chosen child's for a parent (?studentId=)
+      submissions: req.user.roles.includes("STUDENT") || req.scopedStudentId
         ? {
-            where: { student: { userId: req.user.id } },
+            where: req.user.roles.includes("STUDENT") ? { student: { userId: req.user.id } } : { studentId: req.scopedStudentId },
             select: {
               id: true,
               status: true,

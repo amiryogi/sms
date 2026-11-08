@@ -25,7 +25,7 @@ Business rules decided:
 | 4 | Accountant + admin fee management UI | **Done** (2026-11-08) |
 | 5 | Dashboard KPIs, charts, reports, CSV / print | **Done** (2026-11-08) |
 | 6 | Student portal | **Done** (2026-11-08) |
-| 7 | Parent portal | — |
+| 7 | Parent portal | **Done** (2026-11-08) |
 | 8 | QA, drop old fee columns and alias routes, UI wave 6 cleanup, docs | — |
 
 **After pulling Phase 3 on another machine:**

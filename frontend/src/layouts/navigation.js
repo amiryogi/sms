@@ -148,10 +148,12 @@ const PARENT = [
     items: [
       { title: "Dashboard", icon: LayoutDashboard, path: "/parent/dashboard" },
       { title: "Attendance", icon: CalendarCheck, path: "/parent/attendance" },
+      { title: "Assignments", icon: NotebookPen, path: "/parent/assignments" },
       { title: "Results", icon: FileBarChart, path: "/parent/results" },
       { title: "Report Card", icon: Award, path: "/parent/report-card" },
       { title: "Fees", icon: Wallet, path: "/parent/fees" },
       { title: "Notices", icon: Megaphone, path: "/parent/notices" },
+      { title: "Child's Profile", icon: UserRound, path: "/parent/profile" },
     ],
   },
 ];

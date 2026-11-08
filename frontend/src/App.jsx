@@ -78,6 +78,8 @@ const ParentAttendance = React.lazy(() => import("./pages/parent/Attendance"));
 const ParentResults = React.lazy(() => import("./pages/parent/Results"));
 const ParentReportCard = React.lazy(() => import("./pages/parent/ReportCard"));
 const ParentFees = React.lazy(() => import("./pages/parent/Fees"));
+const ParentAssignments = React.lazy(() => import("./pages/parent/Assignments"));
+const ParentChildProfile = React.lazy(() => import("./pages/parent/Profile"));
 
 // Shared Pages
 const NoticesView = React.lazy(() => import("./pages/shared/NoticesView"));
@@ -261,6 +263,10 @@ function App() {
                 element={<ParentReportCard />}
               />
               <Route path="/parent/fees" element={<ParentFees />} />
+              <Route path="/parent/assignments" element={<ParentAssignments />} />
+              <Route path="/parent/profile" element={<ParentChildProfile />} />
+              {/* Same receipt page as the finance screens; the API returns only a linked child's receipts. */}
+              <Route path="/parent/receipts/:id" element={<FinanceReceipt />} />
             </Route>
 
             {/* Accountant Routes */}

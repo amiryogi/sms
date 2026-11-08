@@ -270,8 +270,17 @@ renders the flags. Plan: `docs/plans/configurable-report-card.md`.
   discounts), Profile.
 - One read feeds the dashboard and profile: `GET /portal/students/:studentId/overview`
   (`isOwnStudent`; `services/portal.service.js`).
-- The views are shared components in `src/components/portal/` that take a `studentId`, so
-  the parent portal (Phase 7) reuses them.
+- The views are shared components in `src/components/portal/` that take a `studentId`; the
+  parent portal reuses them.
+
+**Parent portal (Phase 7):**
+- Pages: Dashboard, Attendance, Assignments (read-only), Results, Report Card, Fees and
+  receipts, Child's Profile, Notices.
+- `ParentPage` + `useChildren` give every page a child switcher. The choice lives in
+  `?child=<studentId>` and is remembered for the browser session, so sidebar links keep it.
+- Each view is keyed by the child's id: switching never shows the previous child's data.
+- `GET /assignments?studentId=` narrows a parent's list to one linked child (403 otherwise)
+  and includes that child's submissions.
 - The embedded report card uses the `.rc-embedded` wrapper in `styles/bridge.css`; move
   that rule to `app.css` when `bridge.css` is deleted.
 

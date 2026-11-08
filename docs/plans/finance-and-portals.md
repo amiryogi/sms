@@ -600,3 +600,39 @@ The fee screens are under `/finance/*`, for both ADMIN and ACCOUNTANT:
   - an assignment hand-in works;
   - the report card prints on 1 page;
   - screenshots at 1440 and 390 px.
+
+### Phase 7 — done (2026-11-08)
+
+**Frontend (parent)**
+- Pages: dashboard, attendance, assignments (read-only), results, report card, fees,
+  child's profile, `/parent/receipts/:id`.
+- **Reused:** every view is the Phase 6 portal component, so student, parent and accountant
+  see the same numbers.
+- **Child choice:**
+  - `useChildren` reads the linked children from `/parents/me/children`.
+  - The chosen one goes in `?child=` and in sessionStorage (sidebar links carry no query);
+    an unknown id falls back to the first child.
+  - `ChildSwitcher` is a radio group of children, or a simple header for one child.
+- **Isolation:** `ParentPage` keys each view by child id, so no stale data shows while the
+  next child loads.
+
+**Backend**
+- `GET /assignments?studentId=`: for parents only, narrows the list to one linked child and
+  includes that child's submissions.
+- An unlinked or junk id gets 403. Students and staff are unaffected (for students the
+  parameter is ignored).
+
+**Verified**
+- **API, 18 checks with a parent linked to two children:**
+  - the parent reaches both children's overview, attendance, statement, assignments and
+    receipts;
+  - an unrelated student gets 403;
+  - without `?studentId` no submissions leak.
+- **Browser on the test stack:**
+  - switching children updates the URL and every tile;
+  - links and sidebar navigation keep the chosen child;
+  - a child's receipt opens;
+  - the report card prints on 1 page;
+  - assignments are read-only;
+  - a parent is refused the student and finance pages;
+  - screenshots at 1440 and 390 px.
