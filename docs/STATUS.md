@@ -19,7 +19,7 @@ each tested in the browser and committed separately.
 |---|---|---|
 | 1 | Tailwind, tokens, legacy layer + bridge, `ui/` kit, shared components, shell, login, error pages, per-school brand colour | **Done** (2026-11-08) |
 | 2 | All 18 admin pages | **Done** (2026-11-08) |
-| 3 | Teacher + exam officer | — |
+| 3 | Teacher + exam officer | **Done** (2026-11-08) |
 | 4 | Student, parent, accountant (real accountant dashboard) | — |
 | 5 | Charts + `/dashboard/*` summary endpoints | — |
 | 6 | Delete `index.css` / `bridge.css`, final docs | — |
@@ -45,6 +45,20 @@ Notes:
   `GET /promotions/eligible`) instead of guessing `gradeLevel + 1` in the browser.
 - `DELETE /exams/:id/subjects/:examSubjectId` is now used by the exam details dialog.
 - Subject Excel import accepts any grade that exists as a class (it was 11/12 only).
+
+Wave 3 verified: lint and build clean; every page across 7 roles loads with no
+console errors or failed calls; teacher and exam-officer flows driven in the
+browser (attendance, marks entry with keyboard moves, range errors, discard and
+a real save that was then deleted again, the exam-officer cascade, my students,
+notices); screenshots at 1440 and 390 px. Fixed on the way:
+- Attendance loaded students without a page size, so a section with more than
+  10 students showed only the first 10 (the API default). It now asks for 100.
+- Assignments: class and section were two separate dropdowns, so a teacher
+  could pick a pair they don't teach; it is now one list of their own
+  class-section-subjects. Editing sent `maxMarks`, which the API ignores; it
+  now sends `totalMarks` (and can add attachments). Grading shows feedback.
+- `/teacher/attendance?class=<classId>-<sectionId>` opens a class directly
+  (used by the dashboard and My Students).
 
 Migration `20261108090000_school_brand_color` adds `schools.brand_color`.
 

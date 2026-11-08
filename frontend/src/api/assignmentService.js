@@ -19,8 +19,10 @@ export const assignmentService = {
     return response.data;
   },
   
+  // Accepts FormData (to add attachments) or a plain object.
   updateAssignment: async (id, data) => {
-    const response = await apiClient.put(`/assignments/${id}`, data);
+    const config = data instanceof FormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined;
+    const response = await apiClient.put(`/assignments/${id}`, data, config);
     return response.data;
   },
   

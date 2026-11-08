@@ -1,819 +1,566 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { BookOpen, ClipboardList, Save, Users, Undo2, CheckCircle2, Keyboard } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { Button } from "../../components/common/FormElements";
-import { Save, BookOpen, Users, AlertCircle } from "lucide-react";
 import { examService } from "../../api/examService";
 import { teacherService } from "../../api/teacherService";
+import { PageHeader, Card, Badge, Button, Field, SelectInput, EmptyState, LoadingBlock, toast, confirmDialog } from "../../components/ui";
+import { cn } from "../../lib/cn";
 
 /**
- * Marks Entry Component - RBAC-Aware
+ * Marks entry, in two flows:
  *
- * TWO DISTINCT FLOWS based on role:
+ * - TEACHER: only their own TeacherSubject assignments.
+ *   Exam -> [their class-section-subject] -> students.
+ * - EXAM_OFFICER / ADMIN: any subject in the exam.
+ *   Exam -> class -> section -> subject -> students.
  *
- * 1. TEACHER FLOW:
- *    - Shows ONLY their assigned subjects (from teacher_subjects table)
- *    - Exam → [Their Class-Section-Subject] → Students
- *    - Cannot access subjects not assigned to them
- *
- * 2. EXAM_OFFICER/ADMIN FLOW:
- *    - Can access ANY subject in the exam
- *    - Exam → Class → Section → Subject → Students
+ * The backend enforces both (and the PUBLISHED-only rule); this page only
+ * checks that each number is inside the subject's full marks before saving.
  */
+
+const COLS = ["theory", "practical", "remarks"];
+
+const toRows = (studentList, results = []) => {
+  const byStudent = new Map(results.map((r) => [r.student.id, r]));
+  return studentList
+    .map((s) => {
+      const r = byStudent.get(s.studentId);
+      return {
+        studentId: s.studentId,
+        rollNumber: s.rollNumber,
+        studentName: `${s.firstName} ${s.lastName}`,
+        marksObtained: r && !r.isAbsent ? (r.marksObtained ?? "") : "",
+        practicalMarks: r && !r.isAbsent ? (r.practicalMarks ?? "") : "",
+        isAbsent: Boolean(r?.isAbsent),
+        remarks: r?.remarks || "",
+      };
+    })
+    .sort((a, b) => (a.rollNumber || 999) - (b.rollNumber || 999));
+};
+
+const rowKey = (m) => (m ? JSON.stringify([String(m.marksObtained), String(m.practicalMarks), m.isAbsent, m.remarks]) : "");
+const snapshot = (rows) => Object.fromEntries(rows.map((r) => [r.studentId, { ...r }]));
+
+/** "" when fine, otherwise the problem with this value. */
+const rangeError = (value, max) => {
+  if (value === "" || value === null || value === undefined) return "";
+  const n = Number(value);
+  if (Number.isNaN(n)) return "Not a number";
+  if (n < 0) return "Below 0";
+  if (max && n > max) return `Above ${max}`;
+  return "";
+};
+
 const MarksEntry = () => {
   const { user, hasRole } = useAuth();
-
-  // ==================== ROLE DETECTION ====================
   const isTeacher = hasRole("TEACHER");
   const isExamOfficer = hasRole("EXAM_OFFICER");
-  const isAdmin = hasRole("ADMIN") || hasRole("SUPER_ADMIN");
-
-  // TEACHER role uses their assignments; EXAM_OFFICER/ADMIN can access all
+  const isAdmin = hasRole("ADMIN");
+  // Teachers use their assignments; exam officers and admins can open any subject.
   const useTeacherFlow = isTeacher && !isExamOfficer && !isAdmin;
 
-  // ==================== DATA STATES ====================
   const [exams, setExams] = useState([]);
-  const [teacherAssignments, setTeacherAssignments] = useState([]); // For TEACHER
+  const [teacherAssignments, setTeacherAssignments] = useState([]);
   const [marksData, setMarksData] = useState([]);
+  const [saved, setSaved] = useState({}); // studentId -> row as last loaded/saved
 
-  // Loading states
   const [loadingExams, setLoadingExams] = useState(true);
   const [loadingAssignments, setLoadingAssignments] = useState(false);
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // ==================== FILTER STATES ====================
-  // For TEACHER: examId + assignmentId (combined class-section-subject)
-  // For EXAM_OFFICER/ADMIN: examId + classId + sectionId + subjectId
-  const [filters, setFilters] = useState({
-    examId: "",
-    // Teacher-specific
-    assignmentId: "", // Teacher's assignment ID (classSubjectId-sectionId)
-    // Exam Officer/Admin-specific
-    classId: "",
-    sectionId: "",
-    subjectId: "", // examSubjectId
-  });
+  const [filters, setFilters] = useState({ examId: "", assignmentId: "", classId: "", sectionId: "", subjectId: "" });
+  const gridRef = useRef(null);
 
-  // ==================== INITIAL DATA FETCH ====================
+  // ---------- data ----------
   useEffect(() => {
-    fetchExams();
-    if (useTeacherFlow) {
-      fetchTeacherAssignments();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [useTeacherFlow]);
-
-  // Fetch students when filters are complete
-  useEffect(() => {
-    if (useTeacherFlow) {
-      // TEACHER: Need examId and assignmentId
-      if (!filters.examId || !filters.assignmentId) {
-        setMarksData([]);
-        return;
-      }
-      fetchStudentsForTeacher();
-    } else {
-      // EXAM_OFFICER/ADMIN: Need all filters
-      if (
-        !filters.examId ||
-        !filters.classId ||
-        !filters.sectionId ||
-        !filters.subjectId
-      ) {
-        setMarksData([]);
-        return;
-      }
-      fetchStudentsForExamOfficer();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    filters.examId,
-    filters.assignmentId,
-    filters.classId,
-    filters.sectionId,
-    filters.subjectId,
-    useTeacherFlow,
-    exams,
-  ]);
-
-  // ==================== API CALLS ====================
-  const fetchExams = async () => {
-    setLoadingExams(true);
-    try {
-      const res = await examService.getExamsForMarksEntry();
-      const publishedExams = (res.data || []).filter(
-        (e) => e.status === "PUBLISHED",
-      );
-      setExams(publishedExams);
-    } catch (error) {
-      console.error("Error fetching exams:", error);
-    } finally {
-      setLoadingExams(false);
-    }
-  };
-
-  const fetchTeacherAssignments = async () => {
-    setLoadingAssignments(true);
-    try {
-      const res = await teacherService.getTeacherAssignments({
-        userId: user?.id,
-      });
-      setTeacherAssignments(res.data || []);
-    } catch (error) {
-      console.error("Error fetching teacher assignments:", error);
-    } finally {
-      setLoadingAssignments(false);
-    }
-  };
-
-  // TEACHER FLOW: Fetch students using their assignment
-  const fetchStudentsForTeacher = async () => {
-    setLoadingStudents(true);
-    try {
-      // Parse assignment: "classSubjectId-sectionId"
-      const [classSubjectId, sectionId] = filters.assignmentId.split("-");
-
-      // Find the examSubject that matches this classSubject
-      const exam = exams.find((e) => e.id?.toString() === filters.examId);
-      const examSubject = exam?.examSubjects?.find(
-        (es) => es.classSubjectId?.toString() === classSubjectId,
-      );
-
-      if (!examSubject) {
-        console.error("No exam subject found for this assignment");
-        setMarksData([]);
-        setLoadingStudents(false);
-        return;
-      }
-
-      // ALWAYS fetch full student list first (authoritative source)
-      const studentsRes = await examService.getStudentsForMarksEntry(
-        examSubject.id,
-        sectionId,
-      );
-      const studentList = studentsRes.data?.students || [];
-
-      // Build initial marks data from student list
-      let marks = studentList.map((s) => ({
-        studentId: s.studentId,
-        studentClassId: s.studentClassId,
-        rollNumber: s.rollNumber,
-        studentName: `${s.firstName} ${s.lastName}`,
-        marksObtained: "",
-        practicalMarks: "",
-        isAbsent: false,
-        remarks: "",
-      }));
-
-      // Merge existing results (if any) to preserve entered marks
+    const loadExams = async () => {
+      setLoadingExams(true);
       try {
-        const resultsRes = await examService.getResultsBySubject(
-          examSubject.id,
-          sectionId,
-        );
-        const { results } = resultsRes.data;
-
-        if (results && results.length > 0) {
-          const resultsMap = new Map(results.map((r) => [r.student.id, r]));
-
-          marks = marks.map((m) => {
-            const existing = resultsMap.get(m.studentId);
-            if (existing) {
-              return {
-                ...m,
-                marksObtained: existing.isAbsent
-                  ? ""
-                  : (existing.marksObtained ?? ""),
-                practicalMarks: existing.isAbsent
-                  ? ""
-                  : (existing.practicalMarks ?? ""),
-                isAbsent: existing.isAbsent || false,
-                remarks: existing.remarks || "",
-              };
-            }
-            return m;
-          });
-        }
+        const res = await examService.getExamsForMarksEntry();
+        setExams((res.data || []).filter((e) => e.status === "PUBLISHED"));
       } catch {
-        // No existing results - keep empty marks
+        toast.error("Could not load exams");
+      } finally {
+        setLoadingExams(false);
       }
-
-      marks.sort((a, b) => (a.rollNumber || 999) - (b.rollNumber || 999));
-      setMarksData(marks);
-    } catch (error) {
-      console.error("Error fetching students:", error);
-      setMarksData([]);
-    } finally {
-      setLoadingStudents(false);
-    }
-  };
-
-  // EXAM_OFFICER/ADMIN FLOW: Fetch students with full filter control
-  const fetchStudentsForExamOfficer = async () => {
-    setLoadingStudents(true);
-    try {
-      const examSubjectId = filters.subjectId;
-      const sectionId = filters.sectionId;
-
-      // ALWAYS fetch full student list first (authoritative source)
-      const studentsRes = await examService.getStudentsForMarksEntry(
-        examSubjectId,
-        sectionId,
-      );
-      const studentList = studentsRes.data?.students || [];
-
-      // Build initial marks data from student list
-      let marks = studentList.map((s) => ({
-        studentId: s.studentId,
-        studentClassId: s.studentClassId,
-        rollNumber: s.rollNumber,
-        studentName: `${s.firstName} ${s.lastName}`,
-        marksObtained: "",
-        practicalMarks: "",
-        isAbsent: false,
-        remarks: "",
-      }));
-
-      // Merge existing results (if any) to preserve entered marks
+    };
+    const loadAssignments = async () => {
+      setLoadingAssignments(true);
       try {
-        const resultsRes = await examService.getResultsBySubject(
-          examSubjectId,
-          sectionId,
-        );
-        const { results } = resultsRes.data;
-
-        if (results && results.length > 0) {
-          const resultsMap = new Map(results.map((r) => [r.student.id, r]));
-
-          marks = marks.map((m) => {
-            const existing = resultsMap.get(m.studentId);
-            if (existing) {
-              return {
-                ...m,
-                marksObtained: existing.isAbsent
-                  ? ""
-                  : (existing.marksObtained ?? ""),
-                practicalMarks: existing.isAbsent
-                  ? ""
-                  : (existing.practicalMarks ?? ""),
-                isAbsent: existing.isAbsent || false,
-                remarks: existing.remarks || "",
-              };
-            }
-            return m;
-          });
-        }
+        const res = await teacherService.getTeacherAssignments({ userId: user?.id });
+        setTeacherAssignments(res.data || []);
       } catch {
-        // No existing results - keep empty marks
+        toast.error("Could not load your subjects");
+      } finally {
+        setLoadingAssignments(false);
       }
+    };
+    loadExams();
+    if (useTeacherFlow) loadAssignments();
+  }, [useTeacherFlow, user?.id]);
 
-      marks.sort((a, b) => (a.rollNumber || 999) - (b.rollNumber || 999));
-      setMarksData(marks);
-    } catch (error) {
-      console.error("Error fetching students:", error);
-      setMarksData([]);
-    } finally {
-      setLoadingStudents(false);
-    }
-  };
+  const selectedExam = useMemo(() => exams.find((e) => e.id?.toString() === filters.examId), [exams, filters.examId]);
 
-  // ==================== DERIVED DATA ====================
-
-  // Selected exam object
-  const selectedExam = useMemo(() => {
-    return exams.find((e) => e.id?.toString() === filters.examId);
-  }, [exams, filters.examId]);
-
-  // TEACHER: Get assignments that match subjects in selected exam
+  // Teacher: their assignments that are part of the selected exam.
   const teacherAssignmentOptions = useMemo(() => {
     if (!useTeacherFlow || !selectedExam?.examSubjects) return [];
-
-    // Get classSubjectIds from this exam (ensure numeric comparison)
-    const examClassSubjectIds = new Set(
-      selectedExam.examSubjects.map((es) => Number(es.classSubjectId)),
-    );
-
-    // Filter teacher's assignments to only those in this exam
+    const inExam = new Set(selectedExam.examSubjects.map((es) => Number(es.classSubjectId)));
     return teacherAssignments
-      .filter((ta) => examClassSubjectIds.has(Number(ta.classSubjectId)))
+      .filter((ta) => inExam.has(Number(ta.classSubjectId)))
       .map((ta) => ({
         value: `${ta.classSubjectId}-${ta.sectionId}`,
-        label: `${ta.classSubject?.class?.name} ${ta.section?.name} - ${ta.classSubject?.subject?.name}`,
-        classSubjectId: ta.classSubjectId,
-        sectionId: ta.sectionId,
-        className: ta.classSubject?.class?.name,
-        sectionName: ta.section?.name,
-        subjectName: ta.classSubject?.subject?.name,
+        label: `${ta.classSubject?.class?.name} ${ta.section?.name} · ${ta.classSubject?.subject?.name}`,
       }));
   }, [useTeacherFlow, selectedExam, teacherAssignments]);
 
-  // Get current exam subject info (for marks structure)
-  const currentExamSubject = useMemo(() => {
-    if (!selectedExam?.examSubjects) return null;
-
-    if (useTeacherFlow && filters.assignmentId) {
-      const [classSubjectId] = filters.assignmentId.split("-");
-      return selectedExam.examSubjects.find(
-        (es) => es.classSubjectId?.toString() === classSubjectId,
-      );
-    } else if (filters.subjectId) {
-      return selectedExam.examSubjects.find(
-        (es) => es.id?.toString() === filters.subjectId,
-      );
-    }
-    return null;
-  }, [selectedExam, filters.assignmentId, filters.subjectId, useTeacherFlow]);
-
-  // EXAM_OFFICER/ADMIN: Available classes from exam
   const availableClasses = useMemo(() => {
     if (useTeacherFlow || !selectedExam?.examSubjects) return [];
-
-    const classMap = new Map();
+    const map = new Map();
     selectedExam.examSubjects.forEach((es) => {
       const cls = es.classSubject?.class;
-      if (cls && !classMap.has(cls.id)) {
-        classMap.set(cls.id, {
-          id: cls.id,
-          name: cls.name,
-          gradeLevel: cls.gradeLevel,
-        });
-      }
+      if (cls && !map.has(cls.id)) map.set(cls.id, { id: cls.id, name: cls.name, gradeLevel: cls.gradeLevel });
     });
-
-    return Array.from(classMap.values()).sort(
-      (a, b) => a.gradeLevel - b.gradeLevel,
-    );
+    return [...map.values()].sort((a, b) => a.gradeLevel - b.gradeLevel);
   }, [selectedExam, useTeacherFlow]);
 
-  // EXAM_OFFICER/ADMIN: Available sections for selected class
   const availableSections = useMemo(() => {
-    if (useTeacherFlow || !selectedExam?.examSubjects || !filters.classId)
-      return [];
-
-    const sectionMap = new Map();
+    if (useTeacherFlow || !selectedExam?.examSubjects || !filters.classId) return [];
+    const map = new Map();
     selectedExam.examSubjects.forEach((es) => {
       if (es.classSubject?.classId?.toString() === filters.classId) {
-        (es.sections || []).forEach((sec) => {
-          if (!sectionMap.has(sec.id)) {
-            sectionMap.set(sec.id, { id: sec.id, name: sec.name });
-          }
-        });
+        (es.sections || []).forEach((sec) => map.set(sec.id, { id: sec.id, name: sec.name }));
       }
     });
-
-    return Array.from(sectionMap.values()).sort((a, b) =>
-      a.name.localeCompare(b.name),
-    );
+    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
   }, [selectedExam, filters.classId, useTeacherFlow]);
 
-  // EXAM_OFFICER/ADMIN: Available subjects for selected class
   const availableSubjects = useMemo(() => {
-    if (useTeacherFlow || !selectedExam?.examSubjects || !filters.classId)
-      return [];
-
+    if (useTeacherFlow || !selectedExam?.examSubjects || !filters.classId) return [];
     return selectedExam.examSubjects
       .filter((es) => es.classSubject?.classId?.toString() === filters.classId)
-      .map((es) => ({
-        examSubjectId: es.id,
-        subjectName: es.classSubject?.subject?.name,
-        hasPractical: es.hasPractical === true,
-        theoryFullMarks: es.theoryFullMarks || es.fullMarks || 100,
-        practicalFullMarks: es.practicalFullMarks || 0,
-      }))
+      .map((es) => ({ examSubjectId: es.id, subjectName: es.classSubject?.subject?.name, hasPractical: es.hasPractical === true }))
       .sort((a, b) => (a.subjectName || "").localeCompare(b.subjectName || ""));
   }, [selectedExam, filters.classId, useTeacherFlow]);
 
-  // Marks structure
-  const hasTheory = currentExamSubject?.hasTheory !== false;
-  const hasPractical = currentExamSubject?.hasPractical === true;
-  const theoryMax =
-    currentExamSubject?.theoryFullMarks || currentExamSubject?.fullMarks || 100;
-  const practicalMax = currentExamSubject?.practicalFullMarks || 0;
+  // The exam subject and section the grid is for, in either flow.
+  const target = useMemo(() => {
+    if (!selectedExam?.examSubjects) return null;
+    if (useTeacherFlow) {
+      if (!filters.assignmentId) return null;
+      const [classSubjectId, sectionId] = filters.assignmentId.split("-");
+      const examSubject = selectedExam.examSubjects.find((es) => es.classSubjectId?.toString() === classSubjectId);
+      return examSubject ? { examSubject, sectionId } : null;
+    }
+    if (!filters.subjectId || !filters.sectionId) return null;
+    const examSubject = selectedExam.examSubjects.find((es) => es.id?.toString() === filters.subjectId);
+    return examSubject ? { examSubject, sectionId: filters.sectionId } : null;
+  }, [selectedExam, useTeacherFlow, filters.assignmentId, filters.subjectId, filters.sectionId]);
 
-  // ==================== HANDLERS ====================
+  const targetKey = target ? `${target.examSubject.id}-${target.sectionId}` : "";
 
-  const handleFilterChange = (field, value) => {
-    setFilters((prev) => {
-      const newFilters = { ...prev, [field]: value };
-
-      // Reset dependent fields
-      if (field === "examId") {
-        newFilters.assignmentId = "";
-        newFilters.classId = "";
-        newFilters.sectionId = "";
-        newFilters.subjectId = "";
-      } else if (field === "classId") {
-        newFilters.sectionId = "";
-        newFilters.subjectId = "";
+  useEffect(() => {
+    if (!target) {
+      setMarksData([]);
+      setSaved({});
+      return;
+    }
+    let cancelled = false;
+    const load = async () => {
+      setLoadingStudents(true);
+      try {
+        const studentsRes = await examService.getStudentsForMarksEntry(target.examSubject.id, target.sectionId);
+        let results = [];
+        try {
+          const resultsRes = await examService.getResultsBySubject(target.examSubject.id, target.sectionId);
+          results = resultsRes.data?.results || [];
+        } catch {
+          // No marks entered yet.
+        }
+        if (cancelled) return;
+        const rows = toRows(studentsRes.data?.students || [], results);
+        setMarksData(rows);
+        setSaved(snapshot(rows));
+      } catch (error) {
+        if (!cancelled) {
+          setMarksData([]);
+          toast.error(error.response?.data?.message || "Could not load students");
+        }
+      } finally {
+        if (!cancelled) setLoadingStudents(false);
       }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+    // targetKey identifies the target; the object itself changes identity on every exams refresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetKey]);
 
-      return newFilters;
+  // ---------- derived ----------
+  const es = target?.examSubject;
+  const hasTheory = es ? es.hasTheory !== false : true;
+  const hasPractical = es?.hasPractical === true;
+  const theoryMax = es?.theoryFullMarks || es?.fullMarks || 100;
+  const practicalMax = es?.practicalFullMarks || 0;
+
+  const rowErrors = (m) => ({
+    theory: m.isAbsent ? "" : rangeError(m.marksObtained, theoryMax),
+    practical: m.isAbsent || !hasPractical ? "" : rangeError(m.practicalMarks, practicalMax),
+  });
+
+  const stats = useMemo(() => {
+    let entered = 0;
+    let absent = 0;
+    let invalid = 0;
+    let changed = 0;
+    marksData.forEach((m) => {
+      if (m.isAbsent) absent += 1;
+      else if (m.marksObtained !== "" || (hasPractical && m.practicalMarks !== "")) entered += 1;
+      const e = rowErrors(m);
+      if (e.theory || e.practical) invalid += 1;
+      if (rowKey(saved[m.studentId]) !== rowKey(m)) changed += 1;
+    });
+    return { entered, absent, invalid, changed, pending: marksData.length - entered - absent };
+    // rowErrors only depends on the values listed here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [marksData, saved, hasPractical, theoryMax, practicalMax]);
+
+  // ---------- handlers ----------
+  const handleFilterChange = async (field, value) => {
+    if (stats.changed > 0) {
+      const ok = await confirmDialog({
+        title: "Discard unsaved marks?",
+        message: `${stats.changed} row(s) have changes that are not saved yet.`,
+        confirmLabel: "Discard",
+        tone: "danger",
+      });
+      if (!ok) return;
+    }
+    setFilters((prev) => {
+      const next = { ...prev, [field]: value };
+      if (field === "examId") Object.assign(next, { assignmentId: "", classId: "", sectionId: "", subjectId: "" });
+      else if (field === "classId") Object.assign(next, { sectionId: "", subjectId: "" });
+      return next;
     });
   };
 
   const updateMarks = (studentId, field, value) => {
-    setMarksData((prev) =>
-      prev.map((m) =>
-        m.studentId === studentId ? { ...m, [field]: value } : m,
-      ),
-    );
+    setMarksData((prev) => prev.map((m) => (m.studentId === studentId ? { ...m, [field]: value } : m)));
+  };
+
+  const discard = () => setMarksData((prev) => prev.map((m) => (saved[m.studentId] ? { ...saved[m.studentId] } : m)));
+
+  /** Spreadsheet keys: Enter / ArrowDown -> next row, ArrowUp -> previous row, same column. */
+  const onCellKey = (e, rowIndex, col) => {
+    let next = null;
+    if (e.key === "Enter" || e.key === "ArrowDown") next = rowIndex + 1;
+    else if (e.key === "ArrowUp") next = rowIndex - 1;
+    if (next === null) return;
+    e.preventDefault();
+    for (let i = next; i >= 0 && i < marksData.length; i += next > rowIndex ? 1 : -1) {
+      const cell = gridRef.current?.querySelector(`[data-row="${i}"][data-col="${col}"]`);
+      if (cell && !cell.disabled) {
+        cell.focus();
+        cell.select?.();
+        return;
+      }
+    }
   };
 
   const handleSave = async () => {
+    if (!target) return;
+    if (stats.invalid > 0) {
+      toast.error(`Fix the ${stats.invalid} highlighted row(s) first.`);
+      gridRef.current?.querySelector('[aria-invalid="true"]')?.focus();
+      return;
+    }
+    const resultsToSave = marksData
+      .filter((m) => m.marksObtained !== "" || m.practicalMarks !== "" || m.isAbsent)
+      .map((m) => ({
+        studentId: m.studentId,
+        marksObtained: m.isAbsent ? 0 : parseFloat(m.marksObtained) || 0,
+        practicalMarks: m.isAbsent ? 0 : parseFloat(m.practicalMarks) || 0,
+        isAbsent: m.isAbsent,
+        remarks: m.remarks || "",
+      }));
+    if (resultsToSave.length === 0) return toast.info("Enter marks for at least one student first.");
+
     setSaving(true);
     try {
-      // Determine examSubjectId based on flow
-      let examSubjectId, sectionId;
-
-      if (useTeacherFlow) {
-        const [classSubjectId, secId] = filters.assignmentId.split("-");
-        sectionId = secId;
-        // Find examSubject from classSubjectId
-        const examSubject = selectedExam?.examSubjects?.find(
-          (es) => es.classSubjectId?.toString() === classSubjectId,
-        );
-        if (!examSubject) {
-          alert("Exam subject not found for your assignment.");
-          setSaving(false);
-          return;
-        }
-        examSubjectId = examSubject.id;
-      } else {
-        examSubjectId = parseInt(filters.subjectId);
-        sectionId = filters.sectionId;
-      }
-
-      const resultsToSave = marksData
-        .filter((m) => m.marksObtained !== "" || m.isAbsent)
-        .map((m) => ({
-          studentId: m.studentId,
-          marksObtained: m.isAbsent ? 0 : parseFloat(m.marksObtained) || 0,
-          practicalMarks: m.isAbsent ? 0 : parseFloat(m.practicalMarks) || 0,
-          isAbsent: m.isAbsent,
-          remarks: m.remarks || "",
-        }));
-
-      if (resultsToSave.length === 0) {
-        alert("Please enter marks for at least one student before saving.");
-        setSaving(false);
-        return;
-      }
-
       await examService.saveResults({
-        examSubjectId,
-        sectionId: parseInt(sectionId),
+        examSubjectId: target.examSubject.id,
+        sectionId: parseInt(target.sectionId),
         results: resultsToSave,
       });
-
-      alert("Marks saved successfully!");
+      setSaved(snapshot(marksData));
+      toast.success(`Marks saved for ${resultsToSave.length} student(s)`);
     } catch (error) {
-      console.error("Error saving marks:", error);
-      alert(error.response?.data?.message || "Error saving marks");
+      toast.error(error.response?.data?.message || "Could not save marks");
     } finally {
       setSaving(false);
     }
   };
 
-  // ==================== RENDER ====================
-
-  // Check if user has any valid role for this page
+  // ---------- render ----------
   if (!isTeacher && !isExamOfficer && !isAdmin) {
-    return (
-      <div className="page-container">
-        <div
-          className="card text-center"
-          style={{ padding: "2rem", color: "#dc2626" }}
-        >
-          <AlertCircle size={32} style={{ marginBottom: "0.5rem" }} />
-          <p>You do not have permission to access marks entry.</p>
-        </div>
-      </div>
-    );
+    return <EmptyState icon={ClipboardList} title="No access" description="You do not have permission to enter marks." />;
   }
 
+  const showGrid = Boolean(target);
+  const cellBase =
+    "h-9 w-full rounded-md border bg-white px-2.5 text-sm tabular-nums outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400";
+
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1>Marks Entry</h1>
-          <p className="text-muted">
-            {useTeacherFlow
-              ? "Enter marks for your assigned subjects"
-              : "Enter exam marks for any subject (Exam Officer/Admin)"}
-          </p>
-        </div>
-      </div>
+    <div className={cn("mx-auto max-w-6xl space-y-6", stats.changed > 0 && "pb-24")}>
+      <PageHeader
+        icon={ClipboardList}
+        title="Marks Entry"
+        description={useTeacherFlow ? "Enter marks for the subjects you teach." : "Enter marks for any subject in a published exam."}
+      />
 
-      {/* Filter Card */}
-      <div className="card filter-card">
-        <div
-          className="filter-row"
-          style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}
-        >
-          {/* 1. Exam Selection (Both flows) */}
-          <div className="form-group" style={{ minWidth: "200px", flex: 1 }}>
-            <label>
-              <BookOpen size={14} style={{ marginRight: "4px" }} />
-              Exam
-            </label>
-            <select
-              value={filters.examId}
-              onChange={(e) => handleFilterChange("examId", e.target.value)}
-              disabled={loadingExams}
-            >
-              <option value="">
-                {loadingExams ? "Loading..." : "Select Exam"}
-              </option>
+      <Card>
+        <div className={cn("grid gap-4", useTeacherFlow ? "sm:grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-4")}>
+          <Field label="Exam" htmlFor="me-exam">
+            <SelectInput id="me-exam" value={filters.examId} onChange={(e) => handleFilterChange("examId", e.target.value)} disabled={loadingExams}>
+              <option value="">{loadingExams ? "Loading…" : exams.length ? "Select exam" : "No published exams"}</option>
               {exams.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.name}
-                </option>
+                <option key={e.id} value={e.id}>{e.name}</option>
               ))}
-            </select>
-          </div>
+            </SelectInput>
+          </Field>
 
-          {/* TEACHER FLOW: Single dropdown for their assignments */}
-          {useTeacherFlow && (
-            <div className="form-group" style={{ minWidth: "300px", flex: 2 }}>
-              <label>Your Class - Section - Subject</label>
-              <select
+          {useTeacherFlow ? (
+            <Field
+              label="Class, section and subject"
+              htmlFor="me-assignment"
+              error={filters.examId && !loadingAssignments && teacherAssignmentOptions.length === 0 ? "None of your subjects are in this exam." : undefined}
+            >
+              <SelectInput
+                id="me-assignment"
                 value={filters.assignmentId}
-                onChange={(e) =>
-                  handleFilterChange("assignmentId", e.target.value)
-                }
+                onChange={(e) => handleFilterChange("assignmentId", e.target.value)}
                 disabled={!filters.examId || loadingAssignments}
               >
-                <option value="">
-                  {loadingAssignments ? "Loading..." : "Select your assignment"}
-                </option>
+                <option value="">{loadingAssignments ? "Loading…" : "Select your subject"}</option>
                 {teacherAssignmentOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
-              </select>
-              {filters.examId &&
-                teacherAssignmentOptions.length === 0 &&
-                !loadingAssignments && (
-                  <small
-                    style={{
-                      color: "#dc2626",
-                      marginTop: "4px",
-                      display: "block",
-                    }}
-                  >
-                    No subjects assigned to you for this exam
-                  </small>
-                )}
-            </div>
-          )}
-
-          {/* EXAM_OFFICER/ADMIN FLOW: Cascading dropdowns */}
-          {!useTeacherFlow && (
+              </SelectInput>
+            </Field>
+          ) : (
             <>
-              {/* 2. Class Selection */}
-              <div
-                className="form-group"
-                style={{ minWidth: "150px", flex: 1 }}
-              >
-                <label>Class</label>
-                <select
-                  value={filters.classId}
-                  onChange={(e) =>
-                    handleFilterChange("classId", e.target.value)
-                  }
-                  disabled={!filters.examId || availableClasses.length === 0}
-                >
-                  <option value="">Select Class</option>
+              <Field label="Class" htmlFor="me-class">
+                <SelectInput id="me-class" value={filters.classId} onChange={(e) => handleFilterChange("classId", e.target.value)} disabled={!filters.examId || availableClasses.length === 0}>
+                  <option value="">Select class</option>
                   {availableClasses.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
+                    <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
-                </select>
-              </div>
-
-              {/* 3. Section Selection */}
-              <div
-                className="form-group"
-                style={{ minWidth: "120px", flex: 1 }}
-              >
-                <label>Section</label>
-                <select
-                  value={filters.sectionId}
-                  onChange={(e) =>
-                    handleFilterChange("sectionId", e.target.value)
-                  }
-                  disabled={!filters.classId || availableSections.length === 0}
-                >
-                  <option value="">Select Section</option>
+                </SelectInput>
+              </Field>
+              <Field label="Section" htmlFor="me-section">
+                <SelectInput id="me-section" value={filters.sectionId} onChange={(e) => handleFilterChange("sectionId", e.target.value)} disabled={!filters.classId || availableSections.length === 0}>
+                  <option value="">Select section</option>
                   {availableSections.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
+                    <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
-                </select>
-              </div>
-
-              {/* 4. Subject Selection */}
-              <div
-                className="form-group"
-                style={{ minWidth: "200px", flex: 1 }}
-              >
-                <label>Subject</label>
-                <select
-                  value={filters.subjectId}
-                  onChange={(e) =>
-                    handleFilterChange("subjectId", e.target.value)
-                  }
-                  disabled={!filters.classId || availableSubjects.length === 0}
-                >
-                  <option value="">Select Subject</option>
+                </SelectInput>
+              </Field>
+              <Field label="Subject" htmlFor="me-subject">
+                <SelectInput id="me-subject" value={filters.subjectId} onChange={(e) => handleFilterChange("subjectId", e.target.value)} disabled={!filters.classId || availableSubjects.length === 0}>
+                  <option value="">Select subject</option>
                   {availableSubjects.map((s) => (
                     <option key={s.examSubjectId} value={s.examSubjectId}>
-                      {s.subjectName} {s.hasPractical ? "(Th+Pr)" : "(Th)"}
+                      {s.subjectName} {s.hasPractical ? "(Th + Pr)" : "(Th)"}
                     </option>
                   ))}
-                </select>
-              </div>
+                </SelectInput>
+              </Field>
             </>
           )}
         </div>
-      </div>
+      </Card>
 
-      {/* Students & Marks Entry Card */}
-      {((useTeacherFlow && filters.assignmentId) ||
-        (!useTeacherFlow && filters.subjectId)) && (
-        <div className="card">
-          {/* Subject Info Header */}
-          {currentExamSubject && (
-            <div
-              style={{
-                background: "#f0f9ff",
-                border: "1px solid #bae6fd",
-                borderRadius: "8px",
-                padding: "0.75rem 1rem",
-                marginBottom: "1rem",
-                display: "flex",
-                gap: "1rem",
-                alignItems: "center",
-                flexWrap: "wrap",
-              }}
-            >
-              <span style={{ fontWeight: 600 }}>
-                {currentExamSubject.classSubject?.subject?.name}
-              </span>
-              {hasTheory && (
-                <span className="badge badge-info">
-                  Theory: {theoryMax} marks
-                </span>
-              )}
-              {hasPractical && (
-                <span className="badge badge-success">
-                  Practical: {practicalMax} marks
-                </span>
-              )}
-              <span
-                style={{
-                  marginLeft: "auto",
-                  color: "#6b7280",
-                  fontSize: "0.9em",
-                }}
-              >
-                <Users size={14} style={{ marginRight: "4px" }} />
-                {marksData.length} students
-              </span>
+      {!showGrid ? (
+        <Card>
+          <EmptyState
+            icon={BookOpen}
+            title={!filters.examId ? "Choose an exam" : useTeacherFlow ? "Choose your subject" : "Choose class, section and subject"}
+            description="Only published exams accept marks. Once an exam is locked, marks can no longer change."
+          />
+        </Card>
+      ) : (
+        <Card padding="none" className="overflow-hidden">
+          {/* Subject summary */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-slate-200 px-5 py-4">
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-semibold text-slate-900">{es?.classSubject?.subject?.name}</h2>
+              <p className="text-sm text-slate-500">{selectedExam?.name}</p>
             </div>
-          )}
+            <div className="flex flex-wrap gap-1.5">
+              {hasTheory && <Badge tone="info">Theory {theoryMax}</Badge>}
+              {hasPractical && <Badge tone="success">Practical {practicalMax}</Badge>}
+            </div>
+            <div className="ml-auto flex flex-wrap items-center gap-3 text-sm text-slate-600">
+              <span className="inline-flex items-center gap-1.5"><Users size={15} className="text-slate-400" aria-hidden="true" />{marksData.length}</span>
+              <span className="inline-flex items-center gap-1.5"><CheckCircle2 size={15} className="text-emerald-500" aria-hidden="true" />{stats.entered} entered</span>
+              {stats.absent > 0 && <span>{stats.absent} absent</span>}
+              {stats.pending > 0 && <span className="text-amber-700">{stats.pending} left</span>}
+            </div>
+            {marksData.length > 0 && (
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
+                <div
+                  className="h-full rounded-full bg-brand-600 transition-[width]"
+                  style={{ width: `${Math.round(((stats.entered + stats.absent) / marksData.length) * 100)}%` }}
+                />
+              </div>
+            )}
+          </div>
 
-          {/* Loading/Empty States */}
           {loadingStudents ? (
-            <div className="text-center" style={{ padding: "2rem" }}>
-              Loading students...
-            </div>
+            <LoadingBlock text="Loading students…" />
           ) : marksData.length === 0 ? (
-            <div className="text-muted text-center" style={{ padding: "2rem" }}>
-              No students found for this selection.
-            </div>
+            <EmptyState icon={Users} title="No students" description="No students are enrolled in this section for the current year." />
           ) : (
             <>
-              {/* Marks Table Header */}
-              <div className="marks-header">
-                <span className="col-roll">Roll</span>
-                <span className="col-name">Student Name</span>
-                {hasTheory && <span className="col-marks">Theory</span>}
-                {hasPractical && <span className="col-marks">Practical</span>}
-                <span className="col-absent">Absent</span>
-                <span className="col-remarks">Remarks</span>
+              <div ref={gridRef} className="max-h-[calc(100vh-18rem)] min-h-64 overflow-auto">
+                <table className="w-full min-w-[720px] border-separate border-spacing-0 text-sm">
+                  <thead className="sticky top-0 z-10 bg-slate-50 text-left text-xs font-medium tracking-wide text-slate-500 uppercase">
+                    <tr>
+                      <th className="col-roll w-16 border-b border-slate-200 px-4 py-2.5 font-medium">Roll</th>
+                      <th className="col-name sticky left-0 z-10 border-b border-slate-200 bg-slate-50 px-4 py-2.5 font-medium">Student</th>
+                      {hasTheory && <th className="col-marks w-32 border-b border-slate-200 px-2 py-2.5 font-medium">Theory <span className="normal-case text-slate-400">/{theoryMax}</span></th>}
+                      {hasPractical && <th className="col-marks w-32 border-b border-slate-200 px-2 py-2.5 font-medium">Practical <span className="normal-case text-slate-400">/{practicalMax}</span></th>}
+                      {hasPractical && <th className="w-20 border-b border-slate-200 px-2 py-2.5 text-right font-medium">Total</th>}
+                      <th className="w-24 border-b border-slate-200 px-2 py-2.5 text-center font-medium">Absent</th>
+                      <th className="col-remarks border-b border-slate-200 px-2 py-2.5 pr-4 font-medium">Remarks</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {marksData.map((m, i) => {
+                      const errs = rowErrors(m);
+                      const dirty = rowKey(saved[m.studentId]) !== rowKey(m);
+                      const total = (parseFloat(m.marksObtained) || 0) + (parseFloat(m.practicalMarks) || 0);
+                      const rowBg = errs.theory || errs.practical ? "bg-red-50/60" : m.isAbsent ? "bg-slate-50" : "bg-white";
+                      return (
+                        <tr key={m.studentId} className={cn("group", rowBg)}>
+                          <td className={cn("col-roll border-b border-slate-100 px-4 py-1.5 text-slate-500 tabular-nums", dirty && "shadow-[inset_3px_0_0] shadow-brand-500")}>{m.rollNumber || "—"}</td>
+                          <td className={cn("col-name sticky left-0 border-b border-slate-100 px-4 py-1.5 font-medium text-slate-900", rowBg)}>
+                            <span className="block max-w-56 truncate">{m.studentName}</span>
+                          </td>
+                          {hasTheory && (
+                            <td className="col-marks border-b border-slate-100 px-2 py-1.5 align-top">
+                              <input
+                                type="number"
+                                inputMode="decimal"
+                                min="0"
+                                max={theoryMax}
+                                step="0.01"
+                                data-row={i}
+                                data-col="theory"
+                                value={m.marksObtained}
+                                disabled={m.isAbsent}
+                                placeholder={m.isAbsent ? "Abs" : "—"}
+                                aria-label={`Theory marks for ${m.studentName}`}
+                                aria-invalid={errs.theory ? true : undefined}
+                                title={errs.theory || undefined}
+                                onChange={(e) => updateMarks(m.studentId, "marksObtained", e.target.value)}
+                                onKeyDown={(e) => onCellKey(e, i, "theory")}
+                                onFocus={(e) => e.target.select()}
+                                className={cn(cellBase, errs.theory ? "border-red-400 text-red-700" : "border-slate-200")}
+                              />
+                              {errs.theory && <p className="mt-0.5 text-[11px] font-medium text-red-600">{errs.theory}</p>}
+                            </td>
+                          )}
+                          {hasPractical && (
+                            <td className="col-marks border-b border-slate-100 px-2 py-1.5 align-top">
+                              <input
+                                type="number"
+                                inputMode="decimal"
+                                min="0"
+                                max={practicalMax}
+                                step="0.01"
+                                data-row={i}
+                                data-col="practical"
+                                value={m.practicalMarks}
+                                disabled={m.isAbsent}
+                                placeholder={m.isAbsent ? "Abs" : "—"}
+                                aria-label={`Practical marks for ${m.studentName}`}
+                                aria-invalid={errs.practical ? true : undefined}
+                                title={errs.practical || undefined}
+                                onChange={(e) => updateMarks(m.studentId, "practicalMarks", e.target.value)}
+                                onKeyDown={(e) => onCellKey(e, i, "practical")}
+                                onFocus={(e) => e.target.select()}
+                                className={cn(cellBase, errs.practical ? "border-red-400 text-red-700" : "border-slate-200")}
+                              />
+                              {errs.practical && <p className="mt-0.5 text-[11px] font-medium text-red-600">{errs.practical}</p>}
+                            </td>
+                          )}
+                          {hasPractical && (
+                            <td className="border-b border-slate-100 px-2 py-1.5 text-right font-medium text-slate-700 tabular-nums">
+                              {m.isAbsent || (m.marksObtained === "" && m.practicalMarks === "") ? "—" : total}
+                            </td>
+                          )}
+                          <td className="border-b border-slate-100 px-2 py-1.5 text-center">
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={m.isAbsent}
+                              aria-label={`${m.studentName} absent`}
+                              onClick={() => updateMarks(m.studentId, "isAbsent", !m.isAbsent)}
+                              className={cn(
+                                "cursor-pointer rounded-full px-2.5 py-1 text-xs font-medium ring-1 transition-colors ring-inset",
+                                m.isAbsent ? "bg-amber-100 text-amber-800 ring-amber-300" : "bg-white text-slate-400 ring-slate-200 hover:text-slate-600",
+                              )}
+                            >
+                              {m.isAbsent ? "Absent" : "Present"}
+                            </button>
+                          </td>
+                          <td className="col-remarks border-b border-slate-100 px-2 py-1.5 pr-4">
+                            <input
+                              type="text"
+                              data-row={i}
+                              data-col="remarks"
+                              value={m.remarks}
+                              placeholder="Optional"
+                              aria-label={`Remarks for ${m.studentName}`}
+                              onChange={(e) => updateMarks(m.studentId, "remarks", e.target.value)}
+                              onKeyDown={(e) => onCellKey(e, i, "remarks")}
+                              className={cn(cellBase, "border-transparent bg-transparent hover:border-slate-200 focus:bg-white")}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-
-              {/* Marks List */}
-              <div className="marks-list">
-                {marksData.map((record) => (
-                  <div key={record.studentId} className="marks-row">
-                    <span className="col-roll">{record.rollNumber || "-"}</span>
-                    <span className="col-name">{record.studentName}</span>
-                    {hasTheory && (
-                      <input
-                        type="number"
-                        value={record.marksObtained}
-                        onChange={(e) =>
-                          updateMarks(
-                            record.studentId,
-                            "marksObtained",
-                            e.target.value,
-                          )
-                        }
-                        min="0"
-                        max={theoryMax}
-                        className="marks-input"
-                        disabled={record.isAbsent}
-                        placeholder={`/${theoryMax}`}
-                      />
-                    )}
-                    {hasPractical && (
-                      <input
-                        type="number"
-                        value={record.practicalMarks}
-                        onChange={(e) =>
-                          updateMarks(
-                            record.studentId,
-                            "practicalMarks",
-                            e.target.value,
-                          )
-                        }
-                        min="0"
-                        max={practicalMax}
-                        className="marks-input"
-                        disabled={record.isAbsent}
-                        placeholder={`/${practicalMax}`}
-                      />
-                    )}
-                    <label className="col-absent checkbox-inline">
-                      <input
-                        type="checkbox"
-                        checked={record.isAbsent}
-                        onChange={(e) =>
-                          updateMarks(
-                            record.studentId,
-                            "isAbsent",
-                            e.target.checked,
-                          )
-                        }
-                      />{" "}
-                      Abs
-                    </label>
-                    <input
-                      type="text"
-                      value={record.remarks}
-                      onChange={(e) =>
-                        updateMarks(record.studentId, "remarks", e.target.value)
-                      }
-                      placeholder="Remarks"
-                      className="col-remarks remarks-input"
-                    />
-                  </div>
-                ))}
-              </div>
-
-              {/* Save Button */}
-              <div className="marks-actions" style={{ marginTop: "1rem" }}>
-                <Button icon={Save} loading={saving} onClick={handleSave}>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-5 py-3">
+                <p className="hidden items-center gap-1.5 text-xs text-slate-500 sm:flex">
+                  <Keyboard size={14} aria-hidden="true" /> Enter or ↓ moves down a row, ↑ moves up.
+                </p>
+                <Button icon={Save} loading={saving} onClick={handleSave} disabled={stats.changed === 0}>
                   Save Marks
                 </Button>
               </div>
             </>
           )}
-        </div>
+        </Card>
       )}
 
-      {/* Prompt messages */}
-      {filters.examId &&
-        useTeacherFlow &&
-        !filters.assignmentId &&
-        teacherAssignmentOptions.length > 0 && (
-          <div
-            className="card text-center"
-            style={{ padding: "2rem", color: "#6b7280" }}
-          >
-            <BookOpen
-              size={32}
-              style={{ marginBottom: "0.5rem", opacity: 0.5 }}
-            />
-            <p>Select your class-section-subject assignment to enter marks</p>
+      {/* Sticky save bar while there are unsaved changes */}
+      {showGrid && stats.changed > 0 && (
+        <div data-save-bar className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur lg:left-64 print:hidden">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
+            <span className="text-sm text-slate-700">
+              <strong className="font-semibold">{stats.changed}</strong> unsaved {stats.changed === 1 ? "row" : "rows"}
+              {stats.invalid > 0 && <span className="ml-2 text-red-600">· {stats.invalid} with errors</span>}
+            </span>
+            <span className="flex-1" />
+            <Button variant="ghost" icon={Undo2} onClick={discard} disabled={saving}>Discard</Button>
+            <Button icon={Save} loading={saving} onClick={handleSave}>Save Marks</Button>
           </div>
-        )}
-
-      {!useTeacherFlow && filters.examId && !filters.subjectId && (
-        <div
-          className="card text-center"
-          style={{ padding: "2rem", color: "#6b7280" }}
-        >
-          <BookOpen
-            size={32}
-            style={{ marginBottom: "0.5rem", opacity: 0.5 }}
-          />
-          <p>Select Class, Section, and Subject to begin marks entry</p>
         </div>
       )}
     </div>
