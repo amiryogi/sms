@@ -38,7 +38,7 @@ const errorHandler = (err, req, res, next) => {
       case 'P2003':
         // Foreign key constraint violation
         statusCode = 400;
-        message = 'Related record not found';
+        message = 'This change conflicts with linked records: a related record is missing, or other records (such as fee payments) still depend on this one';
         break;
       case 'P2014':
         // Required relation violation

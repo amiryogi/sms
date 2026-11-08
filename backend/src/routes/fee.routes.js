@@ -4,7 +4,21 @@ const router = express.Router();
 const feeTypeController = require("../controllers/feeType.controller");
 const feeStructureController = require("../controllers/feeStructure.controller");
 const feePaymentController = require("../controllers/feePayment.controller");
-const { body, param } = require("express-validator");
+const financeController = require("../controllers/finance.controller");
+const { body, param, query } = require("express-validator");
+const {
+  idParam: financeIdParam,
+  note: financeNote,
+  reason: financeReason,
+  recordPaymentRules,
+  transactionListRules,
+  reversalRules,
+  discountRules,
+  discountUpdateRules,
+  discountListRules,
+  accountListRules,
+  templateRules,
+} = require("../validators/finance.validators");
 const {
   authenticate,
   isAdmin,
@@ -240,5 +254,44 @@ router.post(
   validate,
   feePaymentController.bulkGenerateFees
 );
+
+// =====================================================
+// LEDGER (docs/plans/finance-and-portals.md §5)
+// Fee staff = ACCOUNTANT, ADMIN, SUPER_ADMIN (canManageFees).
+// Approvals, direct reversals, waivers and reconcile are admin only (isAdmin);
+// the services also refuse to let anyone approve their own request.
+// =====================================================
+
+// Accounts and statements
+router.get("/accounts", canManageFees, accountListRules, validate, financeController.listAccounts);
+router.get("/accounts/:studentId", canReadFees, [studentIdParamRule], validate, financeController.getStatement);
+
+// Payments (the ledger is append-only: no update or delete routes)
+router.post("/transactions", canManageFees, recordPaymentRules, validate, financeController.recordPayment);
+router.get("/transactions", canManageFees, transactionListRules, validate, financeController.listTransactions);
+router.get("/transactions/:id", canReadFees, [financeIdParam()], validate, financeController.getTransaction);
+
+// Reversals
+router.post("/transactions/:id/reversal-requests", canManageFees, [financeIdParam(), ...reversalRules], validate, financeController.requestReversal);
+router.post("/transactions/:id/reverse", isAdmin, [financeIdParam(), ...reversalRules], validate, financeController.reverseDirectly);
+router.get("/reversal-requests", canManageFees, [query("status").optional({ values: "falsy" }).isIn(["PENDING", "APPROVED", "REJECTED"])], validate, financeController.listReversalRequests);
+router.post("/reversal-requests/:id/approve", isAdmin, [financeIdParam(), financeNote], validate, financeController.approveReversal);
+router.post("/reversal-requests/:id/reject", isAdmin, [financeIdParam(), financeNote], validate, financeController.rejectReversal);
+
+// Discounts and scholarships
+router.get("/discounts", canManageFees, discountListRules, validate, financeController.listDiscounts);
+router.post("/discounts", canManageFees, discountRules, validate, financeController.requestDiscount);
+router.put("/discounts/:id", canManageFees, discountUpdateRules, validate, financeController.updateDiscount);
+router.post("/discounts/:id/approve", isAdmin, [financeIdParam(), financeNote], validate, financeController.approveDiscount);
+router.post("/discounts/:id/reject", isAdmin, [financeIdParam(), financeNote], validate, financeController.rejectDiscount);
+router.post("/discounts/:id/revoke", isAdmin, [financeIdParam(), financeReason()], validate, financeController.revokeDiscount);
+
+// Obligations and installment plans
+router.post("/obligations/:id/cancel", isAdmin, [financeIdParam(), financeReason()], validate, financeController.cancelObligation);
+router.get("/structures/:id/installments", canManageFees, [financeIdParam()], validate, financeController.getInstallmentTemplate);
+router.put("/structures/:id/installments", canManageFees, templateRules, validate, financeController.setInstallmentTemplate);
+
+// Integrity check: recompute every cached balance from the ledger (read-only)
+router.get("/reconcile", isAdmin, financeController.reconcile);
 
 module.exports = router;

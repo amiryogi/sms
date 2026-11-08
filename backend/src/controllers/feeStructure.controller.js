@@ -170,7 +170,7 @@ const updateFeeStructure = asyncHandler(async (req, res) => {
   }
 
   // Check if any payments exist for this structure
-  const paymentsExist = await prisma.feePayment.count({
+  const paymentsExist = await prisma.feeObligation.count({
     where: { feeStructureId: parseInt(id) },
   });
 
@@ -218,7 +218,7 @@ const deleteFeeStructure = asyncHandler(async (req, res) => {
   }
 
   // Check if any payments exist
-  const paymentsExist = await prisma.feePayment.count({
+  const paymentsExist = await prisma.feeObligation.count({
     where: { feeStructureId: parseInt(id) },
   });
 

@@ -76,7 +76,7 @@ Then edit `backend/.env`:
 ```bash
 cd backend
 npx prisma generate
-npx prisma migrate deploy    # applies 0_init and 5 later migrations: 37 tables
+npx prisma migrate deploy    # applies 0_init and 6 later migrations: 45 tables
 npm run seed                 # demo school, roles, classes 1-10, students, exams
 ```
 

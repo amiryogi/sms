@@ -470,10 +470,33 @@ const deleteUser = asyncHandler(async (req, res) => {
     throw ApiError.forbidden('Only super admins can delete super admin users');
   }
 
+  // Financial records are never deleted, so a user linked to any of them (a
+  // student with fees, or staff who recorded payments or decided requests)
+  // can only be deactivated.
+  const student = await prisma.student.findFirst({ where: { userId }, select: { id: true } });
+  const [studentFees, staffFinance] = await Promise.all([
+    student
+      ? prisma.feeObligation.count({ where: { studentClass: { studentId: student.id } } })
+      : 0,
+    prisma.feeTransaction.count({ where: { recordedById: userId } }).then(async (n) =>
+      n +
+      (await prisma.feeReversalRequest.count({ where: { OR: [{ requestedById: userId }, { decidedById: userId }] } })) +
+      (await prisma.feeDiscount.count({ where: { OR: [{ requestedById: userId }, { approvedById: userId }, { revokedById: userId }] } })),
+    ),
+  ]);
+  if (studentFees > 0 || staffFinance > 0) {
+    throw ApiError.conflict('This user has fee records, which are never deleted. Deactivate the account instead.');
+  }
+
   // Delete user (cascades to related records)
-  await prisma.user.delete({
-    where: { id: userId },
-  });
+  try {
+    await prisma.user.delete({ where: { id: userId } });
+  } catch (error) {
+    if (error.code === 'P2003') {
+      throw ApiError.conflict('This user is linked to records that cannot be deleted. Deactivate the account instead.');
+    }
+    throw error;
+  }
 
   ApiResponse.success(res, null, 'User deleted successfully');
 });

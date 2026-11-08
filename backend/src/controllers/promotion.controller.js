@@ -546,6 +546,31 @@ const undoPromotion = asyncHandler(async (req, res) => {
 
   // Undo in transaction
   await prisma.$transaction(async (tx) => {
+    // Fee records of the new enrolment: money recorded against it (payments,
+    // reversals) or discounts for that year block the undo; unpaid fees with
+    // no discounts are removed with the enrolment.
+    const newEnrolments = await tx.studentClass.findMany({
+      where: { studentId: promotion.studentId, academicYearId: promotion.toAcademicYearId },
+      select: { id: true },
+    });
+    const enrolmentIds = newEnrolments.map((e) => e.id);
+    if (enrolmentIds.length) {
+      const [transactions, discounts] = await Promise.all([
+        tx.feeTransaction.count({ where: { studentClassId: { in: enrolmentIds } } }),
+        tx.feeDiscount.count({ where: { studentId: promotion.studentId, academicYearId: promotion.toAcademicYearId, status: { in: ['PENDING', 'APPROVED'] } } }),
+      ]);
+      if (transactions > 0 || discounts > 0) {
+        throw ApiError.conflict(
+          'This promotion cannot be undone: fee payments or discounts are already recorded for the new class. Reverse or revoke them first.',
+        );
+      }
+      const obligationIds = (await tx.feeObligation.findMany({ where: { studentClassId: { in: enrolmentIds } }, select: { id: true } })).map((o) => o.id);
+      if (obligationIds.length) {
+        await tx.feeInstallment.deleteMany({ where: { obligationId: { in: obligationIds } } });
+        await tx.feeObligation.deleteMany({ where: { id: { in: obligationIds } } });
+      }
+    }
+
     // Delete the new enrollment if it exists
     await tx.studentClass.deleteMany({
       where: {

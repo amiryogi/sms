@@ -10,6 +10,37 @@ are done** and on `main`.
 
 ---
 
+## Finance ledger and portals — in progress
+
+Plan: [plans/finance-and-portals.md](plans/finance-and-portals.md) (approved 2026-11-08).
+Business rules decided:
+- discounts are requested by an accountant or admin and approved by a different admin;
+- reversals are admin only;
+- overpayment is rejected;
+- receipt numbers run per Nepali fiscal year.
+
+| Phase | Scope | State |
+|---|---|---|
+| 3 | Ledger data model, migration + backfill, payment / reversal / discount / installment services and endpoints, reconcile, cascade-delete fixes, attendance-% rule | **Done** (2026-11-08) |
+| 4 | Accountant + admin fee management UI | — |
+| 5 | Dashboard KPIs, charts, reports, CSV / print | — |
+| 6 | Student portal | — |
+| 7 | Parent portal | — |
+| 8 | QA, drop old fee columns and alias routes, UI wave 6 cleanup, docs | — |
+
+**After pulling Phase 3 on another machine:**
+1. Stop the backend.
+2. Run `npx prisma migrate deploy`, then `npx prisma generate`.
+3. Optionally run `node scripts/reconcile.js` to check the fee balances.
+4. To run the integration tests, set up the test database once (see CLAUDE.md §2).
+
+**Behaviour changes to know about:**
+- **Attendance %** in `/attendance/student/:id` now counts late days as present when the
+  report-card layout says so (the default). The demo student moved from 88.4% to 92.8%.
+- **Fee rows can no longer be deleted** by deleting an enrolment, a fee structure or a user.
+  - Promotion undo refuses once money or discounts exist for the new class.
+  - Deleting a user refuses while they have fee records; deactivate them instead.
+
 ## UI redesign on Tailwind CSS 4 — in progress
 
 Plan: [plans/ui-redesign-tailwind.md](plans/ui-redesign-tailwind.md). Phased waves,

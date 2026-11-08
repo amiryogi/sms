@@ -67,19 +67,25 @@ Demo logins (after seed, password `password123`):
 `superadmin@svi.edu.np`, `admin@svi.edu.np`, `admin@demo-school.edu.np`, `teacher@demo-school.edu.np`,
 `student@demo-school.edu.np`, `parent@demo-school.edu.np`. School code `DEMO001`.
 
-**Tests:** `npm test` (Jest) runs 377 unit tests over the pure utilities in
+**Tests:** `npm test` (Jest) runs 397 unit tests over the pure utilities in
 `backend/src/utils/__tests__/` — grade calculation, grade scales, report-card
-layouts and attendance, BS date conversion, pagination and the response helpers — plus the grade-scale service
+layouts and attendance, BS date conversion, pagination, the response helpers and the fee
+maths (`finance.test.js`: money, allocation, discounts, fiscal year, attendance rate) — plus the grade-scale service
 in `backend/src/services/__tests__/` and the auth/ownership middleware in
 `backend/src/middleware/__tests__/` (Prisma mocked). They need no database, so they run
 anywhere. A handful are marked `test.failing`: those pin **known, unfixed** bugs
 and flip the suite red the moment someone fixes the source without removing the
 marker. Do not delete a marker to silence it.
 
-There are **no integration tests** yet; nothing exercises a controller, a route
-or the database. Verifying those still means running both servers and clicking
-through, or using the ad-hoc scripts in `backend/` (`check_data.js`,
-`diagnose_marks_entry.js`) and `backend/scripts/audit-exam-grades.js`.
+`npm run test:integration` runs the fee-ledger tests in `src/__integration__/`
+against a real MySQL **test database** (`sms_test`, or `TEST_DATABASE_URL`):
+payments, duplicates, racing payments, receipt numbering, reversals, discounts,
+cancellation and reconciliation. `scripts/with-test-db.js` points any command at
+that database and refuses to run against the development one. Set it up once with
+`node scripts/with-test-db.js npx prisma migrate deploy` and
+`node scripts/with-test-db.js npm run seed`. Nothing else has integration tests:
+controllers and routes outside the ledger are still verified by running both servers.
+`node scripts/reconcile.js` checks every cached fee balance against the ledger.
 
 ---
 
@@ -149,6 +155,7 @@ a component without going through a service.
 8. **Grades come from `backend/src/utils/gradeCalculator.js`, on the school's grade scale.** Scales are per school (`GradeScale` / `GradeBand`; presets NEB 8-band and legacy SLC 9-band in `utils/gradeScale.js`). Load one with `services/gradeScale.service.js` and pass it to the calculator; with no scale argument it uses NEB 8-band (A+ 90 / 4.0 … D 35 / 1.6, NG below 35). A `ReportCard` keeps the `gradeScaleId` it was generated with, and a scale in use cannot be edited. Never reimplement a grade table, and never test for the string `"NG"` — use `isPassed` / `band.isPassing`.
 9. **Never trust names, only flags.** No `className.includes('10')`, no grade-level string parsing in the frontend. The backend decides academic rules and returns booleans; the frontend renders them.
 10. **MySQL reserved words:** `rank` is mapped as `classRank` -> `class_rank`. Watch for similar collisions when adding columns.
+11. **Money goes through the ledger only** (`services/finance/*`, plan `docs/plans/finance-and-portals.md`). `FeeTransaction` rows are never updated or deleted; a mistake is undone by a REVERSAL (admin only, never self-approved). Payments never exceed what is owed. `FeeObligation` (table `fee_payments`) and `FeeInstallment` totals are caches rewritten in the same DB transaction (READ COMMITTED, rows locked `FOR UPDATE`). Do maths with `utils/money.js` (Prisma Decimal), never `parseFloat`. Do not write `prisma.feeObligation.update({ amountPaid })` or similar by hand.
 
 ---
 
@@ -228,6 +235,15 @@ assignment; attendance; exams with DRAFT/PUBLISHED/LOCKED; marks entry (theory
 and grading; notices (global / role / class targeting); fees (types,
 structures, payments); promotions; school branding settings; subject Excel
 import.
+
+**Fee ledger (Phase 3 of `docs/plans/finance-and-portals.md`):** backend done, UI
+from Phase 4. Endpoints under `/api/v1/fees`: `accounts`, `transactions`
+(append-only), `reversal-requests`, `discounts` (request → admin approval),
+`obligations/:id/cancel`, `structures/:id/installments`, `reconcile`. Receipt
+numbers run per school per Nepali fiscal year (`RCP-2083-84-00042`, reversals
+`REV-…`). The old `/fees/payments*` endpoints still work, running on the ledger,
+until Phase 8. Attendance % (`/attendance/student/:id`) now follows the
+layout's `countLateAsPresent`.
 
 **Report card layout is per school** (School Settings → Report Card Layout,
 `/api/v1/report-card-layout`). `School.reportCardConfig` (JSON, null = the

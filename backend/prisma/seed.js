@@ -33,6 +33,13 @@ async function cleanupDatabase() {
     
     // Student related
     "submissions",
+    "fee_discount_applications",
+    "fee_allocations",
+    "fee_reversal_requests",
+    "fee_transactions",
+    "fee_discounts",
+    "fee_installments",
+    "receipt_sequences",
     "fee_payments",
     "report_cards",
     "attendance",
@@ -45,6 +52,7 @@ async function cleanupDatabase() {
     
     // Academic structure (middle tier)
     "class_subjects",
+    "fee_structure_installments",
     "fee_structures",
     "fee_types",
     "notices",

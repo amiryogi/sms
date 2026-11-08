@@ -1,5 +1,7 @@
 const prisma = require("../config/database");
 const { ApiError, ApiResponse, asyncHandler } = require("../utils");
+const { normalizeLayout } = require("../utils/reportCardLayout");
+const { tally, rateOf, byBsMonth } = require("../utils/attendanceRate");
 
 const isAdminUser = (user) =>
   user.roles.includes("ADMIN") || user.roles.includes("SUPER_ADMIN");
@@ -345,21 +347,15 @@ const getStudentAttendanceSummary = asyncHandler(async (req, res) => {
     orderBy: { attendanceDate: "desc" },
   });
 
-  const summary = attendances.reduce(
-    (acc, curr) => {
-      acc[curr.status] = (acc[curr.status] || 0) + 1;
-      acc.total += 1;
-      return acc;
-    },
-    { total: 0, present: 0, absent: 0, late: 0, excused: 0 }
-  );
+  // The same "late counts as present" rule as the school's report cards, so
+  // the % here matches the printed card.
+  const school = await prisma.school.findUnique({ where: { id: req.user.schoolId }, select: { reportCardConfig: true } });
+  const rule = { countLateAsPresent: normalizeLayout(school?.reportCardConfig).countLateAsPresent !== false };
+  const counts = tally(attendances);
+  const { attended, percentage } = rateOf(counts, rule);
+  const summary = { ...counts, attended, percentage: percentage.toFixed(2), countLateAsPresent: rule.countLateAsPresent };
 
-  summary.percentage =
-    summary.total > 0
-      ? ((summary.present / summary.total) * 100).toFixed(2)
-      : 0;
-
-  ApiResponse.success(res, { summary, attendances });
+  ApiResponse.success(res, { summary, byMonth: byBsMonth(attendances, rule), attendances });
 });
 
 module.exports = {
