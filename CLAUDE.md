@@ -73,12 +73,12 @@ Demo logins (after seed, password `password123`):
 `superadmin@svi.edu.np`, `admin@svi.edu.np`, `admin@demo-school.edu.np`, `teacher@demo-school.edu.np`,
 `student@demo-school.edu.np`, `parent@demo-school.edu.np`. School code `DEMO001`.
 
-**Tests:** `npm test` (Jest) runs 439 unit tests over the pure utilities in
+**Tests:** `npm test` (Jest) runs 452 unit tests over the pure utilities in
 `backend/src/utils/__tests__/` — grade calculation, grade scales, report-card
 layouts and attendance, BS date conversion, pagination, the response helpers and the fee
 maths (`finance.test.js`: money, allocation, discounts, fiscal year, attendance rate) — plus the grade-scale service
 in `backend/src/services/__tests__/` and the auth/ownership middleware in
-`backend/src/middleware/__tests__/` (Prisma mocked) and the database layer in
+`backend/src/middleware/__tests__/` (Prisma mocked; uploads with Cloudinary mocked) and the database layer in
 `backend/src/database/__tests__/` (provider config, dialect helpers, schema sync,
 no direct `@prisma/client` imports). They need no database, so they run
 anywhere. A handful are marked `test.failing`: those pin **known, unfixed** bugs
@@ -404,7 +404,7 @@ see `docs/STATUS.md`.
 5. *(fixed)*
 6. *(fixed — `apiClient.js` now removes only the auth keys, and token refresh is single-flight)*
 7. CORS origins are hardcoded to localhost 3000/5173/5174 plus `FRONTEND_URL`.
-8. `uploads/` is served statically by the backend; Cloudinary is wired but optional.
+8. Uploads: local `uploads/` (served statically) by default; **Cloudinary** when `CLOUDINARY_*` is set (required on Vercel, which has no disk). Both paths keep the MIME whitelist, magic-byte check and MIME-derived extension (`middleware/upload.middleware.js`). Demo deployment: `docs/deploy-vercel.md` (`vercel.json`, `api/index.js`).
 
 ---
 

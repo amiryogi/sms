@@ -10,6 +10,27 @@ are done** and on `main`.
 
 ---
 
+## Client demo on Vercel — ready to deploy
+
+Guide: [deploy-vercel.md](deploy-vercel.md).
+- **Layout:** one Vercel project holds the static site and the Express API as one function in
+  sin1, next to the Supabase **test** project. Uploads go to Cloudinary. The address is the
+  free `*.vercel.app` for now; `sms.nevanhandicraft.com.np` comes later as a CNAME in Nest
+  Nepal's DNS.
+- **Code changes:**
+  - `vercel.json`, `api/index.js`, `.vercelignore`;
+  - the upload middleware no longer creates `uploads/` at startup, which would crash on a
+    read-only filesystem;
+  - Cloudinary uploads now go memory → magic-byte check → `upload_stream` (before, they
+    skipped the check);
+  - with no storage configured on Vercel, uploads get 503;
+  - the PostgreSQL client also builds Vercel's engine (`rhel-openssl-3.0.x`);
+  - `multer-storage-cloudinary` is removed.
+- **Verified locally:** 452 unit tests and MySQL integration 80/80; a local stand-in of the
+  Vercel layout against Supabase (smoke test plus page rendering, see the guide).
+- **To do (you):** create a Cloudinary account (enable PDF delivery), create the Vercel project
+  and set its environment variables, deploy. Then I check the live site, including uploads.
+
 ## Dual database support (MySQL 8 + Supabase PostgreSQL) — done
 
 Brief pasted 2026-11-08. Docs: [database/](database/). One codebase; the provider is chosen

@@ -6,6 +6,8 @@
 generator client {
   provider = "prisma-client-js"
   output   = "../../node_modules/.prisma-clients/postgresql"
+  // native for local use; rhel-openssl-3.0.x for Vercel functions (Amazon Linux 2023)
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 // Supabase: the app connects through the pooler (SUPABASE_DATABASE_URL,

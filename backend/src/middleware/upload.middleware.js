@@ -1,13 +1,7 @@
 const multer = require('multer');
 const fs = require('fs');
-const { ApiError } = require('../utils');
+const ApiError = require('../utils/ApiError');
 const config = require('../config');
-
-// Ensure upload directory exists for local storage
-const uploadDir = 'uploads';
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
 
 // =====================================================
 // FILE TYPE WHITELIST
@@ -15,7 +9,7 @@ if (!fs.existsSync(uploadDir)) {
 // The saved extension is derived from the (validated) MIME type, never from the
 // client's file name: a file called "x.html" sent as image/png must be stored as
 // .png so that /uploads never serves attacker-chosen HTML. Content is also
-// checked against the type's magic bytes after the upload lands on disk.
+// checked against the type's magic bytes before the file is kept anywhere.
 const MIME_EXTENSIONS = {
   'image/jpeg': '.jpg',
   'image/png': '.png',
@@ -56,56 +50,56 @@ const MAGIC_CHECKS = {
   'text/plain': (b) => !b.includes(0x00),
 };
 
-// Storage Strategy
-let storage;
-let cloudinary;
+/** True when `header` (the first bytes of the file) matches `mimetype`. */
+const contentMatchesType = (mimetype, header) => {
+  const check = MAGIC_CHECKS[mimetype];
+  return Boolean(check && check(header));
+};
+const headerLength = (mimetype) => (mimetype === 'text/plain' ? 4096 : 16);
 
-try {
-  // Only attempt to load cloudinary if configured
-  if (config.cloudinary && config.cloudinary.cloudName) {
-    cloudinary = require('cloudinary').v2;
-    const { CloudinaryStorage } = require('multer-storage-cloudinary');
-    
-    cloudinary.config({
-      cloud_name: config.cloudinary.cloudName,
-      api_key: config.cloudinary.apiKey,
-      api_secret: config.cloudinary.apiSecret,
-    });
+// =====================================================
+// STORAGE MODE
+// =====================================================
+//   cloudinary  CLOUDINARY_CLOUD_NAME is set: files are held in memory,
+//               content-checked, then uploaded; file.path becomes the URL.
+//   disk        local ./uploads (served at /uploads), content-checked on disk.
+//   none        a read-only host (Vercel) without Cloudinary: requests that
+//               carry files get 503; everything else works.
+const READ_ONLY_HOST = Boolean(process.env.VERCEL);
+const UPLOAD_DIR = 'uploads';
 
-    storage = new CloudinaryStorage({
-      cloudinary: cloudinary,
-      params: {
-        folder: 'sms/assignments',
-        allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt'],
-        resource_type: 'auto',
-      },
-    });
-    console.log('✅ Cloudinary storage configured');
-  }
-} catch (error) {
-  console.warn('⚠️ Cloudinary configuration failed, falling back to local storage:', error.message);
-}
-
-// Fallback to local storage
-if (!storage) {
-  storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-      cb(null, 'uploads/');
-    },
-    filename: function (req, file, cb) {
-      const ext = MIME_EXTENSIONS[file.mimetype];
-      if (!ext) {
-        return cb(new ApiError(400, 'Invalid file type.'));
-      }
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-      const field = String(file.fieldname).replace(/[^a-zA-Z0-9_-]/g, '') || 'file';
-      cb(null, field + '-' + uniqueSuffix + ext);
-    },
+let cloudinary = null;
+if (config.cloudinary && config.cloudinary.cloudName) {
+  cloudinary = require('cloudinary').v2;
+  cloudinary.config({
+    cloud_name: config.cloudinary.cloudName,
+    api_key: config.cloudinary.apiKey,
+    api_secret: config.cloudinary.apiSecret,
+    secure: true,
   });
-  console.log('✅ Local disk storage configured');
 }
+const MODE = cloudinary ? 'cloudinary' : READ_ONLY_HOST ? 'none' : 'disk';
 
-// File Filter
+const newFileName = (file) => {
+  const field = String(file.fieldname).replace(/[^a-zA-Z0-9_-]/g, '') || 'file';
+  return `${field}-${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+};
+
+const diskStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    // Created on first use, not at startup, so a read-only filesystem can't
+    // crash the app.
+    fs.mkdir(UPLOAD_DIR, { recursive: true }, (err) =>
+      cb(err ? new ApiError(503, 'File uploads are not available on this server.') : null, `${UPLOAD_DIR}/`)
+    );
+  },
+  filename: (req, file, cb) => {
+    const ext = MIME_EXTENSIONS[file.mimetype];
+    if (!ext) return cb(new ApiError(400, 'Invalid file type.'));
+    cb(null, newFileName(file) + ext);
+  },
+});
+
 const fileFilter = (req, file, cb) => {
   if (Object.prototype.hasOwnProperty.call(MIME_EXTENSIONS, file.mimetype)) {
     cb(null, true);
@@ -115,8 +109,8 @@ const fileFilter = (req, file, cb) => {
 };
 
 const multerUpload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
+  storage: MODE === 'disk' ? diskStorage : multer.memoryStorage(),
+  fileFilter,
   limits: {
     fileSize: (config.upload && config.upload.maxSize) || 5 * 1024 * 1024, // Default 5MB
   },
@@ -154,41 +148,88 @@ const readHeader = (filePath, length = 16) =>
     });
   });
 
-// Post-upload check: the bytes on disk must match the declared MIME type.
-// Cloud-stored files (path is an http URL) are validated by Cloudinary's
-// allowed_formats instead.
-const verifyFileContents = async (req, res, next) => {
+// Office documents and text go to Cloudinary as "raw" files (kept byte for
+// byte, extension in the id); images and PDFs as "image" (viewable inline).
+const RAW_TYPES = new Set([
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain',
+]);
+
+const uploadToCloudinary = (file) =>
+  new Promise((resolve, reject) => {
+    const ext = MIME_EXTENSIONS[file.mimetype];
+    const raw = RAW_TYPES.has(file.mimetype);
+    const name = newFileName(file);
+    const field = String(file.fieldname).replace(/[^a-zA-Z0-9_-]/g, '') || 'file';
+    const options = {
+      folder: `sms/${field}`,
+      resource_type: raw ? 'raw' : 'image',
+      public_id: raw ? `${name}${ext}` : name,
+      overwrite: false,
+      ...(raw ? {} : { format: ext.slice(1) }),
+    };
+    const stream = cloudinary.uploader.upload_stream(options, (err, result) => (err ? reject(err) : resolve(result)));
+    stream.end(file.buffer);
+  });
+
+// After multer: every file's content must match its declared type, then it is
+// kept (disk) or uploaded (Cloudinary). Nothing is stored if any file fails.
+const verifyAndStore = async (req, res, next) => {
   const files = collectFiles(req);
+  if (files.length === 0) return next();
+
+  if (MODE === 'none') {
+    return next(new ApiError(503, 'File uploads are not configured on this server.'));
+  }
+
   try {
     for (const file of files) {
-      if (!file.path || String(file.path).startsWith('http')) continue;
-      const check = MAGIC_CHECKS[file.mimetype];
-      // text/plain: inspect a larger sample for NUL bytes
-      const header = await readHeader(file.path, file.mimetype === 'text/plain' ? 4096 : 16);
-      if (!check || !check(header)) {
+      const header = file.buffer
+        ? file.buffer.subarray(0, headerLength(file.mimetype))
+        : await readHeader(file.path, headerLength(file.mimetype));
+      if (!contentMatchesType(file.mimetype, header)) {
         removeLocalFiles(files);
         return next(new ApiError(400, 'File content does not match its declared type.'));
       }
     }
-    return next();
   } catch (err) {
     removeLocalFiles(files);
     return next(err);
   }
+
+  if (MODE !== 'cloudinary') return next();
+
+  try {
+    for (const file of files) {
+      const result = await uploadToCloudinary(file);
+      file.path = result.secure_url;
+      file.filename = RAW_TYPES.has(file.mimetype) ? result.public_id : `${result.public_id}${MIME_EXTENSIONS[file.mimetype]}`;
+      delete file.buffer;
+    }
+    return next();
+  } catch (err) {
+    console.error('Cloudinary upload failed:', err && err.message);
+    return next(new ApiError(502, 'The file could not be stored. Please try again.'));
+  }
 };
 
 // Same interface as a multer instance (single / array / fields / none), but
-// each returns [multerMiddleware, verifyFileContents] so content is checked.
-// Express flattens middleware arrays, so call sites are unchanged.
+// each returns [multerMiddleware, verifyAndStore] so content is checked and
+// stored. Express flattens middleware arrays, so call sites are unchanged.
 const upload = {
-  single: (name) => [multerUpload.single(name), verifyFileContents],
-  array: (name, maxCount) => [multerUpload.array(name, maxCount), verifyFileContents],
-  fields: (fields) => [multerUpload.fields(fields), verifyFileContents],
+  single: (name) => [multerUpload.single(name), verifyAndStore],
+  array: (name, maxCount) => [multerUpload.array(name, maxCount), verifyAndStore],
+  fields: (fields) => [multerUpload.fields(fields), verifyAndStore],
   none: () => multerUpload.none(),
 };
 
 module.exports = {
   upload,
   MIME_EXTENSIONS,
+  STORAGE_MODE: MODE,
+  contentMatchesType,
   cloudinary: cloudinary || {}, // Export empty object if cloudinary not loaded
 };
