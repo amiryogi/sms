@@ -23,7 +23,7 @@ a font setting that defaults to today's Inter.
 | 1–2 | Audit, proposals, decisions | **Done** (2026-11-11) |
 | 3 | One report-card template for individual and bulk | **Done** (2026-11-11) |
 | 4 | Design settings (fonts, sizes, margins) + admin page | **Done** (2026-11-11) |
-| 5 | React-admin pilot for examinations | — |
+| 5 | React-admin pilot for examinations | **Done** (2026-11-11); keep / extend / remove is the owner's call |
 | 6 | Playwright: report cards, visual baselines, exam flows | — |
 | 7 | Regression and documentation | — |
 
@@ -58,6 +58,34 @@ a font setting that defaults to today's Inter.
     the sliders; "Restore default design" and Save work.
 - **Limits:** the design applies to the NEB grade sheet only, not the Performance Report;
   landscape is not offered; column widths other than the subject column are fixed.
+
+**Phase 5 (pilot):**
+- **Where:** `frontend/src/examAdmin/`, at `/admin/exam-admin` (menu "Exam Admin (pilot)", admins
+  only).
+- **Screens:**
+  - Examinations: search, status / year / type filters, sorting, paging, lifecycle buttons
+    (publish, lock, unlock) calling the existing endpoints;
+  - an exam's subject snapshot;
+  - Results per exam + class + section: totals, %, GPA, grade, pass/fail, rank, report-card
+    status, with result and card filters.
+- **Integration:** React-admin 5.15 is mounted inside the existing router with a bare layout;
+  the Data Provider wraps `apiClient`; the Auth Provider adapts `AuthContext`; the MUI theme
+  follows the app tokens and the brand colour. No backend change.
+- **Cost:** new dependencies `react-admin`, `@mui/material`, `@mui/icons-material`, Emotion and
+  `@tanstack/react-query` (90 packages). The pilot chunk is about 649 kB (206 kB gzip), loaded
+  only on its route; the main bundle grew from 445 kB to about 504 kB.
+- **Verified in a browser (23 checks):**
+  - rows match the API; filters, search and sort work;
+  - DRAFT → PUBLISHED → LOCKED → unlock happens through the UI, with the database agreeing;
+  - the subject snapshot count and the results figures equal the API's;
+  - other pages are unchanged after visiting; a teacher is redirected and still refused by
+    the API; the console is clean.
+- **Limits:**
+  - lists are filtered and paged in the browser (the exam endpoints have no list parameters);
+  - there is no class filter on the exam list (the list payload has no classes);
+  - nothing is created or edited here;
+  - marks entry stays on its own page;
+  - no verification status exists (no schema change).
 
 ## Client demo on Vercel — ready to deploy
 

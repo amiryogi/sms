@@ -24,6 +24,8 @@ const Sections = React.lazy(() => import("./pages/admin/Sections"));
 const Subjects = React.lazy(() => import("./pages/admin/Subjects"));
 const ClassSubjects = React.lazy(() => import("./pages/admin/ClassSubjects"));
 const Exams = React.lazy(() => import("./pages/admin/Exams"));
+// React-admin pilot: its own chunk, so Material UI loads only on these routes.
+const ExamAdmin = React.lazy(() => import("./examAdmin/ExamAdminModule"));
 const TeacherAssignment = React.lazy(
   () => import("./pages/admin/TeacherAssignment"),
 );
@@ -156,6 +158,7 @@ function App() {
               <Route path="/admin/subjects" element={<Subjects />} />
               <Route path="/admin/class-subjects" element={<ClassSubjects />} />
               <Route path="/admin/exams" element={<Exams />} />
+              <Route path="/admin/exam-admin/*" element={<ExamAdmin />} />
               <Route
                 path="/admin/teacher-assignment"
                 element={<TeacherAssignment />}

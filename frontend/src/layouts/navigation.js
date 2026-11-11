@@ -28,6 +28,7 @@ import {
   UserRound,
   ChartColumn,
   FileSpreadsheet,
+  Table2,
 } from "lucide-react";
 
 /*
@@ -62,6 +63,7 @@ const ADMIN = [
     label: "Exams & Results",
     items: [
       { title: "Exams", icon: ClipboardList, path: "/admin/exams" },
+      { title: "Exam Admin (pilot)", icon: Table2, path: "/admin/exam-admin" },
       { title: "Marks Entry", icon: PenLine, path: "/teacher/marks" },
       { title: "Report Cards", icon: Award, path: "/admin/report-cards" },
     ],

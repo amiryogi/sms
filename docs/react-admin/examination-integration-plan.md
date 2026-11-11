@@ -137,3 +137,24 @@ current kit.
 2. Client-side lists (Option A) or new list parameters on the API (Option B).
 3. Whether to add a real verification status (schema change on both providers).
 4. Keep the existing marks-entry grid (recommended).
+
+## Pilot outcome (2026-11-11)
+
+Built as proposed, with these findings:
+- **Mounting works** with `<Admin basename="/admin/exam-admin" layout={BareLayout}>` inside the
+  existing `BrowserRouter`: React-admin detects the router and does not create its own. The
+  headless context was not needed.
+- **Styling:** every app rule lives in a CSS layer and Emotion's styles are unlayered, so MUI
+  wins inside its own components and nothing else is affected. `enableCssLayer` was not
+  needed. `CssBaseline` is mounted by `<Admin>`, but the theme's background and font equal the
+  app's, and a visit leaves other pages identical (checked).
+- **Brand colour:** the tokens are `oklch`, which MUI's colour functions cannot parse; the theme
+  converts them to `rgb` through a canvas at mount.
+- **Filters** use `ReferenceInput`, which waits for its options; a plain `SelectInput` filled
+  later logged "out-of-range value" warnings.
+- **Measured cost:** pilot chunk about 649 kB (206 kB gzip), lazy; main bundle +59 kB.
+
+**To decide next:** keep the pilot as is, extend it (needs list parameters on the exam
+endpoints and, for verification, a schema change), or remove it and build the same two tables
+with the Tailwind kit. Removing it means deleting `src/examAdmin/`, the route and menu entry,
+and the six dependencies.

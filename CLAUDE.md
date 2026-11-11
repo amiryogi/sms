@@ -463,6 +463,17 @@ migrations are tracked in git (apply with `npm run db:migrate:deploy`; never
   - Prefer the existing kit (`components/ui/`) for anything it already covers (buttons,
     dialogs, tabs, menus, fields); reach for shadcn when you need a Radix behaviour the kit
     lacks.
+- **React-admin is a pilot, in one place only:** `src/examAdmin/` (route `/admin/exam-admin/*`,
+  lazy-loaded). It brings Material UI, used nowhere else: do not import `react-admin` or
+  `@mui/*` outside that folder, and do not migrate other screens to it without the owner's
+  decision.
+  - It is read-only apart from the exam lifecycle buttons, which call `examService`.
+  - Its Data Provider wraps `apiClient` and sorts, filters and pages in the browser.
+  - Its Auth Provider adapts `AuthContext`.
+  - Its layout is bare, so the app shell stays.
+  - Its theme mirrors the Tailwind tokens.
+
+  Plan and findings: `docs/react-admin/examination-integration-plan.md`.
 - Shared shell: `layouts/DashboardLayout.jsx` (sidebar, mobile drawer, top bar) reads
   its menus from `layouts/navigation.js`. A new page also needs an entry there.
 - Table columns are targeted by semantic class (`.col-roll`, `.col-name`, `.col-marks`, `.col-remarks`), **not** `nth-child`.
