@@ -1,7 +1,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const { v4: uuidv4 } = require("uuid");
+const { randomUUID } = require("node:crypto");
 const config = require("../config");
 const prisma = require("../config/database");
 const { ApiError, ApiResponse, asyncHandler } = require("../utils");
@@ -53,7 +53,7 @@ const generateTokens = (userId) => {
   });
 
   const refreshToken = jwt.sign(
-    { userId, tokenId: uuidv4() },
+    { userId, tokenId: randomUUID() },
     config.jwt.refreshSecret,
     { expiresIn: config.jwt.refreshExpiresIn },
   );
