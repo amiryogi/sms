@@ -405,6 +405,68 @@ const NEB_SHEET_CSS = `
   margin: 5px 0 0;
 }
 
+/* ==========================================================
+   Design settings (School Settings -> Report Card -> Design).
+   designVars.js sets these variables on .report-card-a4; each
+   fallback is the value this sheet always used.
+   ========================================================== */
+.report-card-a4 {
+  padding: var(--rc-margin-top, 15mm) var(--rc-margin-right, 15mm) var(--rc-margin-bottom, 15mm) var(--rc-margin-left, 15mm);
+}
+.report-card-a4,
+.report-card-a4 * {
+  font-family: var(--rc-font-family, var(--font-sans, sans-serif));
+}
+.report-header {
+  margin-bottom: var(--rc-header-spacing, 15px);
+  flex-direction: var(--rc-header-direction, row);
+}
+.school-logo,
+.logo-placeholder {
+  width: var(--rc-logo-width, 70px);
+  height: var(--rc-logo-height, 70px);
+}
+.school-logo:not(.right-logo) { display: var(--rc-logo-display, block); }
+.school-info { text-align: var(--rc-header-align, center); }
+.school-name {
+  font-size: var(--rc-school-name-size, 22pt);
+  font-weight: var(--rc-school-name-weight, bold);
+  line-height: var(--rc-school-name-line-height, normal);
+}
+.school-address,
+.school-tagline { font-size: var(--rc-address-size, 10pt); }
+.school-contact,
+.school-website { font-size: var(--rc-contact-size, 9pt); }
+.report-title {
+  text-align: var(--rc-title-align, center);
+  margin: var(--rc-title-margin-top, 15px) 0 var(--rc-title-margin-bottom, 15px);
+}
+.report-title h2 {
+  font-size: var(--rc-title-size, 16pt);
+  font-weight: var(--rc-title-weight, 600);
+}
+.info-grid {
+  grid-template-columns: repeat(var(--rc-info-columns, 4), 1fr);
+  gap: var(--rc-info-gap, 10px);
+}
+.info-item .label { font-size: var(--rc-info-label-size, 9pt); }
+.info-item .value { font-size: var(--rc-info-value-size, 11pt); }
+.marks-table { font-size: var(--rc-table-font-size, 9pt); }
+.marks-table thead th { font-size: var(--rc-table-header-size, inherit); }
+.marks-table th,
+.marks-table td {
+  border-width: var(--rc-border-width, 1px);
+  padding: var(--rc-row-padding, 6px) var(--rc-cell-padding-x, 4px);
+}
+.marks-table .subject-col { width: var(--rc-subject-width, auto); }
+.marks-table .subject-name { text-align: var(--rc-subject-align, left); }
+.marks-table .center { text-align: var(--rc-marks-align, center); }
+.summary-item .label { font-size: var(--rc-summary-label-size, 8pt); }
+.summary-item .value.large { font-size: var(--rc-gpa-size, 16pt); }
+.signature-line { height: var(--rc-signature-height, 40px); }
+.signature-label { font-size: var(--rc-signature-label-size, 9pt); }
+.report-footer { font-size: var(--rc-footer-size, 8pt); }
+
 /* Print Styles */
 @media print {
   .no-print {
@@ -428,7 +490,9 @@ const NEB_SHEET_CSS = `
     width: 100%;
     min-height: auto;
     box-shadow: none !important;
-    padding: 6mm 8mm;
+    /* the page margin is 8mm (@page below); the rest of each margin is padding */
+    padding: calc(var(--rc-margin-top, 15mm) - 8mm) calc(var(--rc-margin-right, 15mm) - 8mm)
+      calc(var(--rc-margin-bottom, 15mm) - 8mm) calc(var(--rc-margin-left, 15mm) - 8mm);
     margin: 0;
   }
 

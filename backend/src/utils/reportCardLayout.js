@@ -17,6 +17,7 @@
  */
 
 const { convertADToBS } = require("./dateConverter");
+const { validateDesign, normalizeDesign, DEFAULT_DESIGN } = require("./reportCardDesign");
 
 const TEMPLATES = ["nebGradeSheet", "performanceReport"];
 const MODES = ["grades", "marks", "both"];
@@ -219,6 +220,9 @@ const validateLayout = (raw) => {
     }
   }
 
+  // How the sheet looks (sizes, spacing, margins): utils/reportCardDesign.js
+  errors.push(...validateDesign(raw.design));
+
   return errors;
 };
 
@@ -228,7 +232,7 @@ const validateLayout = (raw) => {
  * template default, so a bad row can never stop a report card printing.
  */
 const normalizeLayout = (raw) => {
-  if (!isPlainObject(raw)) return { ...DEFAULT_LAYOUT, signatures: [...DEFAULT_LAYOUT.signatures] };
+  if (!isPlainObject(raw)) return { ...DEFAULT_LAYOUT, signatures: [...DEFAULT_LAYOUT.signatures], design: { ...DEFAULT_DESIGN } };
 
   const base = TEMPLATE_DEFAULTS[raw.template] || DEFAULT_LAYOUT;
   const out = { ...base, signatures: [...base.signatures] };
@@ -258,6 +262,8 @@ const normalizeLayout = (raw) => {
   ) {
     out.minTableRows = raw.minTableRows;
   }
+
+  out.design = normalizeDesign(raw.design);
 
   return out;
 };

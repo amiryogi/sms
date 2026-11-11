@@ -19,6 +19,7 @@ const {
   listPresets,
   schoolForReport,
 } = require("../utils/reportCardLayout");
+const { designSpec } = require("../utils/reportCardDesign");
 
 /**
  * School Settings -> Report Card Layout.
@@ -138,6 +139,7 @@ const respondWithLayout = async (req, res, message) => {
       isCustom: school.reportCardConfig !== null,
       presets: listPresets(),
       templateFields: TEMPLATE_FIELDS,
+      designSpec: designSpec(),
       sample: buildSample(school, scale),
     },
     message,

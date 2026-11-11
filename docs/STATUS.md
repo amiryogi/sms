@@ -22,7 +22,7 @@ a font setting that defaults to today's Inter.
 |---|---|---|
 | 1–2 | Audit, proposals, decisions | **Done** (2026-11-11) |
 | 3 | One report-card template for individual and bulk | **Done** (2026-11-11) |
-| 4 | Design settings (fonts, sizes, margins) + admin page | — |
+| 4 | Design settings (fonts, sizes, margins) + admin page | **Done** (2026-11-11) |
 | 5 | React-admin pilot for examinations | — |
 | 6 | Playwright: report cards, visual baselines, exam flows | — |
 | 7 | Regression and documentation | — |
@@ -39,6 +39,25 @@ a font setting that defaults to today's Inter.
   - the settings preview still renders; no console errors.
 - **Not covered:** phones (the fit step is skipped below 800px width); long school and
   student names (Playwright fixtures in Phase 6).
+
+**Phase 4:**
+- **What was added:** 37 design settings in 7 groups (page, school header, title, student
+  information, grade sheet, summary, signatures and footer), stored as
+  `School.reportCardConfig.design`. No migration.
+- **Backend:** `utils/reportCardDesign.js` holds the spec, defaults (the sheet's previous fixed
+  values) and ranges; validation rejects unknown settings and out-of-range values;
+  `normalizeLayout` always returns a complete design.
+- **Frontend:** School Settings → Report Card has a Design section with sliders, per-group and
+  full reset, and the existing live preview; `RangeField` joined the `ui/` kit.
+- **Verified:**
+  - 466 unit tests pass (13 new);
+  - in a browser on the test database: the default design gives unchanged sizes and 1-page
+    PDFs; a custom design (28pt extra-bold Times name, logo right, larger table, wider
+    margins) applies identically to individual, bulk and student pages and still prints
+    1 / 5 / 1 pages; invalid values get 400 and a teacher gets 403; the live preview follows
+    the sliders; "Restore default design" and Save work.
+- **Limits:** the design applies to the NEB grade sheet only, not the Performance Report;
+  landscape is not offered; column widths other than the subject column are fixed.
 
 ## Client demo on Vercel — ready to deploy
 

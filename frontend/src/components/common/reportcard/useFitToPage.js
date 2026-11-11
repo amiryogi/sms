@@ -1,9 +1,8 @@
 import { useLayoutEffect } from "react";
 
-// Height available for content on one A4 sheet, in mm. The sheet is 297mm with
-// 15mm padding on screen (267mm) and prints inside 8mm page margins with 6mm
-// padding (269mm, at a slightly narrower width). 266mm fits both.
-const FIT_HEIGHT_MM = 266;
+// Slack, in mm, between the content and the bottom margin. Print lays the
+// sheet out with the same margins as the screen (see nebSheetStyles.js).
+const SLACK_MM = 1;
 const MIN_ZOOM = 0.5;
 
 /**
@@ -26,7 +25,10 @@ export default function useFitToPage(ref, deps = []) {
     const fit = () => {
       inner.style.zoom = "";
       if (!page.offsetWidth || window.matchMedia("(max-width: 800px)").matches) return;
-      const limit = FIT_HEIGHT_MM * (page.offsetWidth / 210);
+      // One A4 page minus the sheet's own top and bottom margins (its padding).
+      const pxPerMm = page.offsetWidth / 210;
+      const style = window.getComputedStyle(page);
+      const limit = (297 - SLACK_MM) * pxPerMm - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
       let zoom = 1;
       for (let i = 0; i < 6; i += 1) {
         const height = outer.offsetHeight;

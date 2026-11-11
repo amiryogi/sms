@@ -9,10 +9,12 @@ const {
   issueDateBS,
   listPresets,
 } = require("../reportCardLayout");
+const { DEFAULT_DESIGN } = require("../reportCardDesign");
 
 describe("normalizeLayout", () => {
   test("null (a school that never chose) is the original NEB grade sheet", () => {
-    expect(normalizeLayout(null)).toEqual({ ...NEB_GRADE_SHEET, signatures: [...NEB_GRADE_SHEET.signatures] });
+    // with the default design: the sizes the sheet has always printed with
+    expect(normalizeLayout(null)).toEqual({ ...NEB_GRADE_SHEET, signatures: [...NEB_GRADE_SHEET.signatures], design: DEFAULT_DESIGN });
     expect(DEFAULT_LAYOUT.template).toBe("nebGradeSheet");
   });
 

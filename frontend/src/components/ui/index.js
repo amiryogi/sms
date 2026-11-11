@@ -2,6 +2,7 @@
 export { Button, IconButton } from "./Button";
 export { buttonClasses, controlClasses } from "./styles";
 export { Field, TextInput, SelectInput, TextArea, Checkbox, Switch } from "./Field";
+export { default as RangeField } from "./RangeField";
 export { Card, CardHeader } from "./Card";
 export { default as Badge } from "./Badge";
 export { default as PageHeader } from "./PageHeader";

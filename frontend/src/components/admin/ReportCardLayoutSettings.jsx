@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { LayoutTemplate, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
 import { reportCardLayoutService } from "../../api/reportCardLayoutService";
 import NepalReportCard from "../common/NepalReportCard";
+import ReportCardDesignFields from "./ReportCardDesignFields";
 import { Alert, Button, Card, CardHeader, Field, IconButton, LoadingBlock, SelectInput, TextArea, TextInput, toast, confirmDialog } from "../ui";
 
 /**
@@ -131,7 +132,8 @@ const ReportCardLayoutSettings = () => {
   const presetName = (template) => state.presets.find((p) => p.config.template === template)?.name || template;
 
   const applyPreset = (preset) => {
-    setDraft(preset.config);
+    // A preset changes what is shown; the design (sizes, margins) is kept.
+    setDraft((d) => ({ ...preset.config, design: d?.design || preset.config.design }));
     setErrors({});
     setProblem("");
   };
@@ -313,6 +315,14 @@ const ReportCardLayoutSettings = () => {
             <Field label="Footer note" htmlFor="rcl-footer" error={err("footerText")} hint="Leave empty to print the school's phone and email instead.">
               <TextArea id="rcl-footer" rows={3} maxLength={600} value={draft.footerText} invalid={Boolean(err("footerText"))} onChange={(e) => set("footerText", e.target.value)} />
             </Field>
+          )}
+
+          {draft.template === "nebGradeSheet" && Array.isArray(state.designSpec) && draft.design ? (
+            <ReportCardDesignFields spec={state.designSpec} design={draft.design} errors={errors} onChange={(design) => set("design", design)} />
+          ) : (
+            <p className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-xs text-slate-500">
+              Design settings (sizes, spacing, margins) apply to the NEB grade sheet template. The Performance Report uses its fixed design.
+            </p>
           )}
 
           <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">

@@ -72,7 +72,7 @@ Demo logins (after seed, password `password123`):
 `superadmin@svi.edu.np`, `admin@svi.edu.np`, `admin@demo-school.edu.np`, `teacher@demo-school.edu.np`,
 `student@demo-school.edu.np`, `parent@demo-school.edu.np`. School code `DEMO001`.
 
-**Tests:** `npm test` (Jest) runs 453 unit tests over the pure utilities in
+**Tests:** `npm test` (Jest) runs 466 unit tests over the pure utilities in
 `backend/src/utils/__tests__/` — grade calculation, grade scales, report-card
 layouts and attendance, BS date conversion, pagination, the response helpers and the fee
 maths (`finance.test.js`: money, allocation, discounts, fiscal year, attendance rate) — plus the grade-scale service
@@ -307,6 +307,17 @@ in every report-card payload as `layout`. Two templates: `nebGradeSheet`
 (`reportcard/PerformanceSheet.jsx`, matches `marksheetformat1-4.jpeg`). Any
 layout change goes through `normalizeLayout`/`validateLayout`; the frontend only
 renders the flags. Plan: `docs/plans/configurable-report-card.md`.
+
+**Report card design** (how the NEB sheet looks: fonts, sizes, logo, row height, margins)
+is `reportCardConfig.design`, same column and endpoint.
+- **Rules:** the spec, defaults and ranges live in `backend/src/utils/reportCardDesign.js`
+  (unit-tested). The admin form (`admin/ReportCardDesignFields.jsx`) is generated from the
+  spec the API returns.
+- **Rendering:** the sheet reads the values as CSS variables (`reportcard/designVars.js` →
+  `nebSheetStyles.js`).
+- **Adding a setting:** add it to the spec, map it in `designVars.js`, use the variable in the
+  stylesheet with the old value as fallback.
+- The Performance Report template does not use the design yet.
 
 **Student portal (Phase 6):**
 - Dashboard, Attendance (Nepali-month register), Assignments (hand in text or files),

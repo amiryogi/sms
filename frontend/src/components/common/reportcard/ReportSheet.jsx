@@ -3,6 +3,7 @@ import { remarkForGrade } from "../../../utils/grades";
 import { resolveAssetUrl } from "../../../utils/assets";
 import { SHEET_OPTIONS, layoutOptions } from "./variants";
 import useFitToPage from "./useFitToPage";
+import { designVars } from "./designVars";
 import PerformanceSheet from "./PerformanceSheet";
 import GradeLegend from "./GradeLegend";
 
@@ -178,10 +179,10 @@ const NebSheet = ({ data, options: overrides }) => {
     </table>
   );
 
-  useFitToPage(fitRef, [data, options.showGradeLegend, options.showSummaryGrid, options.showRemarks, options.showAttendanceStrip, options.footerText, logoFailed]);
+  useFitToPage(fitRef, [data, options.showGradeLegend, options.showSummaryGrid, options.showRemarks, options.showAttendanceStrip, options.footerText, logoFailed, data.layout?.design]);
 
   return (
-    <div className="report-card-a4">
+    <div className="report-card-a4" style={designVars(data.layout?.design)}>
       <div className="rc-fit" ref={fitRef}>
       <div className="rc-fit-inner">
       {/* Header */}
