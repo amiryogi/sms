@@ -152,7 +152,7 @@ Built as proposed, with these findings:
   converts them to `rgb` through a canvas at mount.
 - **Filters** use `ReferenceInput`, which waits for its options; a plain `SelectInput` filled
   later logged "out-of-range value" warnings.
-- **Measured cost:** pilot chunk about 649 kB (206 kB gzip), lazy; main bundle +59 kB.
+- **Measured cost:** pilot chunk about 691 kB (221 kB gzip), lazy; main bundle +59 kB.
 
 **To decide next:** keep the pilot as is, extend it (needs list parameters on the exam
 endpoints and, for verification, a schema change), or remove it and build the same two tables

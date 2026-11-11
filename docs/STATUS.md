@@ -72,7 +72,7 @@ a font setting that defaults to today's Inter.
   the Data Provider wraps `apiClient`; the Auth Provider adapts `AuthContext`; the MUI theme
   follows the app tokens and the brand colour. No backend change.
 - **Cost:** new dependencies `react-admin`, `@mui/material`, `@mui/icons-material`, Emotion and
-  `@tanstack/react-query` (90 packages). The pilot chunk is about 649 kB (206 kB gzip), loaded
+  `@tanstack/react-query` (90 packages). The pilot chunk is about 691 kB (221 kB gzip), loaded
   only on its route; the main bundle grew from 445 kB to about 504 kB.
 - **Verified in a browser (23 checks):**
   - rows match the API; filters, search and sort work;
