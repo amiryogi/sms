@@ -41,7 +41,6 @@ backend/            Express API + Prisma
 frontend/src/{api,pages,components,layouts,context}
 .github/                    feature specs written before implementation (read these)
 database/schema.sql         raw SQL mirror of the Prisma schema
-*.sql (root)                ad-hoc MySQL dumps from the author's machine
 ```
 
 ---
@@ -394,12 +393,12 @@ wired into any npm script (`npm run seed` uses `prisma/seed.js`). Strip its
 Fixed since this list was written: `.env` files are untracked and ignored;
 migrations are tracked in git (apply with `npm run db:migrate:deploy`; never
 `db push`); JWT secrets are required in production; `/auth/login` and
-`/auth/refresh-token` are rate limited. Old secrets remain in git history —
-see `docs/STATUS.md`.
+`/auth/refresh-token` are rate limited. Old secrets were purged from git history
+(2026-11-11); treat them as leaked anyway — see `docs/STATUS.md`.
 
 1. **`.env.example` is committed.** Keep placeholders in it (`USER:PASSWORD`); real values go only in the ignored `.env`.
 2. *(fixed — see above)*
-3. **Five MySQL dumps sit in the repo** (`almostfinaldbfromhome.sql`, `dbfileaftersclsetting.sql`, `smsfromscl.sql`, `SQL_Scl_GradeSheet_1_23.sql`, plus `database/schema.sql`). They are snapshots of the author's machine, not a schema source, and three contain personal data. `schema.prisma` wins; treat the dumps as read-only history.
+3. *(fixed 2026-11-11)* The four MySQL dumps with personal data, the old `.env` files and an enrollment report were removed from the repo **and from git history** (history rewritten; commit ids before that date changed). Root `*.sql` is gitignored: never commit a dump. `database/schema.sql` (structure only) remains.
 4. *(fixed)*
 5. *(fixed)*
 6. *(fixed — `apiClient.js` now removes only the auth keys, and token refresh is single-flight)*
