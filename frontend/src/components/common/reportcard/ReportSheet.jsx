@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useRef, useState } from "react";
 import { remarkForGrade } from "../../../utils/grades";
 import { resolveAssetUrl } from "../../../utils/assets";
-import { VARIANTS, layoutOptions } from "./variants";
+import { SHEET_OPTIONS, layoutOptions } from "./variants";
+import useFitToPage from "./useFitToPage";
 import PerformanceSheet from "./PerformanceSheet";
 import GradeLegend from "./GradeLegend";
 
@@ -18,19 +19,16 @@ import GradeLegend from "./GradeLegend";
  * byte-identical to what `getReportCard` returns:
  *   { school, examination, student, subjects, summary, remarks, meta, gradeReference }
  *
- * Presentation differences between the two callers are expressed as `options`
- * rather than as separate components. VARIANTS below reproduce exactly what each
- * caller rendered before unification. When report-card layout becomes per-school
- * configuration, that config maps onto these same flags — no new rendering paths.
+ * One design: individual and bulk print render this same sheet with the same
+ * options (variants.js SHEET_OPTIONS) and the same stylesheet
+ * (nebSheetStyles.js). Bulk is simply one sheet per page.
  *
- * Per-school layout: the payload's `layout` (School Settings -> Report Card
- * Layout) either switches to the Performance Report template, or adjusts the
- * few NEB-sheet settings mapped in variants.js `layoutOptions`. With no
- * `layout` in the payload the sheet prints exactly as before.
+ * Per-school layout: the payload's `layout` (School Settings -> Report Card)
+ * either switches to the Performance Report template, or adjusts the NEB-sheet
+ * settings mapped in variants.js `layoutOptions`.
  *
- * Styling note: each caller still supplies its own <style> block, and this
- * markup deliberately keeps the class names those stylesheets already target, so
- * the printed output is unchanged. Those two stylesheets remain to be merged.
+ * One page: useFitToPage zooms the content down when it would not fit an A4
+ * page (many subjects, long names), the same way for every caller.
  */
 
 const InfoItem = ({ label, value, wrapValue }) => (
@@ -40,14 +38,7 @@ const InfoItem = ({ label, value, wrapValue }) => (
   </div>
 );
 
-const ReportSheet = ({
-  data,
-  variant = "single",
-  compact = false,
-  options: overrides,
-  onLogoError,
-  logoError = false,
-}) => {
+const ReportSheet = ({ data, compact = false, options, onLogoError, logoError = false }) => {
   if (!data) return null;
 
   if (data.layout?.template === "performanceReport") {
@@ -61,9 +52,17 @@ const ReportSheet = ({
     );
   }
 
+  return <NebSheet data={data} options={options} />;
+};
+
+/** The NEB grade sheet: one student, one A4 page. */
+const NebSheet = ({ data, options: overrides }) => {
+  const fitRef = useRef(null);
+  const [logoFailed, setLogoFailed] = useState(false);
+
   const options = {
-    ...VARIANTS[variant],
-    ...layoutOptions(data.layout, variant),
+    ...SHEET_OPTIONS,
+    ...layoutOptions(data.layout),
     ...overrides,
   };
   const { school, examination, student, subjects, summary, remarks, gradeReference } =
@@ -83,7 +82,7 @@ const ReportSheet = ({
       0
     ) || 0;
 
-  const logoUrl = school?.logoUrl || (options.showEmblem ? school?.bannerUrl : null);
+  const logoUrl = logoFailed ? null : school?.logoUrl || (options.showEmblem ? school?.bannerUrl : null);
 
   const contactLine = [
     school?.landlineNumber && `Ph: ${school.landlineNumber}`,
@@ -131,14 +130,7 @@ const ReportSheet = ({
     );
     const key = subject.subjectId || index;
 
-    // Bulk print wraps each subject in its own <tbody> so the TH/IN pair is an
-    // atomic unit that page-break-inside:avoid can keep together.
-    return options.groupSubjectRows ? (
-      <tbody className="subject-group" key={key}>
-        {theoryRow}
-        {practicalRow}
-      </tbody>
-    ) : (
+    return (
       <React.Fragment key={key}>
         {theoryRow}
         {practicalRow}
@@ -171,10 +163,10 @@ const ReportSheet = ({
           <th className="remarks-col">REMARKS</th>
         </tr>
       </thead>
-      {options.groupSubjectRows ? rows : <tbody>{rows}</tbody>}
+      <tbody>{rows}</tbody>
       <tfoot>
         <tr className="total-row">
-          <td colSpan="2" className={`${options.totalLabelAlign} bold`}>
+          <td colSpan="2" className="right bold">
             TOTAL
           </td>
           <td className="center bold">{totalCreditHours.toFixed(2)}</td>
@@ -186,10 +178,13 @@ const ReportSheet = ({
     </table>
   );
 
+  useFitToPage(fitRef, [data, options.showGradeLegend, options.showSummaryGrid, options.showRemarks, options.showAttendanceStrip, options.footerText, logoFailed]);
+
   return (
-    <div className={`${options.rootClassName}${compact ? " compact" : ""}`}>
+    <div className="report-card-a4">
+      <div className="rc-fit" ref={fitRef}>
+      <div className="rc-fit-inner">
       {/* Header */}
-      {options.headerStyle === "detailed" ? (
         <header className="report-header">
           <div className="school-logo">
             {logoUrl ? (
@@ -197,6 +192,7 @@ const ReportSheet = ({
                 src={resolveAssetUrl(logoUrl)}
                 alt="School Logo"
                 crossOrigin="anonymous"
+                onError={() => setLogoFailed(true)}
               />
             ) : (
               <div className="logo-placeholder">
@@ -227,26 +223,9 @@ const ReportSheet = ({
             </div>
           )}
         </header>
-      ) : (
-        <header className="report-header">
-          {school?.logoUrl && !logoError ? (
-            <img
-              src={resolveAssetUrl(school.logoUrl)}
-              alt="School Logo"
-              className="school-logo"
-              onError={onLogoError}
-            />
-          ) : (
-            <div className="logo-placeholder">🏫</div>
-          )}
-          <h1 className="school-name">{school?.name || "School Name"}</h1>
-          <p className="school-address">{school?.address || ""}</p>
-          <p className="exam-title">{examination?.name || "GRADE SHEET"}</p>
-        </header>
-      )}
 
       {/* Report title */}
-      {options.showReportTitle && (
+      {(
         <div className="report-title">
           <h2>{options.reportTitle}</h2>
           <h3>{examination?.name || "Examination"}</h3>
@@ -257,48 +236,44 @@ const ReportSheet = ({
       )}
 
       {/* Student information */}
-      <section className={options.studentSectionClass}>
+      <section className="student-info-section">
         <div className="info-grid">
           <InfoItem
-            label={options.wrapInfoValues ? "Student Name:" : "Name:"}
+            label="Student Name:"
             value={student?.name || "N/A"}
-            wrapValue={options.wrapInfoValues}
+            wrapValue
           />
           <InfoItem
             label="Roll No:"
             value={student?.rollNumber || "N/A"}
-            wrapValue={options.wrapInfoValues}
+            wrapValue
           />
           <InfoItem
             label="Class:"
             value={student?.class || "N/A"}
-            wrapValue={options.wrapInfoValues}
+            wrapValue
           />
           <InfoItem
             label="Section:"
             value={student?.section || "N/A"}
-            wrapValue={options.wrapInfoValues}
+            wrapValue
           />
-          {options.showAdmissionNumber && student?.admissionNumber && (
+          {student?.admissionNumber && (
             <InfoItem
               label="Admission No:"
               value={student.admissionNumber}
-              wrapValue={options.wrapInfoValues}
+              wrapValue
             />
           )}
         </div>
       </section>
 
       {/* Marks */}
-      {options.showReportTitle ? (
-        <section className="marks-section">{table}</section>
-      ) : (
-        table
-      )}
+      <section className="marks-section">{table}</section>
 
       {options.showGradeLegend && <GradeLegend bands={bands} />}
 
-      {/* Attendance strip (single) */}
+      {/* Attendance strip */}
       {options.showAttendanceStrip && (
         <section className="attendance-section">
           <div className="attendance-grid">
@@ -319,25 +294,7 @@ const ReportSheet = ({
         </section>
       )}
 
-      {/* Result strip (bulk) */}
-      {options.showResultStrip && (
-        <div className="attendance-row">
-          <div className="item">
-            <span className="label">RESULT:</span>
-            <span>{summary?.isPassed ? "PASSED" : "FAILED"}</span>
-          </div>
-          <div className="item">
-            <span className="label">CLASS RANK:</span>
-            <span>{summary?.classRank || "—"}</span>
-          </div>
-          <div className="item">
-            <span className="label">REMARKS:</span>
-            <span>{remarkForGrade(summary?.grade, bands) || "—"}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Summary grid (single) */}
+      {/* Summary grid */}
       {options.showSummaryGrid && (
         <section className="summary-section">
           <div className="summary-grid">
@@ -376,7 +333,7 @@ const ReportSheet = ({
         </section>
       )}
 
-      {/* Teacher / principal remarks (single) */}
+      {/* Teacher / principal remarks */}
       {options.showRemarks && (remarks?.teacher || remarks?.principal) && (
         <section className="remarks-section">
           {remarks?.teacher && (
@@ -410,16 +367,7 @@ const ReportSheet = ({
           ))}
         </div>
         <div className="issue-date">
-          {options.footerInParagraph ? (
-            <span>
-              Date of Issue:{" "}
-              {examination?.academicYearBS
-                ? `${examination.academicYearBS}`
-                : "_______________"}
-            </span>
-          ) : (
-            <>Date of Issue: {examination?.academicYearBS || "_______________"}</>
-          )}
+          <span>Date of Issue: {examination?.academicYearBS || "_______________"}</span>
         </div>
       </section>
 
@@ -429,14 +377,15 @@ const ReportSheet = ({
           <p className="contact-info" style={{ whiteSpace: "pre-line", textAlign: "left" }}>
             {options.footerText}
           </p>
-        ) : options.footerInParagraph ? (
-          <p className="contact-info">{contactLine}</p>
         ) : (
-          contactLine
+          <p className="contact-info">{contactLine}</p>
         )}
       </footer>
+      </div>
+      </div>
     </div>
   );
 };
+
 
 export default ReportSheet;

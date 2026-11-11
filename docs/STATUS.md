@@ -10,6 +10,36 @@ are done** and on `main`.
 
 ---
 
+## Report card redesign, React-admin pilot, Playwright — in progress
+
+Brief pasted 2026-11-11. Audit and proposals: [ui-ux/](ui-ux/), [react-admin/](react-admin/),
+[testing/](testing/). Decisions (owner, 2026-11-11): React-admin **pilot** only (exam list + a
+results table); exam lists filtered in the browser; verification shows derived facts only (no
+schema change); keep the existing marks-entry grid; bulk print adopts the individual design;
+a font setting that defaults to today's Inter.
+
+| Phase | Scope | State |
+|---|---|---|
+| 1–2 | Audit, proposals, decisions | **Done** (2026-11-11) |
+| 3 | One report-card template for individual and bulk | **Done** (2026-11-11) |
+| 4 | Design settings (fonts, sizes, margins) + admin page | — |
+| 5 | React-admin pilot for examinations | — |
+| 6 | Playwright: report cards, visual baselines, exam flows | — |
+| 7 | Regression and documentation | — |
+
+**Phase 3:**
+- **Code:** `ReportSheet` has one option set and one stylesheet (`reportcard/nebSheetStyles.js`).
+  The bulk variant and its 730-line stylesheet are gone; `BulkReportCardPrint` renders the same
+  sheet once per page. Screen spacing now equals print spacing. `useFitToPage` keeps any card
+  on one page.
+- **Verified in a browser on the test database:**
+  - bulk and individual report identical computed font sizes;
+  - PDFs: NEB and Performance individual 1 page, bulk 5 pages for 5 students, student page 1;
+  - a card with 21 subject rows shrinks to 1 page; a normal card is not shrunk;
+  - the settings preview still renders; no console errors.
+- **Not covered:** phones (the fit step is skipped below 800px width); long school and
+  student names (Playwright fixtures in Phase 6).
+
 ## Client demo on Vercel — ready to deploy
 
 Guide: [deploy-vercel.md](deploy-vercel.md).

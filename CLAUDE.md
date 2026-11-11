@@ -423,8 +423,12 @@ migrations are tracked in git (apply with `npm run db:migrate:deploy`; never
   add global class vocabularies (`.card`, `.btn`…) again; write utilities or a kit component.
   `--radius-sm/md/lg` are pinned in `@theme` to 6 / 8 / 14 px (the values the design was built
   with), so `rounded-lg` is 14 px here, not Tailwind's 8 px.
-- **Print exception.** The report-card sheets (`NepalReportCard`, `BulkReportCardPrint`,
-  `reportcard/*`) keep their local, unlayered `<style>` blocks for A4 output. Unlayered CSS
+- **Print exception.** The report-card sheets keep local, unlayered CSS for A4 output.
+  There is **one sheet and one stylesheet per template**: `reportcard/ReportSheet.jsx` +
+  `reportcard/nebSheetStyles.js` (NEB grade sheet) and `reportcard/PerformanceSheet.jsx`.
+  `NepalReportCard` (individual) and `BulkReportCardPrint` (one sheet per page) are only
+  viewers around them, so never style a sheet inside a viewer. `useFitToPage` zooms a long
+  card down to one page for every caller. Unlayered CSS
   beats every Tailwind layer, so to override them from outside you need `!important`
   (see the `.rc-layout-preview` rule in `app.css`). Their `.btn` / `.no-print` class names are
   styled by those blocks, not globally. Check page counts with a print-to-PDF after touching them.
