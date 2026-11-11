@@ -27,6 +27,15 @@ const GRADE_THRESHOLDS = DEFAULT_SCALE.bands.map(
   ({ min, max, grade, gpa, description }) => ({ min, max, grade, gpa, description }),
 );
 
+/** A finite number, or `fallback` for null, undefined, "" and non-numeric input. */
+const toNumber = (value, fallback = 0) => {
+  if (value === null || value === undefined || value === "") return fallback;
+  const n = typeof value === "number" ? value : parseFloat(value);
+  return Number.isFinite(n) ? n : fallback;
+};
+
+const round2 = (n) => Math.round(n * 100) / 100;
+
 /** The result a scale gives for a failure or an ungradeable input. */
 const failResult = (scale, description) => {
   const band = scale.bands.find((b) => b.grade === scale.failGrade);
@@ -80,16 +89,26 @@ const calculateGradeFromMarks = (
   fullMarks,
   scale = DEFAULT_SCALE,
 ) => {
-  if (!fullMarks || fullMarks <= 0) {
+  const full = toNumber(fullMarks, 0);
+  if (full <= 0) {
     return { ...failResult(scale, "Invalid"), percentage: 0 };
   }
 
-  const percentage = (parseFloat(marksObtained) / parseFloat(fullMarks)) * 100;
+  // Non-numeric marks are ungradeable: fail grade, 0%, never NaN.
+  const marks = toNumber(marksObtained, NaN);
+  if (Number.isNaN(marks)) {
+    return { ...failResult(scale, "Not Graded"), percentage: 0 };
+  }
+
+  // The reported percentage is the one the grade was computed from (0..100).
+  // Marks entry rejects values above full marks; this keeps a stray value
+  // from printing as "150%".
+  const percentage = Math.max(0, Math.min(100, (marks / full) * 100));
   const result = calculateGradeFromPercentage(percentage, scale);
 
   return {
     ...result,
-    percentage: Math.round(percentage * 100) / 100, // Round to 2 decimal places
+    percentage: round2(percentage),
   };
 };
 
@@ -121,19 +140,21 @@ const calculateSubjectGrade = (
 ) => {
   // Absent students print AB, whatever the scale
   if (isAbsent) {
+    const absentTheoryFull = toNumber(theoryFullMarks, 0);
+    const absentPracticalFull = hasPractical ? toNumber(practicalFullMarks, 0) : 0;
     return {
       theoryMarks: 0,
-      theoryFullMarks,
+      theoryFullMarks: absentTheoryFull,
       theoryPercentage: 0,
       theoryGrade: "AB",
       theoryGpa: 0,
       practicalMarks: hasPractical ? 0 : null,
-      practicalFullMarks: hasPractical ? practicalFullMarks : null,
+      practicalFullMarks: hasPractical ? absentPracticalFull : null,
       practicalPercentage: hasPractical ? 0 : null,
       practicalGrade: hasPractical ? "AB" : null,
       practicalGpa: hasPractical ? 0 : null,
       totalMarks: 0,
-      totalFullMarks: theoryFullMarks + (hasPractical ? practicalFullMarks : 0),
+      totalFullMarks: absentTheoryFull + absentPracticalFull,
       finalPercentage: 0,
       finalGrade: "AB",
       finalGpa: 0,
@@ -143,11 +164,18 @@ const calculateSubjectGrade = (
     };
   }
 
-  // Parse values
-  const theory = parseFloat(theoryMarks) || 0;
-  const theoryFull = parseFloat(theoryFullMarks) || 100;
-  const practical = hasPractical ? parseFloat(practicalMarks) || 0 : 0;
-  const practicalFull = hasPractical ? parseFloat(practicalFullMarks) || 0 : 0;
+  // Parse values. Full marks default to 100 only when the caller gives none;
+  // an explicit 0 (or junk) stays 0 and the subject fails as "Invalid full
+  // marks" instead of being graded out of an invented 100.
+  const theory = toNumber(theoryMarks, 0);
+  const theoryFull =
+    theoryFullMarks === undefined || theoryFullMarks === null
+      ? 100
+      : toNumber(theoryFullMarks, 0);
+  const practical = hasPractical ? toNumber(practicalMarks, 0) : 0;
+  const practicalFull = hasPractical ? toNumber(practicalFullMarks, 0) : 0;
+  // A practical component only exists when it has marks to score out of.
+  const practicalGraded = hasPractical && practicalFull > 0;
 
   // Calculate theory percentage and grade
   const theoryPercentage = theoryFull > 0 ? (theory / theoryFull) * 100 : 0;
@@ -156,7 +184,7 @@ const calculateSubjectGrade = (
   // Calculate practical percentage and grade (if applicable)
   let practicalResult = null;
   let practicalPercentage = null;
-  if (hasPractical && practicalFull > 0) {
+  if (practicalGraded) {
     practicalPercentage = (practical / practicalFull) * 100;
     practicalResult = calculateGradeFromPercentage(practicalPercentage, scale);
   }
@@ -178,9 +206,13 @@ const calculateSubjectGrade = (
     isPassed = false;
     remark = "Theory Failed";
   }
+  if (theoryFull <= 0) {
+    isPassed = false;
+    remark = "Invalid full marks";
+  }
 
   // If practical exists and fails, entire subject fails
-  if (hasPractical && practicalFull > 0 && practicalPercentage < passPercent) {
+  if (practicalGraded && practicalPercentage < passPercent) {
     isPassed = false;
     remark = "Practical Failed";
   }
@@ -197,11 +229,10 @@ const calculateSubjectGrade = (
     theoryGpa: theoryResult.gpa,
     practicalMarks: hasPractical ? Math.round(practical * 100) / 100 : null,
     practicalFullMarks: hasPractical ? practicalFull : null,
-    practicalPercentage: hasPractical
-      ? Math.round(practicalPercentage * 100) / 100
-      : null,
-    practicalGrade: hasPractical ? practicalResult?.grade : null,
-    practicalGpa: hasPractical ? practicalResult?.gpa : null,
+    // null (not undefined or 0) whenever no practical was graded
+    practicalPercentage: practicalGraded ? round2(practicalPercentage) : null,
+    practicalGrade: practicalGraded ? practicalResult.grade : null,
+    practicalGpa: practicalGraded ? practicalResult.gpa : null,
     totalMarks: Math.round(totalMarks * 100) / 100,
     totalFullMarks,
     finalPercentage: Math.round(finalPercentage * 100) / 100,
@@ -335,8 +366,7 @@ const getGradeColor = (grade) => {
  * @returns {string}
  */
 const formatGPA = (gpa) => {
-  if (gpa === null || gpa === undefined) return "0.00";
-  return parseFloat(gpa).toFixed(2);
+  return toNumber(gpa, 0).toFixed(2);
 };
 
 /**

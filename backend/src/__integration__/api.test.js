@@ -12,6 +12,7 @@ const request = require("supertest");
 const app = require("../app");
 const { prisma } = require("../database");
 const { calculateSubjectGrade } = require("../utils/gradeCalculator");
+const { getScaleResolver } = require("../services/gradeScale.service");
 
 const RUN = Date.now().toString(36).toUpperCase();
 const PASSWORD = "password123";
@@ -269,12 +270,28 @@ describe("results and report cards reach students only when published", () => {
     if (!card) return;
     const res = await api("get", `/report-cards/student/${ctx.studentId}/exam/${card.examId}`, "student");
     expect(res.status).toBe(200);
-    const scale = await prisma.gradeScale.findUnique({ where: { id: card.gradeScaleId }, include: { bands: true } });
+    const { forReportCard } = await getScaleResolver(ctx.schoolId);
+    const scale = forReportCard(card);
     const subjects = res.body.data.subjects || [];
     expect(subjects.length).toBeGreaterThan(0);
-    for (const subj of subjects.filter((x) => !x.isAbsent && x.fullMarks)) {
-      const expected = calculateSubjectGrade(Number(subj.totalMarks ?? subj.marksObtained), Number(subj.fullMarks), scale && { bands: scale.bands });
-      expect(subj.grade ?? subj.finalGrade).toBe(expected.grade);
+    for (const subj of subjects) {
+      const expected = calculateSubjectGrade(
+        {
+          theoryMarks: subj.theoryMarks,
+          theoryFullMarks: subj.theoryFullMarks,
+          practicalMarks: subj.practicalMarks,
+          practicalFullMarks: subj.practicalFullMarks ?? 0,
+          hasPractical: Boolean(subj.hasPractical),
+          isAbsent: Boolean(subj.isAbsent),
+        },
+        scale,
+      );
+      expect({ subject: subj.subjectName, grade: subj.finalGrade, gpa: subj.finalGpa, passed: subj.isPassed }).toEqual({
+        subject: subj.subjectName,
+        grade: expected.finalGrade,
+        gpa: expected.finalGpa,
+        passed: expected.isPassed,
+      });
     }
   });
 });

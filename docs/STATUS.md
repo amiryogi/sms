@@ -485,10 +485,13 @@ A4 page.
 
 - Lint: no errors. Warnings only — backend 7 (unused locals), frontend 5
   (`react-hooks/exhaustive-deps`).
-- 6 `test.failing` markers pin real unfixed bugs in `gradeCalculator`: `NaN`
-  leaking into `percentage`, 150/100 accepted and printed as "150%",
-  `fullMarks: 0` silently becoming 100, the absent-student branch concatenating
-  `'75' + '25'` into `'7525'`. Do not delete a marker to silence it.
+- *(fixed 2026-11-11)* The six `gradeCalculator` bugs once pinned by `test.failing`: non-numeric
+  marks now give 0% (not `NaN`); the reported percentage is clamped to 0–100; full marks
+  are summed as numbers; an explicit 0 full marks fails as "Invalid full marks" instead of
+  being graded out of 100; an ungraded practical reports `null`; `formatGPA` never prints "NaN".
+- Dependencies (2026-11-11): `npm audit` is clean except `xlsx` in the backend (no fixed
+  release on npm; used only by the admin subject import). Options: SheetJS's own CDN build,
+  or another reader and dropping `.xls`.
 - Credit hours are not snapshotted onto `ExamSubject`, so editing
   `ClassSubject.creditHours` retroactively changes already-printed report cards.
 - No integration tests — nothing exercises a controller, route or the database.

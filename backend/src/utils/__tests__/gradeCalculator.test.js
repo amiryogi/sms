@@ -4,9 +4,10 @@
  *
  * Pure functions, no DB, no Prisma, no Express.
  *
- * NOTE: tests marked with `test.failing` document REAL BUGS found in the
- * utility. They are expected to fail, so the suite stays green while the bug
- * stays visible. Do not "fix" them by changing the expectation — fix the source.
+ * The six bugs this file used to pin with `test.failing` (NaN percentage,
+ * unclamped percentage, string-concatenated full marks, the invented 100-mark
+ * paper, undefined practical fields, "NaN" GPA) were fixed on 2026-11-11; their
+ * tests now run as ordinary regression tests.
  */
 
 const {
@@ -211,29 +212,31 @@ describe('calculateGradeFromMarks', () => {
   // BUG: marksObtained is not validated. parseFloat(null) / parseFloat('abc')
   // is NaN, so `percentage` comes back as NaN and that NaN is spread into the
   // result object that controllers persist / serialise.
-  test.failing('should not leak NaN into `percentage` for non-numeric marks', () => {
+  test('should not leak NaN into `percentage` for non-numeric marks', () => {
     expect(calculateGradeFromMarks(null, 100).percentage).toBe(0);
     expect(calculateGradeFromMarks('abc', 100).percentage).toBe(0);
   });
 
-  it('documents the current NaN behaviour for non-numeric marks', () => {
-    const result = calculateGradeFromMarks(null, 100);
-    expect(result.grade).toBe('NG'); // the grade itself is safe
-    expect(Number.isNaN(result.percentage)).toBe(true); // ...but percentage is NaN
+  it('non-numeric marks get the fail grade with a 0 percentage', () => {
+    for (const marks of [null, undefined, '', 'abc']) {
+      const result = calculateGradeFromMarks(marks, 100);
+      expect(result.grade).toBe('NG');
+      expect(result.isPassed).toBe(false);
+      expect(result.percentage).toBe(0);
+    }
   });
 
   // BUG: the grade is computed from a clamped percentage but the RETURNED
   // percentage is unclamped, so a data-entry slip of 150/100 is reported as
   // "150%" and silently graded A+ rather than rejected.
-  test.failing('should clamp the reported percentage to 0..100', () => {
+  test('should clamp the reported percentage to 0..100', () => {
     expect(calculateGradeFromMarks(150, 100).percentage).toBe(100);
     expect(calculateGradeFromMarks(-5, 100).percentage).toBe(0);
   });
 
-  it('documents the current unclamped percentage behaviour', () => {
-    expect(calculateGradeFromMarks(150, 100).percentage).toBe(150);
-    expect(calculateGradeFromMarks(150, 100).grade).toBe('A+');
-    expect(calculateGradeFromMarks(-5, 100).percentage).toBe(-5);
+  it('the clamped percentage and the grade agree', () => {
+    expect(calculateGradeFromMarks(150, 100)).toMatchObject({ percentage: 100, grade: 'A+' });
+    expect(calculateGradeFromMarks(-5, 100)).toMatchObject({ percentage: 0, grade: 'NG' });
   });
 });
 
@@ -383,7 +386,7 @@ describe('calculateSubjectGrade — absent', () => {
   // (`theoryFullMarks + practicalFullMarks`) instead of parsed numbers, so
   // string inputs — which is what express-validator / req.body hand over —
   // get string-concatenated. '75' + '25' === '7525'.
-  test.failing('should add string full marks numerically for an absent student', () => {
+  test('should add string full marks numerically for an absent student', () => {
     const result = calculateSubjectGrade({
       theoryFullMarks: '75',
       practicalFullMarks: '25',
@@ -393,14 +396,16 @@ describe('calculateSubjectGrade — absent', () => {
     expect(result.totalFullMarks).toBe(100);
   });
 
-  it('documents the current string-concatenation behaviour', () => {
+  it('an absent student gets numeric full marks back, whatever type came in', () => {
     const result = calculateSubjectGrade({
       theoryFullMarks: '75',
       practicalFullMarks: '25',
       hasPractical: true,
       isAbsent: true,
     });
-    expect(result.totalFullMarks).toBe('7525');
+    expect(result.theoryFullMarks).toBe(75);
+    expect(result.practicalFullMarks).toBe(25);
+    expect(calculateSubjectGrade({ theoryFullMarks: '100', practicalFullMarks: '25', isAbsent: true }).totalFullMarks).toBe(100);
   });
 });
 
@@ -408,15 +413,25 @@ describe('calculateSubjectGrade — degenerate full marks', () => {
   // BUG: `parseFloat(theoryFullMarks) || 100` turns a full-marks value of 0
   // (or undefined, or NaN) into 100. A subject configured with 0 full marks is
   // silently graded out of 100 instead of being rejected.
-  test.failing('should not invent a 100-mark paper when theoryFullMarks is 0', () => {
+  test('should not invent a 100-mark paper when theoryFullMarks is 0', () => {
     const result = calculateSubjectGrade({ theoryMarks: 40, theoryFullMarks: 0 });
     expect(result.theoryFullMarks).not.toBe(100);
   });
 
-  it('documents the 0 -> 100 fallback', () => {
-    const result = calculateSubjectGrade({ theoryMarks: 40, theoryFullMarks: 0 });
+  it('zero or junk theory full marks fail the subject as invalid', () => {
+    for (const full of [0, '0', 'abc']) {
+      const result = calculateSubjectGrade({ theoryMarks: 40, theoryFullMarks: full });
+      expect(result.theoryFullMarks).toBe(0);
+      expect(result.theoryPercentage).toBe(0);
+      expect(result.finalGrade).toBe('NG');
+      expect(result.isPassed).toBe(false);
+      expect(result.remark).toBe('Invalid full marks');
+    }
+  });
+
+  it('full marks default to 100 only when the caller gives none', () => {
+    const result = calculateSubjectGrade({ theoryMarks: 40 });
     expect(result.theoryFullMarks).toBe(100);
-    expect(result.theoryPercentage).toBe(40);
     expect(result.finalGrade).toBe('C');
   });
 
@@ -431,7 +446,7 @@ describe('calculateSubjectGrade — degenerate full marks', () => {
   // stays null, so practicalGrade/practicalGpa come back as `undefined`
   // (every other no-practical path uses null) while practicalPercentage is
   // reported as 0 — three fields disagreeing about the same thing.
-  test.failing('practical fields should be null, not undefined, when practicalFullMarks is 0', () => {
+  test('practical fields should be null, not undefined, when practicalFullMarks is 0', () => {
     const result = calculateSubjectGrade({
       theoryMarks: 70,
       theoryFullMarks: 100,
@@ -442,16 +457,17 @@ describe('calculateSubjectGrade — degenerate full marks', () => {
     expect(result.practicalGpa).toBeNull();
   });
 
-  it('documents the undefined practical fields', () => {
+  it('a practical with 0 full marks is not graded and does not fail the subject', () => {
     const result = calculateSubjectGrade({
       theoryMarks: 70,
       theoryFullMarks: 100,
       hasPractical: true,
       practicalFullMarks: 0,
     });
-    expect(result.practicalGrade).toBeUndefined();
-    expect(result.practicalPercentage).toBe(0);
-    expect(result.isPassed).toBe(true); // the zero-mark practical is not treated as a fail
+    expect(result.practicalPercentage).toBeNull();
+    expect(result.practicalFullMarks).toBe(0);
+    expect(result.isPassed).toBe(true);
+    expect(result.finalGrade).toBe('B+');
   });
 });
 
@@ -590,12 +606,12 @@ describe('formatGPA', () => {
 
   // BUG: only null/undefined are guarded, so a non-numeric value renders the
   // literal string "NaN" onto the report card.
-  test.failing('should render 0.00 rather than "NaN" for a non-numeric GPA', () => {
+  test('should render 0.00 rather than "NaN" for a non-numeric GPA', () => {
     expect(formatGPA('abc')).toBe('0.00');
   });
 
-  it('documents the "NaN" output', () => {
-    expect(formatGPA('abc')).toBe('NaN');
+  it('never renders "NaN"', () => {
+    for (const input of ['abc', NaN, '', {}]) expect(formatGPA(input)).toBe('0.00');
   });
 });
 

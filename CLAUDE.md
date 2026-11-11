@@ -73,7 +73,7 @@ Demo logins (after seed, password `password123`):
 `superadmin@svi.edu.np`, `admin@svi.edu.np`, `admin@demo-school.edu.np`, `teacher@demo-school.edu.np`,
 `student@demo-school.edu.np`, `parent@demo-school.edu.np`. School code `DEMO001`.
 
-**Tests:** `npm test` (Jest) runs 452 unit tests over the pure utilities in
+**Tests:** `npm test` (Jest) runs 453 unit tests over the pure utilities in
 `backend/src/utils/__tests__/` — grade calculation, grade scales, report-card
 layouts and attendance, BS date conversion, pagination, the response helpers and the fee
 maths (`finance.test.js`: money, allocation, discounts, fiscal year, attendance rate) — plus the grade-scale service
@@ -81,9 +81,9 @@ in `backend/src/services/__tests__/` and the auth/ownership middleware in
 `backend/src/middleware/__tests__/` (Prisma mocked; uploads with Cloudinary mocked) and the database layer in
 `backend/src/database/__tests__/` (provider config, dialect helpers, schema sync,
 no direct `@prisma/client` imports). They need no database, so they run
-anywhere. A handful are marked `test.failing`: those pin **known, unfixed** bugs
-and flip the suite red the moment someone fixes the source without removing the
-marker. Do not delete a marker to silence it.
+anywhere. None are marked `test.failing` now (the six grade-calculator bugs it pinned
+were fixed on 2026-11-11). If you pin a new known bug that way, do not delete the marker
+to silence it: fix the source.
 
 `npm run test:integration:mysql` (alias `test:integration`) and `npm run test:integration:pg`
 run the same suites in `src/__integration__/` against a **test database** of each
