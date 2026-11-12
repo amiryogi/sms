@@ -1,6 +1,6 @@
 # Where this project is
 
-Updated 2026-11-08. Keep this current when you stop work — it is the handover
+Updated 2026-11-12. Keep this current when you stop work — it is the handover
 between machines and between sessions.
 
 New machine? Start with [SETUP-NEW-MACHINE.md](SETUP-NEW-MACHINE.md).
@@ -10,7 +10,10 @@ are done** and on `main`.
 
 ---
 
-## Report card redesign, React-admin pilot, Playwright — in progress
+## Report card redesign, React-admin pilot, Playwright — done
+
+Summary, test results, limits and open decisions:
+[ui-ux/redesign-final-report.md](ui-ux/redesign-final-report.md).
 
 Brief pasted 2026-11-11. Audit and proposals: [ui-ux/](ui-ux/), [react-admin/](react-admin/),
 [testing/](testing/). Decisions (owner, 2026-11-11): React-admin **pilot** only (exam list + a
@@ -25,7 +28,7 @@ a font setting that defaults to today's Inter.
 | 4 | Design settings (fonts, sizes, margins) + admin page | **Done** (2026-11-11) |
 | 5 | React-admin pilot for examinations | **Done** (2026-11-11); keep / extend / remove is the owner's call |
 | 6 | Playwright: report cards, visual baselines, exam flows | **Done** (2026-11-12) |
-| 7 | Regression and documentation | — |
+| 7 | Regression and documentation | **Done** (2026-11-12): [ui-ux/redesign-final-report.md](ui-ux/redesign-final-report.md) |
 
 **Phase 3:**
 - **Code:** `ReportSheet` has one option set and one stylesheet (`reportcard/nebSheetStyles.js`).
