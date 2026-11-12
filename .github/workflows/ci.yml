@@ -127,3 +127,51 @@ jobs:
         run: npm run test:integration:pg
       - name: Reconcile fee balances
         run: node scripts/with-test-db.js --provider pg node scripts/reconcile.js
+
+  e2e:
+    name: Browser tests (Playwright, MySQL)
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: sms_test
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      MYSQL_TEST_DATABASE_URL: mysql://root:root@127.0.0.1:3306/sms_test
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+            e2e/package-lock.json
+      - name: Install backend, frontend and test dependencies
+        run: npm ci --prefix backend && npm ci --prefix frontend && npm ci --prefix e2e
+      - name: Migrate and seed the test database
+        working-directory: backend
+        run: |
+          node scripts/with-test-db.js --provider mysql npm run db:migrate:deploy
+          node scripts/with-test-db.js --provider mysql npm run seed
+      - name: Install Chromium
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+      - name: Run browser tests (visual baselines are Windows-only)
+        working-directory: e2e
+        run: npm run test:ci
+      - name: Upload the report and traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          retention-days: 7

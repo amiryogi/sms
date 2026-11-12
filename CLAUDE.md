@@ -39,6 +39,7 @@ backend/            Express API + Prisma
   src/database/             provider config, client loading, dialect helpers
   src/{routes,controllers,services,middleware,validators,utils,config}
 frontend/src/{api,pages,components,layouts,context}
+e2e/                        Playwright browser tests (own package.json)
 .github/                    feature specs written before implementation (read these)
 database/schema.sql         raw SQL mirror of the Prisma schema
 ```
@@ -104,6 +105,14 @@ refuses one the app is configured to use:
 Set one up with `node scripts/with-test-db.js [--provider pg] npm run db:migrate:deploy`, then
 the same with `npm run seed`.
 `node scripts/reconcile.js` checks every cached fee balance against the ledger.
+
+**Browser tests** live in `e2e/` (Playwright; see `e2e/README.md`):
+- 48 tests over report-card printing (real PDFs), the exam lifecycle and marks entry, the
+  exam pilot, the pages of every role, and fees.
+- They start their own servers on the MySQL test database (ports 5012 / 5184).
+- Run with `cd e2e && PW_CHANNEL=chrome npm test`.
+- A test fails on any unexpected console error.
+- Never edit seeded data in a test: create and remove your own, or rewrite the API response.
 
 ---
 
@@ -351,7 +360,7 @@ academic-year start to the exam end and freezes them on `ReportCard`
 
 **Not built:** timetable/routine, library, transport, hostel, SMS/email
 notifications, payroll, certificates and transfer certificates, audit-log UI,
-multi-school admin UI, browser (end-to-end) tests.
+multi-school admin UI.
 
 **Divergence from `.github/backend-rules.md`:** that file prescribes
 Routes -> Controllers -> **Services** -> Prisma, but only `notice.service.js`

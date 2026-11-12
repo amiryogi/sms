@@ -1,0 +1,15 @@
+{
+  "name": "sms-e2e",
+  "private": true,
+  "description": "Playwright browser tests for the school management system",
+  "scripts": {
+    "test": "playwright test",
+    "test:ci": "playwright test --grep-invert @visual",
+    "test:visual": "playwright test --grep @visual",
+    "update-baselines": "playwright test --grep @visual --update-snapshots",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.0"
+  }
+}

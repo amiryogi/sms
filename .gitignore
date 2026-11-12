@@ -47,3 +47,8 @@ coverage/
 # OS junk
 .DS_Store
 Thumbs.db
+
+# Playwright (e2e/): signed-in browser state holds tokens; results are per run.
+e2e/.auth/
+e2e/test-results/
+e2e/playwright-report/

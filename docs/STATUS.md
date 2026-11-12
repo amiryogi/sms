@@ -24,7 +24,7 @@ a font setting that defaults to today's Inter.
 | 3 | One report-card template for individual and bulk | **Done** (2026-11-11) |
 | 4 | Design settings (fonts, sizes, margins) + admin page | **Done** (2026-11-11) |
 | 5 | React-admin pilot for examinations | **Done** (2026-11-11); keep / extend / remove is the owner's call |
-| 6 | Playwright: report cards, visual baselines, exam flows | — |
+| 6 | Playwright: report cards, visual baselines, exam flows | **Done** (2026-11-12) |
 | 7 | Regression and documentation | — |
 
 **Phase 3:**
@@ -86,6 +86,25 @@ a font setting that defaults to today's Inter.
   - nothing is created or edited here;
   - marks entry stays on its own page;
   - no verification status exists (no schema change).
+
+**Phase 6:**
+- **Setup:** `e2e/` (Playwright 1.65, its own `package.json`). Global setup signs in all 7 roles
+  through the API and makes sure the seeded class has published report cards. Playwright
+  starts the API on the MySQL test database and a Vite server itself.
+- **Tests (48, plus 1 intended skip):**
+  - report cards (17): real PDF page counts and A4 size, roll order, nothing clipped, grades
+    equal the API, long names, 5/12/16 subjects, missing remarks, fail grade, bulk identical
+    to individual, student access, 2 visual baselines;
+  - examinations (12): pilot list / search / filters / snapshot / results against the API,
+    DRAFT → PUBLISHED → LOCKED → unlock, who may publish, marks refused outside PUBLISHED,
+    invalid marks, real marks entry through the grid;
+  - general (19): sign-in, wrong password, silent token refresh, the pages of each role and
+    a refused page, a receipt on one page, student and accountant see the same balance.
+- **Guard:** every test fails on an unexpected console error or uncaught exception.
+- **CI:** a new `e2e` job runs everything except the two visual baselines, which are Windows +
+  Chrome screenshots (fonts differ on Linux).
+- **Not covered yet:** student, teacher and attendance CRUD flows; fee collection end to end;
+  the Performance Report template; phone-size layouts.
 
 ## Client demo on Vercel — ready to deploy
 
