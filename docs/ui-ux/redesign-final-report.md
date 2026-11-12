@@ -91,9 +91,13 @@ are used.
 | GitHub CI on `984216f` | all 4 jobs green, including the new browser-test job on Linux |
 
 - **PostgreSQL note:** the first local run against Supabase lost 10 tests in one suite. That
-  pattern points to a failed setup step, such as a network timeout, which the other tests
-  depended on. The rerun passed 80 / 80, and CI's PostgreSQL job passed on a fresh database.
-  The cause was not identified. If it happens again, keep the full output.
+  pattern points to a failed setup step, which the other tests depended on. The rerun passed
+  80 / 80, and CI's PostgreSQL job passed on a fresh database.
+  - **Cause, found 2026-11-12:** the dashboard test's setup looked for two students in one
+    class with no approved discount. Every run of the fee tests approves more discounts, so a
+    long-used test database runs out of such pairs.
+  - **Fix:** the test now excludes only "all fees" discounts, the only kind that can touch its
+    own fee type (commit `49b5f2e`).
 - **Page sweep:** it reported six "redirects". None is a fault:
   - five are pages opened with a query string that the page then removes (for example
     `?tab=branding`);
