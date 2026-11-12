@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
-import { Plus, Trash2, UserCheck, Pencil, UserCog, Star } from "lucide-react";
+import { Plus, Trash2, UserCheck, Pencil, UserCog, Star, UserPlus } from "lucide-react";
 import DataTable from "../../components/common/DataTable";
 import Modal from "../../components/common/Modal";
 import { Select, Button, FormRow } from "../../components/common/FormElements";
 import {
   PageHeader,
+  Card,
+  CardHeader,
   Badge,
   Avatar,
   IconButton,
@@ -115,7 +117,7 @@ const TeacherAssignment = () => {
     }
   };
 
-  const openModal = (assignment = null) => {
+  const openModal = (assignment = null, presetUserId = "") => {
     setEditingAssignment(assignment);
     reset(
       assignment
@@ -126,7 +128,7 @@ const TeacherAssignment = () => {
             classSubjectId: assignment.classSubjectId?.toString() || "",
             isClassTeacher: assignment.isClassTeacher || false,
           }
-        : { userId: "", classId: "", sectionId: "", classSubjectId: "", isClassTeacher: false },
+        : { userId: presetUserId ? String(presetUserId) : "", classId: "", sectionId: "", classSubjectId: "", isClassTeacher: false },
     );
     setModalOpen(true);
     // Staff added since the page opened (e.g. in another tab) appear without a reload.
@@ -189,6 +191,13 @@ const TeacherAssignment = () => {
       toast.error(error.response?.data?.message || "Could not remove the assignment");
     }
   };
+
+  // Teachers with no assignment in the selected year: the table below lists
+  // assignments only, so a newly added teacher would otherwise not appear.
+  const unassigned = useMemo(() => {
+    const assignedIds = new Set(assignments.map((a) => a.userId ?? a.user?.id));
+    return teachers.filter((t) => !assignedIds.has(t.userId ?? t.id) && t.status !== "inactive");
+  }, [teachers, assignments]);
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -261,6 +270,29 @@ const TeacherAssignment = () => {
         description="Who teaches which subject to which section. Teachers only see the classes they are assigned here."
         actions={<Button icon={Plus} onClick={() => openModal(null)}>Assign teacher</Button>}
       />
+
+      {!loading && unassigned.length > 0 && (
+        <Card className="unassigned-teachers mb-6">
+          <CardHeader icon={UserPlus} title={`Not assigned yet (${unassigned.length})`} />
+          <p className="-mt-2 mb-3 text-sm text-slate-500">
+            These teachers have no class or subject in {yearOptions.find((o) => o.value === filters.academicYearId)?.label || "this year"}, so they see nothing yet.
+          </p>
+          <ul className="flex flex-wrap gap-2">
+            {unassigned.map((t) => (
+              <li key={t.id} className="flex items-center gap-2 rounded-xl border border-slate-200 py-1.5 pr-1.5 pl-2">
+                <Avatar src={t.avatarUrl} name={fullName(t)} size="sm" />
+                <span className="text-sm">
+                  <span className="font-medium text-slate-900">{fullName(t)}</span>
+                  {t.username && <span className="ml-1 font-mono text-xs text-slate-500">{t.username}</span>}
+                </span>
+                <Button size="sm" variant="secondary" icon={Plus} onClick={() => openModal(null, t.userId ?? t.id)} aria-label={`Assign ${fullName(t)}`}>
+                  Assign
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <DataTable
         columns={columns}
