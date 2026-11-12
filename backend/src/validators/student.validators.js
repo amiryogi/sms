@@ -1,10 +1,11 @@
 const { body } = require('express-validator');
-const { middleNameRule, optionalEmailRule, usernameRule } = require('./common.validators');
+const { middleNameRule, optionalEmailRule, usernameRule, optionalPasswordRule } = require('./common.validators');
 
 const studentRules = [
   // User info
   optionalEmailRule,
   usernameRule,
+  optionalPasswordRule(),
   body('firstName').trim().notEmpty().withMessage('First name is required'),
   middleNameRule,
   body('lastName').trim().notEmpty().withMessage('Last name is required'),
@@ -53,3 +54,15 @@ module.exports = {
   updateStudentRules,
   enrollmentRules,
 };
+
+// Class logins (temporary passwords for a class, for printed login slips)
+const bulkCredentialsRules = [
+  body('classId').isInt({ min: 1 }).withMessage('Choose a class').toInt(),
+  body('sectionId').optional({ values: 'falsy' }).isInt({ min: 1 }).toInt(),
+  body('academicYearId').optional({ values: 'falsy' }).isInt({ min: 1 }).toInt(),
+  body('includeParents').optional().isBoolean().toBoolean(),
+  body('onlyNeverSignedIn').optional().isBoolean().toBoolean(),
+  body('dryRun').optional().isBoolean().toBoolean(),
+];
+
+module.exports.bulkCredentialsRules = bulkCredentialsRules;

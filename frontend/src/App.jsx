@@ -49,6 +49,8 @@ const FinanceTransactions = React.lazy(() => import("./pages/finance/Transaction
 const FinanceDiscounts = React.lazy(() => import("./pages/finance/Discounts"));
 const FinanceReceipt = React.lazy(() => import("./pages/finance/Receipt"));
 const FinanceBills = React.lazy(() => import("./pages/finance/Bills"));
+const ChangePassword = React.lazy(() => import("./pages/account/ChangePassword"));
+const LoginSlips = React.lazy(() => import("./pages/admin/LoginSlips"));
 const FinanceDaybook = React.lazy(() => import("./pages/finance/Daybook"));
 // Printable statement and bill: one module, a wrapper per role (pages/finance/FeePrintPages.jsx)
 const feePrint = (name) => React.lazy(() => import("./pages/finance/FeePrintPages").then((m) => ({ default: m[name] })));
@@ -196,6 +198,8 @@ function App() {
                 path="/admin/promotions"
                 element={<AdminPromotions />}
               />
+              {/* Temporary passwords for a class, printed four to a page */}
+              <Route path="/admin/login-slips" element={<LoginSlips />} />
             </Route>
 
             {/* Teacher-only routes: these pages call endpoints scoped to the
@@ -329,6 +333,17 @@ function App() {
                 element={<AdminStudents readOnly />}
               />
             </Route>
+
+            {/* Your own password (every role). Standalone: also where a user lands after
+                signing in with a password an admin set, before anything else works. */}
+            <Route
+              path="/account/password"
+              element={
+                <ProtectedRoute>
+                  <ChangePassword />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Dashboard Redirect Logic */}
             <Route

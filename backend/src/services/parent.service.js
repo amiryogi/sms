@@ -1,9 +1,8 @@
-const bcrypt = require("bcryptjs");
 const prisma = require("../config/database");
 const { dialect } = require("../database");
 const { ApiError, parsePagination, buildSearchQuery } = require("../utils");
 const { fullName, normalizeMiddleName } = require("../utils/names");
-const { normalizeEmail, resolveUsername, assertEmailFree } = require("./account.service");
+const { normalizeEmail, resolveUsername, assertEmailFree, initialPassword, setTemporaryPassword } = require("./account.service");
 
 const RELATIONSHIPS = ["father", "mother", "guardian"];
 
@@ -142,7 +141,8 @@ const createParent = async (schoolId, payload) => {
     suggestion: { kind: "parent", childAdmissionNumber: child?.admissionNumber, email, firstName, lastName },
   });
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+  // Typed by the admin or generated; the parent chooses their own at first sign-in.
+  const { passwordHash: hashedPassword, mustChangePassword, temporaryPassword } = await initialPassword(password);
 
   const result = await prisma.$transaction(async (tx) => {
     const studentIds = await validateStudents(tx, schoolId, students);
@@ -154,6 +154,7 @@ const createParent = async (schoolId, payload) => {
         username,
         email,
         passwordHash: hashedPassword,
+        mustChangePassword,
         firstName,
         middleName: normalizeMiddleName(middleName),
         lastName,
@@ -200,7 +201,8 @@ const createParent = async (schoolId, payload) => {
     return parent.id;
   });
 
-  return fetchParentWithRelations(result, schoolId);
+  const created = await fetchParentWithRelations(result, schoolId);
+  return { ...created, temporaryPassword };
 };
 
 const listParents = async (schoolId, query) => {
@@ -327,11 +329,10 @@ const updateParent = async (schoolId, parentId, payload) => {
     }
   }
 
-  let passwordHash;
+  // A new password from the admin: the parent must change it at the next sign-in
+  // and every open session ends (same as POST /users/:id/reset-password).
   if (payload.newPassword) {
-    passwordHash = await bcrypt.hash(payload.newPassword, 10);
-    updates.user = updates.user || {};
-    updates.user.passwordHash = passwordHash;
+    await setTemporaryPassword(prisma, parent.userId, payload.newPassword);
   }
 
   const parentUpdates = {};

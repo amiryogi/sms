@@ -230,6 +230,127 @@ describe("usernames and sign-in", () => {
   });
 });
 
+describe("passwords: admin-set, reset, forced change, class logins", () => {
+  const made = { users: [], classId: null };
+  const loginAs = async (identifier, password) => api("post", "/auth/login").send({ identifier, password });
+  const as = (token) => (method, url) => request(app)[method](`/api/v1${url}`).set("Authorization", `Bearer ${token}`);
+  const newStudent = async (classId, n, password) => {
+    const admissionNumber = `PW-${RUN}-${n}`;
+    const res = await api("post", "/students", "admin").send({
+      ...(password ? { password } : {}),
+      firstName: `Pw${n}`, lastName: `Student${RUN}`, admissionNumber, dateOfBirth: "2012-04-01", gender: "female", admissionDate: "2024-04-14",
+      classId, sectionId: ctx.enrolment.sectionId, academicYearId: ctx.year.id, rollNumber: n,
+    });
+    expect(res.status).toBe(201);
+    const user = await prisma.user.findFirst({ where: { student: { admissionNumber } } });
+    made.users.push(user.id);
+    return { res, user };
+  };
+
+  afterAll(async () => {
+    for (const userId of made.users) {
+      await prisma.studentClass.deleteMany({ where: { student: { userId } } }).catch(() => {});
+      await prisma.student.deleteMany({ where: { userId } }).catch(() => {});
+      await prisma.user.delete({ where: { id: userId } }).catch(() => {});
+    }
+    if (made.classId) await prisma.class.delete({ where: { id: made.classId } }).catch(() => {});
+  });
+
+  test("a new student without a password gets a generated one, shown once, and must change it", async () => {
+    const { res, user } = await newStudent(ctx.enrolment.classId, 1);
+    const temp = res.body.data.temporaryPassword;
+    expect(temp).toMatch(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z0-9]{10}$/);
+    expect(user.mustChangePassword).toBe(true);
+    expect(user.passwordHash).not.toContain(temp);
+
+    const login = await loginAs(user.username, temp);
+    expect(login.status).toBe(200);
+    expect(login.body.data.user.mustChangePassword).toBe(true);
+    const call = as(login.body.data.accessToken);
+
+    // the API refuses everything else until a new password is chosen
+    const blocked = await call("get", `/students/${user.id}`);
+    expect(blocked.status).toBe(403);
+    expect(blocked.body.code).toBe("PASSWORD_CHANGE_REQUIRED");
+    expect((await call("get", "/fees/accounts/1")).body.code).toBe("PASSWORD_CHANGE_REQUIRED");
+    expect((await call("get", "/auth/me")).status).toBe(200);
+
+    // the new password follows the policy and must differ
+    expect((await call("put", "/auth/change-password").send({ currentPassword: temp, newPassword: "short" })).status).toBe(400);
+    expect((await call("put", "/auth/change-password").send({ currentPassword: temp, newPassword: temp })).status).toBe(400);
+    const changed = await call("put", "/auth/change-password").send({ currentPassword: temp, newPassword: "MyOwnPass9" });
+    expect(changed.status).toBe(200);
+    expect(changed.body.data.accessToken).toBeTruthy(); // a forced change keeps this device signed in
+
+    const after = as(changed.body.data.accessToken);
+    expect((await after("get", "/auth/me")).body.data.mustChangePassword).toBe(false);
+    expect((await after("get", "/portal/students/" + (await prisma.student.findFirst({ where: { userId: user.id } })).id + "/overview")).status).toBe(200);
+    expect((await loginAs(user.username, temp)).status).toBe(401);
+    expect((await loginAs(user.username, "MyOwnPass9")).status).toBe(200);
+  });
+
+  test("an admin resets a password: generated or typed, sessions end, the old one stops working", async () => {
+    const { user } = await newStudent(ctx.enrolment.classId, 2, "Typed1234");
+    const first = await loginAs(user.username, "Typed1234");
+    expect(first.status).toBe(200);
+    const typed = await api("post", `/users/${user.id}/reset-password`, "admin").send({ password: "Another123" });
+    expect(typed.status).toBe(200);
+    expect(typed.body.data.temporaryPassword).toBe("Another123");
+    expect(await prisma.refreshToken.count({ where: { userId: user.id } })).toBe(0);
+    expect((await loginAs(user.username, "Typed1234")).status).toBe(401);
+    expect((await api("post", "/auth/refresh-token").send({ refreshToken: first.body.data.refreshToken })).status).toBe(401);
+
+    const generated = await api("post", `/users/${user.id}/reset-password`, "admin").send({});
+    expect(generated.status).toBe(200);
+    const temp = generated.body.data.temporaryPassword;
+    expect(temp).toHaveLength(10);
+    const login = await loginAs(user.username, temp);
+    expect(login.status).toBe(200);
+    expect(login.body.data.user.mustChangePassword).toBe(true);
+    // a typed password must meet the policy
+    expect((await api("post", `/users/${user.id}/reset-password`, "admin").send({ password: "weak" })).status).toBe(400);
+  });
+
+  test("who may reset whom", async () => {
+    const student = await prisma.user.findFirst({ where: { email: EMAILS.student } });
+    const superAdmin = await prisma.user.findFirst({ where: { email: EMAILS.superadmin } });
+    const admin = await prisma.user.findFirst({ where: { email: EMAILS.admin } });
+    expect((await api("post", `/users/${student.id}/reset-password`, "teacher").send({})).status).toBe(403);
+    expect((await api("post", `/users/${student.id}/reset-password`, "accountant").send({})).status).toBe(403);
+    expect((await api("post", `/users/${student.id}/reset-password`, "student").send({})).status).toBe(403);
+    expect((await api("post", `/users/${superAdmin.id}/reset-password`, "admin").send({})).status).toBe(403);
+    expect((await api("post", `/users/${admin.id}/reset-password`, "admin").send({})).status).toBe(400); // their own
+    expect((await api("post", `/users/999999/reset-password`, "admin").send({})).status).toBe(404);
+  });
+
+  test("class logins: a dry run counts, a real run gives each student a working temporary password", async () => {
+    const cls = await prisma.class.create({ data: { schoolId: ctx.schoolId, name: `Logins ${RUN}`, gradeLevel: 3 } });
+    made.classId = cls.id;
+    const a = await newStudent(cls.id, 3);
+    const b = await newStudent(cls.id, 4);
+    // b has signed in already: skipped by default
+    await loginAs(b.user.username, b.res.body.data.temporaryPassword);
+
+    const dry = await api("post", "/students/credentials/bulk", "admin").send({ classId: cls.id, dryRun: true });
+    expect(dry.status).toBe(200);
+    expect(dry.body.data).toMatchObject({ students: 1, parents: 0, skipped: { signedIn: 1, inactive: 0 }, credentials: [] });
+
+    const run = await api("post", "/students/credentials/bulk", "admin").send({ classId: cls.id });
+    expect(run.status).toBe(200);
+    expect(run.body.data.credentials.map((c) => c.username)).toEqual([a.user.username]);
+    const login = await loginAs(a.user.username, run.body.data.credentials[0].temporaryPassword);
+    expect(login.status).toBe(200);
+    expect(login.body.data.user.mustChangePassword).toBe(true);
+
+    // everyone, in roll order, when signed-in accounts are included
+    const all = await api("post", "/students/credentials/bulk", "admin").send({ classId: cls.id, onlyNeverSignedIn: false });
+    expect(all.body.data.credentials.map((c) => c.rollNumber)).toEqual([3, 4]);
+
+    expect((await api("post", "/students/credentials/bulk", "teacher").send({ classId: cls.id })).status).toBe(403);
+    expect((await api("post", "/students/credentials/bulk", "admin").send({})).status).toBe(400);
+  });
+});
+
 describe("middle names", () => {
   const made = []; // user ids this block creates, removed at the end
 

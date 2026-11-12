@@ -1,9 +1,8 @@
-const bcrypt = require('bcryptjs');
 const prisma = require('../config/database');
 const { dialect } = require('../database');
 const { ApiError, ApiResponse, asyncHandler, parsePagination, parseSort, buildSearchQuery } = require('../utils');
-const { normalizeMiddleName } = require('../utils/names');
-const { normalizeEmail, resolveUsername, assertEmailFree } = require('../services/account.service');
+const { normalizeMiddleName, fullName } = require('../utils/names');
+const { normalizeEmail, resolveUsername, assertEmailFree, initialPassword, setTemporaryPassword, logPasswordSet } = require('../services/account.service');
 
 // Roles that need a profile row (Student / Parent). They are created through
 // their own flows — POST /students and POST /admin/parents — never by
@@ -216,8 +215,8 @@ const createUser = asyncHandler(async (req, res) => {
     throw ApiError.forbidden('Only super admins can create super admin users');
   }
 
-  // Hash password
-  const passwordHash = await bcrypt.hash(password, 10);
+  // Typed by the admin or generated; the user chooses their own at first sign-in.
+  const { passwordHash, mustChangePassword, temporaryPassword } = await initialPassword(password);
 
   // Create user with roles
   const user = await prisma.user.create({
@@ -226,6 +225,7 @@ const createUser = asyncHandler(async (req, res) => {
       username,
       email,
       passwordHash,
+      mustChangePassword,
       firstName,
       middleName: normalizeMiddleName(middleName),
       lastName,
@@ -259,7 +259,10 @@ const createUser = asyncHandler(async (req, res) => {
     status: user.status,
     roles: user.userRoles.map((ur) => ur.role.name),
     createdAt: user.createdAt,
+    // shown to the admin once when generated; never stored in plain text
+    temporaryPassword,
   });
+  logPasswordSet(req.user, user, "account created");
 });
 
 /**
@@ -566,7 +569,40 @@ const getPermissions = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * @desc    Reset a user's password (typed by the admin, or generated)
+ * @route   POST /api/v1/users/:id/reset-password
+ * @access  Private/Admin
+ *
+ * Any student, parent or staff member of the school. Only a super admin resets
+ * a super admin; nobody resets their own password here (they change it). The
+ * user must choose a new password at the next sign-in, and every session of
+ * theirs ends. The temporary password is returned once and never stored.
+ */
+const resetPassword = asyncHandler(async (req, res) => {
+  const userId = parseInt(req.params.id, 10);
+  const user = await prisma.user.findFirst({
+    where: { id: userId, schoolId: req.user.schoolId },
+    include: { userRoles: { include: { role: true } } },
+  });
+  if (!user) throw ApiError.notFound('User not found');
+  if (userId === req.user.id) throw ApiError.badRequest('Use "Change password" for your own account');
+  const targetIsSuperAdmin = user.userRoles.some((ur) => ur.role.name === 'SUPER_ADMIN');
+  if (targetIsSuperAdmin && !req.user.roles.includes('SUPER_ADMIN')) {
+    throw ApiError.forbidden('Only super admins can reset a super admin password');
+  }
+
+  const temporaryPassword = await setTemporaryPassword(prisma, userId, req.body.password);
+  logPasswordSet(req.user, user, 'password reset');
+  ApiResponse.success(
+    res,
+    { userId, username: user.username, name: fullName(user), roles: user.userRoles.map((ur) => ur.role.name), temporaryPassword },
+    'Password reset. They will choose a new one at the next sign-in.',
+  );
+});
+
 module.exports = {
+  resetPassword,
   getUsers,
   getUser,
   createUser,

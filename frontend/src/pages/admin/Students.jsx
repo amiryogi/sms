@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { Plus, Pencil, Eye, UserPlus, GraduationCap } from "lucide-react";
+import { Plus, Pencil, Eye, UserPlus, GraduationCap, KeyRound } from "lucide-react";
+import { Link } from "react-router-dom";
+import ResetPasswordDialog, { NewAccountDialog } from "../../components/admin/ResetPasswordDialog";
 import DataTable from "../../components/common/DataTable";
 import Modal from "../../components/common/Modal";
 import { Input, Select, Button, FormRow } from "../../components/common/FormElements";
-import { PageHeader, Badge, Avatar, IconButton, DialogActions, toast } from "../../components/ui";
+import { PageHeader, Badge, Avatar, IconButton, DialogActions, toast, buttonClasses } from "../../components/ui";
 import { studentService } from "../../api/studentService";
 import { academicService } from "../../api/academicService";
 import AvatarUpload from "../../components/common/AvatarUpload";
@@ -29,6 +31,8 @@ const FormSection = ({ title, children }) => (
  * details form opens with every field disabled. The backend enforces the same.
  */
 const Students = ({ readOnly = false }) => {
+  const [resetFor, setResetFor] = useState(null); // { userId, name, username, ... } for the reset dialog
+  const [newAccount, setNewAccount] = useState(null); // a just-created account's temporary password
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
@@ -187,7 +191,7 @@ const Students = ({ readOnly = false }) => {
         await studentService.updateStudent(editingStudent.id, payloadBase);
         toast.success("Student updated");
       } else {
-        await studentService.createStudent({
+        const created = await studentService.createStudent({
           ...payloadBase,
           academicYearId: parseInt(data.academicYearId),
           classId: parseInt(data.classId),
@@ -195,6 +199,20 @@ const Students = ({ readOnly = false }) => {
           rollNumber: data.rollNumber ? parseInt(data.rollNumber) : undefined,
         });
         toast.success("Student added and enrolled");
+        // A generated password is shown once, now.
+        if (created?.data?.temporaryPassword) {
+          const s = created.data;
+          setNewAccount({
+            userId: s.user?.id,
+            role: "STUDENT",
+            name: [s.user?.firstName, s.user?.middleName, s.user?.lastName].filter(Boolean).join(" "),
+            username: s.user?.username,
+            temporaryPassword: s.temporaryPassword,
+            class: s.class?.name,
+            section: s.section?.name,
+            rollNumber: s.rollNumber,
+          });
+        }
       }
       fetchStudents();
       closeModal();
@@ -225,6 +243,8 @@ const Students = ({ readOnly = false }) => {
   };
 
   const name = (row) => fullName(row);
+  // What a reset dialog and a login slip need about a student row
+  const slipFor = (row) => ({ userId: row.userId, role: "STUDENT", name: name(row), username: row.username, class: row.class, section: row.section, rollNumber: row.rollNumber });
 
   const columns = [
     {
@@ -266,7 +286,7 @@ const Students = ({ readOnly = false }) => {
     },
     {
       header: <span className="sr-only">Actions</span>,
-      width: readOnly ? "56px" : "96px",
+      width: readOnly ? "56px" : "136px",
       render: (row) =>
         readOnly ? (
           <div className="flex justify-end">
@@ -276,6 +296,7 @@ const Students = ({ readOnly = false }) => {
           <div className="flex justify-end gap-1">
             <IconButton icon={Pencil} label={`Edit ${name(row)}`} onClick={() => openModal(row)} />
             <IconButton icon={UserPlus} label={`Enrol ${name(row)}`} onClick={() => openEnrollModal(row)} />
+            <IconButton icon={KeyRound} label={`Reset password for ${name(row)}`} onClick={() => setResetFor(slipFor(row))} />
           </div>
         ),
     },
@@ -293,7 +314,16 @@ const Students = ({ readOnly = false }) => {
         icon={GraduationCap}
         title="Students"
         description={readOnly ? "Student directory (view only)." : "Student records, enrolment and contact details."}
-        actions={readOnly ? null : <Button icon={Plus} onClick={() => openModal()}>Add student</Button>}
+        actions={
+          readOnly ? null : (
+            <>
+              <Link to="/admin/login-slips" className={buttonClasses({ variant: "secondary" })}>
+                <KeyRound size={16} aria-hidden="true" /> Class logins
+              </Link>
+              <Button icon={Plus} onClick={() => openModal()}>Add student</Button>
+            </>
+          )
+        }
       />
 
       <DataTable
@@ -358,7 +388,7 @@ const Students = ({ readOnly = false }) => {
                 <Input label="Phone" name="phone" register={register} />
               </FormRow>
               {!editingStudent && (
-                <Input label="Password" name="password" type="password" register={register} required hint="The student signs in with their username and this password." />
+                <Input label="Password" name="password" type="password" register={register} hint="Leave empty to generate one. Either way the student chooses their own at the first sign-in." />
               )}
               <FormRow>
                 <Input label="Emergency contact" name="emergencyContact" register={register} />
@@ -431,6 +461,8 @@ const Students = ({ readOnly = false }) => {
           </DialogActions>
         </form>
       </Modal>
+      <ResetPasswordDialog account={resetFor} onClose={() => setResetFor(null)} />
+      <NewAccountDialog credential={newAccount} onClose={() => setNewAccount(null)} />
     </div>
   );
 };

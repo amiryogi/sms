@@ -4,8 +4,12 @@ const router = express.Router();
 const studentController = require('../controllers/student.controller');
 const { authenticate, isAdmin, isOwnStudent, validate, requireRole } = require('../middleware');
 const { studentRules, updateStudentRules, enrollmentRules, idParamRule, paginationRules } = require('../validators');
+const { bulkCredentialsRules } = require('../validators/student.validators');
 
 router.use(authenticate);
+
+// Class logins: temporary passwords for a class's students (and parents), for printed slips
+router.post('/credentials/bulk', isAdmin, bulkCredentialsRules, validate, studentController.bulkCredentials);
 
 // List students (Admin, Teacher; Exam Officer and Accountant read-only)
 router.get('/', requireRole('ADMIN', 'TEACHER', 'EXAM_OFFICER', 'ACCOUNTANT'), paginationRules, validate, studentController.getStudents);

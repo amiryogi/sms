@@ -4,7 +4,7 @@ const {
   paginationRules,
   optionalEmailRule,
   usernameRule,
-  passwordRule,
+  optionalPasswordRule,
   firstNameRule,
   middleNameRule,
   lastNameRule,
@@ -15,7 +15,7 @@ const { RELATIONSHIPS } = require("../services/parent.service");
 const createParentRules = [
   optionalEmailRule,
   usernameRule,
-  passwordRule,
+  optionalPasswordRule(),
   firstNameRule,
   middleNameRule,
   lastNameRule,
@@ -64,10 +64,7 @@ const updateParentRules = [
   body("occupation").optional().isString(),
   body("workplace").optional().isString(),
   body("address").optional().isString(),
-  body("newPassword")
-    .optional()
-    .isLength({ min: 8 })
-    .withMessage("New password must be at least 8 characters"),
+  optionalPasswordRule("newPassword"),
 ];
 
 const linkStudentRules = [

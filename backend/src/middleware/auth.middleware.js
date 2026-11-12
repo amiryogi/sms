@@ -111,6 +111,7 @@ const resolveUser = async (req) => {
     permissions: Array.from(permissions),
     studentId: user.student?.id,
     parentId: user.parent?.id,
+    mustChangePassword: Boolean(user.mustChangePassword),
   };
 };
 
@@ -118,8 +119,26 @@ const resolveUser = async (req) => {
  * Authentication middleware
  * Verifies JWT token and attaches user to request
  */
+/**
+ * While an admin-set password is still in use (users.must_change_password),
+ * the account may only read itself, choose a new password or sign out. The API
+ * enforces this; the frontend only sends the user to the right page.
+ */
+const PASSWORD_CHANGE_ALLOWED = [
+  ["GET", "/auth/me"],
+  ["PUT", "/auth/change-password"],
+  ["POST", "/auth/logout"],
+];
+const allowedWhilePasswordChangeRequired = (method, originalUrl) => {
+  const path = String(originalUrl || "").split("?")[0].replace(/^\/api(\/v1)?/, "").replace(/\/+$/, "");
+  return PASSWORD_CHANGE_ALLOWED.some(([m, p]) => m === method && p === path);
+};
+
 const authenticate = asyncHandler(async (req, res, next) => {
   req.user = await resolveUser(req);
+  if (req.user.mustChangePassword && !allowedWhilePasswordChangeRequired(req.method, req.originalUrl)) {
+    throw ApiError.forbidden("Choose a new password before continuing", "PASSWORD_CHANGE_REQUIRED");
+  }
   next();
 });
 
@@ -152,4 +171,5 @@ const optionalAuth = asyncHandler(async (req, res, next) => {
 module.exports = {
   authenticate,
   optionalAuth,
+  allowedWhilePasswordChangeRequired,
 };

@@ -13,6 +13,7 @@ import {
   X,
   Youtube,
   ChevronDown,
+  KeyRound,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import PermissionNotice from "../components/common/PermissionNotice";
@@ -301,7 +302,11 @@ const DashboardLayout = () => {
           >
             <div className="px-2.5 py-2">
               <p className="truncate text-sm font-semibold text-slate-900">{userName}</p>
-              <p className="truncate text-xs text-slate-500">{user?.email}</p>
+              <p className="truncate text-xs text-slate-500">
+                {user?.username && <span className="font-mono">{user.username}</span>}
+                {user?.username && user?.email ? " · " : ""}
+                {user?.email}
+              </p>
               <p className="mt-1 truncate text-xs font-medium text-brand-700">{roleLabel}</p>
             </div>
             {socials.length > 0 && (
@@ -316,6 +321,9 @@ const DashboardLayout = () => {
               </>
             )}
             <MenuSeparator />
+            <MenuItem icon={KeyRound} as={Link} to="/account/password">
+              Change password
+            </MenuItem>
             <MenuItem icon={LogOut} danger onClick={handleLogout}>
               Sign out
             </MenuItem>

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { Plus, Pencil, UsersRound, Mail, Phone } from "lucide-react";
+import { Plus, Pencil, UsersRound, Mail, Phone, KeyRound } from "lucide-react";
+import ResetPasswordDialog, { NewAccountDialog } from "../../components/admin/ResetPasswordDialog";
+import { useAuth } from "../../context/AuthContext";
 import DataTable from "../../components/common/DataTable";
 import Modal from "../../components/common/Modal";
 import { Input, Button, FormRow } from "../../components/common/FormElements";
@@ -36,6 +38,9 @@ const parseServerError = (error, fallback) => {
 const FORM_FIELDS = ["firstName", "middleName", "lastName", "username", "email", "phone", "password"];
 
 const Teachers = () => {
+  const { user: me } = useAuth();
+  const [resetFor, setResetFor] = useState(null);
+  const [newAccount, setNewAccount] = useState(null);
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -111,8 +116,12 @@ const Teachers = () => {
         await teacherService.updateTeacher(editingTeacher.id, payload);
         toast.success("Staff member updated");
       } else {
-        await teacherService.createTeacher(payload);
+        const created = await teacherService.createTeacher(payload);
         toast.success(`${roleOf(selectedRole)?.label || "Staff member"} added`);
+        // A generated password is shown once, now.
+        if (created?.data?.temporaryPassword) {
+          setNewAccount({ userId: created.data.id, name: name(created.data), username: created.data.username, temporaryPassword: created.data.temporaryPassword });
+        }
       }
       fetchTeachers();
       closeModal();
@@ -185,10 +194,14 @@ const Teachers = () => {
     },
     {
       header: <span className="sr-only">Actions</span>,
-      width: "56px",
+      width: "96px",
       render: (row) => (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-1">
           <IconButton icon={Pencil} label={`Edit ${name(row)}`} onClick={() => openModal(row)} />
+          {/* Your own password is changed from the user menu, not reset here */}
+          {row.id !== me?.id && (
+            <IconButton icon={KeyRound} label={`Reset password for ${name(row)}`} onClick={() => setResetFor({ userId: row.id, name: name(row), username: row.username })} />
+          )}
         </div>
       ),
     },
@@ -269,9 +282,7 @@ const Teachers = () => {
                 type="password"
                 register={register}
                 error={errors.password?.message}
-                required
-                minLength={8}
-                hint="At least 8 characters. They sign in with their username (or email) and this password."
+                hint="Leave empty to generate one. Either way they choose their own at the first sign-in."
               />
             )}
           </div>
@@ -318,6 +329,8 @@ const Teachers = () => {
           </DialogActions>
         </form>
       </Modal>
+      <ResetPasswordDialog account={resetFor} onClose={() => setResetFor(null)} />
+      <NewAccountDialog credential={newAccount} onClose={() => setNewAccount(null)} />
     </div>
   );
 };

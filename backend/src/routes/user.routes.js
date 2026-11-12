@@ -4,6 +4,7 @@ const router = express.Router();
 const userController = require('../controllers/user.controller');
 const { authenticate, isAdmin, isOwner, validate } = require('../middleware');
 const { createUserRules, updateUserRules, updateRolesRules, listUsersRules, idParamRule } = require('../validators');
+const { optionalPasswordRule } = require('../validators/common.validators');
 
 // All routes require authentication
 router.use(authenticate);
@@ -23,6 +24,9 @@ router.post('/', isAdmin, createUserRules, validate, userController.createUser);
 
 // Update user (Admin or Owner for basic fields)
 router.put('/:id', [idParamRule, ...updateUserRules], validate, userController.updateUser);
+
+// Reset a password (Admin only): typed or generated; the user must change it at the next sign-in
+router.post('/:id/reset-password', isAdmin, [idParamRule, optionalPasswordRule()], validate, userController.resetPassword);
 
 // Update user roles (Admin only)
 router.put('/:id/roles', isAdmin, [idParamRule, ...updateRolesRules], validate, userController.updateUserRoles);

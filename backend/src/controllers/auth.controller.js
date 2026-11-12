@@ -7,7 +7,7 @@ const prisma = require("../config/database");
 const { ApiError, ApiResponse, asyncHandler } = require("../utils");
 const { fullName, normalizeMiddleName } = require("../utils/names");
 const { parseIdentifier } = require("../utils/usernames");
-const { normalizeEmail, resolveUsername, assertEmailFree } = require("../services/account.service");
+const { normalizeEmail, resolveUsername, assertEmailFree, initialPassword, BCRYPT_ROUNDS } = require("../services/account.service");
 const { dialect } = require("../database");
 
 // One message for every failed sign-in, so it never tells which part was wrong.
@@ -88,6 +88,17 @@ const parseExpiresIn = (expiresIn) => {
     default:
       return 24 * 60 * 60 * 1000; // Default 1 day
   }
+};
+
+/** New access + refresh tokens for a user; the refresh token is stored hashed. */
+const issueSession = async (req, userId) => {
+  const { accessToken, refreshToken } = generateTokens(userId);
+  const expiresAt = new Date(Date.now() + parseExpiresIn(config.jwt.refreshExpiresIn));
+  const { userAgent, ipAddress } = extractTokenMetadata(req);
+  await prisma.refreshToken.create({
+    data: { userId, token: hashRefreshToken(refreshToken), expiresAt, userAgent, ipAddress },
+  });
+  return { accessToken, refreshToken };
 };
 
 /**
@@ -208,25 +219,7 @@ const login = asyncHandler(async (req, res) => {
     );
   }
 
-  // Generate tokens
-  const { accessToken, refreshToken } = generateTokens(user.id);
-
-  // Store refresh token in database (hashed, with metadata)
-  const expiresAt = new Date(
-    Date.now() + parseExpiresIn(config.jwt.refreshExpiresIn),
-  );
-  const hashedToken = hashRefreshToken(refreshToken);
-  const { userAgent, ipAddress } = extractTokenMetadata(req);
-
-  await prisma.refreshToken.create({
-    data: {
-      userId: user.id,
-      token: hashedToken,
-      expiresAt,
-      userAgent,
-      ipAddress,
-    },
-  });
+  const { accessToken, refreshToken } = await issueSession(req, user.id);
 
   // Update last login
   await prisma.user.update({
@@ -320,8 +313,8 @@ const register = asyncHandler(async (req, res) => {
     throw ApiError.badRequest(`Role '${role}' not found`);
   }
 
-  // Hash password
-  const passwordHash = await bcrypt.hash(password, 10);
+  // Typed or generated; the new user chooses their own at first sign-in.
+  const { passwordHash, mustChangePassword, temporaryPassword } = await initialPassword(password);
 
   // Create user and role in one write
   const user = await prisma.user.create({
@@ -330,6 +323,7 @@ const register = asyncHandler(async (req, res) => {
       username,
       email,
       passwordHash,
+      mustChangePassword,
       firstName,
       middleName: normalizeMiddleName(middleName),
       lastName,
@@ -356,6 +350,7 @@ const register = asyncHandler(async (req, res) => {
         roles: [roleRecord.name],
         schoolId,
       },
+      temporaryPassword,
     },
     "Registration successful",
   );
@@ -643,21 +638,28 @@ const changePassword = asyncHandler(async (req, res) => {
   if (!isPasswordValid) {
     throw ApiError.badRequest("Current password is incorrect");
   }
+  if (await bcrypt.compare(newPassword, user.passwordHash)) {
+    throw ApiError.badRequest("Choose a password different from the current one");
+  }
 
-  // Hash new password
-  const passwordHash = await bcrypt.hash(newPassword, 10);
+  const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+  const forced = user.mustChangePassword;
 
-  // Update password
+  // New password, flag cleared, every session ended (other devices too).
   await prisma.user.update({
     where: { id: req.user.id },
-    data: { passwordHash },
+    data: { passwordHash, mustChangePassword: false },
   });
-
-  // Invalidate all refresh tokens
   await prisma.refreshToken.deleteMany({
     where: { userId: req.user.id },
   });
 
+  // Replacing an admin-set password is the first step of a sign-in, so this
+  // device stays signed in with a fresh session; a voluntary change signs out.
+  if (forced) {
+    const session = await issueSession(req, user.id);
+    return ApiResponse.success(res, session, "Password changed. Welcome!");
+  }
   ApiResponse.success(
     res,
     null,

@@ -1,5 +1,6 @@
 const { body, param, query } = require('express-validator');
 const { usernameProblem } = require("../utils/usernames");
+const { meetsPolicy, PASSWORD_POLICY_MESSAGE } = require("../utils/passwords");
 
 /**
  * Common validation rules used across multiple endpoints
@@ -55,6 +56,16 @@ const usernameRule = body("username")
     if (problem) throw new Error(problem);
     return true;
   });
+
+// A password an admin may type when creating an account. Empty: one is generated.
+const optionalPasswordRule = (field = "password") =>
+  body(field)
+    .optional({ values: "falsy" })
+    .isString()
+    .custom((v) => {
+      if (!meetsPolicy(v)) throw new Error(PASSWORD_POLICY_MESSAGE);
+      return true;
+    });
 
 // Password validation
 const passwordRule = body('password')
@@ -126,6 +137,7 @@ module.exports = {
   emailRule,
   optionalEmailRule,
   usernameRule,
+  optionalPasswordRule,
   passwordRule,
   firstNameRule,
   middleNameRule,

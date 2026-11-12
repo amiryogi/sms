@@ -1,7 +1,7 @@
 const express = require('express');
 const { body } = require('express-validator');
 const validator = require('validator');
-const { middleNameRule, optionalEmailRule, usernameRule } = require('../validators/common.validators');
+const { middleNameRule, optionalEmailRule, usernameRule, optionalPasswordRule } = require('../validators/common.validators');
 const router = express.Router();
 
 const authController = require('../controllers/auth.controller');
@@ -41,11 +41,7 @@ const loginValidation = [
 const registerValidation = [
   optionalEmailRule,
   usernameRule,
-  body('password')
-    .isLength({ min: 8 })
-    .withMessage('Password must be at least 8 characters')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('Password must contain uppercase, lowercase, and number'),
+  optionalPasswordRule(),
   body('firstName')
     .trim()
     .notEmpty()

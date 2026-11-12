@@ -74,7 +74,7 @@ Demo logins (after seed, password `password123`): sign in with a **username or t
 students by admission number (`stu20240001`), parents as `p.<child's admission number>`
 (`p.stu20240001`). School code `DEMO001`.
 
-**Tests:** `npm test` (Jest) runs 487 unit tests over the pure utilities in
+**Tests:** `npm test` (Jest) runs 494 unit tests over the pure utilities in
 `backend/src/utils/__tests__/` — grade calculation, grade scales, report-card
 layouts and attendance, BS date conversion, pagination, the response helpers and the fee
 maths (`finance.test.js`: money, allocation, discounts, fiscal year, attendance rate) — plus the grade-scale service
@@ -108,8 +108,9 @@ the same with `npm run seed`.
 `node scripts/reconcile.js` checks every cached fee balance against the ledger.
 
 **Browser tests** live in `e2e/` (Playwright; see `e2e/README.md`):
-- 60 tests over report-card printing (real PDFs), the exam lifecycle and marks entry, the
-  exam pilot, the pages of every role, fees and the fee printouts.
+- 62 tests over report-card printing (real PDFs), the exam lifecycle and marks entry, the
+  exam pilot, the pages of every role, fees and the fee printouts, sign-in by username, password
+  reset with the forced change, and class login slips.
 - They start their own servers on the MySQL test database (ports 5012 / 5184).
 - Run with `cd e2e && PW_CHANNEL=chrome npm test`.
 - A test fails on any unexpected console error.
@@ -268,6 +269,14 @@ Rules the RBAC audit (2026-11-07) established — keep them:
   report card is published; non-admins never see DRAFT exams; students and
   parents see only published assignments for their own class.
 - Fee data is readable by ADMIN, ACCOUNTANT, and STUDENT/PARENT for their own.
+- **Passwords an admin sets** (new accounts, `POST /users/:id/reset-password`, class logins
+  `POST /students/credentials/bulk`) are typed or generated (`utils/passwords.js`), set
+  `users.must_change_password` and end the user's sessions. The plain password is returned once
+  and never stored or logged. Only a super admin resets a super admin; nobody resets their own.
+  While the flag is set, `authenticate` refuses every route except `GET /auth/me`,
+  `PUT /auth/change-password` and `POST /auth/logout` (403 `code: PASSWORD_CHANGE_REQUIRED`);
+  the frontend sends the user to `/account/password`. Class logins skip anyone who has already
+  signed in unless asked. There is no email "forgot password" (no mail service).
 - Uploads are named from a MIME whitelist (never the client's extension),
   checked by magic bytes, and served with `nosniff`; non-images download.
 - Only the attendance, result and report-card routes use `authorize`; every

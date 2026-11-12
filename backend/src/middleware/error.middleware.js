@@ -18,8 +18,8 @@ const errorHandler = (err, req, res, next) => {
   let message = err.message || 'Internal Server Error';
   let errors = err.errors || [];
 
-  // Handle Prisma errors
-  if (err.code) {
+  // Handle Prisma errors (their codes are "P" + four digits)
+  if (typeof err.code === 'string' && /^P\d{4}$/.test(err.code)) {
     switch (err.code) {
       case 'P2002': {
         // Unique constraint violation
@@ -82,6 +82,7 @@ const errorHandler = (err, req, res, next) => {
   res.status(statusCode).json({
     success: false,
     message,
+    ...(err.errorCode && { code: err.errorCode }),
     errors: errors.length > 0 ? errors : undefined,
     ...(process.env.NODE_ENV === 'development' && {
       stack: err.stack,

@@ -10,6 +10,32 @@ are done** and on `main`.
 
 ---
 
+## Client feedback (2026-11-12): usernames and admin-set passwords — done
+
+Students and parents often have no email, and the school wants to create and reset logins.
+
+- **Usernames** (`a7c2df3`):
+  - every user signs in with a username or an email in one box; email is optional;
+  - defaults: students their admission number, parents `p.<child's admission number>`, staff
+    the email's first part;
+  - migration `20261113100000_usernames` added the columns and backfilled every existing user;
+    it is applied to the development MySQL and both test databases.
+- **Passwords:**
+  - an admin creating a student, parent or staff member may leave the password empty; one is
+    generated and shown once;
+  - **Reset password** (key icon on Students and Staff, menu on Parents) generates or takes a
+    typed password;
+  - after either, the user must choose their own at the next sign-in, and the API refuses
+    everything else until then (`/account/password`);
+  - every user can change their password from the user menu.
+- **Class logins:** Students → **Class logins** gives a class (optionally with parents)
+  temporary passwords and prints login slips four to an A4 page. By default anyone who has
+  already signed in is skipped.
+- **Before the Vercel demo:** run `db:migrate:deploy` on Supabase (the backfill is part of the
+  migration).
+- **Not built:** email "forgot password" (there is no mail service); an audit table for resets
+  (each reset is a server log line).
+
 ## Client feedback (2026-11-12): middle names and fee printouts — done
 
 The owner tested the app as a client and asked for two things.

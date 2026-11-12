@@ -1,9 +1,9 @@
-const bcrypt = require('bcryptjs');
 const prisma = require('../config/database');
 const { dialect } = require('../database');
 const { ApiError, ApiResponse, asyncHandler, parsePagination, parseSort, buildSearchQuery } = require('../utils');
 const { normalizeMiddleName } = require('../utils/names');
-const { normalizeEmail, resolveUsername, assertEmailFree } = require('../services/account.service');
+const { normalizeEmail, resolveUsername, assertEmailFree, initialPassword, logPasswordSet } = require('../services/account.service');
+const credentials = require('../services/credentials.service');
 
 const isAdminUser = (user) => user.roles.includes('ADMIN') || user.roles.includes('SUPER_ADMIN');
 
@@ -293,7 +293,8 @@ const createStudent = asyncHandler(async (req, res) => {
   const studentRole = await prisma.role.findUnique({ where: { name: 'STUDENT' } });
   if (!studentRole) throw ApiError.internal('Student role not configured');
 
-  const passwordHash = await bcrypt.hash(password || 'Student@123', 10);
+  // Typed by the admin or generated; the student chooses their own at first sign-in.
+  const { passwordHash, mustChangePassword, temporaryPassword } = await initialPassword(password);
 
   // Transaction: Create User -> Create Student -> Create Enrollment
   const student = await prisma.$transaction(async (tx) => {
@@ -303,6 +304,7 @@ const createStudent = asyncHandler(async (req, res) => {
         username,
         email,
         passwordHash,
+        mustChangePassword,
         firstName,
         middleName: normalizeMiddleName(middleName),
         lastName,
@@ -362,7 +364,9 @@ const createStudent = asyncHandler(async (req, res) => {
     };
   });
 
-  ApiResponse.created(res, student, 'Student created and enrolled successfully');
+  // A generated password is shown to the admin once, here; it is not stored anywhere.
+  logPasswordSet(req.user, { id: student.userId ?? student.user?.id, username }, "account created");
+  ApiResponse.created(res, { ...student, temporaryPassword }, 'Student created and enrolled successfully');
 });
 
 /**
@@ -509,3 +513,27 @@ module.exports = {
   updateStudent,
   enrollStudent,
 };
+
+/**
+ * @desc    Temporary passwords for a class's students (and parents), for login slips
+ * @route   POST /api/v1/students/credentials/bulk
+ * @access  Private/Admin
+ * Body: classId, sectionId?, academicYearId?, includeParents?, onlyNeverSignedIn? (default true), dryRun?
+ */
+const bulkCredentials = asyncHandler(async (req, res) => {
+  const { classId, sectionId, academicYearId, includeParents, onlyNeverSignedIn, dryRun } = req.body;
+  const result = await credentials.classLogins({
+    actor: req.user,
+    schoolId: req.user.schoolId,
+    classId,
+    sectionId,
+    academicYearId,
+    includeParents: includeParents === true,
+    onlyNeverSignedIn: onlyNeverSignedIn !== false,
+    dryRun: dryRun === true,
+  });
+  const n = result.students + result.parents;
+  ApiResponse.success(res, result, dryRun ? `${n} account(s) would get a new password` : `${n} temporary password(s) created`);
+});
+
+module.exports.bulkCredentials = bulkCredentials;

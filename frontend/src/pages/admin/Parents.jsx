@@ -29,6 +29,7 @@ import {
   toast,
   confirmDialog,
 } from "../../components/ui";
+import ResetPasswordDialog, { NewAccountDialog } from "../../components/admin/ResetPasswordDialog";
 import { parentService } from "../../api/parentService";
 import { studentService } from "../../api/studentService";
 import { fullName } from "../../utils/format";
@@ -70,8 +71,8 @@ const Parents = () => {
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
-  const [passwordParent, setPasswordParent] = useState(null);
-  const [newPassword, setNewPassword] = useState("");
+  const [resetFor, setResetFor] = useState(null); // shared reset dialog (POST /users/:id/reset-password)
+  const [newAccount, setNewAccount] = useState(null); // a just-created parent's temporary password
   const [selectedParent, setSelectedParent] = useState(null);
   const [studentOptions, setStudentOptions] = useState([]);
   const [studentSearch, setStudentSearch] = useState("");
@@ -165,14 +166,14 @@ const Parents = () => {
   const handleCreateParent = createForm.handleSubmit(async (values) => {
     setSubmitting(true);
     try {
-      await parentService.createParent({
+      const created = await parentService.createParent({
         firstName: values.firstName,
         middleName: values.middleName || undefined,
         lastName: values.lastName,
         username: values.username || undefined,
         email: values.email || undefined,
         phone: values.phone,
-        password: values.password,
+        password: values.password || undefined,
         occupation: values.occupation,
         workplace: values.workplace,
         address: values.address,
@@ -181,6 +182,11 @@ const Parents = () => {
           : [],
       });
       toast.success("Parent account created");
+      // A generated password is shown once, now.
+      const p = created?.data;
+      if (p?.temporaryPassword) {
+        setNewAccount({ userId: p.userId, role: "PARENT", name: name(p), username: p.username, temporaryPassword: p.temporaryPassword, children: (p.linkedStudents || []).map((l) => l.studentName) });
+      }
       closeCreateModal();
       loadParents();
     } catch (error) {
@@ -246,21 +252,7 @@ const Parents = () => {
     }
   };
 
-  const submitPasswordReset = async (e) => {
-    e.preventDefault();
-    if (newPassword.length < 8) return toast.error("Use at least 8 characters.");
-    setSubmitting(true);
-    try {
-      await parentService.updateParent(passwordParent.id, { newPassword });
-      toast.success("Password reset. Share it with the parent securely.");
-      setPasswordParent(null);
-      setNewPassword("");
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Could not reset the password");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+
 
   const name = (p) => fullName(p);
 
@@ -333,7 +325,7 @@ const Parents = () => {
             )}
           >
             <MenuItem icon={Link2} onClick={() => openLinkModal(row)}>Link a student</MenuItem>
-            <MenuItem icon={KeyRound} onClick={() => setPasswordParent(row)}>Reset password</MenuItem>
+            <MenuItem icon={KeyRound} onClick={() => setResetFor({ userId: row.userId, role: "PARENT", name: name(row), username: row.username, children: (row.linkedStudents || []).map((l) => l.studentName) })}>Reset password</MenuItem>
             <MenuSeparator />
             {row.status === "active" ? (
               <MenuItem icon={ShieldOff} danger onClick={() => handleToggleStatus(row)}>Deactivate account</MenuItem>
@@ -388,7 +380,7 @@ const Parents = () => {
             <Input type="tel" label="Phone" name="phone" register={createForm.register} />
           </FormRow>
           <FormRow>
-            <Input type="password" label="Password" name="password" register={createForm.register} required minLength={8} hint="At least 8 characters." />
+            <Input type="password" label="Password" name="password" register={createForm.register} hint="Leave empty to generate one. They choose their own at the first sign-in." />
             <Select label="Relationship" name="relationship" register={createForm.register} options={relationshipOptions} placeholder={null} />
           </FormRow>
           <FormRow>
@@ -429,42 +421,8 @@ const Parents = () => {
         </form>
       </Modal>
 
-      <Modal
-        isOpen={Boolean(passwordParent)}
-        onClose={() => {
-          setPasswordParent(null);
-          setNewPassword("");
-        }}
-        title="Reset password"
-        description={passwordParent ? name(passwordParent) : undefined}
-        size="sm"
-      >
-        <form onSubmit={submitPasswordReset}>
-          <label htmlFor="new-parent-password" className="mb-1.5 block text-sm font-medium text-slate-700">New password</label>
-          <TextInput
-            id="new-parent-password"
-            type="text"
-            autoComplete="new-password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="At least 8 characters"
-          />
-          <p className="mt-1.5 text-xs text-slate-500">They can change it after signing in.</p>
-          <DialogActions>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                setPasswordParent(null);
-                setNewPassword("");
-              }}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" loading={submitting} icon={KeyRound}>Reset password</Button>
-          </DialogActions>
-        </form>
-      </Modal>
+      <ResetPasswordDialog account={resetFor} onClose={() => setResetFor(null)} />
+      <NewAccountDialog credential={newAccount} onClose={() => setNewAccount(null)} />
     </div>
   );
 };

@@ -125,3 +125,30 @@ describe('optionalAuth', () => {
     expect(err.message).toBe('db down');
   });
 });
+
+describe('authenticate: a password an admin set must be changed first', () => {
+  const withRoute = (method, originalUrl) => ({ ...withToken(), method, originalUrl });
+
+  it('refuses other routes with 403 PASSWORD_CHANGE_REQUIRED', async () => {
+    prisma.user.findUnique.mockResolvedValue(dbUser({ mustChangePassword: true }));
+    for (const [method, url] of [['GET', '/api/v1/students'], ['POST', '/api/v1/auth/me'], ['GET', '/api/v1/auth/me/extra'], ['PUT', '/api/v1/users/7']]) {
+      const err = await run(authenticate, withRoute(method, url));
+      expect(err.statusCode).toBe(403);
+      expect(err.errorCode).toBe('PASSWORD_CHANGE_REQUIRED');
+    }
+  });
+
+  it('lets the user read themselves, change the password and sign out', async () => {
+    prisma.user.findUnique.mockResolvedValue(dbUser({ mustChangePassword: true }));
+    for (const [method, url] of [['GET', '/api/v1/auth/me'], ['GET', '/api/v1/auth/me?fresh=1'], ['PUT', '/api/v1/auth/change-password'], ['POST', '/api/v1/auth/logout']]) {
+      expect(await run(authenticate, withRoute(method, url))).toBeUndefined();
+    }
+  });
+
+  it('does nothing once the password was changed', async () => {
+    prisma.user.findUnique.mockResolvedValue(dbUser({ mustChangePassword: false }));
+    const req = withRoute('GET', '/api/v1/students');
+    expect(await run(authenticate, req)).toBeUndefined();
+    expect(req.user.mustChangePassword).toBe(false);
+  });
+});

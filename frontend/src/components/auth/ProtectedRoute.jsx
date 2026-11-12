@@ -18,6 +18,12 @@ const ProtectedRoute = ({ children, roles = [], permission = null }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Signed in with a password an admin set: choose your own first (the API
+  // refuses everything else until then, so this only spares the error pages).
+  if (user.mustChangePassword && location.pathname !== "/account/password") {
+    return <Navigate to="/account/password" replace />;
+  }
+
   // Check roles if specified
   if (roles.length > 0 && !roles.some(role => hasRole(role))) {
     return <Navigate to="/unauthorized" replace />;

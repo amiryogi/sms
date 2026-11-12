@@ -2,10 +2,13 @@
  * Custom API Error class
  */
 class ApiError extends Error {
-  constructor(statusCode, message, errors = []) {
+  constructor(statusCode, message, errors = [], errorCode = undefined) {
     super(message);
     this.statusCode = statusCode;
     this.errors = errors;
+    // A machine-readable reason the client can act on (e.g. PASSWORD_CHANGE_REQUIRED).
+    // Not `code`: that name belongs to Prisma errors in the error middleware.
+    this.errorCode = errorCode;
     this.isOperational = true;
 
     Error.captureStackTrace(this, this.constructor);
@@ -19,8 +22,8 @@ class ApiError extends Error {
     return new ApiError(401, message);
   }
 
-  static forbidden(message = 'Forbidden') {
-    return new ApiError(403, message);
+  static forbidden(message = 'Forbidden', errorCode = undefined) {
+    return new ApiError(403, message, [], errorCode);
   }
 
   static notFound(message = 'Resource not found') {
