@@ -83,7 +83,7 @@ const NebSheet = ({ data, options: overrides }) => {
       0
     ) || 0;
 
-  const logoUrl = logoFailed ? null : school?.logoUrl || (options.showEmblem ? school?.bannerUrl : null);
+  const logoUrl = logoFailed ? null : school?.logoUrl || school?.bannerUrl || null;
 
   const contactLine = [
     school?.landlineNumber && `Ph: ${school.landlineNumber}`,
@@ -187,20 +187,17 @@ const NebSheet = ({ data, options: overrides }) => {
       <div className="rc-fit-inner">
       {/* Header */}
         <header className="report-header">
-          <div className="school-logo">
-            {logoUrl ? (
+          {/* No logo (or it failed to load): print nothing rather than a placeholder box. */}
+          {logoUrl && (
+            <div className="school-logo">
               <img
                 src={resolveAssetUrl(logoUrl)}
                 alt="School Logo"
                 crossOrigin="anonymous"
                 onError={() => setLogoFailed(true)}
               />
-            ) : (
-              <div className="logo-placeholder">
-                <span>🏫</span>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
           <div className="school-info">
             <h1 className="school-name">{school?.name || "School Name"}</h1>
             {school?.tagline && <p className="school-tagline">{school.tagline}</p>}
@@ -216,13 +213,8 @@ const NebSheet = ({ data, options: overrides }) => {
               <p className="school-website">Website: {school.website}</p>
             )}
           </div>
-          {options.showEmblem && (
-            <div className="school-logo right-logo">
-              <div className="logo-placeholder nepal-emblem">
-                <span>🇳🇵</span>
-              </div>
-            </div>
-          )}
+          {/* Empty box as wide as the logo on the other side, so the school name stays centred. */}
+          {logoUrl && <div className="school-logo-balance" aria-hidden="true" />}
         </header>
 
       {/* Report title */}

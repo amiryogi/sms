@@ -51,17 +51,6 @@ const NEB_SHEET_CSS = `
   object-fit: contain;
 }
 
-.logo-placeholder {
-  width: 70px;
-  height: 70px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 40px;
-  background: #fff;
-  border: 1px solid #000;
-}
-
 .school-info {
   text-align: center;
   flex: 1;
@@ -422,11 +411,12 @@ const NEB_SHEET_CSS = `
   flex-direction: var(--rc-header-direction, row);
 }
 .school-logo,
-.logo-placeholder {
+.school-logo-balance {
   width: var(--rc-logo-width, 70px);
   height: var(--rc-logo-height, 70px);
+  flex-shrink: 0;
+  display: var(--rc-logo-display, block);
 }
-.school-logo:not(.right-logo) { display: var(--rc-logo-display, block); }
 .school-info { text-align: var(--rc-header-align, center); }
 .school-name {
   font-size: var(--rc-school-name-size, 22pt);

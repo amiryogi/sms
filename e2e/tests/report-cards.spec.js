@@ -82,17 +82,47 @@ test.describe("individual report card", () => {
     await expect(sheet.locator(".summary-item.highlight").last()).toContainText(card.summary.isPassed ? "PASSED" : "FAILED");
   });
 
-  test("the school logo, or its placeholder, sits inside the header", async ({ page }) => {
+  test("the header shows the school logo or nothing, never a placeholder box, and the name stays centred", async ({ page }) => {
     const sheet = await openIndividual(page);
-    const logo = sheet.locator(".school-logo").first();
-    const header = await sheet.locator(".report-header").boundingBox();
-    const box = await logo.boundingBox();
-    expect(box.x).toBeGreaterThanOrEqual(header.x - 1);
-    expect(box.y + box.height).toBeLessThanOrEqual(header.y + header.height + 1);
-    const img = logo.locator("img");
-    if (await img.count()) expect(await img.evaluate((el) => el.complete && el.naturalWidth > 0)).toBe(true);
-    else await expect(logo.locator(".logo-placeholder")).toBeVisible();
+    const header = sheet.locator(".report-header");
+    const headerBox = await header.boundingBox();
+    // no emoji stand-ins (the old 🏫 and 🇳🇵 "NP" boxes)
+    await expect(header).not.toContainText(/🏫|🇳🇵/u);
+
+    const logo = header.locator(".school-logo");
+    if (await logo.count()) {
+      const box = await logo.boundingBox();
+      expect(box.x).toBeGreaterThanOrEqual(headerBox.x - 1);
+      expect(box.y + box.height).toBeLessThanOrEqual(headerBox.y + headerBox.height + 1);
+      expect(await logo.locator("img").evaluate((el) => el.complete && el.naturalWidth > 0)).toBe(true);
+    } else {
+      await expect(header.locator(".school-logo-balance")).toHaveCount(0);
+    }
+
+    const info = await header.locator(".school-info").boundingBox();
+    const offCentre = Math.abs(info.x + info.width / 2 - (headerBox.x + headerBox.width / 2));
+    expect(offCentre).toBeLessThan(2);
   });
+
+  for (const position of ["left", "right"]) {
+    test(`with a logo on the ${position}, the name stays centred and nothing prints on the other side`, async ({ page }) => {
+      await rewriteCards(page, (card) => {
+        card.school.logoUrl = `${process.env.E2E_BASE_URL}/vite.svg`;
+        if (card.layout?.design) card.layout.design.logoPosition = position;
+      });
+      const sheet = await openIndividual(page);
+      const header = sheet.locator(".report-header");
+      const headerBox = await header.boundingBox();
+      const logo = await header.locator(".school-logo").boundingBox();
+      const onLeft = logo.x + logo.width / 2 < headerBox.x + headerBox.width / 2;
+      expect(onLeft).toBe(position === "left");
+      await expect(header.locator(".school-logo-balance")).toHaveCount(1);
+      await expect(header.locator(".school-logo-balance")).toBeEmpty();
+      const info = await header.locator(".school-info").boundingBox();
+      expect(Math.abs(info.x + info.width / 2 - (headerBox.x + headerBox.width / 2))).toBeLessThan(2);
+      await expectOnePage(page, sheet);
+    });
+  }
 
   test("a failed subject prints the fail grade and the card says FAILED", async ({ page }) => {
     await rewriteCards(page, (card) => {

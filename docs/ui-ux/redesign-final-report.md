@@ -11,7 +11,7 @@ Brief pasted 2026-11-11, done in seven phases with approval between each, finish
 | 3 | `06d5f9e` | One report-card template and one stylesheet for individual and bulk print; every card fits one A4 page |
 | 4 | `42d076c` | 37 design settings (fonts, sizes, logo, row height, margins) in School Settings, with a live preview |
 | 5 | `43ce6e0`, `546e56b` | React-admin pilot for examinations at `/admin/exam-admin` (read-only lists plus the lifecycle buttons) |
-| 6 | `984216f` | 48 Playwright browser tests, plus a CI job |
+| 6 | `984216f` | 48 (now 50) Playwright browser tests, plus a CI job |
 | 7 | this commit | Full regression run and this report |
 
 **Tailwind:** the audit found the move to Tailwind CSS 4 already complete (UI waves 1–6,
@@ -85,7 +85,7 @@ are used.
 | Frontend build | passes |
 | Integration, MySQL test database | 80 / 80 pass |
 | Integration, Supabase PostgreSQL test project | 80 / 80 pass on the second run; see the note below |
-| Browser tests (`e2e/`, Chrome on Windows) | 48 pass, 1 skipped on purpose (a super admin has no page they're refused) |
+| Browser tests (`e2e/`, Chrome on Windows) | 50 pass, 1 skipped on purpose (a super admin has no page they're refused) |
 | Fee ledger check (`scripts/reconcile.js`) | OK on both test databases |
 | All-roles page sweep (development database) | 72 pages across 7 roles: no console errors, no exceptions, no failed API calls |
 | GitHub CI on `984216f` | all 4 jobs green, including the new browser-test job on Linux |

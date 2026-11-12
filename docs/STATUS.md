@@ -94,9 +94,9 @@ a font setting that defaults to today's Inter.
 - **Setup:** `e2e/` (Playwright 1.65, its own `package.json`). Global setup signs in all 7 roles
   through the API and makes sure the seeded class has published report cards. Playwright
   starts the API on the MySQL test database and a Vite server itself.
-- **Tests (48, plus 1 intended skip):**
-  - report cards (17): real PDF page counts and A4 size, roll order, nothing clipped, grades
-    equal the API, long names, 5/12/16 subjects, missing remarks, fail grade, bulk identical
+- **Tests (50, plus 1 intended skip):**
+  - report cards (19): real PDF page counts and A4 size, roll order, nothing clipped, grades
+    equal the API, long names, 5/12/16 subjects, missing remarks, fail grade, logo left / right / none, bulk identical
     to individual, student access, 2 visual baselines;
   - examinations (12): pilot list / search / filters / snapshot / results against the API,
     DRAFT → PUBLISHED → LOCKED → unlock, who may publish, marks refused outside PUBLISHED,

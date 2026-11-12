@@ -107,7 +107,7 @@ the same with `npm run seed`.
 `node scripts/reconcile.js` checks every cached fee balance against the ledger.
 
 **Browser tests** live in `e2e/` (Playwright; see `e2e/README.md`):
-- 48 tests over report-card printing (real PDFs), the exam lifecycle and marks entry, the
+- 50 tests over report-card printing (real PDFs), the exam lifecycle and marks entry, the
   exam pilot, the pages of every role, and fees.
 - They start their own servers on the MySQL test database (ports 5012 / 5184).
 - Run with `cd e2e && PW_CHANNEL=chrome npm test`.

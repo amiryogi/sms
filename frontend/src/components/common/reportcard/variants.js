@@ -9,7 +9,6 @@
  * overrides these through `layoutOptions`.
  */
 export const SHEET_OPTIONS = {
-  showEmblem: true,
   reportTitle: "GRADE SHEET / REPORT CARD",
   showAttendanceStrip: true,
   showSummaryGrid: true,
