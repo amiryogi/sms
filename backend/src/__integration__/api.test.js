@@ -154,6 +154,75 @@ describe("students, parents, ownership", () => {
   });
 });
 
+describe("middle names", () => {
+  const made = []; // user ids this block creates, removed at the end
+
+  afterAll(async () => {
+    for (const userId of made) {
+      await prisma.studentClass.deleteMany({ where: { student: { userId } } }).catch(() => {});
+      await prisma.student.deleteMany({ where: { userId } }).catch(() => {});
+      await prisma.user.delete({ where: { id: userId } }).catch(() => {});
+    }
+  });
+
+  test("a staff member keeps a middle name through create, list, search, /auth/me and update", async () => {
+    const email = `middle.${RUN.toLowerCase()}@svi.edu.np`;
+    const created = await api("post", "/users", "admin").send({
+      email, password: "Password123", firstName: "Ram", middleName: "  Bahadur ", lastName: `Thapa${RUN}`, role: "TEACHER",
+    });
+    expect(created.status).toBe(201);
+    made.push(created.body.data.id);
+    expect(created.body.data.middleName).toBe("Bahadur");
+
+    const found = await api("get", `/teachers?search=bahadur`, "admin");
+    expect(found.status).toBe(200);
+    const row = (found.body.data.teachers || found.body.data).find((t) => t.email === email);
+    expect(row?.middleName).toBe("Bahadur");
+
+    const login = await api("post", "/auth/login").send({ email, password: "Password123" });
+    expect(login.status).toBe(200);
+    const me = await request(app).get("/api/v1/auth/me").set("Authorization", `Bearer ${login.body.data.accessToken}`);
+    expect(me.body.data.middleName).toBe("Bahadur");
+
+    // an empty middle name clears it
+    expect((await api("put", `/teachers/${created.body.data.id}`, "admin").send({ middleName: "" })).status).toBe(200);
+    const after = await prisma.user.findUnique({ where: { id: created.body.data.id } });
+    expect(after.middleName).toBeNull();
+    expect((await api("post", "/users", "admin").send({ email: `x${email}`, password: "Password123", firstName: "A", middleName: "x".repeat(101), lastName: "B", role: "TEACHER" })).status).toBe(400);
+  });
+
+  test("a new student keeps a middle name; it is admin-only to change", async () => {
+    const res = await api("post", "/students", "admin").send({
+      email: `middle.student.${RUN.toLowerCase()}@svi.edu.np`,
+      firstName: "Sita", middleName: "Kumari", lastName: `Rai${RUN}`,
+      admissionNumber: `MN-${RUN}`, dateOfBirth: "2012-04-01", gender: "female", admissionDate: "2024-04-14",
+      classId: ctx.enrolment.classId, sectionId: ctx.enrolment.sectionId, academicYearId: ctx.year.id,
+    });
+    expect(res.status).toBe(201);
+    const student = await prisma.student.findFirst({ where: { admissionNumber: `MN-${RUN}` } });
+    made.push(student.userId);
+    const got = await api("get", `/students/${student.id}`, "admin");
+    expect(got.body.data.middleName).toBe("Kumari");
+    // a student may not change their own name, middle name included
+    expect((await api("put", `/students/${ctx.studentId}`, "student").send({ middleName: "Hacked" })).status).toBe(403);
+  });
+
+  test("the report card prints the full name, middle name included", async () => {
+    const card = await prisma.reportCard.findFirst({ where: { studentId: ctx.studentId, isPublished: true }, orderBy: { id: "asc" } });
+    if (!card) return;
+    const student = await prisma.student.findUnique({ where: { id: ctx.studentId }, include: { user: true } });
+    const original = student.user.middleName;
+    try {
+      await prisma.user.update({ where: { id: student.userId }, data: { middleName: "Bahadur" } });
+      const res = await api("get", `/report-cards/student/${ctx.studentId}/exam/${card.examId}`, "student");
+      expect(res.status).toBe(200);
+      expect(res.body.data.student.name).toBe(`${student.user.firstName} Bahadur ${student.user.lastName}`);
+    } finally {
+      await prisma.user.update({ where: { id: student.userId }, data: { middleName: original } });
+    }
+  });
+});
+
 describe("academic years and attendance", () => {
   test("exactly one current academic year", async () => {
     const res = await api("get", "/academic-years", "admin");

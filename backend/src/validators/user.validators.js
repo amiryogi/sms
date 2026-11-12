@@ -1,4 +1,5 @@
 const { body, query } = require('express-validator');
+const { middleNameRule } = require('./common.validators');
 
 /**
  * User validation rules
@@ -27,6 +28,7 @@ const createUserRules = [
     .withMessage('First name is required')
     .isLength({ max: 100 })
     .withMessage('First name must be less than 100 characters'),
+  middleNameRule,
   body('lastName')
     .trim()
     .notEmpty()
@@ -71,6 +73,7 @@ const updateUserRules = [
     .withMessage('First name cannot be empty')
     .isLength({ max: 100 })
     .withMessage('First name must be less than 100 characters'),
+  middleNameRule,
   body('lastName')
     .optional()
     .trim()

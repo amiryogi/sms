@@ -1,5 +1,6 @@
 const prisma = require("../config/database");
 const { dialect } = require("../database");
+const { fullName, normalizeMiddleName } = require("../utils/names");
 const {
   ApiError,
   ApiResponse,
@@ -51,6 +52,7 @@ const getTeachers = asyncHandler(async (req, res) => {
   if (search) {
     const searchQuery = buildSearchQuery(search, [
       "firstName",
+      "middleName",
       "lastName",
       "email",
     ], dialect.text.search);
@@ -71,6 +73,7 @@ const getTeachers = asyncHandler(async (req, res) => {
         id: true,
         email: true,
         firstName: true,
+        middleName: true,
         lastName: true,
         phone: true,
         avatarUrl: true,
@@ -132,6 +135,7 @@ const getTeacher = asyncHandler(async (req, res) => {
       id: true,
       email: true,
       firstName: true,
+      middleName: true,
       lastName: true,
       phone: true,
       avatarUrl: true,
@@ -184,7 +188,7 @@ const getTeacher = asyncHandler(async (req, res) => {
  */
 const updateTeacher = asyncHandler(async (req, res) => {
   const teacherId = parseInt(req.params.id, 10);
-  const { firstName, lastName, phone, avatarUrl, status, role } = req.body;
+  const { firstName, middleName, lastName, phone, avatarUrl, status, role } = req.body;
   const isAdmin = isAdminUser(req.user);
 
   const teacher = await prisma.user.findFirst({
@@ -224,6 +228,7 @@ const updateTeacher = asyncHandler(async (req, res) => {
     where: { id: teacherId },
     data: {
       ...(firstName && { firstName }),
+      ...(middleName !== undefined && { middleName: normalizeMiddleName(middleName) }),
       ...(lastName && { lastName }),
       ...(phone !== undefined && { phone }),
       ...(avatarUrl !== undefined && { avatarUrl }),
@@ -338,6 +343,7 @@ const getMyStudents = asyncHandler(async (req, res) => {
             select: {
               id: true,
               firstName: true,
+              middleName: true,
               lastName: true,
               email: true,
               avatarUrl: true,
@@ -394,8 +400,9 @@ const getMyStudents = asyncHandler(async (req, res) => {
       studentId: enrollment.student.id,
       rollNumber: enrollment.rollNumber,
       firstName: enrollment.student.user.firstName,
+      middleName: enrollment.student.user.middleName ?? null,
       lastName: enrollment.student.user.lastName,
-      fullName: `${enrollment.student.user.firstName} ${enrollment.student.user.lastName}`,
+      fullName: fullName(enrollment.student.user),
       email: enrollment.student.user.email,
       admissionNumber: enrollment.student.admissionNumber,
       avatarUrl: enrollment.student.user.avatarUrl,

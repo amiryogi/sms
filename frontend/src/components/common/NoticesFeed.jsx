@@ -4,7 +4,7 @@ import { Bell, ChevronDown, ArrowRight, RotateCw } from "lucide-react";
 import { noticeService } from "../../api/noticeService";
 import { Badge, Button, EmptyState, Skeleton } from "../ui";
 import { cn } from "../../lib/cn";
-import { formatDate, formatRelative } from "../../utils/format";
+import { formatDate, formatRelative, fullName } from "../../utils/format";
 
 /**
  * Read-only feed of published notices for the signed-in user. The backend
@@ -101,7 +101,7 @@ const NoticesFeed = ({ limit = 5, showViewAll = true, viewAllPath = null, compac
                 <div className={cn("border-t border-slate-100", compact ? "px-3 py-3" : "px-4 py-4")}>
                   <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-700">{notice.content}</p>
                   <p className="mt-3 text-xs text-slate-500">
-                    Posted by {notice.createdBy?.firstName} {notice.createdBy?.lastName} · {formatDate(when)}
+                    Posted by {fullName(notice.createdBy)} · {formatDate(when)}
                   </p>
                 </div>
               )}

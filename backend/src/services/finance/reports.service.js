@@ -10,6 +10,7 @@ const { kathmanduToday } = require("../../utils/fiscalYear");
 const discountService = require("./discount.service");
 const obligationService = require("./obligation.service");
 const { RECEIPT_INCLUDE } = require("./ledger.service");
+const { fullName } = require("../../utils/names");
 
 const resolveYear = async (schoolId, academicYearId) => {
   const year = academicYearId
@@ -231,7 +232,7 @@ const REPORTS = {
   discounts: async ({ schoolId, academicYearId, status }) => {
     const list = await discountService.list({ schoolId, academicYearId, status });
     const rows = list.map((d) => ({
-      student: `${d.student.user.firstName} ${d.student.user.lastName}`,
+      student: fullName(d.student.user),
       admissionNumber: d.student.admissionNumber,
       year: d.academicYear.name,
       name: d.name,
@@ -240,8 +241,8 @@ const REPORTS = {
       value: d.kind === "PERCENT" ? `${Number(d.value)}%` : Number(d.value),
       applied: d.appliedAmount,
       status: d.status.charAt(0) + d.status.slice(1).toLowerCase(),
-      requestedBy: `${d.requestedBy.firstName} ${d.requestedBy.lastName}`,
-      decidedBy: d.approvedBy ? `${d.approvedBy.firstName} ${d.approvedBy.lastName}` : "",
+      requestedBy: fullName(d.requestedBy),
+      decidedBy: d.approvedBy ? fullName(d.approvedBy) : "",
       reason: d.reason,
     }));
     return {
@@ -272,7 +273,7 @@ const REPORTS = {
     const start = from || fr.addDays(end, -364);
     const txns = await prisma.feeTransaction.findMany({
       where: { schoolId, type: "REVERSAL", paidOn: { gte: new Date(`${start}T00:00:00Z`), lte: new Date(`${end}T00:00:00Z`) } },
-      include: { ...RECEIPT_INCLUDE, reversalFor: { select: { requestedBy: { select: { firstName: true, lastName: true } } } } },
+      include: { ...RECEIPT_INCLUDE, reversalFor: { select: { requestedBy: { select: { firstName: true, middleName: true, lastName: true } } } } },
       orderBy: [{ paidOn: "desc" }, { id: "desc" }],
     });
     const rows = txns.map((t) => ({
@@ -280,12 +281,12 @@ const REPORTS = {
       receiptNumber: t.receiptNumber,
       reverses: t.reverses?.receiptNumber,
       originalDate: t.reverses ? fr.isoDay(t.reverses.paidOn) : "",
-      student: `${t.student.user.firstName} ${t.student.user.lastName}`,
+      student: fullName(t.student.user),
       amount: Number(t.amount),
       category: t.reversalCategory === "REFUND" ? "Refund" : "Correction",
       reason: t.reversalReason,
-      requestedBy: t.reversalFor[0] ? `${t.reversalFor[0].requestedBy.firstName} ${t.reversalFor[0].requestedBy.lastName}` : "(direct)",
-      approvedBy: `${t.recordedBy.firstName} ${t.recordedBy.lastName}`,
+      requestedBy: t.reversalFor[0] ? fullName(t.reversalFor[0].requestedBy) : "(direct)",
+      approvedBy: fullName(t.recordedBy),
     }));
     return {
       title: "Reversals",

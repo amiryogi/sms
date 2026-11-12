@@ -11,6 +11,7 @@ const discounts = require("../services/finance/discount.service");
 const obligations = require("../services/finance/obligation.service");
 const reports = require("../services/finance/reports.service");
 const { toCsv } = require("../utils/csv");
+const { fullName } = require("../utils/names");
 
 const FEE_STAFF = ["ADMIN", "SUPER_ADMIN", "ACCOUNTANT"];
 const isFeeStaff = (user) => user.roles.some((r) => FEE_STAFF.includes(r));
@@ -71,6 +72,7 @@ const listTransactions = asyncHandler(async (req, res) => {
       { reference: dialect.text.search(search) },
       { student: { admissionNumber: dialect.text.search(search) } },
       { student: { user: { firstName: dialect.text.search(search) } } },
+      { student: { user: { middleName: dialect.text.search(search) } } },
       { student: { user: { lastName: dialect.text.search(search) } } },
     ];
   }
@@ -109,8 +111,8 @@ const listReversalRequests = asyncHandler(async (req, res) => {
     include: {
       transaction: { include: ledger.RECEIPT_INCLUDE },
       reversalTxn: { select: { id: true, receiptNumber: true, paidOn: true } },
-      requestedBy: { select: { id: true, firstName: true, lastName: true } },
-      decidedBy: { select: { id: true, firstName: true, lastName: true } },
+      requestedBy: { select: { id: true, firstName: true, middleName: true, lastName: true } },
+      decidedBy: { select: { id: true, firstName: true, middleName: true, lastName: true } },
     },
   });
   ApiResponse.success(res, rows, "Reversal requests retrieved");
@@ -163,7 +165,7 @@ const generateForEnrolment = asyncHandler(async (req, res) => {
   const schoolId = req.user.schoolId;
   const enrolment = await prisma.studentClass.findFirst({
     where: { id: Number(req.params.studentClassId), schoolId },
-    include: { student: { include: { user: { select: { firstName: true, lastName: true } } } } },
+    include: { student: { include: { user: { select: { firstName: true, middleName: true, lastName: true } } } } },
   });
   if (!enrolment) throw ApiError.notFound("Student enrollment not found");
 
@@ -176,7 +178,7 @@ const generateForEnrolment = asyncHandler(async (req, res) => {
     academicYearId: enrolment.academicYearId,
   });
   if (count === 0) throw ApiError.conflict("Fee records already exist for this enrollment");
-  const name = `${enrolment.student.user.firstName} ${enrolment.student.user.lastName}`;
+  const name = fullName(enrolment.student.user);
   ApiResponse.created(res, { count }, `${count} fee records generated for ${name}`);
 });
 

@@ -11,6 +11,7 @@ const { kathmanduToday } = require("../../utils/fiscalYear");
 const { lockInstallments, refreshBalances, withTransaction } = require("./balances");
 const discountService = require("./discount.service");
 const { RECEIPT_INCLUDE } = require("./ledger.service");
+const { fullName } = require("../../utils/names");
 
 /** Installment rows for a new obligation: the structure's template, or one row for the whole amount. */
 const scheduleFor = (structure) => {
@@ -114,7 +115,7 @@ const numberify = (inst, today) => {
 const statement = async ({ schoolId, studentId, academicYearId }) => {
   const student = await prisma.student.findFirst({
     where: { id: Number(studentId), schoolId },
-    select: { id: true, admissionNumber: true, user: { select: { firstName: true, lastName: true } } },
+    select: { id: true, admissionNumber: true, user: { select: { firstName: true, middleName: true, lastName: true } } },
   });
   if (!student) throw ApiError.notFound("Student not found");
 
@@ -195,7 +196,7 @@ const statement = async ({ schoolId, studentId, academicYearId }) => {
   });
 
   return {
-    student: { id: student.id, admissionNumber: student.admissionNumber, name: `${student.user.firstName} ${student.user.lastName}` },
+    student: { id: student.id, admissionNumber: student.admissionNumber, name: fullName(student.user) },
     years,
     discounts,
     transactions,
@@ -221,6 +222,7 @@ const accounts = async ({ schoolId, academicYearId, classId, sectionId, search, 
       OR: [
         { admissionNumber: dialect.text.search(search) },
         { user: { firstName: dialect.text.search(search) } },
+        { user: { middleName: dialect.text.search(search) } },
         { user: { lastName: dialect.text.search(search) } },
       ],
     };
@@ -233,7 +235,7 @@ const accounts = async ({ schoolId, academicYearId, classId, sectionId, search, 
       rollNumber: true,
       class: { select: { id: true, name: true } },
       section: { select: { id: true, name: true } },
-      student: { select: { id: true, admissionNumber: true, user: { select: { firstName: true, lastName: true, avatarUrl: true } } } },
+      student: { select: { id: true, admissionNumber: true, user: { select: { firstName: true, middleName: true, lastName: true, avatarUrl: true } } } },
       feeObligations: {
         where: { cancelledAt: null },
         select: { amountDue: true, discountTotal: true, amountPaid: true, installments: { select: { dueDate: true, amount: true, discountTotal: true, paidTotal: true, status: true } } },
@@ -252,7 +254,7 @@ const accounts = async ({ schoolId, academicYearId, classId, sectionId, search, 
     return {
       studentId: e.student.id,
       studentClassId: e.id,
-      name: `${e.student.user.firstName} ${e.student.user.lastName}`,
+      name: fullName(e.student.user),
       avatarUrl: e.student.user.avatarUrl,
       admissionNumber: e.student.admissionNumber,
       rollNumber: e.rollNumber,

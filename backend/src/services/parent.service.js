@@ -2,6 +2,7 @@ const bcrypt = require("bcryptjs");
 const prisma = require("../config/database");
 const { dialect } = require("../database");
 const { ApiError, parsePagination, buildSearchQuery } = require("../utils");
+const { fullName, normalizeMiddleName } = require("../utils/names");
 
 const RELATIONSHIPS = ["father", "mother", "guardian"];
 
@@ -11,7 +12,7 @@ const formatParent = (parent) => {
     return {
       studentParentId: sp.id,
       studentId: sp.studentId,
-      studentName: `${sp.student.user.firstName} ${sp.student.user.lastName}`,
+      studentName: fullName(sp.student.user),
       email: sp.student.user.email,
       phone: sp.student.user.phone,
       class: enrollment?.class?.name,
@@ -27,6 +28,7 @@ const formatParent = (parent) => {
     userId: parent.user.id,
     email: parent.user.email,
     firstName: parent.user.firstName,
+    middleName: parent.user.middleName ?? null,
     lastName: parent.user.lastName,
     phone: parent.user.phone,
     status: parent.user.status,
@@ -51,6 +53,7 @@ const fetchParentWithRelations = async (parentId, schoolId) => {
                 select: {
                   id: true,
                   firstName: true,
+                  middleName: true,
                   lastName: true,
                   email: true,
                   phone: true,
@@ -110,6 +113,7 @@ const createParent = async (schoolId, payload) => {
     email,
     password,
     firstName,
+    middleName,
     lastName,
     phone,
     occupation,
@@ -142,6 +146,7 @@ const createParent = async (schoolId, payload) => {
         email,
         passwordHash: hashedPassword,
         firstName,
+        middleName: normalizeMiddleName(middleName),
         lastName,
         phone,
         status: "active",
@@ -205,6 +210,7 @@ const listParents = async (schoolId, query) => {
   if (search) {
     const searchQuery = buildSearchQuery(search, [
       "firstName",
+      "middleName",
       "lastName",
       "email",
       "phone",
@@ -229,6 +235,7 @@ const listParents = async (schoolId, query) => {
                       select: {
                         id: true,
                         firstName: true,
+                        middleName: true,
                         lastName: true,
                         email: true,
                         phone: true,
@@ -287,6 +294,7 @@ const updateParent = async (schoolId, parentId, payload) => {
   const updates = {};
   if (
     payload.firstName ||
+    payload.middleName !== undefined ||
     payload.lastName ||
     payload.phone ||
     payload.status ||
@@ -294,6 +302,7 @@ const updateParent = async (schoolId, parentId, payload) => {
   ) {
     updates.user = {};
     if (payload.firstName) updates.user.firstName = payload.firstName;
+    if (payload.middleName !== undefined) updates.user.middleName = normalizeMiddleName(payload.middleName);
     if (payload.lastName) updates.user.lastName = payload.lastName;
     if (payload.phone !== undefined) updates.user.phone = payload.phone;
     if (payload.status) updates.user.status = payload.status;
@@ -425,6 +434,7 @@ const getMyChildren = async (userId, schoolId) => {
                 select: {
                   id: true,
                   firstName: true,
+                  middleName: true,
                   lastName: true,
                   email: true,
                   phone: true,
@@ -467,6 +477,7 @@ const getMyChildren = async (userId, schoolId) => {
       user: {
         id: student.user.id,
         firstName: student.user.firstName,
+        middleName: student.user.middleName ?? null,
         lastName: student.user.lastName,
         email: student.user.email,
         phone: student.user.phone,
@@ -476,8 +487,9 @@ const getMyChildren = async (userId, schoolId) => {
 
       // Convenience fields (duplicated for easier access)
       firstName: student.user.firstName,
+      middleName: student.user.middleName ?? null,
       lastName: student.user.lastName,
-      fullName: `${student.user.firstName} ${student.user.lastName}`,
+      fullName: fullName(student.user),
       email: student.user.email,
       phone: student.user.phone,
       status: student.user.status,
@@ -548,6 +560,7 @@ const getChildById = async (userId, schoolId, studentId) => {
                 select: {
                   id: true,
                   firstName: true,
+                  middleName: true,
                   lastName: true,
                   email: true,
                   phone: true,
@@ -590,6 +603,7 @@ const getChildById = async (userId, schoolId, studentId) => {
     user: {
       id: student.user.id,
       firstName: student.user.firstName,
+      middleName: student.user.middleName ?? null,
       lastName: student.user.lastName,
       email: student.user.email,
       phone: student.user.phone,
@@ -597,8 +611,9 @@ const getChildById = async (userId, schoolId, studentId) => {
       status: student.user.status,
     },
     firstName: student.user.firstName,
+    middleName: student.user.middleName ?? null,
     lastName: student.user.lastName,
-    fullName: `${student.user.firstName} ${student.user.lastName}`,
+    fullName: fullName(student.user),
     email: student.user.email,
     phone: student.user.phone,
     status: student.user.status,

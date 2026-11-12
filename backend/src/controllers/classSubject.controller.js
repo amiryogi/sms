@@ -35,6 +35,7 @@ const getClassSubjects = asyncHandler(async (req, res) => {
             select: {
               id: true,
               firstName: true,
+              middleName: true,
               lastName: true,
             },
           },

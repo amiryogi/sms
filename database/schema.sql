@@ -210,6 +210,7 @@ CREATE TABLE users (
     email VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     first_name VARCHAR(100) NOT NULL,
+    middle_name VARCHAR(100),
     last_name VARCHAR(100) NOT NULL,
     phone VARCHAR(20),
     avatar_url VARCHAR(500),

@@ -127,7 +127,7 @@ const getAssignments = asyncHandler(async (req, res) => {
         include: {
           classSubject: { include: { class: true, subject: true } },
           section: true,
-          user: { select: { firstName: true, lastName: true } },
+          user: { select: { firstName: true, middleName: true, lastName: true } },
         },
       },
       assignmentFiles: true,
@@ -181,7 +181,7 @@ const getAssignment = asyncHandler(async (req, res) => {
         include: {
           classSubject: { include: { class: true, subject: true } },
           section: true,
-          user: { select: { firstName: true, lastName: true } },
+          user: { select: { firstName: true, middleName: true, lastName: true } },
         },
       },
       assignmentFiles: true,

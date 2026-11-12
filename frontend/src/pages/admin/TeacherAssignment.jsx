@@ -240,7 +240,7 @@ const TeacherAssignment = () => {
   const yearOptions = academicYears.map((y) => ({ value: y.id.toString(), label: y.name }));
   const teacherOptions = teachers.map((t) => ({
     value: t.userId?.toString() || t.id?.toString(),
-    label: `${t.user?.firstName || t.firstName} ${t.user?.lastName || t.lastName}`,
+    label: fullName(t),
   }));
   const classOptions = classes.map((c) => ({ value: c.id.toString(), label: c.name }));
   const sectionOptions = sections.map((s) => ({ value: s.id.toString(), label: s.name }));

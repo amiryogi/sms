@@ -20,7 +20,7 @@ import { Card, CardHeader, Avatar, Badge, Skeleton } from "../../components/ui";
 import { studentService } from "../../api/studentService";
 import { teacherService } from "../../api/teacherService";
 import { academicService } from "../../api/academicService";
-import { formatDate } from "../../utils/format";
+import { formatDate, fullName } from "../../utils/format";
 
 const extractList = (res, key) => res?.data?.[key] || res?.data || res?.[key] || res || [];
 
@@ -39,7 +39,7 @@ const greeting = () => {
 };
 
 const PersonRow = ({ person, role }) => {
-  const name = `${person.firstName || ""} ${person.lastName || ""}`.trim();
+  const name = fullName(person);
   return (
     <li className="flex items-center gap-3 py-2.5">
       <Avatar src={person.avatarUrl} name={name} size="sm" />

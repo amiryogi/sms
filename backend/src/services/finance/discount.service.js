@@ -18,12 +18,12 @@ const { discountFor, splitProportionally, spreadDiscount } = require("../../util
 const { lockInstallments, refreshBalances, withTransaction } = require("./balances");
 
 const DISCOUNT_INCLUDE = {
-  student: { select: { id: true, admissionNumber: true, user: { select: { firstName: true, lastName: true } } } },
+  student: { select: { id: true, admissionNumber: true, user: { select: { firstName: true, middleName: true, lastName: true } } } },
   academicYear: { select: { id: true, name: true } },
   feeType: { select: { id: true, name: true } },
-  requestedBy: { select: { id: true, firstName: true, lastName: true } },
-  approvedBy: { select: { id: true, firstName: true, lastName: true } },
-  revokedBy: { select: { id: true, firstName: true, lastName: true } },
+  requestedBy: { select: { id: true, firstName: true, middleName: true, lastName: true } },
+  approvedBy: { select: { id: true, firstName: true, middleName: true, lastName: true } },
+  revokedBy: { select: { id: true, firstName: true, middleName: true, lastName: true } },
   applications: { select: { amount: true } },
 };
 

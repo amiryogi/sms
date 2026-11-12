@@ -7,6 +7,7 @@ import { teacherService } from "../../api/teacherService";
 import { studentService } from "../../api/studentService";
 import { PageHeader, Card, Badge, Button, Field, SelectInput, TextInput, Avatar, EmptyState, LoadingBlock, toast } from "../../components/ui";
 import { cn } from "../../lib/cn";
+import { fullName } from "../../utils/format";
 
 const STATUSES = [
   { value: "present", short: "P", label: "Present", icon: Check, on: "bg-emerald-600 text-white ring-emerald-600", soft: "bg-emerald-50 text-emerald-700" },
@@ -81,7 +82,7 @@ const Attendance = () => {
               return {
                 studentId: s.id,
                 rollNumber: s.rollNumber,
-                name: `${s.user?.firstName ?? s.firstName} ${s.user?.lastName ?? s.lastName}`,
+                name: fullName(s),
                 avatarUrl: s.user?.avatarUrl || s.avatarUrl,
                 status: found?.status || "present",
                 remarks: found?.remarks || "",

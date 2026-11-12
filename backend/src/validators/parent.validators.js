@@ -5,6 +5,7 @@ const {
   emailRule,
   passwordRule,
   firstNameRule,
+  middleNameRule,
   lastNameRule,
   phoneRule,
 } = require("./common.validators");
@@ -14,6 +15,7 @@ const createParentRules = [
   emailRule,
   passwordRule,
   firstNameRule,
+  middleNameRule,
   lastNameRule,
   phoneRule,
   body("occupation")
@@ -45,6 +47,7 @@ const updateParentRules = [
     .trim()
     .notEmpty()
     .withMessage("First name cannot be empty"),
+  middleNameRule,
   body("lastName")
     .optional()
     .trim()

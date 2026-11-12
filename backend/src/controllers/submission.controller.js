@@ -144,7 +144,7 @@ const getSubmissionsByAssignment = asyncHandler(async (req, res) => {
       student: {
         include: {
           user: {
-            select: { firstName: true, lastName: true, avatarUrl: true },
+            select: { firstName: true, middleName: true, lastName: true, avatarUrl: true },
           },
         },
       },

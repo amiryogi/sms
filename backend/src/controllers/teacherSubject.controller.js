@@ -39,6 +39,7 @@ const getTeacherAssignments = asyncHandler(async (req, res) => {
         select: {
           id: true,
           firstName: true,
+          middleName: true,
           lastName: true,
           email: true,
           avatarUrl: true,
@@ -148,7 +149,7 @@ const assignTeacher = asyncHandler(async (req, res) => {
       isClassTeacher: !!isClassTeacher,
     },
     include: {
-      user: { select: { firstName: true, lastName: true } },
+      user: { select: { firstName: true, middleName: true, lastName: true } },
       classSubject: { include: { subject: true, class: true } },
       section: true,
     },
@@ -287,7 +288,7 @@ const updateAssignment = asyncHandler(async (req, res) => {
       ...academicYearUpdate,
     },
     include: {
-      user: { select: { firstName: true, lastName: true } },
+      user: { select: { firstName: true, middleName: true, lastName: true } },
       classSubject: { include: { subject: true, class: true } },
       section: true,
     },

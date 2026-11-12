@@ -21,6 +21,7 @@ import { cn } from "../../lib/cn";
 import { reportCardService } from "../../api/reportCardService";
 import { examService } from "../../api/examService";
 import { academicService } from "../../api/academicService";
+import { fullName } from "../../utils/format";
 
 const MEDAL = { 1: "text-amber-500", 2: "text-slate-400", 3: "text-orange-700" };
 
@@ -308,7 +309,7 @@ const ReportCards = () => {
                       <tr key={s.studentId} className="hover:bg-slate-50/70">
                         <td className="col-roll px-4 py-3 text-slate-500 tabular-nums">{s.rollNumber}</td>
                         <td className="col-name px-4 py-3 font-medium text-slate-900">
-                          {s.firstName} {s.lastName}
+                          {fullName(s)}
                         </td>
                         <td className="px-4 py-3 text-center tabular-nums">
                           <span className={s.failedSubjects > 0 ? "text-red-600" : "text-emerald-700"}>{s.passedSubjects || 0}</span>

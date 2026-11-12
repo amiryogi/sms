@@ -106,7 +106,7 @@ const getResultsBySubject = asyncHandler(async (req, res) => {
     include: {
       student: {
         include: {
-          user: { select: { firstName: true, lastName: true } },
+          user: { select: { firstName: true, middleName: true, lastName: true } },
           examResults: {
             where: { examSubjectId },
           },
@@ -120,6 +120,7 @@ const getResultsBySubject = asyncHandler(async (req, res) => {
     studentId: enrollment.student.id,
     rollNumber: enrollment.rollNumber,
     firstName: enrollment.student.user.firstName,
+    middleName: enrollment.student.user.middleName ?? null,
     lastName: enrollment.student.user.lastName,
     marksObtained: enrollment.student.examResults[0]?.marksObtained || null,
     practicalMarks: enrollment.student.examResults[0]?.practicalMarks || 0,

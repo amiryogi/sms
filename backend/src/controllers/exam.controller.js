@@ -30,7 +30,7 @@ const getExams = asyncHandler(async (req, res) => {
     include: {
       academicYear: true,
       createdByUser: {
-        select: { id: true, firstName: true, lastName: true },
+        select: { id: true, firstName: true, middleName: true, lastName: true },
       },
       _count: {
         select: { examSubjects: true },
@@ -60,7 +60,7 @@ const getExam = asyncHandler(async (req, res) => {
     include: {
       academicYear: true,
       createdByUser: {
-        select: { id: true, firstName: true, lastName: true },
+        select: { id: true, firstName: true, middleName: true, lastName: true },
       },
       examSubjects: {
         select: {

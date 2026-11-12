@@ -5,6 +5,7 @@ import { examService } from "../../api/examService";
 import { teacherService } from "../../api/teacherService";
 import { PageHeader, Card, Badge, Button, Field, SelectInput, EmptyState, LoadingBlock, toast, confirmDialog } from "../../components/ui";
 import { cn } from "../../lib/cn";
+import { fullName } from "../../utils/format";
 
 /**
  * Marks entry, in two flows:
@@ -28,7 +29,7 @@ const toRows = (studentList, results = []) => {
       return {
         studentId: s.studentId,
         rollNumber: s.rollNumber,
-        studentName: `${s.firstName} ${s.lastName}`,
+        studentName: fullName(s),
         marksObtained: r && !r.isAbsent ? (r.marksObtained ?? "") : "",
         practicalMarks: r && !r.isAbsent ? (r.practicalMarks ?? "") : "",
         isAbsent: Boolean(r?.isAbsent),

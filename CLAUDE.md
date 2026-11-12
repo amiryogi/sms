@@ -73,7 +73,7 @@ Demo logins (after seed, password `password123`):
 `superadmin@svi.edu.np`, `admin@svi.edu.np`, `admin@demo-school.edu.np`, `teacher@demo-school.edu.np`,
 `student@demo-school.edu.np`, `parent@demo-school.edu.np`. School code `DEMO001`.
 
-**Tests:** `npm test` (Jest) runs 466 unit tests over the pure utilities in
+**Tests:** `npm test` (Jest) runs 472 unit tests over the pure utilities in
 `backend/src/utils/__tests__/` — grade calculation, grade scales, report-card
 layouts and attendance, BS date conversion, pagination, the response helpers and the fee
 maths (`finance.test.js`: money, allocation, discounts, fiscal year, attendance rate) — plus the grade-scale service
@@ -107,7 +107,7 @@ the same with `npm run seed`.
 `node scripts/reconcile.js` checks every cached fee balance against the ledger.
 
 **Browser tests** live in `e2e/` (Playwright; see `e2e/README.md`):
-- 50 tests over report-card printing (real PDFs), the exam lifecycle and marks entry, the
+- 51 tests over report-card printing (real PDFs), the exam lifecycle and marks entry, the
   exam pilot, the pages of every role, and fees.
 - They start their own servers on the MySQL test database (ports 5012 / 5184).
 - Run with `cd e2e && PW_CHANNEL=chrome npm test`.
@@ -275,6 +275,12 @@ Rules the RBAC audit (2026-11-07) established — keep them:
 ---
 
 ## 6. Feature state
+
+**Names:** every user has a first, an optional middle (`User.middleName`, migration
+`20261112100000_user_middle_name`) and a last name. Build a display name only with
+`fullName()`: `backend/src/utils/names.js` on the server, `frontend/src/utils/format.js` in
+the UI. Never join `firstName` and `lastName` by hand, or the middle name goes missing. A new
+`select` of a user's name includes `middleName: true`.
 
 **Working:** auth + refresh tokens; RBAC; academic years / classes / sections /
 subjects / class-subjects; student, teacher and parent CRUD; teacher

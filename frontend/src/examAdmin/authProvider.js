@@ -1,3 +1,4 @@
+import { fullName } from "../utils/format";
 /**
  * React-admin Auth Provider: a thin adapter over the app's own AuthContext.
  * The app has already signed the user in and guards the route
@@ -20,7 +21,7 @@ const buildAuthProvider = ({ user, logout }) => ({
   getIdentity: () =>
     Promise.resolve({
       id: user?.id,
-      fullName: [user?.firstName, user?.lastName].filter(Boolean).join(" "),
+      fullName: fullName(user),
       avatar: user?.avatarUrl || undefined,
     }),
   getPermissions: () => Promise.resolve(user?.roles || []),

@@ -44,7 +44,8 @@ export const toPaisa = (value) => {
 export const fromPaisa = (paisa) => (paisa / 100).toFixed(2);
 export const isMoneyInput = (value) => Number.isFinite(toPaisa(value)) && toPaisa(value) > 0;
 
-export const fullName = (user) => `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
+// One name helper for the whole app (first, middle, last).
+export { fullName } from "../../utils/format";
 
 // ---------- amount in words (Nepali / Indian grouping: thousand, lakh, crore) ----------
 

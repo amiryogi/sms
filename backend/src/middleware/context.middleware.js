@@ -202,6 +202,7 @@ const loadParentContext = asyncHandler(async (req, res, next) => {
       studentId: sp.student.id,
       userId: sp.student.userId,
       firstName: sp.student.user.firstName,
+      middleName: sp.student.user.middleName ?? null,
       lastName: sp.student.user.lastName,
       admissionNumber: sp.student.admissionNumber,
       relationship: sp.relationship,

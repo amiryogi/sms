@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const prisma = require('../config/database');
 const { dialect } = require('../database');
 const { ApiError, ApiResponse, asyncHandler, parsePagination, parseSort, buildSearchQuery } = require('../utils');
+const { normalizeMiddleName } = require('../utils/names');
 
 // Roles that need a profile row (Student / Parent). They are created through
 // their own flows — POST /students and POST /admin/parents — never by
@@ -44,7 +45,7 @@ const getUsers = asyncHandler(async (req, res) => {
 
   // Add search filter
   if (search) {
-    const searchQuery = buildSearchQuery(search, ['firstName', 'lastName', 'email'], dialect.text.search);
+    const searchQuery = buildSearchQuery(search, ['firstName', 'middleName', 'lastName', 'email'], dialect.text.search);
     if (searchQuery) {
       where.OR = searchQuery.OR;
     }
@@ -89,6 +90,7 @@ const getUsers = asyncHandler(async (req, res) => {
     id: user.id,
     email: user.email,
     firstName: user.firstName,
+    middleName: user.middleName ?? null,
     lastName: user.lastName,
     phone: user.phone,
     avatarUrl: user.avatarUrl,
@@ -152,6 +154,7 @@ const getUser = asyncHandler(async (req, res) => {
     id: user.id,
     email: user.email,
     firstName: user.firstName,
+    middleName: user.middleName ?? null,
     lastName: user.lastName,
     phone: user.phone,
     avatarUrl: user.avatarUrl,
@@ -172,7 +175,7 @@ const getUser = asyncHandler(async (req, res) => {
  * @access  Private/Admin
  */
 const createUser = asyncHandler(async (req, res) => {
-  const { email, password, firstName, lastName, phone, roleIds = [], role, status = 'active', avatarUrl } = req.body;
+  const { email, password, firstName, middleName, lastName, phone, roleIds = [], role, status = 'active', avatarUrl } = req.body;
 
   // Check if neither roleIds nor role is provided
   if (!role && (!roleIds || roleIds.length === 0)) {
@@ -227,6 +230,7 @@ const createUser = asyncHandler(async (req, res) => {
       email,
       passwordHash,
       firstName,
+      middleName: normalizeMiddleName(middleName),
       lastName,
       phone,
       status,
@@ -250,6 +254,7 @@ const createUser = asyncHandler(async (req, res) => {
     id: user.id,
     email: user.email,
     firstName: user.firstName,
+    middleName: user.middleName ?? null,
     lastName: user.lastName,
     phone: user.phone,
     avatarUrl: user.avatarUrl, // Return avatarUrl
@@ -266,7 +271,7 @@ const createUser = asyncHandler(async (req, res) => {
  */
 const updateUser = asyncHandler(async (req, res) => {
   const userId = parseInt(req.params.id, 10);
-  const { email, firstName, lastName, phone, status, avatarUrl } = req.body;
+  const { email, firstName, middleName, lastName, phone, status, avatarUrl } = req.body;
 
   // Find user
   const user = await prisma.user.findFirst({
@@ -320,6 +325,7 @@ const updateUser = asyncHandler(async (req, res) => {
     data: {
       ...(email && { email }),
       ...(firstName && { firstName }),
+      ...(middleName !== undefined && { middleName: normalizeMiddleName(middleName) }),
       ...(lastName && { lastName }),
       ...(phone !== undefined && { phone }),
       ...(avatarUrl !== undefined && { avatarUrl }),
@@ -338,6 +344,7 @@ const updateUser = asyncHandler(async (req, res) => {
     id: updatedUser.id,
     email: updatedUser.email,
     firstName: updatedUser.firstName,
+    middleName: updatedUser.middleName ?? null,
     lastName: updatedUser.lastName,
     phone: updatedUser.phone,
     avatarUrl: updatedUser.avatarUrl,
@@ -428,6 +435,7 @@ const updateUserRoles = asyncHandler(async (req, res) => {
     id: updatedUser.id,
     email: updatedUser.email,
     firstName: updatedUser.firstName,
+    middleName: updatedUser.middleName ?? null,
     lastName: updatedUser.lastName,
     roles: updatedUser.userRoles.map((ur) => ur.role.name),
   }, 'User roles updated successfully');

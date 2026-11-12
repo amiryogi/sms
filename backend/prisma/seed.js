@@ -513,9 +513,9 @@ async function main() {
   const teachers = [];
   const teacherData = [
     { firstName: "Bimala", lastName: "Sharma", subject: "MATH" },
-    { firstName: "Ram", lastName: "Adhikari", subject: "ENG" },
+    { firstName: "Ram", middleName: "Prasad", lastName: "Adhikari", subject: "ENG" },
     { firstName: "Sita", lastName: "Poudel", subject: "SCI" },
-    { firstName: "Krishna", lastName: "Thapa", subject: "NEP" },
+    { firstName: "Krishna", middleName: "Bahadur", lastName: "Thapa", subject: "NEP" },
     { firstName: "Gita", lastName: "Gurung", subject: "SOC" },
     { firstName: "Hari", lastName: "KC", subject: "CS" },
     { firstName: "Laxmi", lastName: "Bhattarai", subject: "PHY" },
@@ -532,6 +532,7 @@ async function main() {
         email: `teacher${i + 1}@svi.edu.np`,
         passwordHash,
         firstName: t.firstName,
+        middleName: t.middleName || null,
         lastName: t.lastName,
         phone: generatePhone(),
         status: "active",
@@ -660,6 +661,8 @@ async function main() {
             email,
             passwordHash,
             firstName,
+            // two demo students show the optional middle name
+            middleName: studentIndex === 2 ? "Kumari" : studentIndex === 3 ? "Bahadur" : null,
             lastName,
             phone: generatePhone(),
             status: "active",

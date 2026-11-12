@@ -43,7 +43,7 @@ const getPromotionHistory = asyncHandler(async (req, res) => {
         student: {
           include: {
             user: {
-              select: { firstName: true, lastName: true, email: true },
+              select: { firstName: true, middleName: true, lastName: true, email: true },
             },
           },
         },
@@ -52,7 +52,7 @@ const getPromotionHistory = asyncHandler(async (req, res) => {
         fromAcademicYear: { select: { id: true, name: true } },
         toAcademicYear: { select: { id: true, name: true } },
         processedByUser: {
-          select: { firstName: true, lastName: true },
+          select: { firstName: true, middleName: true, lastName: true },
         },
       },
       orderBy: { processedAt: 'desc' },
@@ -108,7 +108,7 @@ const getEligibleStudents = asyncHandler(async (req, res) => {
       student: {
         include: {
           user: {
-            select: { firstName: true, lastName: true, email: true, status: true },
+            select: { firstName: true, middleName: true, lastName: true, email: true, status: true },
           },
           promotions: {
             where: { fromAcademicYearId: parseInt(academicYearId) },
@@ -130,6 +130,7 @@ const getEligibleStudents = asyncHandler(async (req, res) => {
       studentClassId: enrollment.id,
       admissionNumber: enrollment.student.admissionNumber,
       firstName: enrollment.student.user.firstName,
+      middleName: enrollment.student.user.middleName ?? null,
       lastName: enrollment.student.user.lastName,
       email: enrollment.student.user.email,
       userStatus: enrollment.student.user.status,
@@ -266,7 +267,7 @@ const processPromotion = asyncHandler(async (req, res) => {
       },
       include: {
         student: {
-          include: { user: { select: { firstName: true, lastName: true } } },
+          include: { user: { select: { firstName: true, middleName: true, lastName: true } } },
         },
         fromClass: { select: { name: true } },
         toClass: { select: { name: true } },

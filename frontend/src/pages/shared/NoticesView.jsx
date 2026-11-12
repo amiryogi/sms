@@ -3,7 +3,7 @@ import { Bell, Search, ChevronDown, ChevronLeft, ChevronRight, Megaphone } from 
 import { noticeService } from "../../api/noticeService";
 import { PageHeader, Card, Badge, Button, TextInput, SelectInput, EmptyState, Skeleton, toast } from "../../components/ui";
 import { cn } from "../../lib/cn";
-import { formatDate, formatDateTime, formatRelative } from "../../utils/format";
+import { formatDate, formatDateTime, formatRelative, fullName } from "../../utils/format";
 
 /**
  * Read-only notices for every non-admin role. The backend returns only the
@@ -115,7 +115,7 @@ const NoticesView = () => {
                     <p className="mt-1 text-sm text-slate-500">
                       <span className="inline-block first-letter:uppercase" title={formatDateTime(when)}>{formatRelative(when)}</span>
                       {" · "}
-                      {notice.createdBy?.firstName} {notice.createdBy?.lastName}
+                      {fullName(notice.createdBy)}
                     </p>
                     {!open && <p className="mt-2 line-clamp-2 text-sm text-slate-600">{notice.content}</p>}
                   </div>

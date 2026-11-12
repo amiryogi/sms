@@ -1,5 +1,6 @@
 const express = require('express');
 const { body } = require('express-validator');
+const { middleNameRule } = require('../validators/common.validators');
 const router = express.Router();
 
 const authController = require('../controllers/auth.controller');
@@ -38,6 +39,7 @@ const registerValidation = [
     .withMessage('First name is required')
     .isLength({ max: 100 })
     .withMessage('First name must be less than 100 characters'),
+  middleNameRule,
   body('lastName')
     .trim()
     .notEmpty()

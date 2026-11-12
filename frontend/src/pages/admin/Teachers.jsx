@@ -8,6 +8,7 @@ import AvatarUpload from "../../components/common/AvatarUpload";
 import { PageHeader, Badge, Avatar, IconButton, Alert, DialogActions, toast } from "../../components/ui";
 import { cn } from "../../lib/cn";
 import { teacherService } from "../../api/teacherService";
+import { fullName } from "../../utils/format";
 
 // Staff roles that can be created and edited from this page
 const STAFF_ROLES = [
@@ -32,7 +33,7 @@ const parseServerError = (error, fallback) => {
   return { message: body.message || error?.message || fallback, fieldErrors, otherErrors: otherErrors.filter(Boolean) };
 };
 
-const FORM_FIELDS = ["firstName", "lastName", "email", "phone", "password"];
+const FORM_FIELDS = ["firstName", "middleName", "lastName", "email", "phone", "password"];
 
 const Teachers = () => {
   const [teachers, setTeachers] = useState([]);
@@ -79,7 +80,7 @@ const Teachers = () => {
     setServerError(null);
     clearErrors();
     if (teacher) {
-      reset({ firstName: teacher.firstName, lastName: teacher.lastName, email: teacher.email, phone: teacher.phone });
+      reset({ firstName: teacher.firstName, middleName: teacher.middleName || "", lastName: teacher.lastName, email: teacher.email, phone: teacher.phone });
       setAvatarUrl(teacher.avatarUrl || "");
       setSelectedRole(currentStaffRole(teacher));
     } else {
@@ -126,7 +127,7 @@ const Teachers = () => {
     }
   };
 
-  const name = (row) => `${row.firstName || ""} ${row.lastName || ""}`.trim();
+  const name = (row) => fullName(row);
   const roleChanged = editingTeacher && selectedRole !== currentStaffRole(editingTeacher);
   const unshownErrors = serverError
     ? [
@@ -238,6 +239,7 @@ const Teachers = () => {
           <div>
             <FormRow>
               <Input label="First name" name="firstName" register={register} error={errors.firstName?.message} required />
+              <Input label="Middle name" name="middleName" register={register} error={errors.middleName?.message} />
               <Input label="Last name" name="lastName" register={register} error={errors.lastName?.message} required />
             </FormRow>
             <FormRow>

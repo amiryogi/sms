@@ -2,8 +2,8 @@ import React from "react";
 import { Users } from "lucide-react";
 import { Avatar, Card, EmptyState, Skeleton } from "../ui";
 import { cn } from "../../lib/cn";
+import { fullName } from "../../utils/format";
 
-const fullName = (c) => `${c.user?.firstName || ""} ${c.user?.lastName || ""}`.trim();
 const classOf = (c) => (c.currentEnrollment ? `${c.currentEnrollment.class.name} ${c.currentEnrollment.section.name}` : "Not enrolled this year");
 
 /**

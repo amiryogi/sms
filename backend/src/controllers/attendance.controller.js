@@ -86,6 +86,7 @@ const getAttendance = asyncHandler(async (req, res) => {
           user: {
             select: {
               firstName: true,
+              middleName: true,
               lastName: true,
               email: true,
             },
@@ -104,6 +105,7 @@ const getAttendance = asyncHandler(async (req, res) => {
     studentId: e.studentId,
     rollNumber: e.rollNumber,
     firstName: e.student.user.firstName,
+    middleName: e.student.user.middleName ?? null,
     lastName: e.student.user.lastName,
     status: e.attendances[0]?.status || null,
     remarks: e.attendances[0]?.remarks || "",

@@ -17,12 +17,12 @@ const { kathmanduToday, dateOnly } = require("../utils/fiscalYear");
 const { convertADToBS } = require("../utils/dateConverter");
 const obligations = require("./finance/obligation.service");
 
-const name = (u) => `${u?.firstName || ""} ${u?.lastName || ""}`.trim();
+const { fullName: name } = require("../utils/names");
 
 const overview = async ({ schoolId, studentId }) => {
   const student = await prisma.student.findFirst({
     where: { id: Number(studentId), schoolId },
-    include: { user: { select: { firstName: true, lastName: true, email: true, phone: true, avatarUrl: true } } },
+    include: { user: { select: { firstName: true, middleName: true, lastName: true, email: true, phone: true, avatarUrl: true } } },
   });
   if (!student) throw ApiError.notFound("Student not found");
 
@@ -40,6 +40,7 @@ const overview = async ({ schoolId, studentId }) => {
     id: student.id,
     name: name(student.user),
     firstName: student.user.firstName,
+    middleName: student.user.middleName ?? null,
     email: student.user.email,
     phone: student.user.phone,
     avatarUrl: student.user.avatarUrl,
@@ -63,7 +64,7 @@ const overview = async ({ schoolId, studentId }) => {
       where: { classId: enrolment.classId, academicYearId: yearId },
       include: {
         subject: { select: { id: true, name: true, code: true, isOptional: true } },
-        teacherSubjects: { where: { sectionId: enrolment.sectionId, academicYearId: yearId }, include: { user: { select: { firstName: true, lastName: true } } } },
+        teacherSubjects: { where: { sectionId: enrolment.sectionId, academicYearId: yearId }, include: { user: { select: { firstName: true, middleName: true, lastName: true } } } },
       },
       orderBy: { subject: { name: "asc" } },
     }),

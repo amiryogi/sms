@@ -8,7 +8,7 @@ import { PageHeader, Card, CardHeader, Badge, Tabs, IconButton, EmptyState, Load
 import { cn } from '../../lib/cn';
 import { promotionService } from '../../api/promotionService';
 import { academicService } from '../../api/academicService';
-import { formatDate } from '../../utils/format';
+import { formatDate, fullName } from '../../utils/format';
 
 const DECISIONS = [
   { value: 'promoted', label: 'Promote', icon: ArrowUpRight, active: 'bg-emerald-600 text-white', tone: 'success' },
@@ -202,7 +202,7 @@ const Promotions = () => {
   const handleUndoPromotion = async (row) => {
     const ok = await confirmDialog({
       title: 'Undo this promotion?',
-      message: `${row.student?.user?.firstName} ${row.student?.user?.lastName} goes back to ${row.fromClass?.name} (${row.fromAcademicYear?.name}).`,
+      message: `${fullName(row.student?.user)} goes back to ${row.fromClass?.name} (${row.fromAcademicYear?.name}).`,
       confirmLabel: 'Undo',
       tone: 'danger',
     });
@@ -227,7 +227,7 @@ const Promotions = () => {
       header: 'Student',
       render: (row) => (
         <div>
-          <p className="font-medium text-slate-900">{row.student?.user?.firstName} {row.student?.user?.lastName}</p>
+          <p className="font-medium text-slate-900">{fullName(row.student?.user)}</p>
           <p className="font-mono text-xs text-slate-500">{row.student?.admissionNumber}</p>
         </div>
       ),
@@ -247,7 +247,7 @@ const Promotions = () => {
       header: 'By',
       render: (row) => (
         <div className="text-sm">
-          <p>{row.processedByUser?.firstName} {row.processedByUser?.lastName}</p>
+          <p>{fullName(row.processedByUser)}</p>
           <p className="text-xs text-slate-500">{formatDate(row.processedAt)}</p>
         </div>
       ),
@@ -408,7 +408,7 @@ const Promotions = () => {
                             <tr key={s.studentId} className={cn(s.alreadyPromoted && 'bg-slate-50/60 text-slate-400')}>
                               <td className="col-roll px-4 py-3 tabular-nums">{s.rollNumber || '—'}</td>
                               <td className="col-name px-4 py-3">
-                                <p className={cn('font-medium', s.alreadyPromoted ? 'text-slate-500' : 'text-slate-900')}>{s.firstName} {s.lastName}</p>
+                                <p className={cn('font-medium', s.alreadyPromoted ? 'text-slate-500' : 'text-slate-900')}>{fullName(s)}</p>
                                 <p className="font-mono text-xs text-slate-500">{s.admissionNumber}</p>
                               </td>
                               <td className="px-4 py-3">{s.section?.name}</td>

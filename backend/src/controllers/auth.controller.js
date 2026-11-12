@@ -5,6 +5,7 @@ const { randomUUID } = require("node:crypto");
 const config = require("../config");
 const prisma = require("../config/database");
 const { ApiError, ApiResponse, asyncHandler } = require("../utils");
+const { fullName, normalizeMiddleName } = require("../utils/names");
 
 // A revoked refresh token presented again within this window of its rotation
 // is treated as a benign concurrent refresh (no session-wide revocation).
@@ -20,7 +21,7 @@ const formatParentForAuth = (parent) => {
     const enrollment = sp.student.studentClasses?.[0];
     return {
       studentId: sp.studentId,
-      studentName: `${sp.student.user.firstName} ${sp.student.user.lastName}`,
+      studentName: fullName(sp.student.user),
       email: sp.student.user.email,
       phone: sp.student.user.phone,
       class: enrollment?.class?.name,
@@ -131,6 +132,7 @@ const login = asyncHandler(async (req, res) => {
                   user: {
                     select: {
                       firstName: true,
+                      middleName: true,
                       lastName: true,
                       email: true,
                       phone: true,
@@ -233,6 +235,7 @@ const login = asyncHandler(async (req, res) => {
         id: user.id,
         email: user.email,
         firstName: user.firstName,
+        middleName: user.middleName ?? null,
         lastName: user.lastName,
         phone: user.phone,
         avatarUrl: user.avatarUrl,
@@ -282,7 +285,7 @@ const login = asyncHandler(async (req, res) => {
  * row and have their own creation flows.
  */
 const register = asyncHandler(async (req, res) => {
-  const { email, password, firstName, lastName, phone, role } = req.body;
+  const { email, password, firstName, middleName, lastName, phone, role } = req.body;
   const schoolId = req.user.schoolId;
 
   // Check if email already exists for this school
@@ -315,6 +318,7 @@ const register = asyncHandler(async (req, res) => {
       email,
       passwordHash,
       firstName,
+      middleName: normalizeMiddleName(middleName),
       lastName,
       phone,
       status: "active",
@@ -331,6 +335,7 @@ const register = asyncHandler(async (req, res) => {
         id: user.id,
         email: user.email,
         firstName: user.firstName,
+        middleName: user.middleName ?? null,
         lastName: user.lastName,
         phone: user.phone,
         status: user.status,
@@ -519,6 +524,7 @@ const getMe = asyncHandler(async (req, res) => {
                   user: {
                     select: {
                       firstName: true,
+                      middleName: true,
                       lastName: true,
                       email: true,
                       phone: true,
@@ -562,6 +568,7 @@ const getMe = asyncHandler(async (req, res) => {
     id: user.id,
     email: user.email,
     firstName: user.firstName,
+    middleName: user.middleName ?? null,
     lastName: user.lastName,
     phone: user.phone,
     avatarUrl: user.avatarUrl,

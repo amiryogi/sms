@@ -8,7 +8,7 @@ import { PageHeader, Badge, IconButton, Tabs, SelectInput, DialogActions, toast,
 import { cn } from "../../lib/cn";
 import { noticeService } from "../../api/noticeService";
 import { academicService } from "../../api/academicService";
-import { formatDate, formatDateTime, toDateInput } from "../../utils/format";
+import { formatDate, formatDateTime, toDateInput, fullName } from "../../utils/format";
 
 const TARGET_TYPES = [
   { value: "GLOBAL", label: "Everyone", icon: Globe, hint: "All staff, students and parents" },
@@ -343,7 +343,7 @@ const Notices = () => {
             {row.title}
           </button>
           <p className="truncate text-xs text-slate-500">
-            {row.createdBy?.firstName} {row.createdBy?.lastName} · {formatDate(row.createdAt)}
+            {fullName(row.createdBy)} · {formatDate(row.createdAt)}
           </p>
         </div>
       ),
@@ -543,7 +543,7 @@ const Notices = () => {
             </div>
             <h2 className="text-xl font-semibold text-slate-900">{v.title}</h2>
             <p className="mt-1 text-sm text-slate-500">
-              {v.createdBy?.firstName} {v.createdBy?.lastName} · {formatDateTime(v.createdAt)}
+              {fullName(v.createdBy)} · {formatDateTime(v.createdAt)}
             </p>
             <div className="mt-5 rounded-xl bg-slate-50 p-4 text-sm leading-relaxed whitespace-pre-line text-slate-800">{v.content}</div>
             <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">

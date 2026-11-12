@@ -18,10 +18,10 @@ const { lockInstallments, refreshBalances, withTransaction } = require("./balanc
 const { convertADToBS } = require("../../utils/dateConverter");
 
 const RECEIPT_INCLUDE = {
-  student: { select: { id: true, admissionNumber: true, user: { select: { firstName: true, lastName: true } } } },
+  student: { select: { id: true, admissionNumber: true, user: { select: { firstName: true, middleName: true, lastName: true } } } },
   studentClass: { select: { rollNumber: true, class: { select: { name: true } }, section: { select: { name: true } } } },
   academicYear: { select: { id: true, name: true } },
-  recordedBy: { select: { id: true, firstName: true, lastName: true } },
+  recordedBy: { select: { id: true, firstName: true, middleName: true, lastName: true } },
   reverses: { select: { id: true, receiptNumber: true, paidOn: true, amount: true } },
   reversedBy: { select: { id: true, receiptNumber: true, paidOn: true, reversalReason: true, reversalCategory: true } },
   allocations: {

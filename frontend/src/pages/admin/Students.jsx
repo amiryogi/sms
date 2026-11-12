@@ -8,7 +8,7 @@ import { PageHeader, Badge, Avatar, IconButton, DialogActions, toast } from "../
 import { studentService } from "../../api/studentService";
 import { academicService } from "../../api/academicService";
 import AvatarUpload from "../../components/common/AvatarUpload";
-import { toDateInput } from "../../utils/format";
+import { toDateInput, fullName } from "../../utils/format";
 
 const GENDERS = [
   { value: "male", label: "Male" },
@@ -104,6 +104,7 @@ const Students = ({ readOnly = false }) => {
         const { data: s } = await studentService.getStudentById(student.id);
         reset({
           firstName: s.firstName || s.user?.firstName,
+          middleName: s.middleName || s.user?.middleName || "",
           lastName: s.lastName || s.user?.lastName,
           email: s.email || s.user?.email,
           phone: s.phone || s.user?.phone || "",
@@ -118,6 +119,7 @@ const Students = ({ readOnly = false }) => {
       } catch {
         reset({
           firstName: student.firstName,
+          middleName: student.middleName || "",
           lastName: student.lastName,
           email: student.email,
           phone: student.phone || "",
@@ -133,6 +135,7 @@ const Students = ({ readOnly = false }) => {
     } else {
       reset({
         firstName: "",
+        middleName: "",
         lastName: "",
         email: "",
         password: "",
@@ -218,7 +221,7 @@ const Students = ({ readOnly = false }) => {
     }
   };
 
-  const name = (row) => `${row.firstName || ""} ${row.lastName || ""}`.trim();
+  const name = (row) => fullName(row);
 
   const columns = [
     {
@@ -323,6 +326,7 @@ const Students = ({ readOnly = false }) => {
             <FormSection title="Personal details">
               <FormRow>
                 <Input label="First name" name="firstName" register={register} error={errors.firstName?.message} required />
+                <Input label="Middle name" name="middleName" register={register} error={errors.middleName?.message} />
                 <Input label="Last name" name="lastName" register={register} error={errors.lastName?.message} required />
               </FormRow>
               <FormRow>

@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const prisma = require('../config/database');
 const { dialect } = require('../database');
 const { ApiError, ApiResponse, asyncHandler, parsePagination, parseSort, buildSearchQuery } = require('../utils');
+const { normalizeMiddleName } = require('../utils/names');
 
 const isAdminUser = (user) => user.roles.includes('ADMIN') || user.roles.includes('SUPER_ADMIN');
 
@@ -24,7 +25,7 @@ const assertEnrollmentTargetsInSchool = async (schoolId, { classId, sectionId, a
 // change via PUT /students/:id. Everything else — name, date of birth, gender,
 // blood group (printed on report cards) and status — is admin-only.
 const SELF_SERVICE_FIELDS = ['phone', 'address', 'avatarUrl', 'emergencyContact'];
-const ADMIN_ONLY_FIELDS = ['firstName', 'lastName', 'dateOfBirth', 'gender', 'bloodGroup', 'status'];
+const ADMIN_ONLY_FIELDS = ['firstName', 'middleName', 'lastName', 'dateOfBirth', 'gender', 'bloodGroup', 'status'];
 
 /**
  * @desc    Get all students
@@ -108,7 +109,7 @@ const getStudents = asyncHandler(async (req, res) => {
   };
 
   if (search) {
-    const searchQuery = buildSearchQuery(search, ['firstName', 'lastName', 'email'], dialect.text.search);
+    const searchQuery = buildSearchQuery(search, ['firstName', 'middleName', 'lastName', 'email'], dialect.text.search);
     if (searchQuery) userWhere.OR = searchQuery.OR;
   }
 
@@ -143,6 +144,7 @@ const getStudents = asyncHandler(async (req, res) => {
       userId: user.id,
       email: user.email,
       firstName: user.firstName,
+      middleName: user.middleName ?? null,
       lastName: user.lastName,
       phone: user.phone,
       admissionNumber: user.student.admissionNumber,
@@ -161,6 +163,7 @@ const getStudents = asyncHandler(async (req, res) => {
       user: {
         id: user.id,
         firstName: user.firstName,
+        middleName: user.middleName ?? null,
         lastName: user.lastName,
         email: user.email,
         phone: user.phone,
@@ -191,6 +194,7 @@ const getStudent = asyncHandler(async (req, res) => {
           id: true,
           email: true,
           firstName: true,
+          middleName: true,
           lastName: true,
           phone: true,
           avatarUrl: true,
@@ -212,6 +216,7 @@ const getStudent = asyncHandler(async (req, res) => {
               user: {
                 select: {
                   firstName: true,
+                  middleName: true,
                   lastName: true,
                   phone: true,
                   email: true,
@@ -233,6 +238,7 @@ const getStudent = asyncHandler(async (req, res) => {
   const formattedStudent = {
     ...student,
     firstName: student.user.firstName,
+    middleName: student.user.middleName ?? null,
     lastName: student.user.lastName,
     email: student.user.email,
     phone: student.user.phone || student.phone, // hierarchy: user phone > student phone
@@ -254,7 +260,7 @@ const getStudent = asyncHandler(async (req, res) => {
  */
 const createStudent = asyncHandler(async (req, res) => {
   const {
-    email, password, firstName, lastName, phone,
+    email, password, firstName, middleName, lastName, phone,
     admissionNumber, dateOfBirth, gender, bloodGroup, address, emergencyContact, admissionDate,
     classId, sectionId, academicYearId, rollNumber
   } = req.body;
@@ -294,6 +300,7 @@ const createStudent = asyncHandler(async (req, res) => {
         email,
         passwordHash,
         firstName,
+        middleName: normalizeMiddleName(middleName),
         lastName,
         phone,
         status: 'active',
@@ -339,6 +346,7 @@ const createStudent = asyncHandler(async (req, res) => {
       user: {
         id: user.id,
         firstName: user.firstName,
+        middleName: user.middleName ?? null,
         lastName: user.lastName,
         email: user.email,
         avatarUrl: user.avatarUrl
@@ -360,7 +368,7 @@ const createStudent = asyncHandler(async (req, res) => {
 const updateStudent = asyncHandler(async (req, res) => {
   const studentId = parseInt(req.params.id);
   const {
-    firstName, lastName, phone, avatarUrl,
+    firstName, middleName, lastName, phone, avatarUrl,
     dateOfBirth, gender, bloodGroup, address, emergencyContact, status
   } = req.body;
 
@@ -397,6 +405,7 @@ const updateStudent = asyncHandler(async (req, res) => {
       where: { id: student.userId },
       data: {
         ...(firstName && isAdmin && { firstName }),
+        ...(middleName !== undefined && isAdmin && { middleName: normalizeMiddleName(middleName) }),
         ...(lastName && isAdmin && { lastName }),
         ...(phone !== undefined && { phone }),
         ...(avatarUrl !== undefined && { avatarUrl }),

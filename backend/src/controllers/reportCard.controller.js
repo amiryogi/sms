@@ -7,6 +7,7 @@ const {
   dateConverter,
 } = require("../utils");
 const { toGradeReference } = require("../utils/gradeScale");
+const { fullName } = require("../utils/names");
 const {
   SCHOOL_REPORT_SELECT,
   normalizeLayout,
@@ -161,7 +162,7 @@ const getReportCards = asyncHandler(async (req, res) => {
     include: {
       student: {
         include: {
-          user: { select: { id: true, firstName: true, lastName: true } },
+          user: { select: { id: true, firstName: true, middleName: true, lastName: true } },
           reportCards: {
             where: { examId: parseInt(examId) },
           },
@@ -230,6 +231,7 @@ const getReportCards = asyncHandler(async (req, res) => {
       enrollmentId: enrollment.id,
       rollNumber: enrollment.rollNumber,
       firstName: enrollment.student.user.firstName,
+      middleName: enrollment.student.user.middleName ?? null,
       lastName: enrollment.student.user.lastName,
       className: enrollment.class.name,
       sectionName: enrollment.section.name,
@@ -531,7 +533,7 @@ const getReportCard = asyncHandler(async (req, res) => {
           dateOfBirth: true,
           gender: true,
           user: {
-            select: { firstName: true, lastName: true, email: true },
+            select: { firstName: true, middleName: true, lastName: true, email: true },
           },
         },
       },
@@ -630,8 +632,9 @@ const getReportCard = asyncHandler(async (req, res) => {
     // Student Information
     student: {
       id: reportCard.student.id,
-      name: `${reportCard.student.user.firstName} ${reportCard.student.user.lastName}`,
+      name: fullName(reportCard.student.user),
       firstName: reportCard.student.user.firstName,
+      middleName: reportCard.student.user.middleName ?? null,
       lastName: reportCard.student.user.lastName,
       rollNumber: reportCard.studentClass.rollNumber,
       class: reportCard.studentClass.class.name,
@@ -860,7 +863,7 @@ const getBulkReportCards = asyncHandler(async (req, res) => {
           dateOfBirth: true,
           gender: true,
           user: {
-            select: { firstName: true, lastName: true, email: true },
+            select: { firstName: true, middleName: true, lastName: true, email: true },
           },
         },
       },
@@ -945,8 +948,9 @@ const getBulkReportCards = asyncHandler(async (req, res) => {
         },
         student: {
           id: reportCard.student.id,
-          name: `${reportCard.student.user.firstName} ${reportCard.student.user.lastName}`,
+          name: fullName(reportCard.student.user),
           firstName: reportCard.student.user.firstName,
+          middleName: reportCard.student.user.middleName ?? null,
           lastName: reportCard.student.user.lastName,
           rollNumber: reportCard.studentClass.rollNumber,
           class: reportCard.studentClass.class.name,

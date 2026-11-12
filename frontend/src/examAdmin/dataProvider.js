@@ -1,4 +1,5 @@
 import apiClient from "../api/apiClient";
+import { fullName } from "../utils/format";
 
 /**
  * React-admin Data Provider for the examination pilot.
@@ -76,7 +77,7 @@ const results = {
     let rows = (data?.students || []).map((s) => ({
       ...s,
       id: s.studentId,
-      name: `${s.firstName} ${s.lastName}`,
+      name: fullName(s),
       subjectsWithMarks: s.results?.length ?? 0,
       classRank: s.reportCard?.classRank ?? null,
       cardStatus: !s.reportCard ? "none" : s.reportCard.isPublished ? "published" : "generated",

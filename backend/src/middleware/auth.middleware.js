@@ -102,6 +102,7 @@ const resolveUser = async (req) => {
     id: user.id,
     email: user.email,
     firstName: user.firstName,
+    middleName: user.middleName ?? null,
     lastName: user.lastName,
     schoolId: user.schoolId,
     school: user.school,

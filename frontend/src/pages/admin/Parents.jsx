@@ -31,6 +31,7 @@ import {
 } from "../../components/ui";
 import { parentService } from "../../api/parentService";
 import { studentService } from "../../api/studentService";
+import { fullName } from "../../utils/format";
 
 const relationshipOptions = [
   { value: "father", label: "Father" },
@@ -110,7 +111,7 @@ const Parents = () => {
         Array.isArray(list)
           ? list.map((s) => ({
               value: s.id,
-              label: `${`${s.firstName || ""} ${s.lastName || ""}`.trim() || s.email || `Student ${s.id}`}${s.class ? ` · ${s.class} ${s.section || ""}` : ""}`,
+              label: `${fullName(s) || s.email || `Student ${s.id}`}${s.class ? ` · ${s.class} ${s.section || ""}` : ""}`,
             }))
           : [],
       );
@@ -166,6 +167,7 @@ const Parents = () => {
     try {
       await parentService.createParent({
         firstName: values.firstName,
+        middleName: values.middleName || undefined,
         lastName: values.lastName,
         email: values.email,
         phone: values.phone,
@@ -209,7 +211,7 @@ const Parents = () => {
   const handleUnlink = async (parent, link) => {
     const ok = await confirmDialog({
       title: `Unlink ${link.studentName}?`,
-      message: `${parent.firstName} ${parent.lastName} will no longer see this student's results, attendance or fees.`,
+      message: `${fullName(parent)} will no longer see this student's results, attendance or fees.`,
       confirmLabel: "Unlink",
       tone: "danger",
     });
@@ -227,7 +229,7 @@ const Parents = () => {
     const deactivating = parent.status === "active";
     if (deactivating) {
       const ok = await confirmDialog({
-        title: `Deactivate ${parent.firstName} ${parent.lastName}?`,
+        title: `Deactivate ${fullName(parent)}?`,
         message: "They will not be able to sign in until the account is activated again.",
         confirmLabel: "Deactivate",
         tone: "danger",
@@ -259,7 +261,7 @@ const Parents = () => {
     }
   };
 
-  const name = (p) => `${p.firstName || ""} ${p.lastName || ""}`.trim();
+  const name = (p) => fullName(p);
 
   const columns = [
     {
@@ -371,6 +373,7 @@ const Parents = () => {
         <form onSubmit={handleCreateParent}>
           <FormRow>
             <Input label="First name" name="firstName" register={createForm.register} required />
+            <Input label="Middle name" name="middleName" register={createForm.register} />
             <Input label="Last name" name="lastName" register={createForm.register} required />
           </FormRow>
           <FormRow>

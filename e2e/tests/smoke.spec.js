@@ -79,6 +79,37 @@ for (const [role, { home, allowed, forbidden }] of Object.entries(HOMES)) {
   });
 }
 
+test.describe("middle name", () => {
+  test.use({ storageState: stateFor("admin") });
+  const RUN = Date.now().toString(36);
+  const email = `e2e.middle.${RUN}@svi.edu.np`;
+
+  test.afterAll(async () => {
+    const { call } = require("../helpers/api");
+    const { tokens } = data();
+    const found = await call("GET", `/users?search=${encodeURIComponent(email)}`, tokens.admin);
+    for (const u of found.body?.data?.users || found.body?.data || []) {
+      if (u.email === email) await call("DELETE", `/users/${u.id}`, tokens.admin);
+    }
+  });
+
+  test("a staff member added with a middle name is listed and found by it", async ({ page }) => {
+    await page.goto("/admin/teachers");
+    await page.getByRole("button", { name: "Add staff member" }).first().click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("First name").fill("Ram");
+    await dialog.getByLabel("Middle name").fill("Bahadur");
+    await dialog.getByLabel("Last name").fill(`Thapa${RUN}`);
+    await dialog.getByLabel("Email").fill(email);
+    await dialog.getByLabel("Password").fill("Password123");
+    await dialog.getByRole("button", { name: "Add staff member" }).click();
+    await expect(dialog).toBeHidden();
+
+    await page.getByPlaceholder("Search name or email…").fill("bahadur");
+    await expect(page.locator("main")).toContainText(`Ram Bahadur Thapa${RUN}`);
+  });
+});
+
 test.describe("fees", () => {
   test.use({ storageState: stateFor("accountant") });
 

@@ -384,7 +384,7 @@ const getResultsByExamSubject = asyncHandler(async (req, res) => {
       student: {
         include: {
           user: {
-            select: { firstName: true, lastName: true },
+            select: { firstName: true, middleName: true, lastName: true },
           },
           // Include studentClasses to get rollNumber
           studentClasses: {
@@ -674,7 +674,7 @@ const getStudentsForMarksEntry = asyncHandler(async (req, res) => {
       student: {
         include: {
           user: {
-            select: { id: true, firstName: true, lastName: true },
+            select: { id: true, firstName: true, middleName: true, lastName: true },
           },
           examResults: {
             where: { examSubjectId: parseInt(examSubjectId) },
@@ -691,6 +691,7 @@ const getStudentsForMarksEntry = asyncHandler(async (req, res) => {
     studentClassId: sc.id,
     rollNumber: sc.rollNumber,
     firstName: sc.student.user.firstName,
+    middleName: sc.student.user.middleName ?? null,
     lastName: sc.student.user.lastName,
     existingResult: sc.student.examResults[0] || null,
   }));

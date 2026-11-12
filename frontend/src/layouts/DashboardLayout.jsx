@@ -21,6 +21,7 @@ import { academicService } from "../api/academicService";
 import { resolveAssetUrl } from "../utils/assets";
 import { cn } from "../lib/cn";
 import { getNavSections, titleForPath, formatRoleName } from "./navigation";
+import { fullName } from "../utils/format";
 
 const COLLAPSE_KEY = "sms.sidebarCollapsed";
 
@@ -118,7 +119,7 @@ const DashboardLayout = () => {
   const sections = useMemo(() => getNavSections(hasRole), [hasRole]);
   const { title, section } = titleForPath(location.pathname);
   const school = user?.school;
-  const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ");
+  const userName = fullName(user);
   const roleLabel = (user?.roles || []).map(formatRoleName).join(", ");
 
   useEffect(() => {
@@ -289,9 +290,9 @@ const DashboardLayout = () => {
                 {...aria}
                 className="flex cursor-pointer items-center gap-2 rounded-full py-1 pr-2 pl-1 transition-colors hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-brand-600"
               >
-                <Avatar src={user?.avatarUrl} name={fullName} size="sm" />
+                <Avatar src={user?.avatarUrl} name={userName} size="sm" />
                 <span className="hidden text-left sm:block">
-                  <span className="block max-w-40 truncate text-sm leading-tight font-medium text-slate-800">{fullName}</span>
+                  <span className="block max-w-40 truncate text-sm leading-tight font-medium text-slate-800">{userName}</span>
                   <span className="block max-w-40 truncate text-xs leading-tight text-slate-500">{roleLabel}</span>
                 </span>
                 <ChevronDown size={14} className="hidden text-slate-400 sm:block" aria-hidden="true" />
@@ -299,7 +300,7 @@ const DashboardLayout = () => {
             )}
           >
             <div className="px-2.5 py-2">
-              <p className="truncate text-sm font-semibold text-slate-900">{fullName}</p>
+              <p className="truncate text-sm font-semibold text-slate-900">{userName}</p>
               <p className="truncate text-xs text-slate-500">{user?.email}</p>
               <p className="mt-1 truncate text-xs font-medium text-brand-700">{roleLabel}</p>
             </div>

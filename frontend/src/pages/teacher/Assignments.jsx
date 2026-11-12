@@ -9,7 +9,7 @@ import { PageHeader, Badge, IconButton, Avatar, EmptyState, LoadingBlock, Dialog
 import { assignmentService } from "../../api/assignmentService";
 import { teacherService } from "../../api/teacherService";
 import { resolveAssetUrl } from "../../utils/assets";
-import { formatDate, formatDateTime, toDateInput } from "../../utils/format";
+import { formatDate, formatDateTime, toDateInput, fullName } from "../../utils/format";
 
 const SUBMISSION_TONE = { submitted: "info", late: "warning", graded: "success", returned: "neutral" };
 
@@ -346,7 +346,7 @@ const Assignments = () => {
           <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">
             {submissions.map((sub) => {
               const u = sub.student?.user || {};
-              const name = `${u.firstName || ""} ${u.lastName || ""}`.trim();
+              const name = fullName(u);
               const isGrading = grading?.id === sub.id;
               const graded = sub.marksObtained !== null && sub.marksObtained !== undefined;
               return (

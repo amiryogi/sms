@@ -164,6 +164,7 @@ const formatNotice = (notice) => {
       ? {
           id: notice.createdBy.id,
           firstName: notice.createdBy.firstName,
+          middleName: notice.createdBy.middleName ?? null,
           lastName: notice.createdBy.lastName,
         }
       : null,
@@ -366,7 +367,7 @@ const createNotice = async (user, data) => {
     return tx.notice.findUnique({
       where: { id: newNotice.id },
       include: {
-        createdBy: { select: { id: true, firstName: true, lastName: true } },
+        createdBy: { select: { id: true, firstName: true, middleName: true, lastName: true } },
         roleTargets: { include: { role: { select: { name: true } } } },
         classTargets: {
           include: {
@@ -425,7 +426,7 @@ const publishNotice = async (user, noticeId) => {
       publishedAt: new Date(),
     },
     include: {
-      createdBy: { select: { id: true, firstName: true, lastName: true } },
+      createdBy: { select: { id: true, firstName: true, middleName: true, lastName: true } },
       roleTargets: { include: { role: { select: { name: true } } } },
       classTargets: {
         include: {
@@ -482,7 +483,7 @@ const archiveNotice = async (user, noticeId) => {
       archivedAt: new Date(),
     },
     include: {
-      createdBy: { select: { id: true, firstName: true, lastName: true } },
+      createdBy: { select: { id: true, firstName: true, middleName: true, lastName: true } },
       roleTargets: { include: { role: { select: { name: true } } } },
       classTargets: {
         include: {
@@ -630,7 +631,7 @@ const updateNotice = async (user, noticeId, data) => {
     return tx.notice.findUnique({
       where: { id: notice.id },
       include: {
-        createdBy: { select: { id: true, firstName: true, lastName: true } },
+        createdBy: { select: { id: true, firstName: true, middleName: true, lastName: true } },
         roleTargets: { include: { role: { select: { name: true } } } },
         classTargets: {
           include: {
@@ -706,7 +707,7 @@ const getNoticeById = async (user, noticeId) => {
   const notice = await prisma.notice.findFirst({
     where: { id: parseInt(noticeId, 10), schoolId },
     include: {
-      createdBy: { select: { id: true, firstName: true, lastName: true } },
+      createdBy: { select: { id: true, firstName: true, middleName: true, lastName: true } },
       roleTargets: { include: { role: { select: { name: true } } } },
       classTargets: {
         include: {
@@ -954,7 +955,7 @@ const listNotices = async (user, query = {}) => {
       prisma.notice.findMany({
         where: baseWhere,
         include: {
-          createdBy: { select: { id: true, firstName: true, lastName: true } },
+          createdBy: { select: { id: true, firstName: true, middleName: true, lastName: true } },
           roleTargets: { include: { role: { select: { name: true } } } },
           classTargets: {
             include: {
@@ -1034,7 +1035,7 @@ const listNotices = async (user, query = {}) => {
   const candidates = await prisma.notice.findMany({
     where: candidateWhere,
     include: {
-      createdBy: { select: { id: true, firstName: true, lastName: true } },
+      createdBy: { select: { id: true, firstName: true, middleName: true, lastName: true } },
       roleTargets: { include: { role: { select: { name: true } } } },
       classTargets: {
         include: {

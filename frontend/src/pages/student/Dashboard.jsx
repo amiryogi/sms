@@ -6,7 +6,7 @@ import { Card, CardHeader, EmptyState, Skeleton, Avatar } from "../../components
 import NoticesFeed from "../../components/common/NoticesFeed";
 import useStudentOverview from "../../components/portal/useStudentOverview";
 import { SummaryTiles, UpcomingExamsCard, AssignmentsDueCard, SubjectsCard } from "../../components/portal/OverviewCards";
-import { formatDate } from "../../utils/format";
+import { formatDate, fullName } from "../../utils/format";
 
 const greeting = () => {
   const h = new Date().getHours();
@@ -26,7 +26,7 @@ const StudentDashboard = () => {
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <div className="flex flex-wrap items-center gap-4">
-        <Avatar src={user?.avatarUrl} name={`${user?.firstName} ${user?.lastName}`} size="lg" />
+        <Avatar src={user?.avatarUrl} name={fullName(user)} size="lg" />
         <div className="min-w-0 flex-1">
           <p className="text-sm text-slate-500">{formatDate(new Date())}</p>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">

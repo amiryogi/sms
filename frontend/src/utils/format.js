@@ -53,8 +53,14 @@ export const formatNumber = (value) => {
   return Number.isFinite(n) ? n.toLocaleString("en-IN") : "—";
 };
 
-/** "Om Basnet" from { firstName, lastName } (or a user nested inside). */
+/**
+ * "Ram Bahadur Thapa" from { firstName, middleName, lastName } (or a user nested
+ * inside). The middle name is optional. Every name the UI shows goes through here.
+ */
 export const fullName = (person) => {
   const p = person?.user || person || {};
-  return [p.firstName, p.lastName].filter(Boolean).join(" ");
+  return [p.firstName, p.middleName, p.lastName]
+    .map((v) => (typeof v === "string" ? v.trim() : ""))
+    .filter(Boolean)
+    .join(" ");
 };

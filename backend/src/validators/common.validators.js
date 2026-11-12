@@ -51,6 +51,15 @@ const firstNameRule = body('firstName')
   .isLength({ max: 100 })
   .withMessage('First name must be less than 100 characters');
 
+// Optional middle name (Ram Bahadur Thapa). Empty clears it; the controller stores null.
+const middleNameRule = body('middleName')
+  .optional({ values: 'null' })
+  .isString()
+  .withMessage('Middle name must be text')
+  .trim()
+  .isLength({ max: 100 })
+  .withMessage('Middle name must be less than 100 characters');
+
 const lastNameRule = body('lastName')
   .trim()
   .notEmpty()
@@ -97,6 +106,7 @@ module.exports = {
   emailRule,
   passwordRule,
   firstNameRule,
+  middleNameRule,
   lastNameRule,
   phoneRule,
   dateRule,
