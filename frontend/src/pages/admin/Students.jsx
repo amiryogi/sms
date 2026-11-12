@@ -106,7 +106,8 @@ const Students = ({ readOnly = false }) => {
           firstName: s.firstName || s.user?.firstName,
           middleName: s.middleName || s.user?.middleName || "",
           lastName: s.lastName || s.user?.lastName,
-          email: s.email || s.user?.email,
+          username: s.username || s.user?.username || "",
+          email: s.email || s.user?.email || "",
           phone: s.phone || s.user?.phone || "",
           admissionNumber: s.admissionNumber,
           dateOfBirth: toDateInput(s.dateOfBirth),
@@ -121,7 +122,8 @@ const Students = ({ readOnly = false }) => {
           firstName: student.firstName,
           middleName: student.middleName || "",
           lastName: student.lastName,
-          email: student.email,
+          username: student.username || "",
+          email: student.email || "",
           phone: student.phone || "",
           admissionNumber: student.admissionNumber,
           dateOfBirth: toDateInput(student.dateOfBirth),
@@ -137,6 +139,7 @@ const Students = ({ readOnly = false }) => {
         firstName: "",
         middleName: "",
         lastName: "",
+        username: "",
         email: "",
         password: "",
         phone: "",
@@ -231,7 +234,10 @@ const Students = ({ readOnly = false }) => {
           <Avatar src={row.avatarUrl} name={name(row)} size="sm" />
           <div className="min-w-0">
             <p className="truncate font-medium text-slate-900">{name(row)}</p>
-            <p className="truncate text-xs text-slate-500">{row.email}</p>
+            <p className="truncate text-xs text-slate-500">
+              <span className="font-mono">{row.username || row.user?.username}</span>
+              {row.email ? ` · ${row.email}` : ""}
+            </p>
           </div>
         </div>
       ),
@@ -301,7 +307,7 @@ const Students = ({ readOnly = false }) => {
           setSearch(value);
           setPagination((prev) => ({ ...prev, page: 1 }));
         }}
-        searchPlaceholder="Search name, email or admission no…"
+        searchPlaceholder="Search name, username or admission no…"
         emptyMessage={search ? "No students match your search" : "No students yet"}
         emptyDescription={search || readOnly ? undefined : "Add a student to create their login and enrol them in a class."}
         emptyIcon={GraduationCap}
@@ -338,11 +344,21 @@ const Students = ({ readOnly = false }) => {
 
             <FormSection title="Contact & login">
               <FormRow>
-                <Input label="Email" name="email" type="email" register={register} required />
+                <Input
+                  label="Username"
+                  name="username"
+                  register={register}
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  hint={editingStudent ? "Used to sign in." : "Leave empty to use the admission number."}
+                />
+                <Input label="Email (optional)" name="email" type="email" register={register} />
+              </FormRow>
+              <FormRow>
                 <Input label="Phone" name="phone" register={register} />
               </FormRow>
               {!editingStudent && (
-                <Input label="Password" name="password" type="password" register={register} required hint="The student signs in with this email and password." />
+                <Input label="Password" name="password" type="password" register={register} required hint="The student signs in with their username and this password." />
               )}
               <FormRow>
                 <Input label="Emergency contact" name="emergencyContact" register={register} />

@@ -22,7 +22,7 @@ const { fullName: name } = require("../utils/names");
 const overview = async ({ schoolId, studentId }) => {
   const student = await prisma.student.findFirst({
     where: { id: Number(studentId), schoolId },
-    include: { user: { select: { firstName: true, middleName: true, lastName: true, email: true, phone: true, avatarUrl: true } } },
+    include: { user: { select: { firstName: true, middleName: true, lastName: true, username: true, email: true, phone: true, avatarUrl: true } } },
   });
   if (!student) throw ApiError.notFound("Student not found");
 
@@ -41,6 +41,7 @@ const overview = async ({ schoolId, studentId }) => {
     name: name(student.user),
     firstName: student.user.firstName,
     middleName: student.user.middleName ?? null,
+    username: student.user.username ?? null,
     email: student.user.email,
     phone: student.user.phone,
     avatarUrl: student.user.avatarUrl,

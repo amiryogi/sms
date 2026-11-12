@@ -6,6 +6,12 @@ const config = require("../config");
 const prisma = require("../config/database");
 const { ApiError, ApiResponse, asyncHandler } = require("../utils");
 const { fullName, normalizeMiddleName } = require("../utils/names");
+const { parseIdentifier } = require("../utils/usernames");
+const { normalizeEmail, resolveUsername, assertEmailFree } = require("../services/account.service");
+const { dialect } = require("../database");
+
+// One message for every failed sign-in, so it never tells which part was wrong.
+const BAD_LOGIN = "Invalid username or password";
 
 // A revoked refresh token presented again within this window of its rotation
 // is treated as a benign concurrent refresh (no session-wide revocation).
@@ -22,6 +28,7 @@ const formatParentForAuth = (parent) => {
     return {
       studentId: sp.studentId,
       studentName: fullName(sp.student.user),
+      username: sp.student.user.username ?? null,
       email: sp.student.user.email,
       phone: sp.student.user.phone,
       class: enrollment?.class?.name,
@@ -89,11 +96,21 @@ const parseExpiresIn = (expiresIn) => {
  * @access  Public
  */
 const login = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  // One sign-in name: a username, or an email (it contains "@"). `email` is
+  // still accepted for older clients. With a school code (the login page sends
+  // one), only that school is searched; without one, a name that matches users
+  // in two schools is refused rather than guessed.
+  const { password, schoolCode } = req.body;
+  const id = parseIdentifier(req.body.identifier ?? req.body.email);
+  if (!id) throw ApiError.unauthorized(BAD_LOGIN);
 
-  // Find user by email (across all schools for now)
-  const user = await prisma.user.findFirst({
-    where: { email },
+  const where = id.kind === "email" ? { email: dialect.text.equals(id.value) } : { username: dialect.text.equals(id.value) };
+  if (schoolCode) where.school = { code: dialect.text.equals(String(schoolCode).trim()) };
+
+  const matches = await prisma.user.findMany({
+    where,
+    take: 2,
+    orderBy: { id: "asc" },
     include: {
       school: true,
       userRoles: {
@@ -134,6 +151,7 @@ const login = asyncHandler(async (req, res) => {
                       firstName: true,
                       middleName: true,
                       lastName: true,
+                      username: true,
                       email: true,
                       phone: true,
                     },
@@ -157,15 +175,16 @@ const login = asyncHandler(async (req, res) => {
     },
   });
 
-  if (!user) {
-    throw ApiError.unauthorized("Invalid email or password");
+  if (matches.length !== 1) {
+    throw ApiError.unauthorized(BAD_LOGIN);
   }
+  const user = matches[0];
 
   // Check password
   const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
 
   if (!isPasswordValid) {
-    throw ApiError.unauthorized("Invalid email or password");
+    throw ApiError.unauthorized(BAD_LOGIN);
   }
 
   // Check if user is active
@@ -233,7 +252,9 @@ const login = asyncHandler(async (req, res) => {
     {
       user: {
         id: user.id,
-        email: user.email,
+        username: user.username,
+                email: user.email,
+        mustChangePassword: user.mustChangePassword,
         firstName: user.firstName,
         middleName: user.middleName ?? null,
         lastName: user.lastName,
@@ -285,20 +306,11 @@ const login = asyncHandler(async (req, res) => {
  * row and have their own creation flows.
  */
 const register = asyncHandler(async (req, res) => {
-  const { email, password, firstName, middleName, lastName, phone, role } = req.body;
+  const { password, firstName, middleName, lastName, phone, role } = req.body;
   const schoolId = req.user.schoolId;
-
-  // Check if email already exists for this school
-  const existingUser = await prisma.user.findFirst({
-    where: {
-      email,
-      schoolId,
-    },
-  });
-
-  if (existingUser) {
-    throw ApiError.conflict("Email already registered for this school");
-  }
+  const email = normalizeEmail(req.body.email);
+  await assertEmailFree(prisma, schoolId, email);
+  const username = await resolveUsername(prisma, schoolId, { requested: req.body.username, suggestion: { kind: "staff", email, firstName, lastName } });
 
   const roleRecord = await prisma.role.findUnique({
     where: { name: role },
@@ -315,6 +327,7 @@ const register = asyncHandler(async (req, res) => {
   const user = await prisma.user.create({
     data: {
       schoolId,
+      username,
       email,
       passwordHash,
       firstName,
@@ -333,7 +346,8 @@ const register = asyncHandler(async (req, res) => {
     {
       user: {
         id: user.id,
-        email: user.email,
+        username: user.username,
+                email: user.email,
         firstName: user.firstName,
         middleName: user.middleName ?? null,
         lastName: user.lastName,
@@ -526,6 +540,7 @@ const getMe = asyncHandler(async (req, res) => {
                       firstName: true,
                       middleName: true,
                       lastName: true,
+                      username: true,
                       email: true,
                       phone: true,
                     },
@@ -566,7 +581,9 @@ const getMe = asyncHandler(async (req, res) => {
 
   ApiResponse.success(res, {
     id: user.id,
-    email: user.email,
+    username: user.username,
+        email: user.email,
+    mustChangePassword: user.mustChangePassword,
     firstName: user.firstName,
     middleName: user.middleName ?? null,
     lastName: user.lastName,

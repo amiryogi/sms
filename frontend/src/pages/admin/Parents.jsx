@@ -169,7 +169,8 @@ const Parents = () => {
         firstName: values.firstName,
         middleName: values.middleName || undefined,
         lastName: values.lastName,
-        email: values.email,
+        username: values.username || undefined,
+        email: values.email || undefined,
         phone: values.phone,
         password: values.password,
         occupation: values.occupation,
@@ -271,7 +272,10 @@ const Parents = () => {
           <Avatar name={name(row)} size="sm" />
           <div className="min-w-0">
             <p className="truncate font-medium text-slate-900">{name(row)}</p>
-            <p className="truncate text-xs text-slate-500">{row.email}</p>
+            <p className="truncate text-xs text-slate-500">
+              <span className="font-mono">{row.username}</span>
+              {row.email ? ` · ${row.email}` : ""}
+            </p>
           </div>
         </div>
       ),
@@ -362,7 +366,7 @@ const Parents = () => {
         loading={loading}
         searchValue={search}
         onSearchChange={handleSearchChange}
-        searchPlaceholder="Search name, email or phone…"
+        searchPlaceholder="Search name, username, email or phone…"
         pagination={pagination}
         onPageChange={handlePageChange}
         emptyMessage={search ? "No parents match your search" : "No parents yet"}
@@ -377,7 +381,10 @@ const Parents = () => {
             <Input label="Last name" name="lastName" register={createForm.register} required />
           </FormRow>
           <FormRow>
-            <Input type="email" label="Email" name="email" register={createForm.register} required />
+            <Input label="Username" name="username" register={createForm.register} autoCapitalize="none" spellCheck={false} hint={"Leave empty for \"p.\" + the child's admission number."} />
+            <Input type="email" label="Email (optional)" name="email" register={createForm.register} />
+          </FormRow>
+          <FormRow>
             <Input type="tel" label="Phone" name="phone" register={createForm.register} />
           </FormRow>
           <FormRow>

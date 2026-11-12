@@ -154,6 +154,82 @@ describe("students, parents, ownership", () => {
   });
 });
 
+describe("usernames and sign-in", () => {
+  const made = [];
+  afterAll(async () => {
+    for (const userId of made) {
+      await prisma.studentClass.deleteMany({ where: { student: { userId } } }).catch(() => {});
+      await prisma.student.deleteMany({ where: { userId } }).catch(() => {});
+      await prisma.user.delete({ where: { id: userId } }).catch(() => {});
+    }
+  });
+
+  test("every user has a unique username after the backfill", async () => {
+    const users = await prisma.user.findMany({ where: { schoolId: ctx.schoolId }, select: { username: true } });
+    expect(users.every((u) => u.username)).toBe(true);
+    expect(new Set(users.map((u) => u.username)).size).toBe(users.length);
+  });
+
+  test("sign in by username, by email, in any case, with or without the school code", async () => {
+    const me = await prisma.user.findFirst({ where: { email: EMAILS.student } });
+    const school = await prisma.school.findUnique({ where: { id: ctx.schoolId } });
+    for (const body of [
+      { identifier: me.username, password: PASSWORD },
+      { identifier: me.username.toUpperCase(), password: PASSWORD },
+      { identifier: EMAILS.student, password: PASSWORD },
+      { identifier: me.username, password: PASSWORD, schoolCode: school.code.toLowerCase() },
+      { email: EMAILS.student, password: PASSWORD }, // the old field name
+    ]) {
+      const res = await api("post", "/auth/login").send(body);
+      expect(res.status).toBe(200);
+      expect(res.body.data.user.username).toBe(me.username);
+    }
+    // a school code of another school finds nobody
+    expect((await api("post", "/auth/login").send({ identifier: me.username, password: PASSWORD, schoolCode: `OTHER-${RUN}` })).status).toBe(401);
+  });
+
+  test("a wrong password and an unknown username get the same answer", async () => {
+    const me = await prisma.user.findFirst({ where: { email: EMAILS.student } });
+    const wrong = await api("post", "/auth/login").send({ identifier: me.username, password: "Nope12345" });
+    const unknown = await api("post", "/auth/login").send({ identifier: `nobody-${RUN.toLowerCase()}`, password: "Nope12345" });
+    expect(wrong.status).toBe(401);
+    expect(unknown.status).toBe(401);
+    expect(wrong.body.message).toBe(unknown.body.message);
+  });
+
+  test("a student added without an email gets the admission number as username and can sign in", async () => {
+    const admissionNumber = `UN-${RUN}`;
+    const res = await api("post", "/students", "admin").send({
+      password: "Password123", firstName: "Hari", lastName: `Nomail${RUN}`,
+      admissionNumber, dateOfBirth: "2012-04-01", gender: "male", admissionDate: "2024-04-14",
+      classId: ctx.enrolment.classId, sectionId: ctx.enrolment.sectionId, academicYearId: ctx.year.id,
+    });
+    expect(res.status).toBe(201);
+    const user = await prisma.user.findFirst({ where: { student: { admissionNumber } } });
+    made.push(user.id);
+    expect(user.email).toBeNull();
+    expect(user.username).toBe(admissionNumber.toLowerCase());
+    const login = await api("post", "/auth/login").send({ identifier: admissionNumber, password: "Password123" });
+    expect(login.status).toBe(200);
+  });
+
+  test("usernames are unique per school; only an admin changes one", async () => {
+    const taken = await prisma.user.findFirst({ where: { email: EMAILS.teacher } });
+    const dup = await api("post", "/users", "admin").send({ username: taken.username.toUpperCase(), password: "Password123", firstName: "Dup", lastName: "User", role: "TEACHER" });
+    expect(dup.status).toBe(409);
+    const bad = await api("post", "/users", "admin").send({ username: "has space", password: "Password123", firstName: "Bad", lastName: "User", role: "TEACHER" });
+    expect(bad.status).toBe(400);
+    // a staff member with neither email nor username gets first.last
+    const res = await api("post", "/users", "admin").send({ password: "Password123", firstName: "Sita", lastName: `Noemail${RUN}`, role: "TEACHER" });
+    expect(res.status).toBe(201);
+    made.push(res.body.data.id);
+    expect(res.body.data.username).toBe(`sita.noemail${RUN.toLowerCase()}`);
+    expect(res.body.data.email).toBeNull();
+    // the student may not rename themselves
+    expect((await api("put", `/students/${ctx.studentId}`, "student").send({ username: "renamed" })).status).toBe(403);
+  });
+});
+
 describe("middle names", () => {
   const made = []; // user ids this block creates, removed at the end
 

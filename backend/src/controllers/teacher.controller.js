@@ -1,6 +1,7 @@
 const prisma = require("../config/database");
 const { dialect } = require("../database");
 const { fullName, normalizeMiddleName } = require("../utils/names");
+const { normalizeEmail, resolveUsername, assertEmailFree } = require("../services/account.service");
 const {
   ApiError,
   ApiResponse,
@@ -54,6 +55,7 @@ const getTeachers = asyncHandler(async (req, res) => {
       "firstName",
       "middleName",
       "lastName",
+      "username",
       "email",
     ], dialect.text.search);
     if (searchQuery) where.OR = searchQuery.OR;
@@ -71,6 +73,7 @@ const getTeachers = asyncHandler(async (req, res) => {
       ]),
       select: {
         id: true,
+        username: true,
         email: true,
         firstName: true,
         middleName: true,
@@ -133,6 +136,7 @@ const getTeacher = asyncHandler(async (req, res) => {
     },
     select: {
       id: true,
+      username: true,
       email: true,
       firstName: true,
       middleName: true,
@@ -224,9 +228,21 @@ const updateTeacher = asyncHandler(async (req, res) => {
     }
   }
 
+  // Sign-in details: only an admin changes them; an emptied email is null.
+  const signIn = {};
+  if ((req.body.username !== undefined && req.body.username !== "") || req.body.email !== undefined) {
+    if (!isAdmin) throw ApiError.forbidden("Only admins can change a username or email");
+    if (req.body.username) signIn.username = await resolveUsername(prisma, req.user.schoolId, { requested: req.body.username, exceptUserId: teacherId });
+    if (req.body.email !== undefined) {
+      signIn.email = normalizeEmail(req.body.email);
+      await assertEmailFree(prisma, req.user.schoolId, signIn.email, teacherId);
+    }
+  }
+
   const profileUpdate = prisma.user.update({
     where: { id: teacherId },
     data: {
+      ...signIn,
       ...(firstName && { firstName }),
       ...(middleName !== undefined && { middleName: normalizeMiddleName(middleName) }),
       ...(lastName && { lastName }),
@@ -345,6 +361,7 @@ const getMyStudents = asyncHandler(async (req, res) => {
               firstName: true,
               middleName: true,
               lastName: true,
+              username: true,
               email: true,
               avatarUrl: true,
             },
@@ -403,6 +420,7 @@ const getMyStudents = asyncHandler(async (req, res) => {
       middleName: enrollment.student.user.middleName ?? null,
       lastName: enrollment.student.user.lastName,
       fullName: fullName(enrollment.student.user),
+      username: enrollment.student.user.username ?? null,
       email: enrollment.student.user.email,
       admissionNumber: enrollment.student.admissionNumber,
       avatarUrl: enrollment.student.user.avatarUrl,

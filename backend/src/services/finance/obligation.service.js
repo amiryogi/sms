@@ -225,6 +225,7 @@ const accounts = async ({ schoolId, academicYearId, classId, sectionId, search, 
         { admissionNumber: dialect.text.search(search) },
         { user: { firstName: dialect.text.search(search) } },
         { user: { middleName: dialect.text.search(search) } },
+        { user: { username: dialect.text.search(search) } },
         { user: { lastName: dialect.text.search(search) } },
       ],
     };

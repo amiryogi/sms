@@ -1,9 +1,10 @@
 const { body } = require('express-validator');
-const { middleNameRule } = require('./common.validators');
+const { middleNameRule, optionalEmailRule, usernameRule } = require('./common.validators');
 
 const studentRules = [
   // User info
-  body('email').isEmail().withMessage('Valid email is required').normalizeEmail(),
+  optionalEmailRule,
+  usernameRule,
   body('firstName').trim().notEmpty().withMessage('First name is required'),
   middleNameRule,
   body('lastName').trim().notEmpty().withMessage('Last name is required'),
@@ -26,6 +27,8 @@ const studentRules = [
 ];
 
 const updateStudentRules = [
+  optionalEmailRule,
+  usernameRule,
   body('firstName').optional().trim().notEmpty().withMessage('First name cannot be empty'),
   middleNameRule,
   body('lastName').optional().trim().notEmpty().withMessage('Last name cannot be empty'),

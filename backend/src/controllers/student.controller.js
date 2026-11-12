@@ -3,6 +3,7 @@ const prisma = require('../config/database');
 const { dialect } = require('../database');
 const { ApiError, ApiResponse, asyncHandler, parsePagination, parseSort, buildSearchQuery } = require('../utils');
 const { normalizeMiddleName } = require('../utils/names');
+const { normalizeEmail, resolveUsername, assertEmailFree } = require('../services/account.service');
 
 const isAdminUser = (user) => user.roles.includes('ADMIN') || user.roles.includes('SUPER_ADMIN');
 
@@ -25,7 +26,7 @@ const assertEnrollmentTargetsInSchool = async (schoolId, { classId, sectionId, a
 // change via PUT /students/:id. Everything else — name, date of birth, gender,
 // blood group (printed on report cards) and status — is admin-only.
 const SELF_SERVICE_FIELDS = ['phone', 'address', 'avatarUrl', 'emergencyContact'];
-const ADMIN_ONLY_FIELDS = ['firstName', 'middleName', 'lastName', 'dateOfBirth', 'gender', 'bloodGroup', 'status'];
+const ADMIN_ONLY_FIELDS = ['username', 'email', 'firstName', 'middleName', 'lastName', 'dateOfBirth', 'gender', 'bloodGroup', 'status'];
 
 /**
  * @desc    Get all students
@@ -109,7 +110,7 @@ const getStudents = asyncHandler(async (req, res) => {
   };
 
   if (search) {
-    const searchQuery = buildSearchQuery(search, ['firstName', 'middleName', 'lastName', 'email'], dialect.text.search);
+    const searchQuery = buildSearchQuery(search, ['firstName', 'middleName', 'lastName', 'username', 'email'], dialect.text.search);
     if (searchQuery) userWhere.OR = searchQuery.OR;
   }
 
@@ -142,6 +143,7 @@ const getStudents = asyncHandler(async (req, res) => {
     return {
       id: user.student.id,
       userId: user.id,
+      username: user.username ?? null,
       email: user.email,
       firstName: user.firstName,
       middleName: user.middleName ?? null,
@@ -165,6 +167,7 @@ const getStudents = asyncHandler(async (req, res) => {
         firstName: user.firstName,
         middleName: user.middleName ?? null,
         lastName: user.lastName,
+        username: user.username ?? null,
         email: user.email,
         phone: user.phone,
         avatarUrl: user.avatarUrl,
@@ -192,6 +195,7 @@ const getStudent = asyncHandler(async (req, res) => {
       user: {
         select: {
           id: true,
+          username: true,
           email: true,
           firstName: true,
           middleName: true,
@@ -219,6 +223,7 @@ const getStudent = asyncHandler(async (req, res) => {
                   middleName: true,
                   lastName: true,
                   phone: true,
+                  username: true,
                   email: true,
                 },
               },
@@ -240,6 +245,7 @@ const getStudent = asyncHandler(async (req, res) => {
     firstName: student.user.firstName,
     middleName: student.user.middleName ?? null,
     lastName: student.user.lastName,
+    username: student.user.username ?? null,
     email: student.user.email,
     phone: student.user.phone || student.phone, // hierarchy: user phone > student phone
     avatarUrl: student.user.avatarUrl,
@@ -260,19 +266,14 @@ const getStudent = asyncHandler(async (req, res) => {
  */
 const createStudent = asyncHandler(async (req, res) => {
   const {
-    email, password, firstName, middleName, lastName, phone,
+    password, firstName, middleName, lastName, phone,
     admissionNumber, dateOfBirth, gender, bloodGroup, address, emergencyContact, admissionDate,
     classId, sectionId, academicYearId, rollNumber
   } = req.body;
 
-  // Check if user exists
-  const existingUser = await prisma.user.findFirst({
-    where: { email, schoolId: req.user.schoolId },
-  });
-
-  if (existingUser) {
-    throw ApiError.conflict('User with this email already exists in this school');
-  }
+  // Email is optional; the username defaults to the admission number.
+  const email = normalizeEmail(req.body.email);
+  await assertEmailFree(prisma, req.user.schoolId, email);
 
   // Check if admission number exists
   const existingStudent = await prisma.student.findFirst({
@@ -282,6 +283,8 @@ const createStudent = asyncHandler(async (req, res) => {
   if (existingStudent) {
     throw ApiError.conflict('Admission number already exists');
   }
+
+  const username = await resolveUsername(prisma, req.user.schoolId, { requested: req.body.username, suggestion: { kind: "student", admissionNumber } });
 
   // Class, section and academic year must all belong to the caller's school
   await assertEnrollmentTargetsInSchool(req.user.schoolId, { classId, sectionId, academicYearId });
@@ -297,6 +300,7 @@ const createStudent = asyncHandler(async (req, res) => {
     const user = await tx.user.create({
       data: {
         schoolId: req.user.schoolId,
+        username,
         email,
         passwordHash,
         firstName,
@@ -348,6 +352,7 @@ const createStudent = asyncHandler(async (req, res) => {
         firstName: user.firstName,
         middleName: user.middleName ?? null,
         lastName: user.lastName,
+        username: user.username ?? null,
         email: user.email,
         avatarUrl: user.avatarUrl
       },
@@ -399,11 +404,23 @@ const updateStudent = asyncHandler(async (req, res) => {
     }
   }
 
+  // Sign-in details (admin only; checked above): a new username must be free,
+  // an emptied email is stored as null.
+  const signIn = {};
+  if (isAdmin && req.body.username !== undefined && req.body.username !== "") {
+    signIn.username = await resolveUsername(prisma, req.user.schoolId, { requested: req.body.username, exceptUserId: student.userId });
+  }
+  if (isAdmin && req.body.email !== undefined) {
+    signIn.email = normalizeEmail(req.body.email);
+    await assertEmailFree(prisma, req.user.schoolId, signIn.email, student.userId);
+  }
+
   await prisma.$transaction(async (tx) => {
     // 1. Update User Profile
     await tx.user.update({
       where: { id: student.userId },
       data: {
+        ...signIn,
         ...(firstName && isAdmin && { firstName }),
         ...(middleName !== undefined && isAdmin && { middleName: normalizeMiddleName(middleName) }),
         ...(lastName && isAdmin && { lastName }),

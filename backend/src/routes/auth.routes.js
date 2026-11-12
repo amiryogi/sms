@@ -1,6 +1,7 @@
 const express = require('express');
 const { body } = require('express-validator');
-const { middleNameRule } = require('../validators/common.validators');
+const validator = require('validator');
+const { middleNameRule, optionalEmailRule, usernameRule } = require('../validators/common.validators');
 const router = express.Router();
 
 const authController = require('../controllers/auth.controller');
@@ -13,21 +14,33 @@ const {
 } = require('../middleware');
 
 // Validation rules
+// Sign in with a username or an email in `identifier` (`email` is the old
+// name of the field and still accepted). An email is normalized the same way
+// it was when the account was created.
 const loginValidation = [
+  body('identifier')
+    .optional({ values: 'falsy' })
+    .isString()
+    .trim()
+    .isLength({ max: 255 })
+    .customSanitizer((v) => (v.includes('@') ? validator.normalizeEmail(v) || v : v)),
   body('email')
-    .isEmail()
-    .withMessage('Please provide a valid email')
-    .normalizeEmail(),
+    .optional({ values: 'falsy' })
+    .isString()
+    .trim()
+    .customSanitizer((v) => (v.includes('@') ? validator.normalizeEmail(v) || v : v)),
+  body('identifier')
+    .custom((v, { req }) => Boolean(v || req.body.email))
+    .withMessage('Username or email is required'),
+  body('schoolCode').optional({ values: 'falsy' }).isString().trim().isLength({ max: 50 }),
   body('password')
     .notEmpty()
     .withMessage('Password is required'),
 ];
 
 const registerValidation = [
-  body('email')
-    .isEmail()
-    .withMessage('Please provide a valid email')
-    .normalizeEmail(),
+  optionalEmailRule,
+  usernameRule,
   body('password')
     .isLength({ min: 8 })
     .withMessage('Password must be at least 8 characters')

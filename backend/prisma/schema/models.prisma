@@ -338,8 +338,14 @@ model RolePermission {
 model User {
   id           Int        @id @default(autoincrement())
   schoolId     Int        @map("school_id")
-  email        String     @db.VarChar(255)
+  /// Sign-in name, unique per school, stored lower case (students: the admission number).
+  /// Nullable in the database only so the migration could backfill it; the app always sets one.
+  username     String?    @db.VarChar(50)
+  /// Optional: many students and parents have none. Sign-in works with the username or the email.
+  email        String?    @db.VarChar(255)
   passwordHash String     @map("password_hash") @db.VarChar(255)
+  /// Set when an admin creates the account or resets its password: the user must choose a new one first.
+  mustChangePassword Boolean @default(false) @map("must_change_password")
   firstName    String     @map("first_name") @db.VarChar(100)
   middleName   String?    @map("middle_name") @db.VarChar(100)
   lastName     String     @map("last_name") @db.VarChar(100)
@@ -392,6 +398,7 @@ model User {
   feeDiscountsRevoked   FeeDiscount[] @relation("FeeDiscountRevokedBy")
 
   @@unique([email, schoolId])
+  @@unique([username, schoolId])
   @@index([schoolId])
   @@index([email])
   @@index([status])

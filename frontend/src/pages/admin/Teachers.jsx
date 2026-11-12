@@ -33,7 +33,7 @@ const parseServerError = (error, fallback) => {
   return { message: body.message || error?.message || fallback, fieldErrors, otherErrors: otherErrors.filter(Boolean) };
 };
 
-const FORM_FIELDS = ["firstName", "middleName", "lastName", "email", "phone", "password"];
+const FORM_FIELDS = ["firstName", "middleName", "lastName", "username", "email", "phone", "password"];
 
 const Teachers = () => {
   const [teachers, setTeachers] = useState([]);
@@ -80,7 +80,7 @@ const Teachers = () => {
     setServerError(null);
     clearErrors();
     if (teacher) {
-      reset({ firstName: teacher.firstName, middleName: teacher.middleName || "", lastName: teacher.lastName, email: teacher.email, phone: teacher.phone });
+      reset({ firstName: teacher.firstName, middleName: teacher.middleName || "", lastName: teacher.lastName, username: teacher.username || "", email: teacher.email || "", phone: teacher.phone });
       setAvatarUrl(teacher.avatarUrl || "");
       setSelectedRole(currentStaffRole(teacher));
     } else {
@@ -147,7 +147,12 @@ const Teachers = () => {
           <div className="min-w-0">
             <p className="truncate font-medium text-slate-900">{name(row)}</p>
             <p className="flex items-center gap-1 truncate text-xs text-slate-500">
-              <Mail size={11} aria-hidden="true" /> {row.email}
+              <span className="font-mono">{row.username}</span>
+              {row.email && (
+                <>
+                  <Mail size={11} aria-hidden="true" className="ml-1" /> {row.email}
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -209,7 +214,7 @@ const Teachers = () => {
           setSearch(value);
           setPagination((prev) => ({ ...prev, page: 1 }));
         }}
-        searchPlaceholder="Search name or email…"
+        searchPlaceholder="Search name, username or email…"
         emptyMessage={search ? "No staff match your search" : "No staff yet"}
         emptyIcon={UsersRound}
       />
@@ -243,7 +248,18 @@ const Teachers = () => {
               <Input label="Last name" name="lastName" register={register} error={errors.lastName?.message} required />
             </FormRow>
             <FormRow>
-              <Input label="Email" name="email" type="email" register={register} error={errors.email?.message} required />
+              <Input
+                label="Username"
+                name="username"
+                register={register}
+                error={errors.username?.message}
+                autoCapitalize="none"
+                spellCheck={false}
+                hint={editingTeacher ? "Used to sign in." : "Leave empty to use the email's first part, or first.last."}
+              />
+              <Input label="Email (optional)" name="email" type="email" register={register} error={errors.email?.message} />
+            </FormRow>
+            <FormRow>
               <Input label="Phone" name="phone" type="tel" register={register} error={errors.phone?.message} />
             </FormRow>
             {!editingTeacher && (
@@ -255,7 +271,7 @@ const Teachers = () => {
                 error={errors.password?.message}
                 required
                 minLength={8}
-                hint="At least 8 characters. They sign in with this email and password."
+                hint="At least 8 characters. They sign in with their username (or email) and this password."
               />
             )}
           </div>

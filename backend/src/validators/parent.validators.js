@@ -2,7 +2,8 @@ const { body } = require("express-validator");
 const {
   idParamRule,
   paginationRules,
-  emailRule,
+  optionalEmailRule,
+  usernameRule,
   passwordRule,
   firstNameRule,
   middleNameRule,
@@ -12,7 +13,8 @@ const {
 const { RELATIONSHIPS } = require("../services/parent.service");
 
 const createParentRules = [
-  emailRule,
+  optionalEmailRule,
+  usernameRule,
   passwordRule,
   firstNameRule,
   middleNameRule,
@@ -41,7 +43,8 @@ const createParentRules = [
 
 const updateParentRules = [
   idParamRule,
-  body("email").optional().isEmail().withMessage("Valid email is required"),
+  optionalEmailRule,
+  usernameRule,
   body("firstName")
     .optional()
     .trim()

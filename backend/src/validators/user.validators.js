@@ -1,5 +1,5 @@
 const { body, query } = require('express-validator');
-const { middleNameRule } = require('./common.validators');
+const { middleNameRule, optionalEmailRule, usernameRule } = require('./common.validators');
 
 /**
  * User validation rules
@@ -15,10 +15,8 @@ const ALL_ROLES = ['SUPER_ADMIN', 'ADMIN', 'TEACHER', 'EXAM_OFFICER', 'ACCOUNTAN
 
 // Create user validation
 const createUserRules = [
-  body('email')
-    .isEmail()
-    .withMessage('Please provide a valid email')
-    .normalizeEmail(),
+  optionalEmailRule,
+  usernameRule,
   body('password')
     .isLength({ min: 8 })
     .withMessage('Password must be at least 8 characters'),
@@ -61,11 +59,8 @@ const createUserRules = [
 
 // Update user validation
 const updateUserRules = [
-  body('email')
-    .optional()
-    .isEmail()
-    .withMessage('Please provide a valid email')
-    .normalizeEmail(),
+  optionalEmailRule,
+  usernameRule,
   body('firstName')
     .optional()
     .trim()

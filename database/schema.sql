@@ -207,8 +207,10 @@ WHERE name IN ('attendance.view_own', 'result.view_child', 'report_card.view_chi
 CREATE TABLE users (
     id INT PRIMARY KEY AUTO_INCREMENT,
     school_id INT NOT NULL,
-    email VARCHAR(255) NOT NULL,
+    username VARCHAR(50),
+    email VARCHAR(255),
     password_hash VARCHAR(255) NOT NULL,
+    must_change_password BOOLEAN NOT NULL DEFAULT FALSE,
     first_name VARCHAR(100) NOT NULL,
     middle_name VARCHAR(100),
     last_name VARCHAR(100) NOT NULL,
@@ -220,8 +222,9 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
     UNIQUE KEY uk_user_email_school (email, school_id),
+    UNIQUE KEY uk_user_username_school (username, school_id),
     FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE,
-    
+
     INDEX idx_users_school (school_id),
     INDEX idx_users_email (email),
     INDEX idx_users_status (status),

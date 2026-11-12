@@ -3,6 +3,7 @@ const prisma = require("../config/database");
 const { dialect } = require("../database");
 const { ApiError, parsePagination, buildSearchQuery } = require("../utils");
 const { fullName, normalizeMiddleName } = require("../utils/names");
+const { normalizeEmail, resolveUsername, assertEmailFree } = require("./account.service");
 
 const RELATIONSHIPS = ["father", "mother", "guardian"];
 
@@ -13,6 +14,7 @@ const formatParent = (parent) => {
       studentParentId: sp.id,
       studentId: sp.studentId,
       studentName: fullName(sp.student.user),
+      username: sp.student.user.username ?? null,
       email: sp.student.user.email,
       phone: sp.student.user.phone,
       class: enrollment?.class?.name,
@@ -26,6 +28,7 @@ const formatParent = (parent) => {
   return {
     id: parent.id,
     userId: parent.user.id,
+    username: parent.user.username ?? null,
     email: parent.user.email,
     firstName: parent.user.firstName,
     middleName: parent.user.middleName ?? null,
@@ -55,6 +58,7 @@ const fetchParentWithRelations = async (parentId, schoolId) => {
                   firstName: true,
                   middleName: true,
                   lastName: true,
+                  username: true,
                   email: true,
                   phone: true,
                 },
@@ -110,7 +114,6 @@ const validateStudents = async (tx, schoolId, studentItems) => {
 
 const createParent = async (schoolId, payload) => {
   const {
-    email,
     password,
     firstName,
     middleName,
@@ -126,13 +129,18 @@ const createParent = async (schoolId, payload) => {
     throw ApiError.badRequest("Parent must be linked to at least one student");
   }
 
-  // Unique email per school
-  const existing = await prisma.user.findFirst({ where: { email, schoolId } });
-  if (existing) {
-    throw ApiError.conflict(
-      "A user with this email already exists in this school"
-    );
-  }
+  // Email is optional; the username defaults to "p." + the (primary) child's admission number.
+  const email = normalizeEmail(payload.email);
+  await assertEmailFree(prisma, schoolId, email);
+  const firstChild = students.find((s) => s.isPrimary) || students[0];
+  const child = await prisma.student.findFirst({
+    where: { id: Number(firstChild.studentId), schoolId },
+    select: { admissionNumber: true },
+  });
+  const username = await resolveUsername(prisma, schoolId, {
+    requested: payload.username,
+    suggestion: { kind: "parent", childAdmissionNumber: child?.admissionNumber, email, firstName, lastName },
+  });
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -143,6 +151,7 @@ const createParent = async (schoolId, payload) => {
     const user = await tx.user.create({
       data: {
         schoolId,
+        username,
         email,
         passwordHash: hashedPassword,
         firstName,
@@ -212,6 +221,7 @@ const listParents = async (schoolId, query) => {
       "firstName",
       "middleName",
       "lastName",
+      "username",
       "email",
       "phone",
     ], dialect.text.search);
@@ -237,6 +247,7 @@ const listParents = async (schoolId, query) => {
                         firstName: true,
                         middleName: true,
                         lastName: true,
+                        username: true,
                         email: true,
                         phone: true,
                       },
@@ -298,7 +309,8 @@ const updateParent = async (schoolId, parentId, payload) => {
     payload.lastName ||
     payload.phone ||
     payload.status ||
-    payload.email
+    payload.email !== undefined ||
+    (payload.username !== undefined && payload.username !== "")
   ) {
     updates.user = {};
     if (payload.firstName) updates.user.firstName = payload.firstName;
@@ -306,13 +318,12 @@ const updateParent = async (schoolId, parentId, payload) => {
     if (payload.lastName) updates.user.lastName = payload.lastName;
     if (payload.phone !== undefined) updates.user.phone = payload.phone;
     if (payload.status) updates.user.status = payload.status;
-    if (payload.email && payload.email !== parent.user.email) {
-      const exists = await prisma.user.findFirst({
-        where: { email: payload.email, schoolId, NOT: { id: parent.userId } },
-      });
-      if (exists)
-        throw ApiError.conflict("Email already exists in this school");
-      updates.user.email = payload.email;
+    if (payload.email !== undefined) {
+      updates.user.email = normalizeEmail(payload.email);
+      await assertEmailFree(prisma, schoolId, updates.user.email, parent.userId);
+    }
+    if (payload.username !== undefined && payload.username !== "") {
+      updates.user.username = await resolveUsername(prisma, schoolId, { requested: payload.username, exceptUserId: parent.userId });
     }
   }
 
@@ -436,6 +447,7 @@ const getMyChildren = async (userId, schoolId) => {
                   firstName: true,
                   middleName: true,
                   lastName: true,
+                  username: true,
                   email: true,
                   phone: true,
                   avatarUrl: true,
@@ -479,6 +491,7 @@ const getMyChildren = async (userId, schoolId) => {
         firstName: student.user.firstName,
         middleName: student.user.middleName ?? null,
         lastName: student.user.lastName,
+        username: student.user.username ?? null,
         email: student.user.email,
         phone: student.user.phone,
         avatarUrl: student.user.avatarUrl,
@@ -490,6 +503,7 @@ const getMyChildren = async (userId, schoolId) => {
       middleName: student.user.middleName ?? null,
       lastName: student.user.lastName,
       fullName: fullName(student.user),
+      username: student.user.username ?? null,
       email: student.user.email,
       phone: student.user.phone,
       status: student.user.status,
@@ -562,6 +576,7 @@ const getChildById = async (userId, schoolId, studentId) => {
                   firstName: true,
                   middleName: true,
                   lastName: true,
+                  username: true,
                   email: true,
                   phone: true,
                   avatarUrl: true,
@@ -605,6 +620,7 @@ const getChildById = async (userId, schoolId, studentId) => {
       firstName: student.user.firstName,
       middleName: student.user.middleName ?? null,
       lastName: student.user.lastName,
+      username: student.user.username ?? null,
       email: student.user.email,
       phone: student.user.phone,
       avatarUrl: student.user.avatarUrl,
@@ -614,6 +630,7 @@ const getChildById = async (userId, schoolId, studentId) => {
     middleName: student.user.middleName ?? null,
     lastName: student.user.lastName,
     fullName: fullName(student.user),
+    username: student.user.username ?? null,
     email: student.user.email,
     phone: student.user.phone,
     status: student.user.status,

@@ -74,6 +74,7 @@ const transactionWhere = (schoolId, { from, to, type, method, classId, academicY
       { student: { admissionNumber: dialect.text.search(search) } },
       { student: { user: { firstName: dialect.text.search(search) } } },
       { student: { user: { middleName: dialect.text.search(search) } } },
+      { student: { user: { username: dialect.text.search(search) } } },
       { student: { user: { lastName: dialect.text.search(search) } } },
     ];
   }

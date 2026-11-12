@@ -1,4 +1,5 @@
 const { body, param, query } = require('express-validator');
+const { usernameProblem } = require("../utils/usernames");
 
 /**
  * Common validation rules used across multiple endpoints
@@ -35,6 +36,25 @@ const emailRule = body('email')
   .isEmail()
   .withMessage('Please provide a valid email')
   .normalizeEmail();
+
+// Optional email: many students and parents have none (they sign in by username).
+// An empty value is allowed and stored as null.
+const optionalEmailRule = body("email")
+  .optional({ values: "falsy" })
+  .isEmail()
+  .withMessage("Please provide a valid email")
+  .normalizeEmail();
+
+// Username: optional on input (the server suggests one), validated when given.
+const usernameRule = body("username")
+  .optional({ values: "falsy" })
+  .isString()
+  .withMessage("Username must be text")
+  .custom((v) => {
+    const problem = usernameProblem(v);
+    if (problem) throw new Error(problem);
+    return true;
+  });
 
 // Password validation
 const passwordRule = body('password')
@@ -104,6 +124,8 @@ module.exports = {
   idParamRule,
   userIdRule,
   emailRule,
+  optionalEmailRule,
+  usernameRule,
   passwordRule,
   firstNameRule,
   middleNameRule,

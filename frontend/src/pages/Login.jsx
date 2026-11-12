@@ -82,10 +82,11 @@ const Login = () => {
     setIsLoading(true);
     setError("");
     try {
-      await login(data);
+      // The school code narrows the lookup to this school; sent only when it named a real school.
+      await login({ identifier: data.identifier, password: data.password, ...(school?.code ? { schoolCode: school.code } : {}) });
       navigate(POST_LOGIN_PATH, { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed. Please check your email and password.");
+      setError(err.response?.data?.message || "Sign-in failed. Check your username and password.");
     } finally {
       setIsLoading(false);
     }
@@ -172,7 +173,7 @@ const Login = () => {
           </div>
 
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Sign in</h1>
-          <p className="mt-1.5 text-sm text-slate-500">Welcome back. Use the email and password your school gave you.</p>
+          <p className="mt-1.5 text-sm text-slate-500">Welcome back. Use the username and password your school gave you.</p>
 
           {error && (
             <Alert tone="danger" className="mt-6">
@@ -181,16 +182,18 @@ const Login = () => {
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4" noValidate>
-            <Field label="Email" htmlFor="email" error={errors.email?.message}>
+            <Field label="Username or email" htmlFor="identifier" error={errors.identifier?.message}>
               <TextInput
-                id="email"
-                type="email"
+                id="identifier"
+                type="text"
                 icon={AtSign}
                 autoComplete="username"
-                placeholder="you@school.edu.np"
-                invalid={Boolean(errors.email)}
+                autoCapitalize="none"
+                spellCheck={false}
+                placeholder="e.g. stu20240001"
+                invalid={Boolean(errors.identifier)}
                 className="h-11"
-                {...register("email", { required: "Email is required" })}
+                {...register("identifier", { required: "Enter your username or email" })}
               />
             </Field>
 

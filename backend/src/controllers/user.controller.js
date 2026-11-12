@@ -3,6 +3,7 @@ const prisma = require('../config/database');
 const { dialect } = require('../database');
 const { ApiError, ApiResponse, asyncHandler, parsePagination, parseSort, buildSearchQuery } = require('../utils');
 const { normalizeMiddleName } = require('../utils/names');
+const { normalizeEmail, resolveUsername, assertEmailFree } = require('../services/account.service');
 
 // Roles that need a profile row (Student / Parent). They are created through
 // their own flows — POST /students and POST /admin/parents — never by
@@ -45,7 +46,7 @@ const getUsers = asyncHandler(async (req, res) => {
 
   // Add search filter
   if (search) {
-    const searchQuery = buildSearchQuery(search, ['firstName', 'middleName', 'lastName', 'email'], dialect.text.search);
+    const searchQuery = buildSearchQuery(search, ['firstName', 'middleName', 'lastName', 'username', 'email'], dialect.text.search);
     if (searchQuery) {
       where.OR = searchQuery.OR;
     }
@@ -88,6 +89,7 @@ const getUsers = asyncHandler(async (req, res) => {
   // Format response
   const formattedUsers = users.map((user) => ({
     id: user.id,
+    username: user.username ?? null,
     email: user.email,
     firstName: user.firstName,
     middleName: user.middleName ?? null,
@@ -152,6 +154,7 @@ const getUser = asyncHandler(async (req, res) => {
 
   ApiResponse.success(res, {
     id: user.id,
+    username: user.username ?? null,
     email: user.email,
     firstName: user.firstName,
     middleName: user.middleName ?? null,
@@ -175,24 +178,17 @@ const getUser = asyncHandler(async (req, res) => {
  * @access  Private/Admin
  */
 const createUser = asyncHandler(async (req, res) => {
-  const { email, password, firstName, middleName, lastName, phone, roleIds = [], role, status = 'active', avatarUrl } = req.body;
+  const { password, firstName, middleName, lastName, phone, roleIds = [], role, status = 'active', avatarUrl } = req.body;
 
   // Check if neither roleIds nor role is provided
   if (!role && (!roleIds || roleIds.length === 0)) {
     throw ApiError.badRequest('At least one role is required');
   }
 
-  // Check if email already exists for this school
-  const existingUser = await prisma.user.findFirst({
-    where: {
-      email,
-      schoolId: req.user.schoolId,
-    },
-  });
-
-  if (existingUser) {
-    throw ApiError.conflict('Email already registered for this school');
-  }
+  // Email is optional; the username defaults to the email's first part (or first.last).
+  const email = normalizeEmail(req.body.email);
+  await assertEmailFree(prisma, req.user.schoolId, email);
+  const username = await resolveUsername(prisma, req.user.schoolId, { requested: req.body.username, suggestion: { kind: "staff", email, firstName, lastName } });
 
   // Handle role string payload (e.g., "TEACHER")
   const finalRoleIds = [...(roleIds || [])];
@@ -227,6 +223,7 @@ const createUser = asyncHandler(async (req, res) => {
   const user = await prisma.user.create({
     data: {
       schoolId: req.user.schoolId,
+      username,
       email,
       passwordHash,
       firstName,
@@ -252,6 +249,7 @@ const createUser = asyncHandler(async (req, res) => {
 
   ApiResponse.created(res, {
     id: user.id,
+    username: user.username ?? null,
     email: user.email,
     firstName: user.firstName,
     middleName: user.middleName ?? null,
@@ -271,7 +269,7 @@ const createUser = asyncHandler(async (req, res) => {
  */
 const updateUser = asyncHandler(async (req, res) => {
   const userId = parseInt(req.params.id, 10);
-  const { email, firstName, middleName, lastName, phone, status, avatarUrl } = req.body;
+  const { firstName, middleName, lastName, phone, status, avatarUrl } = req.body;
 
   // Find user
   const user = await prisma.user.findFirst({
@@ -304,26 +302,22 @@ const updateUser = asyncHandler(async (req, res) => {
     throw ApiError.forbidden('Only admins can change user status');
   }
 
-  // Check email uniqueness if changing email
-  if (email && email !== user.email) {
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        email,
-        schoolId: req.user.schoolId,
-        NOT: { id: userId },
-      },
-    });
-
-    if (existingUser) {
-      throw ApiError.conflict('Email already in use');
-    }
+  // Sign-in details: only an admin changes a username; an emptied email is null.
+  const signIn = {};
+  if (req.body.username !== undefined && req.body.username !== "") {
+    if (!isAdmin) throw ApiError.forbidden('Only admins can change a username');
+    signIn.username = await resolveUsername(prisma, req.user.schoolId, { requested: req.body.username, exceptUserId: userId });
+  }
+  if (req.body.email !== undefined) {
+    signIn.email = normalizeEmail(req.body.email);
+    await assertEmailFree(prisma, req.user.schoolId, signIn.email, userId);
   }
 
   // Update user
   const updatedUser = await prisma.user.update({
     where: { id: userId },
     data: {
-      ...(email && { email }),
+      ...signIn,
       ...(firstName && { firstName }),
       ...(middleName !== undefined && { middleName: normalizeMiddleName(middleName) }),
       ...(lastName && { lastName }),
@@ -342,6 +336,7 @@ const updateUser = asyncHandler(async (req, res) => {
 
   ApiResponse.success(res, {
     id: updatedUser.id,
+    username: updatedUser.username ?? null,
     email: updatedUser.email,
     firstName: updatedUser.firstName,
     middleName: updatedUser.middleName ?? null,
@@ -433,6 +428,7 @@ const updateUserRoles = asyncHandler(async (req, res) => {
 
   ApiResponse.success(res, {
     id: updatedUser.id,
+    username: updatedUser.username ?? null,
     email: updatedUser.email,
     firstName: updatedUser.firstName,
     middleName: updatedUser.middleName ?? null,

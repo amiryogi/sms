@@ -8,7 +8,7 @@ test.describe("signing in", () => {
 
   test("wrong password shows an error and stays on the login page", async ({ page }) => {
     await page.goto("/login");
-    await page.locator("#email").fill(ROLES.admin);
+    await page.locator("#identifier").fill(ROLES.admin);
     await page.locator("#password").fill("not-the-password");
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page.getByRole("alert").first()).toBeVisible();
@@ -17,11 +17,23 @@ test.describe("signing in", () => {
 
   test("an admin signs in through the form and lands on the dashboard", async ({ page }) => {
     await page.goto("/login");
-    await page.locator("#email").fill(ROLES.admin);
+    await page.locator("#identifier").fill(ROLES.admin);
     await page.locator("#password").fill("password123");
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page).toHaveURL(/\/admin\/dashboard/);
     await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
+  });
+
+  test("a student signs in with their username (the admission number)", async ({ page }) => {
+    const { call } = require("../helpers/api");
+    const me = await call("POST", "/auth/login", null, { email: ROLES.student, password: "password123" });
+    const username = me.body.data.user.username;
+    expect(username).toBeTruthy();
+    await page.goto("/login");
+    await page.locator("#identifier").fill(username.toUpperCase()); // any case works
+    await page.locator("#password").fill("password123");
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await expect(page).toHaveURL(/\/student\/dashboard/);
   });
 
   test("a visitor who is not signed in is sent to the login page", async ({ page }) => {
@@ -105,7 +117,7 @@ test.describe("middle name", () => {
     await dialog.getByRole("button", { name: "Add staff member" }).click();
     await expect(dialog).toBeHidden();
 
-    await page.getByPlaceholder("Search name or email…").fill("bahadur");
+    await page.getByPlaceholder("Search name, username or email…").fill("bahadur");
     await expect(page.locator("main")).toContainText(`Ram Bahadur Thapa${RUN}`);
   });
 });

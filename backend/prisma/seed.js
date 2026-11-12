@@ -472,6 +472,7 @@ async function main() {
     update: {},
     create: {
       schoolId: school.id,
+      username: "admin",
       email: "admin@svi.edu.np",
       passwordHash,
       firstName: "Amir",
@@ -495,6 +496,7 @@ async function main() {
     update: {},
     create: {
       schoolId: school.id,
+      username: "superadmin",
       email: "superadmin@svi.edu.np",
       passwordHash,
       firstName: "Super",
@@ -529,6 +531,7 @@ async function main() {
       update: {},
       create: {
         schoolId: school.id,
+        username: `teacher${i + 1}`,
         email: `teacher${i + 1}@svi.edu.np`,
         passwordHash,
         firstName: t.firstName,
@@ -553,6 +556,7 @@ async function main() {
     update: {},
     create: {
       schoolId: school.id,
+      username: "examofficer",
       email: "examofficer@svi.edu.np",
       passwordHash,
       firstName: "Exam",
@@ -574,6 +578,7 @@ async function main() {
     update: {},
     create: {
       schoolId: school.id,
+      username: "accountant",
       email: "accountant@svi.edu.np",
       passwordHash,
       firstName: "Accounts",
@@ -658,6 +663,8 @@ async function main() {
           update: {},
           create: {
             schoolId: school.id,
+            // students sign in with their admission number
+            username: generateAdmissionNumber(studentIndex).toLowerCase(),
             email,
             passwordHash,
             firstName,
@@ -732,6 +739,7 @@ async function main() {
       update: {},
       create: {
         schoolId: school.id,
+        username: `p.${studentData.student.admissionNumber.toLowerCase()}`,
         email: parentEmail,
         passwordHash,
         firstName: parentFirstName,

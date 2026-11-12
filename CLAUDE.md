@@ -69,11 +69,12 @@ npm run lint
 Health check: `GET http://localhost:5000/health`. API root: `GET /api/v1`.
 Frontend reads `VITE_API_URL` (`frontend/.env`), default `http://localhost:5000/api/v1`.
 
-Demo logins (after seed, password `password123`):
-`superadmin@svi.edu.np`, `admin@svi.edu.np`, `admin@demo-school.edu.np`, `teacher@demo-school.edu.np`,
-`student@demo-school.edu.np`, `parent@demo-school.edu.np`. School code `DEMO001`.
+Demo logins (after seed, password `password123`): sign in with a **username or the email**:
+`admin` / `admin@svi.edu.np`, `superadmin`, `teacher1`…`teacher8`, `examofficer`, `accountant`,
+students by admission number (`stu20240001`), parents as `p.<child's admission number>`
+(`p.stu20240001`). School code `DEMO001`.
 
-**Tests:** `npm test` (Jest) runs 478 unit tests over the pure utilities in
+**Tests:** `npm test` (Jest) runs 487 unit tests over the pure utilities in
 `backend/src/utils/__tests__/` — grade calculation, grade scales, report-card
 layouts and attendance, BS date conversion, pagination, the response helpers and the fee
 maths (`finance.test.js`: money, allocation, discounts, fiscal year, attendance rate) — plus the grade-scale service
@@ -107,7 +108,7 @@ the same with `npm run seed`.
 `node scripts/reconcile.js` checks every cached fee balance against the ledger.
 
 **Browser tests** live in `e2e/` (Playwright; see `e2e/README.md`):
-- 59 tests over report-card printing (real PDFs), the exam lifecycle and marks entry, the
+- 60 tests over report-card printing (real PDFs), the exam lifecycle and marks entry, the
   exam pilot, the pages of every role, fees and the fee printouts.
 - They start their own servers on the MySQL test database (ports 5012 / 5184).
 - Run with `cd e2e && PW_CHANNEL=chrome npm test`.
@@ -275,6 +276,14 @@ Rules the RBAC audit (2026-11-07) established — keep them:
 ---
 
 ## 6. Feature state
+
+**Sign-in names:** every user has a `username`, unique per school and stored lower case
+(`utils/usernames.js`); `email` is optional. `POST /auth/login` takes `{ identifier, password,
+schoolCode? }`, where an identifier with "@" is an email (the old `email` field still works).
+Defaults: students get their admission number, parents `p.<child's admission number>`, staff the
+email's first part or `first.last` (migration `20261113100000_usernames` backfilled the same).
+Create and edit accounts only through `services/account.service.js` (`resolveUsername`,
+`assertEmailFree`, `normalizeEmail`), never by checking email uniqueness by hand.
 
 **Names:** every user has a first, an optional middle (`User.middleName`, migration
 `20261112100000_user_middle_name`) and a last name. Build a display name only with
