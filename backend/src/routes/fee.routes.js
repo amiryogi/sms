@@ -11,6 +11,9 @@ const {
   reason: financeReason,
   recordPaymentRules,
   transactionListRules,
+  daybookRules,
+  billRules,
+  studentBillRules,
   reversalRules,
   discountRules,
   discountUpdateRules,
@@ -215,9 +218,15 @@ router.delete(
 router.get("/accounts", canManageFees, accountListRules, validate, financeController.listAccounts);
 router.get("/accounts/:studentId", canReadFees, [studentIdParamRule], validate, financeController.getStatement);
 
+// Fee bills / due notices: a class at once (fee staff), or one student (ownership-checked)
+router.get("/bills", canManageFees, billRules, validate, financeController.listBills);
+router.get("/bills/student/:studentId", canReadFees, [studentIdParamRule, ...studentBillRules], validate, financeController.getStudentBill);
+
 // Payments (the ledger is append-only: no update or delete routes)
 router.post("/transactions", canManageFees, recordPaymentRules, validate, financeController.recordPayment);
 router.get("/transactions", canManageFees, transactionListRules, validate, financeController.listTransactions);
+// The printed day book (before /transactions/:id, which would read "daybook" as an id)
+router.get("/transactions/daybook", canManageFees, daybookRules, validate, financeController.getDaybook);
 router.get("/transactions/:id", canReadFees, [financeIdParam()], validate, financeController.getTransaction);
 
 // Reversals

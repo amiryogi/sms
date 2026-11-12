@@ -10,7 +10,7 @@ const Fees = () => {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader icon={Wallet} title="My fees" description="What is due, what has been paid, and your receipts." />
-      <FeesView studentId={user?.student?.id} receiptPath={(id) => `/student/receipts/${id}`} />
+      <FeesView studentId={user?.student?.id} receiptPath={(id) => `/student/receipts/${id}`} printPaths={{ statement: "/student/fees/statement", bill: "/student/fees/bill" }} />
     </div>
   );
 };

@@ -48,6 +48,16 @@ const FinanceAccountDetail = React.lazy(() => import("./pages/finance/AccountDet
 const FinanceTransactions = React.lazy(() => import("./pages/finance/Transactions"));
 const FinanceDiscounts = React.lazy(() => import("./pages/finance/Discounts"));
 const FinanceReceipt = React.lazy(() => import("./pages/finance/Receipt"));
+const FinanceBills = React.lazy(() => import("./pages/finance/Bills"));
+const FinanceDaybook = React.lazy(() => import("./pages/finance/Daybook"));
+// Printable statement and bill: one module, a wrapper per role (pages/finance/FeePrintPages.jsx)
+const feePrint = (name) => React.lazy(() => import("./pages/finance/FeePrintPages").then((m) => ({ default: m[name] })));
+const StaffStatement = feePrint("StaffStatement");
+const StaffBill = feePrint("StaffBill");
+const StudentStatement = feePrint("StudentStatement");
+const StudentBill = feePrint("StudentBill");
+const ParentStatement = feePrint("ParentStatement");
+const ParentBill = feePrint("ParentBill");
 const AdminPromotions = React.lazy(() => import("./pages/admin/Promotions"));
 
 // Teacher Pages
@@ -247,6 +257,8 @@ function App() {
               <Route path="/student/profile" element={<StudentProfile />} />
               {/* Same receipt page as the finance screens; the API returns only the student's own receipts. */}
               <Route path="/student/receipts/:id" element={<FinanceReceipt />} />
+              <Route path="/student/fees/statement" element={<StudentStatement />} />
+              <Route path="/student/fees/bill" element={<StudentBill />} />
             </Route>
 
             {/* Parent Routes */}
@@ -270,6 +282,8 @@ function App() {
               <Route path="/parent/profile" element={<ParentChildProfile />} />
               {/* Same receipt page as the finance screens; the API returns only a linked child's receipts. */}
               <Route path="/parent/receipts/:id" element={<FinanceReceipt />} />
+              <Route path="/parent/fees/statement" element={<ParentStatement />} />
+              <Route path="/parent/fees/bill" element={<ParentBill />} />
             </Route>
 
             {/* Accountant Routes */}
@@ -289,6 +303,10 @@ function App() {
               <Route path="/finance/transactions" element={<FinanceTransactions />} />
               <Route path="/finance/discounts" element={<FinanceDiscounts />} />
               <Route path="/finance/receipts/:id" element={<FinanceReceipt />} />
+              <Route path="/finance/accounts/:studentId/statement" element={<StaffStatement />} />
+              <Route path="/finance/accounts/:studentId/bill" element={<StaffBill />} />
+              <Route path="/finance/bills" element={<FinanceBills />} />
+              <Route path="/finance/daybook" element={<FinanceDaybook />} />
               <Route path="/accountant/fee-types" element={<AdminFeeTypes />} />
               <Route
                 path="/accountant/fee-structures"

@@ -10,6 +10,35 @@ are done** and on `main`.
 
 ---
 
+## Client feedback (2026-11-12): middle names and fee printouts — done
+
+The owner tested the app as a client and asked for two things.
+
+- **Middle name** (`89aa60c`): `users.middle_name` is optional; migration
+  `20261112100000_user_middle_name` is applied to the development MySQL database and to both test
+  databases. Students, staff (all roles) and Add parent have a Middle name box. Every displayed
+  name goes through `fullName()` (server `utils/names.js`, UI `utils/format.js`), so lists,
+  report cards, receipts, reports, CSV and the portals show it, and searches match it.
+  Existing people have none until someone edits them.
+- **Fee printouts:**
+  - fee bills / due notices, four to an A4 page with cut lines, for a class (Accounts →
+    "Print bills", with class, section and "due by" filters) or one student (account page,
+    and the student and parent Fees pages);
+  - receipts print as a quarter-page slip instead of a full A4 page, and every receipt row has
+    a print link;
+  - the student fee statement on A4 (account page, student and parent Fees pages);
+  - the day book: Transactions → "Print day book" prints the filtered ledger (today by
+    default) with per-method totals and Counted by / Checked by lines.
+- **Verified:**
+  - 478 unit tests, 86 integration tests on MySQL and PostgreSQL;
+  - 59 browser tests (8 new for the printouts, 1 for the middle name);
+  - the printed PDFs were inspected: 4 bills per page, a long bill shrinks to fit, a receipt
+    slip in one quarter, an A4 statement, a 245-entry day book over 10 pages.
+- **Not covered:**
+  - printing on a real printer; the slips assume the printer can print to about 7 mm from
+    the edge;
+  - a parent or a student whose child or own account has no fees (the bill says "Nothing is due").
+
 ## Report card redesign, React-admin pilot, Playwright — done
 
 Summary, test results, limits and open decisions:

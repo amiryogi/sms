@@ -5,9 +5,13 @@ import { useAuth } from "../../context/AuthContext";
 import { feeService } from "../../api/feeService";
 import { Button, Card, EmptyState, LoadingBlock } from "../../components/ui";
 import ReceiptSheet from "../../components/finance/ReceiptSheet";
+import ReceiptSlip from "../../components/finance/print/ReceiptSlip";
+import SlipSheet from "../../components/finance/print/SlipSheet";
 
 /**
- * One receipt, ready to print. ?print=1 opens the print dialog once loaded.
+ * One receipt. On screen: the full receipt. Printed: a quarter-A4 slip (the
+ * same facts, set small), so receipts do not use a whole sheet each.
+ * ?print=1 opens the print dialog once loaded.
  * Students and parents can open their own receipts here too; the API checks.
  */
 const Receipt = () => {
@@ -61,7 +65,16 @@ const Receipt = () => {
         <span className="flex-1" />
         <Button icon={Printer} onClick={() => window.print()}>Print</Button>
       </div>
-      <ReceiptSheet receipt={receipt} school={user?.school} />
+      <div className="print:hidden">
+        <ReceiptSheet receipt={receipt} school={user?.school} />
+      </div>
+      {/* Laid out off-screen so the slip is measured (and shrunk to fit) before printing. */}
+      <div className="receipt-print" aria-hidden="true">
+        <style>{".receipt-print { position: absolute; left: -10000px; top: 0; } @media print { .receipt-print { position: static; } }"}</style>
+        <SlipSheet>
+          <ReceiptSlip key={receipt.id} receipt={receipt} school={user?.school} />
+        </SlipSheet>
+      </div>
     </div>
   );
 };

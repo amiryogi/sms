@@ -120,7 +120,9 @@ test.describe("fees", () => {
     const number = (await link.innerText()).trim();
     await link.click();
     await expect(page).toHaveURL(/\/finance\/receipts\/\d+/);
-    await expect(page.locator("article")).toContainText(number);
+    // the on-screen receipt; printing uses a quarter-page slip with the same number
+    await expect(page.locator("article").first()).toContainText(number);
+    await expect(page.locator(".receipt-slip")).toContainText(number);
     expect(pdfPageCount(await printPdf(page))).toBe(1);
   });
 

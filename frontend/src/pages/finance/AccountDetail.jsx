@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { Wallet, BadgePercent, ReceiptText, Undo2, CheckCircle2, XCircle, Ban, UserRound, MoreHorizontal } from "lucide-react";
+import { Wallet, BadgePercent, ReceiptText, Undo2, CheckCircle2, XCircle, Ban, UserRound, MoreHorizontal, Printer, FileText } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { feeService } from "../../api/feeService";
-import { PageHeader, Card, CardHeader, Button, IconButton, Tabs, Badge, EmptyState, LoadingBlock, Menu, MenuItem, toast } from "../../components/ui";
+import { PageHeader, Card, CardHeader, Button, IconButton, Tabs, Badge, EmptyState, LoadingBlock, Menu, MenuItem, toast, buttonClasses } from "../../components/ui";
 import FeeStatement from "../../components/finance/FeeStatement";
 import PaymentDialog from "../../components/finance/PaymentDialog";
 import DiscountDialog from "../../components/finance/DiscountDialog";
@@ -88,6 +88,12 @@ const AccountDetail = () => {
         actions={
           year && (
             <>
+              <Link className={buttonClasses({ variant: "secondary" })} to={`/finance/accounts/${studentId}/statement`}>
+                <FileText size={16} aria-hidden="true" /> Print statement
+              </Link>
+              <Link className={buttonClasses({ variant: "secondary" })} to={`/finance/accounts/${studentId}/bill`}>
+                <Printer size={16} aria-hidden="true" /> Print bill
+              </Link>
               <Button variant="secondary" icon={BadgePercent} onClick={() => setDialog({ kind: "discount" })}>Request discount</Button>
               <Button icon={Wallet} disabled={year.totals.balance <= 0} onClick={() => setDialog({ kind: "pay" })}>Record payment</Button>
             </>
@@ -189,6 +195,7 @@ const AccountDetail = () => {
                               )}
                             >
                               <MenuItem icon={ReceiptText} as={Link} to={`/finance/receipts/${t.id}`}>View receipt</MenuItem>
+                              <MenuItem icon={Printer} as={Link} to={`/finance/receipts/${t.id}?print=1`}>Print receipt</MenuItem>
                               {!reversal && !t.reversedBy && (
                                 <MenuItem icon={Undo2} onClick={() => setDialog({ kind: "reverse", target: t })}>
                                   {isAdmin ? "Reverse payment" : "Request reversal"}

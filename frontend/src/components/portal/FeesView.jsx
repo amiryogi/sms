@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Wallet, ReceiptText, BadgePercent } from "lucide-react";
+import { Wallet, ReceiptText, BadgePercent, Printer, FileText } from "lucide-react";
 import { feeService } from "../../api/feeService";
-import { Card, CardHeader, Tabs, Badge, EmptyState, LoadingBlock } from "../ui";
+import { Card, CardHeader, Tabs, Badge, EmptyState, LoadingBlock, buttonClasses } from "../ui";
 import { Progress } from "../shadcn/progress";
 import FeeStatement from "../finance/FeeStatement";
 import { FeeStatusBadge } from "../finance/FeeStatusBadge";
@@ -12,10 +12,11 @@ import { formatCurrency, formatDate } from "../../utils/format";
 /**
  * A student's fees, as the school's ledger has them: what is due by when,
  * what has been paid (with receipts), approved discounts and the balance.
- * Read-only. receiptPath(id) builds the link to a receipt page.
+ * Read-only. receiptPath(id) builds the link to a receipt page; printPaths
+ * ({ statement, bill }) the links to the printable statement and bill.
  * Shared by the student and parent portals.
  */
-const FeesView = ({ studentId, receiptPath }) => {
+const FeesView = ({ studentId, receiptPath, printPaths }) => {
   const [statement, setStatement] = useState(null);
   const [error, setError] = useState("");
   const [yearId, setYearId] = useState(null);
@@ -53,6 +54,16 @@ const FeesView = ({ studentId, receiptPath }) => {
 
   return (
     <div className="space-y-6">
+      {printPaths && (
+        <div className="flex flex-wrap justify-end gap-2">
+          <Link className={buttonClasses({ variant: "secondary", size: "sm" })} to={printPaths.bill}>
+            <Printer size={14} aria-hidden="true" /> Print bill
+          </Link>
+          <Link className={buttonClasses({ variant: "secondary", size: "sm" })} to={printPaths.statement}>
+            <FileText size={14} aria-hidden="true" /> Print statement
+          </Link>
+        </div>
+      )}
       {years.length > 1 && (
         <Tabs value={String(year.academicYear.id)} onChange={setYearId} tabs={years.map((y) => ({ value: String(y.academicYear.id), label: y.academicYear.name }))} />
       )}
@@ -122,6 +133,14 @@ const FeesView = ({ studentId, receiptPath }) => {
                     {r.type === "REVERSAL" ? "−" : ""}
                     {formatCurrency(r.amount)}
                   </span>
+                  <Link
+                    to={`${receiptPath(r.id)}${receiptPath(r.id).includes("?") ? "&" : "?"}print=1`}
+                    aria-label={`Print ${r.receiptNumber}`}
+                    title="Print receipt"
+                    className="inline-flex size-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-brand-700"
+                  >
+                    <Printer size={15} aria-hidden="true" />
+                  </Link>
                 </li>
               ))}
             </ul>

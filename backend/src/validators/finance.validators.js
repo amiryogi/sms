@@ -47,6 +47,30 @@ const transactionListRules = [
   query("studentId").optional({ values: "falsy" }).isInt({ min: 1 }).toInt(),
 ];
 
+/** The printed day book: a date range is required. */
+const daybookRules = [
+  query("from").isISO8601({ strict: true }).withMessage("from must be a date (YYYY-MM-DD)"),
+  query("to").isISO8601({ strict: true }).withMessage("to must be a date (YYYY-MM-DD)"),
+  query("type").optional({ values: "falsy" }).isIn(["PAYMENT", "REVERSAL"]),
+  query("method").optional({ values: "falsy" }).isIn(METHODS),
+  query("classId").optional({ values: "falsy" }).isInt({ min: 1 }).toInt(),
+  query("search").optional({ values: "falsy" }).isString().trim().isLength({ max: 100 }),
+];
+
+/** Fee bills: a class is required (one student has its own route). */
+const billRules = [
+  query("academicYearId").optional({ values: "falsy" }).isInt({ min: 1 }).toInt(),
+  query("classId").isInt({ min: 1 }).withMessage("Choose a class").toInt(),
+  query("sectionId").optional({ values: "falsy" }).isInt({ min: 1 }).toInt(),
+  query("dueBy").optional({ values: "falsy" }).isISO8601({ strict: true }).withMessage("dueBy must be a date (YYYY-MM-DD)"),
+  query("includeZero").optional({ values: "falsy" }).isBoolean(),
+];
+
+const studentBillRules = [
+  query("academicYearId").optional({ values: "falsy" }).isInt({ min: 1 }).toInt(),
+  query("dueBy").optional({ values: "falsy" }).isISO8601({ strict: true }).withMessage("dueBy must be a date (YYYY-MM-DD)"),
+];
+
 const reversalRules = [reason(), body("category").isIn(REVERSAL_CATEGORIES).withMessage("category must be CORRECTION or REFUND")];
 
 const discountRules = [
@@ -99,6 +123,9 @@ module.exports = {
   reason,
   recordPaymentRules,
   transactionListRules,
+  daybookRules,
+  billRules,
+  studentBillRules,
   reversalRules,
   discountRules,
   discountUpdateRules,

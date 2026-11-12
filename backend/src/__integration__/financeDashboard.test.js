@@ -25,9 +25,13 @@ beforeAll(async () => {
   const year = await prisma.academicYear.findFirst({ where: { schoolId: school.id, isCurrent: true } });
   ctx.yearId = year.id;
 
-  // Two students in one class with no approved discounts this year (an
-  // "all fees" discount would rightly apply to this test's new fees too).
-  const discounted = (await prisma.feeDiscount.findMany({ where: { schoolId: school.id, academicYearId: year.id, status: "APPROVED" }, select: { studentId: true } })).map((d) => d.studentId);
+  // Two students in one class with no approved "all fees" discount this year:
+  // that kind would rightly apply to this test's new fee type too. A discount
+  // on another fee type cannot touch it, so those students are fine (excluding
+  // them too made the test run out of students as earlier runs piled up).
+  const discounted = (
+    await prisma.feeDiscount.findMany({ where: { schoolId: school.id, academicYearId: year.id, status: "APPROVED", feeTypeId: null }, select: { studentId: true } })
+  ).map((d) => d.studentId);
   const candidates = await prisma.studentClass.findMany({ where: { schoolId: school.id, academicYearId: year.id, studentId: { notIn: discounted } }, orderBy: { id: "asc" } });
   const first = candidates.find((c) => candidates.some((o) => o.classId === c.classId && o.id !== c.id));
   const second = candidates.find((c) => c.classId === first.classId && c.id !== first.id);

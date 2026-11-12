@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import { ReceiptText, Undo2, CheckCircle2, XCircle, Inbox } from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { ReceiptText, Undo2, CheckCircle2, XCircle, Inbox, Printer, BookOpen } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import DataTable from "../../components/common/DataTable";
 import { feeService } from "../../api/feeService";
@@ -19,6 +19,7 @@ const signed = (t) => (
 
 /** Every payment and reversal, newest first. The ledger is append-only. */
 const Ledger = () => {
+  const navigate = useNavigate();
   const [filters, setFilters] = useState({ from: "", to: "", type: "", method: "", search: "" });
   const [rows, setRows] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 25, total: 0, totalPages: 1 });
@@ -86,7 +87,28 @@ const Ledger = () => {
     },
     { header: <span className="block text-right">Amount</span>, render: (t) => <p className="text-right">{signed(t)}</p> },
     { header: "Recorded by", render: (t) => <span className="text-slate-600">{fullName(t.recordedBy)}</span> },
+    {
+      header: <span className="sr-only">Print</span>,
+      render: (t) => (
+        <Link
+          to={`/finance/receipts/${t.id}?print=1`}
+          aria-label={`Print ${t.receiptNumber}`}
+          title="Print receipt"
+          className="inline-flex size-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-brand-700"
+        >
+          <Printer size={16} aria-hidden="true" />
+        </Link>
+      ),
+    },
   ];
+
+  // The day book prints this ledger as filtered; with no dates, today.
+  const printDaybook = () => {
+    const today = new Date().toLocaleDateString("en-CA"); // local YYYY-MM-DD (toISOString would be UTC)
+    const q = new URLSearchParams({ from: filters.from || filters.to || today, to: filters.to || filters.from || today });
+    for (const k of ["type", "method", "search"]) if (filters[k]) q.set(k, filters[k]);
+    navigate(`/finance/daybook?${q}`);
+  };
 
   return (
     <DataTable
@@ -96,6 +118,7 @@ const Ledger = () => {
       searchValue={filters.search}
       onSearchChange={(v) => setFilter("search", v)}
       searchPlaceholder="Receipt, reference, student…"
+      actions={<Button variant="secondary" icon={BookOpen} onClick={printDaybook}>Print day book</Button>}
       toolbar={
         <>
           <TextInput type="date" aria-label="From date" value={filters.from} onChange={(e) => setFilter("from", e.target.value)} wrapperClassName="w-full sm:w-auto" />

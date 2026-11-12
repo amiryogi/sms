@@ -1,13 +1,12 @@
 import React from "react";
-import { Building2 } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { resolveAssetUrl } from "../../utils/assets";
 import { formatCurrency, formatDate, formatDateTime } from "../../utils/format";
 import { amountInWords, methodLabel, fullName } from "./financeLabels";
 
 /**
- * A printed payment or reversal receipt (GET /fees/transactions/:id).
- * Black on white for printing; the app shell hides itself when printing.
+ * A payment or reversal receipt on screen (GET /fees/transactions/:id).
+ * Printing uses print/ReceiptSlip.jsx, a quarter-A4 slip with the same facts.
  */
 const ReceiptSheet = ({ receipt, school }) => {
   const r = receipt;
@@ -28,13 +27,8 @@ const ReceiptSheet = ({ receipt, school }) => {
       )}
 
       <header className="flex items-start gap-4 border-b border-slate-300 pb-4">
-        {school?.logoUrl ? (
-          <img src={resolveAssetUrl(school.logoUrl)} alt="" className="size-16 shrink-0 object-contain" />
-        ) : (
-          <span className="flex size-16 shrink-0 items-center justify-center rounded-xl border border-slate-300">
-            <Building2 size={28} aria-hidden="true" />
-          </span>
-        )}
+        {/* The logo only when the school has one; no placeholder box. */}
+        {school?.logoUrl && <img src={resolveAssetUrl(school.logoUrl)} alt="" className="size-16 shrink-0 object-contain" />}
         <div className="min-w-0 flex-1">
           <h1 className="text-xl font-bold">{school?.name}</h1>
           {school?.address && <p className="text-sm text-slate-600">{school.address}</p>}

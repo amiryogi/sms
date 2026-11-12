@@ -11,6 +11,8 @@ const discounts = require("../services/finance/discount.service");
 const obligations = require("../services/finance/obligation.service");
 const reports = require("../services/finance/reports.service");
 const { toCsv } = require("../utils/csv");
+const { daybookTotals } = require("../utils/financeReports");
+const { convertADToBS } = require("../utils/dateConverter");
 const { fullName } = require("../utils/names");
 
 const FEE_STAFF = ["ADMIN", "SUPER_ADMIN", "ACCOUNTANT"];
@@ -56,10 +58,9 @@ const recordPayment = asyncHandler(async (req, res) => {
   return ApiResponse.created(res, { ...t, replayed: false }, `Payment recorded. Receipt ${t.receiptNumber}`);
 });
 
-const listTransactions = asyncHandler(async (req, res) => {
-  const { page, limit, skip } = parsePagination(req.query);
-  const { from, to, type, method, classId, academicYearId, studentId, search } = req.query;
-  const where = { schoolId: req.user.schoolId };
+/** The ledger filter shared by the list and the printed day book. */
+const transactionWhere = (schoolId, { from, to, type, method, classId, academicYearId, studentId, search }) => {
+  const where = { schoolId };
   if (type) where.type = type;
   if (method) where.method = method;
   if (academicYearId) where.academicYearId = Number(academicYearId);
@@ -76,11 +77,77 @@ const listTransactions = asyncHandler(async (req, res) => {
       { student: { user: { lastName: dialect.text.search(search) } } },
     ];
   }
+  return where;
+};
+
+const listTransactions = asyncHandler(async (req, res) => {
+  const { page, limit, skip } = parsePagination(req.query);
+  const where = transactionWhere(req.user.schoolId, req.query);
   const [rows, total] = await Promise.all([
     prisma.feeTransaction.findMany({ where, include: ledger.RECEIPT_INCLUDE, orderBy: [{ paidOn: "desc" }, { id: "desc" }], skip, take: limit }),
     prisma.feeTransaction.count({ where }),
   ]);
   return ApiResponse.paginated(res, rows, { page, limit, total });
+});
+
+/**
+ * Every ledger entry in a date range (at most 366 days, at most DAYBOOK_LIMIT
+ * entries), oldest first, with per-method totals: the printed day book.
+ */
+const DAYBOOK_LIMIT = 5000;
+const getDaybook = asyncHandler(async (req, res) => {
+  const from = String(req.query.from).slice(0, 10);
+  const to = String(req.query.to).slice(0, 10);
+  if (to < from) throw ApiError.badRequest("The end date is before the start date");
+  if ((Date.parse(to) - Date.parse(from)) / 86400000 > 366) throw ApiError.badRequest("Print at most one year at a time");
+  const where = transactionWhere(req.user.schoolId, { ...req.query, from, to });
+  const rows = await prisma.feeTransaction.findMany({
+    where,
+    orderBy: [{ paidOn: "asc" }, { id: "asc" }],
+    take: DAYBOOK_LIMIT + 1,
+    select: {
+      id: true,
+      receiptNumber: true,
+      type: true,
+      paidOn: true,
+      method: true,
+      reference: true,
+      amount: true,
+      student: { select: { id: true, admissionNumber: true, user: { select: { firstName: true, middleName: true, lastName: true } } } },
+      studentClass: { select: { rollNumber: true, class: { select: { name: true } }, section: { select: { name: true } } } },
+      recordedBy: { select: { id: true, firstName: true, middleName: true, lastName: true } },
+      reverses: { select: { receiptNumber: true } },
+      reversedBy: { select: { receiptNumber: true } },
+    },
+  });
+  if (rows.length > DAYBOOK_LIMIT) throw ApiError.badRequest(`More than ${DAYBOOK_LIMIT} entries: print a shorter period`);
+  ApiResponse.success(
+    res,
+    {
+      from,
+      to,
+      fromBs: convertADToBS(new Date(`${from}T00:00:00Z`))?.formatted || null,
+      toBs: convertADToBS(new Date(`${to}T00:00:00Z`))?.formatted || null,
+      rows,
+      totals: daybookTotals(rows),
+    },
+    "Day book retrieved",
+  );
+});
+
+// ---------- fee bills (due notices) ----------
+
+const listBills = asyncHandler(async (req, res) => {
+  const { academicYearId, classId, sectionId, dueBy, includeZero } = req.query;
+  const data = await obligations.bills({ schoolId: req.user.schoolId, academicYearId, classId, sectionId, dueBy, includeZero: includeZero === true || includeZero === "true" });
+  ApiResponse.success(res, data, `${data.bills.length} bill(s)`);
+});
+
+const getStudentBill = asyncHandler(async (req, res) => {
+  await assertCanViewStudent(req.user, req.params.studentId);
+  const data = await obligations.bills({ schoolId: req.user.schoolId, studentId: req.params.studentId, academicYearId: req.query.academicYearId, dueBy: req.query.dueBy, includeZero: true });
+  if (data.bills.length === 0) throw ApiError.notFound("The student is not enrolled in this academic year");
+  ApiResponse.success(res, { ...data, bill: data.bills[0], bills: undefined }, "Bill retrieved");
 });
 
 const getTransaction = asyncHandler(async (req, res) => {
@@ -248,6 +315,9 @@ module.exports = {
   getStatement,
   recordPayment,
   listTransactions,
+  getDaybook,
+  listBills,
+  getStudentBill,
   getTransaction,
   requestReversal,
   reverseDirectly,

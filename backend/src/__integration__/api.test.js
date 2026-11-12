@@ -375,6 +375,62 @@ describe("fees", () => {
     expect(acct.body.data).toEqual(res.body.data);
   });
 
+  test("a class's fee bills equal each student's statement for the year", async () => {
+    const res = await api("get", `/fees/bills?classId=${ctx.enrolment.classId}&includeZero=true`, "accountant");
+    expect(res.status).toBe(200);
+    const { bills } = res.body.data;
+    expect(bills.length).toBeGreaterThan(0);
+    // ordered by section, then roll number
+    for (const b of bills.slice(0, 5)) {
+      const st = await api("get", `/fees/accounts/${b.studentId}?academicYearId=${res.body.data.academicYear.id}`, "accountant");
+      const year = st.body.data.years.find((y) => y.academicYear.id === res.body.data.academicYear.id);
+      expect(b.totals.due).toBeCloseTo(year ? year.totals.balance : 0, 2);
+      expect(b.totals.overdue).toBeCloseTo(year ? year.totals.overdue : 0, 2);
+      const lineSum = b.lines.reduce((s, l) => s + l.balance, 0);
+      expect(lineSum).toBeCloseTo(b.totals.due, 2);
+    }
+    // without includeZero, nobody who owes nothing gets a bill
+    const owing = await api("get", `/fees/bills?classId=${ctx.enrolment.classId}`, "accountant");
+    expect(owing.body.data.bills.every((b) => b.totals.due > 0)).toBe(true);
+  });
+
+  test("fee bills: staff only for a class; a student or parent only their own", async () => {
+    expect((await api("get", `/fees/bills?classId=${ctx.enrolment.classId}`, "teacher")).status).toBe(403);
+    expect((await api("get", `/fees/bills?classId=${ctx.enrolment.classId}`, "student")).status).toBe(403);
+    expect((await api("get", `/fees/bills`, "accountant")).status).toBe(400); // a class is required
+    expect((await api("get", `/fees/bills/student/${ctx.studentId}`, "student")).status).toBe(200);
+    expect((await api("get", `/fees/bills/student/${ctx.otherStudentId}`, "student")).status).toBe(403);
+    for (const id of ctx.childIds) expect((await api("get", `/fees/bills/student/${id}`, "parent")).status).toBe(200);
+    expect((await api("get", `/fees/bills/student/${ctx.otherStudentId}`, "parent")).status).toBe(403);
+    expect((await api("get", `/fees/bills/student/${ctx.studentId}`, "teacher")).status).toBe(403);
+  });
+
+  test("the day book lists every entry in the range with totals that add up", async () => {
+    const res = await api("get", "/fees/transactions/daybook?from=2020-01-01&to=2020-12-31", "accountant");
+    expect(res.status).toBe(200);
+    const year = await prisma.feeTransaction.findFirst({ where: { schoolId: ctx.schoolId }, orderBy: { paidOn: "desc" } });
+    if (year) {
+      const to = year.paidOn.toISOString().slice(0, 10);
+      const from = new Date(Date.parse(to) - 300 * 86400000).toISOString().slice(0, 10);
+      const book = await api("get", `/fees/transactions/daybook?from=${from}&to=${to}`, "accountant");
+      expect(book.status).toBe(200);
+      const { rows, totals } = book.body.data;
+      const count = await prisma.feeTransaction.count({ where: { schoolId: ctx.schoolId, paidOn: { gte: new Date(`${from}T00:00:00Z`), lte: new Date(`${to}T00:00:00Z`) } } });
+      expect(rows.length).toBe(count);
+      const net = rows.reduce((s, r) => s + (r.type === "REVERSAL" ? -1 : 1) * Number(r.amount), 0);
+      expect(totals.overall.net).toBeCloseTo(net, 2);
+      expect(totals.byMethod.reduce((s, m) => s + m.net, 0)).toBeCloseTo(net, 2);
+      // oldest first
+      const days = rows.map((r) => r.paidOn);
+      expect([...days].sort()).toEqual(days);
+    }
+    expect((await api("get", "/fees/transactions/daybook?from=2024-01-01&to=2025-06-01", "accountant")).status).toBe(400); // over a year
+    expect((await api("get", "/fees/transactions/daybook?from=2025-02-01&to=2025-01-01", "accountant")).status).toBe(400); // backwards
+    expect((await api("get", "/fees/transactions/daybook", "accountant")).status).toBe(400); // no range
+    expect((await api("get", "/fees/transactions/daybook?from=2025-01-01&to=2025-01-31", "teacher")).status).toBe(403);
+    expect((await api("get", "/fees/transactions/daybook?from=2025-01-01&to=2025-01-31", "student")).status).toBe(403);
+  });
+
   test("reconcile: every cached balance matches the ledger", async () => {
     const res = await api("get", "/fees/reconcile", "admin");
     expect(res.status).toBe(200);

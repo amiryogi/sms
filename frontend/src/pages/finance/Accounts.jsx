@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Users, FilePlus2, HandCoins, ChevronRight } from "lucide-react";
+import { Users, FilePlus2, HandCoins, ChevronRight, Printer } from "lucide-react";
 import DataTable from "../../components/common/DataTable";
 import Modal from "../../components/common/Modal";
 import { feeService } from "../../api/feeService";
 import { academicService } from "../../api/academicService";
-import { PageHeader, Tabs, Avatar, Button, DialogActions, Field, SelectInput, Alert, toast } from "../../components/ui";
+import { PageHeader, Tabs, Avatar, Button, DialogActions, Field, SelectInput, Alert, toast, buttonClasses } from "../../components/ui";
 import { FeeStatusBadge } from "../../components/finance/FeeStatusBadge";
 import { formatCurrency } from "../../utils/format";
 
@@ -182,7 +182,18 @@ const Accounts = () => {
         icon={Users}
         title="Student accounts"
         description="What each student owes and has paid this year."
-        actions={<Button icon={FilePlus2} variant="secondary" onClick={() => setGenerating(true)}>Generate fees</Button>}
+        actions={
+          <>
+            {/* Bills for the class (and section, year) chosen below; the bills page asks for a class if none is. */}
+            <Link
+              className={buttonClasses({ variant: "secondary" })}
+              to={`/finance/bills?${new URLSearchParams(Object.entries({ classId: filters.classId, sectionId: filters.sectionId, academicYearId: filters.academicYearId }).filter(([, v]) => v))}`}
+            >
+              <Printer size={16} aria-hidden="true" /> Print bills
+            </Link>
+            <Button icon={FilePlus2} variant="secondary" onClick={() => setGenerating(true)}>Generate fees</Button>
+          </>
+        }
       />
 
       <Tabs value={filters.status} onChange={(v) => setFilter("status", v)} tabs={STATUS_TABS} />

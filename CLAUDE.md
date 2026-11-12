@@ -73,7 +73,7 @@ Demo logins (after seed, password `password123`):
 `superadmin@svi.edu.np`, `admin@svi.edu.np`, `admin@demo-school.edu.np`, `teacher@demo-school.edu.np`,
 `student@demo-school.edu.np`, `parent@demo-school.edu.np`. School code `DEMO001`.
 
-**Tests:** `npm test` (Jest) runs 472 unit tests over the pure utilities in
+**Tests:** `npm test` (Jest) runs 478 unit tests over the pure utilities in
 `backend/src/utils/__tests__/` — grade calculation, grade scales, report-card
 layouts and attendance, BS date conversion, pagination, the response helpers and the fee
 maths (`finance.test.js`: money, allocation, discounts, fiscal year, attendance rate) — plus the grade-scale service
@@ -107,8 +107,8 @@ the same with `npm run seed`.
 `node scripts/reconcile.js` checks every cached fee balance against the ledger.
 
 **Browser tests** live in `e2e/` (Playwright; see `e2e/README.md`):
-- 51 tests over report-card printing (real PDFs), the exam lifecycle and marks entry, the
-  exam pilot, the pages of every role, and fees.
+- 59 tests over report-card printing (real PDFs), the exam lifecycle and marks entry, the
+  exam pilot, the pages of every role, fees and the fee printouts.
 - They start their own servers on the MySQL test database (ports 5012 / 5184).
 - Run with `cd e2e && PW_CHANNEL=chrome npm test`.
 - A test fails on any unexpected console error.
@@ -333,6 +333,19 @@ is `reportCardConfig.design`, same column and endpoint.
 - **Adding a setting:** add it to the spec, map it in `designVars.js`, use the variable in the
   stylesheet with the old value as fallback.
 - The Performance Report template does not use the design yet.
+
+**Fee printouts** (`components/finance/print/`):
+- **Slips, four to an A4 portrait page:** fee bills / due notices and printed receipts.
+  `SlipSheet` gives each slip a quarter page (A6) with cut lines and shrinks a long one to fit.
+  The on-screen receipt (`ReceiptSheet`) is unchanged; printing uses `ReceiptSlip`.
+- **A4 sheets:** the student statement (`StatementSheet`) and the day book (`pages/finance/Daybook.jsx`).
+- **Endpoints:** `GET /fees/bills?classId=` (fee staff), `GET /fees/bills/student/:studentId`
+  (ownership-checked, like the statement), `GET /fees/transactions/daybook?from=&to=` (fee staff,
+  at most 366 days and 5,000 entries). Bill lines and day-book totals are computed in
+  `utils/financeReports.js` (`billLines`, `daybookTotals`); the pages only draw them.
+- **Entry points:** Accounts "Print bills"; the account page "Print statement" / "Print bill";
+  a print link on every receipt row (opens `?print=1`); Transactions "Print day book"; the
+  student and parent Fees pages.
 
 **Student portal (Phase 6):**
 - Dashboard, Attendance (Nepali-month register), Assignments (hand in text or files),

@@ -78,6 +78,10 @@ export const feeService = {
   recordTransaction: async (data) => (await apiClient.post("/fees/transactions", data)).data,
   getTransactions: async (params = {}) => (await apiClient.get("/fees/transactions", { params })).data,
   getTransaction: async (id) => (await apiClient.get(`/fees/transactions/${id}`)).data,
+  // Printouts: the day book (every entry in a range, with totals) and fee bills (due notices)
+  getDaybook: async (params) => (await apiClient.get("/fees/transactions/daybook", { params })).data,
+  getBills: async (params) => (await apiClient.get("/fees/bills", { params })).data,
+  getStudentBill: async (studentId, params = {}) => (await apiClient.get(`/fees/bills/student/${studentId}`, { params })).data,
 
   requestReversal: async (transactionId, data) => (await apiClient.post(`/fees/transactions/${transactionId}/reversal-requests`, data)).data,
   reverseTransaction: async (transactionId, data) => (await apiClient.post(`/fees/transactions/${transactionId}/reverse`, data)).data,

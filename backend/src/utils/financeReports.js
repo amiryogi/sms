@@ -206,7 +206,74 @@ const collectionRows = (allocations, groupByKey) => {
     .map(({ order, ...rest }) => rest); // eslint-disable-line no-unused-vars
 };
 
+// ---------- printouts: fee bills and the day book ----------
+
+/**
+ * One student's fee bill: what is still owed, line by line.
+ *
+ *   installments: [{ feeTypeName, label, sequence, dueDate, amount, discountTotal, paidTotal, status }]
+ *                 (live obligations only; cancelled installments are skipped here)
+ *   dueBy:        "YYYY-MM-DD" or null. With a date, only installments due on or
+ *                 before it are billed; an installment with no due date is due now,
+ *                 so it is always billed.
+ *
+ * Returns { lines, totals: { due, overdue }, earliestDue } with numbers in rupees.
+ * Lines keep the given order (callers pass fee then sequence).
+ */
+const billLines = (installments, { today, dueBy = null }) => {
+  const lines = [];
+  for (const i of installments) {
+    if (i.status === "cancelled") continue;
+    const owed = balance(i);
+    if (!isPositive(owed)) continue;
+    if (dueBy && i.dueDate && isoDay(i.dueDate) > dueBy) continue;
+    lines.push({
+      feeType: i.feeTypeName,
+      label: i.label,
+      dueDate: i.dueDate ? isoDay(i.dueDate) : null,
+      balance: owed,
+      overdue: isOverdue(i, today),
+    });
+  }
+  const due = lines.reduce((acc, l) => add(acc, l.balance), dec(0));
+  const overdue = lines.filter((l) => l.overdue).reduce((acc, l) => add(acc, l.balance), dec(0));
+  const dated = lines.map((l) => l.dueDate).filter(Boolean).sort();
+  return {
+    lines: lines.map((l) => ({ ...l, balance: toNumber(l.balance) })),
+    totals: { due: toNumber(due), overdue: toNumber(overdue) },
+    earliestDue: dated[0] || null,
+  };
+};
+
+/**
+ * Totals for a printed day book: rows are ledger entries { type, method, amount }.
+ * Payments add, reversals subtract. Per method in a fixed order (methods with no
+ * entries are left out), then overall.
+ */
+const DAYBOOK_METHODS = ["cash", "cheque", "bank_transfer", "wallet", "card"];
+const daybookTotals = (rows) => {
+  const blank = () => ({ count: 0, payments: dec(0), reversals: dec(0) });
+  const by = new Map();
+  const all = blank();
+  for (const r of rows) {
+    if (!by.has(r.method)) by.set(r.method, blank());
+    for (const t of [by.get(r.method), all]) {
+      t.count += 1;
+      if (r.type === "REVERSAL") t.reversals = add(t.reversals, r.amount);
+      else t.payments = add(t.payments, r.amount);
+    }
+  }
+  const out = (t) => ({ count: t.count, payments: toNumber(t.payments), reversals: toNumber(t.reversals), net: toNumber(sub(t.payments, t.reversals)) });
+  const order = (m) => (DAYBOOK_METHODS.indexOf(m) === -1 ? DAYBOOK_METHODS.length : DAYBOOK_METHODS.indexOf(m));
+  return {
+    byMethod: [...by.entries()].sort((a, b) => order(a[0]) - order(b[0])).map(([method, t]) => ({ method, ...out(t) })),
+    overall: out(all),
+  };
+};
+
 module.exports = {
+  billLines,
+  daybookTotals,
   isoDay,
   addDays,
   bsMonthOf,

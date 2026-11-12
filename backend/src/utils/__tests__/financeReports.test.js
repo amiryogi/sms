@@ -132,3 +132,66 @@ describe("csv", () => {
     expect(csv).toContain('"-3"');
   });
 });
+
+describe("billLines: what a fee bill asks for", () => {
+  const i = (over) => ({ feeTypeName: "Tuition", label: "Full amount", sequence: 1, dueDate: null, amount: "1000", discountTotal: "0", paidTotal: "0", status: "pending", ...over });
+
+  test("bills only what is still owed, after discounts and payments", () => {
+    const bill = fr.billLines(
+      [
+        i({ label: "Baisakh", dueDate: "2026-10-01", paidTotal: "1000", status: "paid" }), // paid: left out
+        i({ label: "Jestha", dueDate: "2026-10-20", amount: "1000", discountTotal: "100", paidTotal: "300" }), // 600 overdue
+        i({ feeTypeName: "Exam", amount: "500" }), // no due date: due now
+        i({ feeTypeName: "Bus", amount: "800", status: "cancelled" }), // waived: left out
+      ],
+      { today: TODAY },
+    );
+    expect(bill.lines).toEqual([
+      { feeType: "Tuition", label: "Jestha", dueDate: "2026-10-20", balance: 600, overdue: true },
+      { feeType: "Exam", label: "Full amount", dueDate: null, balance: 500, overdue: false },
+    ]);
+    expect(bill.totals).toEqual({ due: 1100, overdue: 600 });
+    expect(bill.earliestDue).toBe("2026-10-20");
+  });
+
+  test("dueBy bills installments due on or before the date, and undated ones", () => {
+    const rows = [
+      i({ label: "Mangsir", dueDate: "2026-11-30" }),
+      i({ label: "Poush", dueDate: "2026-12-31" }),
+      i({ feeTypeName: "Exam", amount: "500" }),
+    ];
+    const bill = fr.billLines(rows, { today: TODAY, dueBy: "2026-11-30" });
+    expect(bill.lines.map((l) => l.label)).toEqual(["Mangsir", "Full amount"]);
+    expect(bill.totals.due).toBe(1500);
+    expect(bill.totals.overdue).toBe(0);
+  });
+
+  test("keeps paisa exact", () => {
+    const bill = fr.billLines([i({ amount: "0.30", paidTotal: "0.10" }), i({ amount: "0.10" })], { today: TODAY });
+    expect(bill.totals.due).toBe(0.3);
+  });
+
+  test("nothing owed gives an empty bill", () => {
+    expect(fr.billLines([i({ paidTotal: "1000", status: "paid" })], { today: TODAY })).toEqual({ lines: [], totals: { due: 0, overdue: 0 }, earliestDue: null });
+  });
+});
+
+describe("daybookTotals: the cash counter's totals", () => {
+  test("payments add, reversals subtract, per method in a fixed order", () => {
+    const t = fr.daybookTotals([
+      { type: "PAYMENT", method: "bank_transfer", amount: "2500" },
+      { type: "PAYMENT", method: "cash", amount: "1000.50" },
+      { type: "PAYMENT", method: "cash", amount: "499.50" },
+      { type: "REVERSAL", method: "cash", amount: "300" },
+    ]);
+    expect(t.byMethod).toEqual([
+      { method: "cash", count: 3, payments: 1500, reversals: 300, net: 1200 },
+      { method: "bank_transfer", count: 1, payments: 2500, reversals: 0, net: 2500 },
+    ]);
+    expect(t.overall).toEqual({ count: 4, payments: 4000, reversals: 300, net: 3700 });
+  });
+
+  test("an empty day is all zeros", () => {
+    expect(fr.daybookTotals([])).toEqual({ byMethod: [], overall: { count: 0, payments: 0, reversals: 0, net: 0 } });
+  });
+});

@@ -9,7 +9,13 @@ const ParentFees = () => (
     icon={Wallet}
     title="Fees"
     description="What is due, what has been paid, and the receipts."
-    render={(child) => <FeesView studentId={child.id} receiptPath={(id) => `/parent/receipts/${id}?child=${child.id}`} />}
+    render={(child) => (
+      <FeesView
+        studentId={child.id}
+        receiptPath={(id) => `/parent/receipts/${id}?child=${child.id}`}
+        printPaths={{ statement: `/parent/fees/statement?child=${child.id}`, bill: `/parent/fees/bill?child=${child.id}` }}
+      />
+    )}
   />
 );
 

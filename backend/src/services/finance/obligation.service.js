@@ -12,6 +12,8 @@ const { lockInstallments, refreshBalances, withTransaction } = require("./balanc
 const discountService = require("./discount.service");
 const { RECEIPT_INCLUDE } = require("./ledger.service");
 const { fullName } = require("../../utils/names");
+const fr = require("../../utils/financeReports");
+const { convertADToBS } = require("../../utils/dateConverter");
 
 /** Installment rows for a new obligation: the structure's template, or one row for the whole amount. */
 const scheduleFor = (structure) => {
@@ -273,6 +275,72 @@ const accounts = async ({ schoolId, academicYearId, classId, sectionId, search, 
 };
 
 /**
+ * Fee bills (due notices) for one academic year: each enrolment's unpaid
+ * installments, in one query. Narrow it with classId / sectionId (a class's
+ * bills) or studentId (one student). `dueBy` bills only what is due by that
+ * date. Students who owe nothing are left out unless includeZero.
+ */
+const bills = async ({ schoolId, academicYearId, classId, sectionId, studentId, dueBy, includeZero = false }) => {
+  const year = academicYearId
+    ? await prisma.academicYear.findFirst({ where: { id: Number(academicYearId), schoolId } })
+    : await prisma.academicYear.findFirst({ where: { schoolId, isCurrent: true } });
+  if (!year) throw ApiError.notFound("Academic year not found");
+  const today = kathmanduToday();
+  const where = { schoolId, academicYearId: year.id };
+  if (classId) where.classId = Number(classId);
+  if (sectionId) where.sectionId = Number(sectionId);
+  if (studentId) where.studentId = Number(studentId);
+
+  const enrolments = await prisma.studentClass.findMany({
+    where,
+    orderBy: [{ class: { displayOrder: "asc" } }, { section: { name: "asc" } }, { rollNumber: { sort: "asc", nulls: "first" } }, { id: "asc" }],
+    select: {
+      id: true,
+      rollNumber: true,
+      class: { select: { id: true, name: true } },
+      section: { select: { id: true, name: true } },
+      student: { select: { id: true, admissionNumber: true, user: { select: { firstName: true, middleName: true, lastName: true } } } },
+      feeObligations: {
+        where: { cancelledAt: null },
+        orderBy: { id: "asc" },
+        select: {
+          feeStructure: { select: { feeType: { select: { name: true } } } },
+          installments: {
+            orderBy: { sequence: "asc" },
+            select: { label: true, sequence: true, dueDate: true, amount: true, discountTotal: true, paidTotal: true, status: true },
+          },
+        },
+      },
+    },
+  });
+
+  const rows = enrolments
+    .map((e) => {
+      const installments = e.feeObligations.flatMap((o) => o.installments.map((i) => ({ ...i, feeTypeName: o.feeStructure.feeType.name })));
+      const bill = fr.billLines(installments, { today, dueBy: dueBy ? String(dueBy).slice(0, 10) : null });
+      return {
+        studentId: e.student.id,
+        studentClassId: e.id,
+        name: fullName(e.student.user),
+        admissionNumber: e.student.admissionNumber,
+        rollNumber: e.rollNumber,
+        class: e.class,
+        section: e.section,
+        ...bill,
+      };
+    })
+    .filter((b) => includeZero || b.totals.due > 0);
+
+  return {
+    academicYear: { id: year.id, name: year.name },
+    billDate: today,
+    billDateBs: convertADToBS(new Date(`${today}T00:00:00Z`))?.formatted || null,
+    dueBy: dueBy ? String(dueBy).slice(0, 10) : null,
+    bills: rows,
+  };
+};
+
+/**
  * Recompute every cache in a school from the ledger and report differences.
  * Read-only: it never repairs anything.
  */
@@ -355,4 +423,4 @@ const setTemplate = async ({ schoolId, feeStructureId, installments }) => {
   return getTemplate({ schoolId, feeStructureId });
 };
 
-module.exports = { generate, cancel, statement, accounts, reconcile, getTemplate, setTemplate, scheduleFor };
+module.exports = { generate, cancel, statement, accounts, bills, reconcile, getTemplate, setTemplate, scheduleFor };
