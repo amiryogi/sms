@@ -52,7 +52,7 @@ module.exports = async () => {
         scope,
         exam: { id: exam.id, name: exam.name, status: exam.status },
         yearId: exam.academicYearId,
-        students: cards.body.data.students.map((s) => ({ id: s.studentId, name: `${s.firstName} ${s.lastName}`, rollNumber: s.rollNumber, gpa: s.gpa, grade: s.overallGrade, isPassed: s.isPassed })),
+        students: cards.body.data.students.map((s) => ({ id: s.studentId, name: [s.firstName, s.middleName, s.lastName].filter(Boolean).join(" "), rollNumber: s.rollNumber, gpa: s.gpa, grade: s.overallGrade, isPassed: s.isPassed })),
         studentId: users.student.student?.id,
         tokens,
       },

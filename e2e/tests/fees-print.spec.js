@@ -183,8 +183,11 @@ test.describe("day book", () => {
     await page.getByRole("button", { name: "Print day book" }).click();
     await expect(page).toHaveURL(new RegExp(`/finance/daybook\\?from=${from}&to=${to}`));
     await expect(page.locator(".daybook-row")).toHaveCount(api.body.data.rows.length);
-    const net = (await page.locator(".daybook-net").innerText()).replace(/[^\d]/g, "");
-    expect(net).toBe(String(Math.round(api.body.data.totals.overall.net)));
+    // the net can be negative (a period with more reversed than received)
+    const netText = await page.locator(".daybook-net").innerText();
+    const expectedNet = api.body.data.totals.overall.net;
+    expect(netText.replace(/[^\d]/g, "")).toBe(String(Math.abs(Math.round(expectedNet))));
+    expect(/[-−]/.test(netText)).toBe(expectedNet < 0);
     const pdf = await printPdf(page);
     savePdf(testInfo, "daybook.pdf", pdf);
     expect(pdfPageCount(pdf)).toBeGreaterThanOrEqual(1);
