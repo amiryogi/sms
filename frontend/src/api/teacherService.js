@@ -7,6 +7,21 @@ export const teacherService = {
     return response.data;
   },
 
+  /**
+   * Every staff member matching `params` (e.g. { role: "TEACHER" }), all pages.
+   * For pick lists: getTeachers alone returns one page (10 by default), which
+   * silently dropped teachers once a school had more than that.
+   */
+  getAllTeachers: async (params = {}) => {
+    const all = [];
+    for (let page = 1; page <= 50; page += 1) {
+      const { data, pagination } = (await apiClient.get("/teachers", { params: { ...params, page, limit: 100 } })).data;
+      all.push(...(data || []));
+      if (!pagination?.hasNextPage) break;
+    }
+    return all;
+  },
+
   getTeacher: async (id) => {
     const response = await apiClient.get(`/teachers/${id}`);
     return response.data;

@@ -64,12 +64,12 @@ const TeacherAssignment = () => {
   const fetchInitialData = async () => {
     try {
       const [teachersRes, classesRes, yearsRes] = await Promise.all([
-        // Only teachers can be given subjects (the API refuses other staff).
-        teacherService.getTeachers({ role: "TEACHER" }),
+        // Only teachers can be given subjects (the API refuses other staff). Every page of them.
+        teacherService.getAllTeachers({ role: "TEACHER" }),
         academicService.getClasses(),
         academicService.getAcademicYears(),
       ]);
-      setTeachers(teachersRes.data?.teachers || teachersRes.data || []);
+      setTeachers(teachersRes);
       setClasses(classesRes.data || []);
       setAcademicYears(yearsRes.data || []);
 
@@ -129,6 +129,11 @@ const TeacherAssignment = () => {
         : { userId: "", classId: "", sectionId: "", classSubjectId: "", isClassTeacher: false },
     );
     setModalOpen(true);
+    // Staff added since the page opened (e.g. in another tab) appear without a reload.
+    teacherService
+      .getAllTeachers({ role: "TEACHER" })
+      .then(setTeachers)
+      .catch(() => {});
   };
 
   const closeModal = () => {
