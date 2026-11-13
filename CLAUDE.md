@@ -108,9 +108,9 @@ the same with `npm run seed`.
 `node scripts/reconcile.js` checks every cached fee balance against the ledger.
 
 **Browser tests** live in `e2e/` (Playwright; see `e2e/README.md`):
-- 62 tests over report-card printing (real PDFs), the exam lifecycle and marks entry, the
+- 68 tests over report-card printing (real PDFs), the exam lifecycle and marks entry, the
   exam pilot, the pages of every role, fees and the fee printouts, sign-in by username, password
-  reset with the forced change, and class login slips.
+  reset with the forced change, class login slips, and the public site.
 - They start their own servers on the MySQL test database (ports 5012 / 5184).
 - Run with `cd e2e && PW_CHANNEL=chrome npm test`.
 - A test fails on any unexpected console error.
@@ -390,6 +390,27 @@ counts present (+ late, per the layout's `countLateAsPresent`) days from the
 academic-year start to the exam end and freezes them on `ReportCard`
 (`daysPresent`, `daysLate`, `totalWorkingDays`). Rules in
 `utils/reportCardAttendance.js`.
+
+**Public product site ("Vidyalaya SMS")** at `/`, `/features`, `/portals`, `/tour`, `/contact`:
+- It presents the system to other schools, so it is not school-branded. The sign-in page
+  keeps the school's name, logo and colour. `/` used to redirect to `/dashboard`; a signed-in
+  user now sees the home page with "Go to dashboard".
+- Shell: `layouts/PublicLayout.jsx` (navbar, footer, scroll handling,
+  `MotionConfig reducedMotion="user"`). Pieces live in `components/public/`, pages in
+  `pages/public/`.
+- **All copy is in `pages/public/content.js`** (features, roles, screenshots, contact
+  details). Describe only what the system really does.
+- Animation uses `framer-motion`, on these pages only. Import it as `motion as Motion`: the
+  lint config does not see JSX member use (`<Motion.div>`).
+- Screenshots sit on `components/public/ShotStage.jsx`, a fixed dark blue gradient
+  (slate-950 → blue-950 → blue-800, not the school's `brand-*`), so the white app screens stand
+  out. Use it (and `<BrowserFrame dark>`) for any new screenshot.
+- The enquiry form opens the visitor's mail app or WhatsApp. There is no mail service.
+- **Screenshots** (`frontend/public/screenshots/*.jpg`) are captured from the real app on
+  the seeded test database by `cd e2e && PW_CHANNEL=chrome npm run screenshots`
+  (`e2e/screenshots/capture.spec.js`, its own config, not part of `npm test`). Look at every
+  image before committing it.
+- Footer credit: "Created and Designed by Amir Shrestha" (https://amirlearner.me).
 
 **Partial or rough:**
 - No admin-facing attendance report page (the API exists).

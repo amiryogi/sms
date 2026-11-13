@@ -1,12 +1,29 @@
 # Where this project is
 
-Updated 2026-11-12. Keep this current when you stop work — it is the handover
+Updated 2026-11-13. Keep this current when you stop work — it is the handover
 between machines and between sessions.
 
 New machine? Start with [SETUP-NEW-MACHINE.md](SETUP-NEW-MACHINE.md).
 
 **All four phases of [plans/configurable-report-card.md](plans/configurable-report-card.md)
 are done** and on `main`.
+
+---
+
+## Public product site (2026-11-13): done, not yet committed
+
+- **What it is:** a "Vidyalaya SMS" site at `/` with Features, Portals, Tour and Contact pages,
+  a navbar and footer, and light animation (framer-motion, turned off by reduced motion).
+- **Screenshots:** real ones, captured with `cd e2e && npm run screenshots`.
+- **Contact details** for enquiries: 9861158271 (call, WhatsApp, Viber) and amirsvi766@gmail.com.
+- **Footer credit:** Amir Shrestha, linking to https://amirlearner.me.
+- **Code and docs:** see CLAUDE.md §6 "Public product site".
+- **Verified:** lint and build clean; `tests/public-site.spec.js` (6 tests) passes; every page
+  checked at 1440 px and 390 px.
+- **Open questions for the owner:**
+  - Is the copy right? In particular the "pricing" mention on the Contact page.
+  - Should the site take the school's brand colour once someone has opened the sign-in page?
+    Today it does, because `applyBrand` sets the colour on the whole document.
 
 ---
 

@@ -16,6 +16,14 @@ import DashboardLayout from "./layouts/DashboardLayout";
 // Lazy loading for better performance
 const Login = React.lazy(() => import("./pages/Login"));
 
+// Public product site (navbar + footer shell; pages load inside it)
+const PublicLayout = React.lazy(() => import("./layouts/PublicLayout"));
+const PublicHome = React.lazy(() => import("./pages/public/Home"));
+const PublicFeatures = React.lazy(() => import("./pages/public/Features"));
+const PublicPortals = React.lazy(() => import("./pages/public/Portals"));
+const PublicTour = React.lazy(() => import("./pages/public/Tour"));
+const PublicContact = React.lazy(() => import("./pages/public/Contact"));
+
 // Admin Pages
 const AdminDashboard = React.lazy(() => import("./pages/admin/Dashboard"));
 const AcademicYears = React.lazy(() => import("./pages/admin/AcademicYears"));
@@ -154,6 +162,13 @@ function App() {
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
+            <Route element={<PublicLayout />}>
+              <Route path="/" element={<PublicHome />} />
+              <Route path="/features" element={<PublicFeatures />} />
+              <Route path="/portals" element={<PublicPortals />} />
+              <Route path="/tour" element={<PublicTour />} />
+              <Route path="/contact" element={<PublicContact />} />
+            </Route>
 
             {/* Admin Routes */}
             <Route
@@ -355,9 +370,6 @@ function App() {
             >
               <Route path="/dashboard" element={<RoleBasedDashboard />} />
             </Route>
-
-            {/* Root redirect */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
             {/* Error Routes */}
             <Route path="/unauthorized" element={<Unauthorized />} />

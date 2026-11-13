@@ -107,7 +107,7 @@ test.describe("individual report card", () => {
   for (const position of ["left", "right"]) {
     test(`with a logo on the ${position}, the name stays centred and nothing prints on the other side`, async ({ page }) => {
       await rewriteCards(page, (card) => {
-        card.school.logoUrl = `${process.env.E2E_BASE_URL}/vite.svg`;
+        card.school.logoUrl = `${process.env.E2E_BASE_URL}/favicon.svg`;
         if (card.layout?.design) card.layout.design.logoPosition = position;
       });
       const sheet = await openIndividual(page);

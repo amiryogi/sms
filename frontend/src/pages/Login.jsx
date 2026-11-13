@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
+  ArrowLeft,
   AtSign,
   Building2,
   Eye,
@@ -164,6 +165,13 @@ const Login = () => {
       {/* Form */}
       <main className="flex flex-1 items-center justify-center px-5 py-12 sm:px-10">
         <div className="w-full max-w-sm animate-pop-in">
+          <Link
+            to="/"
+            className="mb-8 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 no-underline hover:text-brand-700"
+          >
+            <ArrowLeft size={15} aria-hidden="true" />
+            Back to home
+          </Link>
           <div className="mb-8 flex items-center gap-3 lg:hidden">
             <SchoolLogo school={school} className="size-11 rounded-xl object-contain ring-1 ring-slate-200" />
             <div className="min-w-0">

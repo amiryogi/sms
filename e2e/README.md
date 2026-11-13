@@ -29,6 +29,7 @@ On Windows PowerShell: `$env:PW_CHANNEL="chrome"; npm test`.
 | `tests/exams.spec.js` | The exam pilot tables (list, search, filters, subject snapshot, results), the lifecycle DRAFT → PUBLISHED → LOCKED → unlock, who may publish, marks refused outside PUBLISHED, invalid marks, real marks entry through the grid |
 | `tests/fees-print.spec.js` | Fee printouts: a class's bills print four to an A4 page with totals equal to the API, a long bill shrinks to fit its quarter, one bill on one page, the receipt reprint link opens the print dialog and prints as one slip, the student's statement balance equals the API, a student cannot print another's, the day book total equals the API |
 | `tests/accounts.spec.js` | An admin resets a student's password in the UI; the student signs in with the temporary one, is held on "Choose your password" (even when typing another address), sets a new one and reaches the dashboard; old and temporary passwords stop working. Class login slips print four to an A4 page (API response rewritten, so no real password changes) |
+| `tests/public-site.spec.js` | The public site: every navbar page, sign-in and back, the contact hrefs (tel / WhatsApp / Viber / mailto) and the footer credit link, the enquiry form's required fields, every tour screenshot served, the lightbox with arrow keys, the phone menu, no sideways scroll at 390 px, "Go to dashboard" when signed in |
 | `tests/smoke.spec.js` | Sign-in and a wrong password, silent token refresh, each of the 7 roles' pages and a refused page, a fee receipt on one page, the same balance for student and accountant |
 
 Every test also fails on an unexpected console error or uncaught exception
@@ -41,6 +42,21 @@ Every test also fails on an unexpected console error or uncaught exception
 - **Awkward data comes from rewriting the API response** (`rewriteCards` in the report-card
   tests), not from the database.
 - **Compare with the API or the rules**, not with what the page happens to show.
+
+## Public-site screenshots
+
+The pictures on the public site (`frontend/public/screenshots/*.jpg`) are captured from the
+running app, signed in as each role on the seeded test database:
+
+```bash
+PW_CHANNEL=chrome npm run screenshots   # playwright.screenshots.config.js -> screenshots/capture.spec.js
+```
+
+It is a separate config, so `npm test` never runs it. **Look at every image before committing.**
+The integration and e2e tests leave fee plans named "Integration …" / "Dashboard dash-…" in the
+test database, and the capture skips students who have them. Check for empty states and test
+leftovers anyway. To add a screen, add a `shot(...)` line there and an entry in
+`frontend/src/pages/public/content.js`.
 
 ## Visual baselines
 
