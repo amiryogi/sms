@@ -152,6 +152,9 @@ FRONTEND_URL=https://vidyalaya-sms.vercel.app
 
 UPLOAD_PATH=./uploads
 MAX_FILE_SIZE=10485760
+
+# Shared hosting: cap Prisma's engine threads (see the note below).
+TOKIO_WORKER_THREADS=2
 ```
 
 - **Cloudinary:** leave the `CLOUDINARY_*` lines out. Uploads are then stored in
@@ -159,10 +162,19 @@ MAX_FILE_SIZE=10485760
 - **Proxy:** `TRUST_PROXY_HOPS` is not needed. Apache → Passenger is one proxy hop, which is
   the production default (`backend/src/app.js`).
 - **Required settings:** the server refuses to start in production without the JWT secrets.
+- **`TOKIO_WORKER_THREADS=2` is required on shared hosting.**
+  - Prisma's engine starts one worker thread per CPU core, and a shared server reports dozens of
+    cores.
+  - CloudLinux caps the threads and processes an account may run. Without the cap, a second
+    Prisma process (a migration or the seed next to the running app) fails with
+    `fork: Resource temporarily unavailable`, `P1001: Can't reach database server`, or
+    `PANIC: timer has gone away`.
 
 ### 2.5 Install, migrate, seed
 
-In Terminal, **inside the virtual environment** (the command from 2.3):
+First **Stop App** in Setup Node.js App and clear leftover engines with
+`pkill -u <user> -f prisma`, so the account has threads to spare. Then, in Terminal, **inside the
+virtual environment** (the command from 2.3):
 
 ```bash
 npm install --omit=dev       # installs into the virtual environment
@@ -276,7 +288,7 @@ node scripts/db.js generate  # after every install (see 2.5)
 npm run db:migrate:deploy    # applies new migrations, if any
 ```
 
-Then **Restart** in Setup Node.js App.
+Stop the app before `db:migrate:deploy` (see 2.5) and **Start** it afterwards.
 
 Order matters when a release changes the schema: migrate before the frontend that needs it goes
 live.
