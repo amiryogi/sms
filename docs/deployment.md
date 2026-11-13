@@ -38,21 +38,24 @@ Contents:
 
 Every API request makes several database queries, and each one is a round trip between the
 cPanel server and Supabase. So pick the region **closest to the server**, not to the
-school. Measure it in cPanel → **Terminal**:
+school. Measure it in cPanel → **Terminal**. Plain bash, because `node` is not on the PATH
+until a Node.js app exists (§2.3):
 
 ```bash
 for host in aws-0-ap-southeast-1.pooler.supabase.com aws-0-ap-south-1.pooler.supabase.com; do
   for port in 6543 5432; do
-    node -e '
-      const [h, p] = process.argv.slice(1); const t = Date.now();
-      const s = require("net").connect(+p, h, () => { console.log(h, p, "OK", Date.now() - t, "ms"); s.end(); });
-      s.setTimeout(8000, () => { console.log(h, p, "TIMEOUT"); s.destroy(); });
-      s.on("error", (e) => console.log(h, p, "FAILED", e.code));
-    ' "$host" "$port"
+    start=$(date +%s%N)
+    if timeout 8 bash -c "</dev/tcp/$host/$port" 2>/dev/null; then
+      echo "$host $port OK $(( ($(date +%s%N) - start) / 1000000 )) ms"
+    else
+      echo "$host $port FAILED or TIMEOUT"
+    fi
   done
 done
+ls /opt/alt | grep -i node      # Node.js versions this server offers (for §2.3)
 ```
 
+- **Run it twice and read the second run;** the first also pays for the DNS lookups.
 - `ap-southeast-1` is Singapore and `ap-south-1` is Mumbai. Pick the one with the lower time.
 - **If every line says TIMEOUT or FAILED,** the host's firewall blocks outbound database
   ports. Ask Nest Nepal support to **allow outbound TCP 5432 and 6543** (CSF `TCP_OUT`) for
