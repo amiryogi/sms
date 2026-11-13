@@ -53,11 +53,11 @@ test.describe("public site", () => {
   test("pricing: the yearly/monthly switch changes the price, and a plan opens a ready enquiry", async ({ page }) => {
     await page.goto("/pricing");
     const basic = page.getByTestId("price-basic");
-    await expect(basic).toHaveText("NPR 20,000");
+    await expect(basic).toHaveText("NPR 35,000");
     await page.getByRole("tab", { name: /monthly/i }).click();
-    await expect(basic).toHaveText("NPR 2,000");
+    await expect(basic).toHaveText("NPR 3,500");
     await page.getByRole("tab", { name: /yearly/i }).click();
-    await expect(basic).toHaveText("NPR 20,000");
+    await expect(basic).toHaveText("NPR 35,000");
 
     await page.getByRole("link", { name: "Choose Basic" }).click();
     await expect(page).toHaveURL(/\/contact\?plan=Basic#enquiry$/);

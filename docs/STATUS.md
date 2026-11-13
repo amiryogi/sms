@@ -42,7 +42,7 @@ Runbook: [deployment.md](deployment.md).
 ## Public product site (2026-11-13): done
 
 **Pricing page (`/pricing`)**, added later the same day:
-- **Plans:** Starter NPR 12,000, Basic 20,000, Standard 30,000 a year, or the same over 10 monthly
+- **Plans:** Starter NPR 27,000, Basic 35,000, Standard 45,000 a year, or the same over 10 monthly
   payments.
 - **Other ways to pay:** per student NPR 50 (minimum 10,000); modules from 8,000; one-time 50,000
   plus 10,000 a year.

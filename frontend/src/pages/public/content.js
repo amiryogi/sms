@@ -72,9 +72,9 @@ export const npr = (amount) => `NPR ${Number(amount).toLocaleString("en-IN")}`;
 export const PRICING = {
   monthlyPayments: 10,
   plans: [
-    { id: "starter", name: "Starter", students: "Up to 200 students", yearly: 12000, blurb: "For small schools getting started." },
-    { id: "basic", name: "Basic", students: "200 – 500 students", yearly: 20000, blurb: "The usual choice for a growing school.", popular: true },
-    { id: "standard", name: "Standard", students: "500+ students", yearly: 30000, blurb: "For larger schools with more staff and families." },
+    { id: "starter", name: "Starter", students: "Up to 200 students", yearly: 27000, blurb: "For small schools getting started." },
+    { id: "basic", name: "Basic", students: "200 – 500 students", yearly: 35000, blurb: "The usual choice for a growing school.", popular: true },
+    { id: "standard", name: "Standard", students: "500+ students", yearly: 45000, blurb: "For larger schools with more staff and families." },
   ],
   setup: { free: true, dataImport: 5000 },
   included: [
