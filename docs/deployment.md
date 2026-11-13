@@ -165,13 +165,16 @@ MAX_FILE_SIZE=10485760
 In Terminal, **inside the virtual environment** (the command from 2.3):
 
 ```bash
-npm ci                       # also generates the Prisma clients for this server
+npm install --omit=dev       # also generates the Prisma clients for this server
 npm run db:migrate:deploy    # creates the tables in the new project
 npm run db:status            # "Database schema is up to date!"
 npm run seed                 # demo school, demo users, demo fees
 ```
 
-- **If `npm ci` is killed** (CloudLinux memory limits during `prisma generate`), run it again.
+- **Use `npm install`, not `npm ci`.** cPanel keeps `node_modules` in the virtual environment
+  behind a link, and `npm ci` deletes that link; the app then refuses to start. Prisma is a
+  runtime dependency, so `--omit=dev` still installs everything needed to migrate and seed.
+- **If the install is killed** (CloudLinux memory limits during `prisma generate`), run it again.
   If it keeps failing, ask Nest Nepal to raise the account's memory limit for the install.
 - **The seed** took about 16 minutes from a PC in Nepal. From the server it is as fast as the
   route to Supabase allows.
@@ -259,7 +262,7 @@ The seeded password `password123` is written in this public repository.
 ```bash
 cd ~/sms && git pull
 cd backend
-npm ci                       # only needed when package-lock.json changed, but always safe
+npm install --omit=dev       # only needed when package-lock.json changed, but always safe
 npm run db:migrate:deploy    # applies new migrations, if any
 ```
 
