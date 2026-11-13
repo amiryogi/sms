@@ -7,6 +7,20 @@ const DEV_JWT_SECRET = 'default-secret-change-in-production';
 const DEV_JWT_REFRESH_SECRET = 'default-refresh-secret';
 
 /**
+ * Browser origins allowed by CORS: every entry of FRONTEND_URL (comma-separated, so a
+ * deployment can list its Vercel address and a custom domain), plus the dev servers.
+ * A trailing slash is dropped: browsers send the origin without one.
+ * @param {string|undefined} value  the FRONTEND_URL env var
+ */
+function corsOrigins(value) {
+  const listed = (value || 'http://localhost:3000')
+    .split(',')
+    .map((origin) => origin.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+  return [...new Set([...listed, 'http://localhost:5173', 'http://localhost:5174'])];
+}
+
+/**
  * Resolve a JWT signing secret.
  * @param {string} name   env var name, for the error message
  * @param {string|undefined} value  the env var value
@@ -62,7 +76,7 @@ module.exports = {
 
   // CORS Configuration
   cors: {
-    origin: [process.env.FRONTEND_URL || 'http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174'],
+    origin: corsOrigins(process.env.FRONTEND_URL),
   },
 
   // Pagination defaults

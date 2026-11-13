@@ -1,5 +1,6 @@
 const multer = require('multer');
 const fs = require('fs');
+const path = require('path');
 const ApiError = require('../utils/ApiError');
 const config = require('../config');
 
@@ -66,7 +67,9 @@ const headerLength = (mimetype) => (mimetype === 'text/plain' ? 4096 : 16);
 //   none        a read-only host (Vercel) without Cloudinary: requests that
 //               carry files get 503; everything else works.
 const READ_ONLY_HOST = Boolean(process.env.VERCEL);
-const UPLOAD_DIR = 'uploads';
+// backend/uploads, the folder app.js serves at /uploads. Absolute, so it does not depend on
+// the directory the server was started from (a cPanel/Passenger app, PM2, a shell).
+const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads');
 
 let cloudinary = null;
 if (config.cloudinary && config.cloudinary.cloudName) {
@@ -90,7 +93,7 @@ const diskStorage = multer.diskStorage({
     // Created on first use, not at startup, so a read-only filesystem can't
     // crash the app.
     fs.mkdir(UPLOAD_DIR, { recursive: true }, (err) =>
-      cb(err ? new ApiError(503, 'File uploads are not available on this server.') : null, `${UPLOAD_DIR}/`)
+      cb(err ? new ApiError(503, 'File uploads are not available on this server.') : null, UPLOAD_DIR)
     );
   },
   filename: (req, file, cb) => {

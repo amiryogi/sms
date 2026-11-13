@@ -10,7 +10,31 @@ are done** and on `main`.
 
 ---
 
-## Public product site (2026-11-13): done, not yet committed
+## Production deployment (2026-11-13): code ready, hosts not yet set up
+
+Runbook: [deployment.md](deployment.md).
+
+| Part | Where |
+|---|---|
+| Frontend | Vercel, `https://vidyalaya-sms.vercel.app`, Root Directory `frontend` |
+| Backend | Nest Nepal cPanel Node.js app, `https://sms.nevanhandicraft.com.np` |
+| Database | A **new** Supabase production project, seeded with the demo school |
+
+- **Code changes:**
+  - `FRONTEND_URL` takes a comma-separated list (`config/index.js`, unit test
+    `config/__tests__/cors.test.js`);
+  - disk uploads are written to an absolute `backend/uploads`, the folder `/uploads` serves,
+    whatever directory the app starts in;
+  - `frontend/vercel.json` holds the SPA fallback and asset caching.
+- **Next:**
+  1. Measure Supabase latency and the firewall from the cPanel Terminal (deployment.md §1.1).
+  2. Create the Supabase project.
+  3. Set up the cPanel app, `.env`, migrate and seed.
+  4. Create the Vercel project.
+  5. Change the `superadmin` / `admin` passwords.
+  6. Run the checks in §4.
+
+## Public product site (2026-11-13): done
 
 - **What it is:** a "Vidyalaya SMS" site at `/` with Features, Portals, Tour and Contact pages,
   a navbar and footer, and light animation (framer-motion, turned off by reduced motion).
@@ -19,7 +43,8 @@ are done** and on `main`.
 - **Footer credit:** Amir Shrestha, linking to https://amirlearner.me.
 - **Code and docs:** see CLAUDE.md §6 "Public product site".
 - **Verified:** lint and build clean; `tests/public-site.spec.js` (6 tests) passes; every page
-  checked at 1440 px and 390 px.
+  checked at 1440 px and 390 px. The full e2e suite passed (68 tests, 1 skipped).
+- **Screenshots** sit on a dark blue gradient stage (`components/public/ShotStage.jsx`).
 - **Open questions for the owner:**
   - Is the copy right? In particular the "pricing" mention on the Contact page.
   - Should the site take the school's brand colour once someone has opened the sign-in page?
@@ -181,9 +206,11 @@ a font setting that defaults to today's Inter.
 - **Not covered yet:** student, teacher and attendance CRUD flows; fee collection end to end;
   the Performance Report template; phone-size layouts.
 
-## Client demo on Vercel — ready to deploy
+## Client demo on Vercel — replaced (2026-11-13)
 
-Guide: [deploy-vercel.md](deploy-vercel.md).
+**Replaced by the split deployment** in "Production deployment" above. The all-in-one files
+(`vercel.json`, `api/index.js`, `.vercelignore`, `docs/deploy-vercel.md`) are deleted. The
+backend changes listed below (Cloudinary, read-only host) remain and still work.
 - **Layout:** one Vercel project holds the static site and the Express API as one function in
   sin1, next to the Supabase **test** project. Uploads go to Cloudinary. The address is the
   free `*.vercel.app` for now; `sms.nevanhandicraft.com.np` comes later as a CNAME in Nest

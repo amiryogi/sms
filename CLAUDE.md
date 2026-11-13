@@ -481,7 +481,7 @@ migrations are tracked in git (apply with `npm run db:migrate:deploy`; never
 5. *(fixed)*
 6. *(fixed — `apiClient.js` now removes only the auth keys, and token refresh is single-flight)*
 7. CORS origins are hardcoded to localhost 3000/5173/5174 plus `FRONTEND_URL`.
-8. Uploads: local `uploads/` (served statically) by default; **Cloudinary** when `CLOUDINARY_*` is set (required on Vercel, which has no disk). Both paths keep the MIME whitelist, magic-byte check and MIME-derived extension (`middleware/upload.middleware.js`). Demo deployment: `docs/deploy-vercel.md` (`vercel.json`, `api/index.js`).
+8. Uploads: local `uploads/` (served statically) by default; **Cloudinary** when `CLOUDINARY_*` is set (required on Vercel, which has no disk). Both paths keep the MIME whitelist, magic-byte check and MIME-derived extension (`middleware/upload.middleware.js`). Production: `docs/deployment.md`. The frontend is on Vercel (`frontend/vercel.json`, Root Directory `frontend`), the backend is a Nest Nepal cPanel Node.js app at `sms.nevanhandicraft.com.np` with uploads on its disk, and the database is a Supabase production project. `FRONTEND_URL` may list several origins, comma-separated.
 
 ---
 
