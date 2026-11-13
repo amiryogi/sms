@@ -165,7 +165,9 @@ MAX_FILE_SIZE=10485760
 In Terminal, **inside the virtual environment** (the command from 2.3):
 
 ```bash
-npm install --omit=dev       # also generates the Prisma clients for this server
+npm install --omit=dev       # installs into the virtual environment
+ls -la node_modules          # must be a link: node_modules -> /home/<user>/nodevenv/.../lib/node_modules
+node scripts/db.js generate  # builds the Prisma clients for this server
 npm run db:migrate:deploy    # creates the tables in the new project
 npm run db:status            # "Database schema is up to date!"
 npm run seed                 # demo school, demo users, demo fees
@@ -174,6 +176,13 @@ npm run seed                 # demo school, demo users, demo fees
 - **Use `npm install`, not `npm ci`.** cPanel keeps `node_modules` in the virtual environment
   behind a link, and `npm ci` deletes that link; the app then refuses to start. Prisma is a
   runtime dependency, so `--omit=dev` still installs everything needed to migrate and seed.
+- **Why `generate` is a separate step:** cPanel's npm installs packages inside the virtual
+  environment folder, where `scripts/` does not exist. So the install script skips it and prints
+  "postinstall: no scripts/db.js …". Run `node scripts/db.js generate` from the app folder after
+  every install.
+- **If `node_modules` is missing after the install** (an older install failed half-way),
+  create the link yourself:
+  `ln -s /home/<user>/nodevenv/sms/backend/22/lib/node_modules node_modules`.
 - **If the install is killed** (CloudLinux memory limits during `prisma generate`), run it again.
   If it keeps failing, ask Nest Nepal to raise the account's memory limit for the install.
 - **The seed** took about 16 minutes from a PC in Nepal. From the server it is as fast as the
@@ -263,6 +272,7 @@ The seeded password `password123` is written in this public repository.
 cd ~/sms && git pull
 cd backend
 npm install --omit=dev       # only needed when package-lock.json changed, but always safe
+node scripts/db.js generate  # after every install (see 2.5)
 npm run db:migrate:deploy    # applies new migrations, if any
 ```
 

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "postinstall": "node scripts/db.js generate",
+    "postinstall": "node -e \"if(!require('fs').existsSync('scripts/db.js')){console.log('postinstall: no scripts/db.js in '+process.cwd()+' (cPanel installs packages in its own folder). Run in the app folder: node scripts/db.js generate');process.exit(0)}require('child_process').execFileSync(process.execPath,['scripts/db.js','generate'],{stdio:'inherit'})\"",
     "db:schemas": "node scripts/db.js schemas",
     "db:schemas:check": "node scripts/db.js schemas:check",
     "db:generate": "node scripts/db.js generate",
