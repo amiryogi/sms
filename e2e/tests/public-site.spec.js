@@ -6,6 +6,7 @@ const PAGES = [
   { label: "Features", url: "/features", heading: /Built for the whole school year/ },
   { label: "Portals", url: "/portals", heading: /A portal for every person/ },
   { label: "Tour", url: "/tour", heading: /Every screen, as it really is/ },
+  { label: "Pricing", url: "/pricing", heading: /Simple prices for every school/ },
   { label: "Contact", url: "/contact", heading: /Let's talk about your school/ },
 ];
 
@@ -47,6 +48,23 @@ test.describe("public site", () => {
     await page.getByRole("button", { name: "Send by email" }).click();
     await expect(page.getByText("Tell us your name")).toBeVisible();
     await expect(page.getByText("Write a short message")).toBeVisible();
+  });
+
+  test("pricing: the yearly/monthly switch changes the price, and a plan opens a ready enquiry", async ({ page }) => {
+    await page.goto("/pricing");
+    const basic = page.getByTestId("price-basic");
+    await expect(basic).toHaveText("NPR 20,000");
+    await page.getByRole("tab", { name: /monthly/i }).click();
+    await expect(basic).toHaveText("NPR 2,000");
+    await page.getByRole("tab", { name: /yearly/i }).click();
+    await expect(basic).toHaveText("NPR 20,000");
+
+    await page.getByRole("link", { name: "Choose Basic" }).click();
+    await expect(page).toHaveURL(/\/contact\?plan=Basic#enquiry$/);
+    await expect(page.locator("#c-message")).toHaveValue(/interested in the "Basic" option/);
+    // an unknown plan name is ignored
+    await page.goto("/contact?plan=%3Cscript%3E");
+    await expect(page.locator("#c-message")).toHaveValue("");
   });
 
   test("every screenshot on the tour exists", async ({ page }) => {

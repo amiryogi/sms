@@ -1,12 +1,20 @@
 import React from "react";
 import { useForm } from "react-hook-form";
+import { useSearchParams } from "react-router-dom";
 import { motion as Motion } from "framer-motion";
 import { ChevronDown, Mail, MessageCircle, Phone, PhoneCall, Send } from "lucide-react";
 import { Button, Field, TextArea, TextInput } from "../../components/ui";
 import PageHero from "../../components/public/PageHero";
 import { Reveal, Stagger, StaggerItem } from "../../components/public/Reveal";
 import usePageTitle from "../../components/public/usePageTitle";
-import { CONTACT, FAQ, mailtoLink, whatsappLink } from "./content";
+import { CONTACT, FAQ, PRICING, mailtoLink, whatsappLink } from "./content";
+
+// Names a pricing button may pass as ?plan= (anything else is ignored).
+const PLAN_NAMES = [...PRICING.plans.map((p) => p.name), ...PRICING.options.map((o) => o.title)];
+
+/** Opening message when the visitor came from a "Choose …" button on the pricing page. */
+const planMessage = (plan) =>
+  PLAN_NAMES.includes(plan) ? `I'm interested in the "${plan}" option. Our school has about ___ students.` : "";
 
 const CHANNELS = [
   {
@@ -57,12 +65,12 @@ const enquiryText = ({ name, school, phone, message }) => {
  * Enquiry form. There is no mail service on the server, so it opens the visitor's own
  * email app or WhatsApp with the message filled in; nothing is sent from this page.
  */
-const EnquiryForm = () => {
+const EnquiryForm = ({ plan }) => {
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm({ defaultValues: { name: "", school: "", phone: "", message: "" } });
+  } = useForm({ defaultValues: { name: "", school: "", phone: "", message: planMessage(plan) } });
 
   const byEmail = handleSubmit((values) => {
     window.location.assign(mailtoLink(`Enquiry about Vidyalaya SMS${values.school ? ` — ${values.school}` : ""}`, enquiryText(values)));
@@ -108,6 +116,8 @@ const EnquiryForm = () => {
 
 const Contact = () => {
   usePageTitle("Contact");
+  const [params] = useSearchParams();
+  const plan = params.get("plan") || "";
   return (
     <>
       <PageHero
@@ -141,10 +151,10 @@ const Contact = () => {
       </section>
 
       <section className="mx-auto grid max-w-7xl gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[1.2fr_1fr] lg:px-8">
-        <Reveal className="rounded-2xl bg-white p-6 shadow-card ring-1 ring-slate-200 sm:p-8">
+        <Reveal id="enquiry" className="scroll-mt-24 rounded-2xl bg-white p-6 shadow-card ring-1 ring-slate-200 sm:p-8">
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">Send an enquiry</h2>
           <p className="mt-1.5 mb-6 text-slate-600">Tell us a little about your school and we'll get back to you.</p>
-          <EnquiryForm />
+          <EnquiryForm key={plan} plan={plan} />
         </Reveal>
 
         <Reveal delay={0.1}>

@@ -22,6 +22,7 @@ const PublicHome = React.lazy(() => import("./pages/public/Home"));
 const PublicFeatures = React.lazy(() => import("./pages/public/Features"));
 const PublicPortals = React.lazy(() => import("./pages/public/Portals"));
 const PublicTour = React.lazy(() => import("./pages/public/Tour"));
+const PublicPricing = React.lazy(() => import("./pages/public/Pricing"));
 const PublicContact = React.lazy(() => import("./pages/public/Contact"));
 
 // Admin Pages
@@ -167,6 +168,7 @@ function App() {
               <Route path="/features" element={<PublicFeatures />} />
               <Route path="/portals" element={<PublicPortals />} />
               <Route path="/tour" element={<PublicTour />} />
+              <Route path="/pricing" element={<PublicPricing />} />
               <Route path="/contact" element={<PublicContact />} />
             </Route>
 

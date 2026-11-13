@@ -41,6 +41,16 @@ Runbook: [deployment.md](deployment.md).
 
 ## Public product site (2026-11-13): done
 
+**Pricing page (`/pricing`)**, added later the same day:
+- **Plans:** Starter NPR 12,000, Basic 20,000, Standard 30,000 a year, or the same over 10 monthly
+  payments.
+- **Other ways to pay:** per student NPR 50 (minimum 10,000); modules from 8,000; one-time 50,000
+  plus 10,000 a year.
+- **Offers:** launch offer (first 3 schools get 50% off the first year) and referral (one month free).
+- **Not on the page:** no VAT line, and no free trial is advertised.
+- **Copy to confirm with the owner:** the pricing FAQ answers about changing plans mid-year,
+  exporting data and the yearly agreement.
+
 - **What it is:** a "Vidyalaya SMS" site at `/` with Features, Portals, Tour and Contact pages,
   a navbar and footer, and light animation (framer-motion, turned off by reduced motion).
 - **Screenshots:** real ones, captured with `cd e2e && npm run screenshots`.

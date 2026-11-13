@@ -58,8 +58,93 @@ export const NAV_LINKS = [
   { to: "/features", label: "Features" },
   { to: "/portals", label: "Portals" },
   { to: "/tour", label: "Tour" },
+  { to: "/pricing", label: "Pricing" },
   { to: "/contact", label: "Contact" },
 ];
+
+// ---- Pricing -------------------------------------------------------------
+// Prices are final (no VAT line). Monthly = the yearly price over 10 payments, matching the
+// months schools collect fees. Change figures here only; the page renders them.
+
+/** "NPR 12,000" in Nepali digit grouping (12,000 / 1,20,000). */
+export const npr = (amount) => `NPR ${Number(amount).toLocaleString("en-IN")}`;
+
+export const PRICING = {
+  monthlyPayments: 10,
+  plans: [
+    { id: "starter", name: "Starter", students: "Up to 200 students", yearly: 12000, blurb: "For small schools getting started." },
+    { id: "basic", name: "Basic", students: "200 – 500 students", yearly: 20000, blurb: "The usual choice for a growing school.", popular: true },
+    { id: "standard", name: "Standard", students: "500+ students", yearly: 30000, blurb: "For larger schools with more staff and families." },
+  ],
+  setup: { free: true, dataImport: 5000 },
+  included: [
+    "Every feature: attendance, exams, NEB report cards, fees, notices, portals",
+    "Hosting, daily backups and updates",
+    "Bikram Sambat dates and NEB grading",
+    "Unlimited staff, student and parent logins",
+    "Help by phone, WhatsApp or Viber",
+  ],
+  options: [
+    {
+      id: "per-student",
+      title: "Per student",
+      price: "NPR 50",
+      unit: "per student, per year",
+      note: "Minimum NPR 10,000 a year. A 300-student school pays NPR 15,000.",
+      points: ["Every feature included", "Pay for the students you have", "Recounted each academic year"],
+    },
+    {
+      id: "modules",
+      title: "Pick your modules",
+      price: "From NPR 8,000",
+      unit: "per year",
+      note: "Start with report cards; add fees and the portal when you are ready.",
+      modules: [
+        { name: "Core: students, attendance, exams, NEB report cards, notices", price: 8000 },
+        { name: "+ Fees and receipts: ledger, bills, day book, reports", price: 6000 },
+        { name: "+ Student and parent portal: phone access for families", price: 5000 },
+      ],
+    },
+    {
+      id: "one-time",
+      title: "Buy once",
+      price: "NPR 50,000",
+      unit: "one time",
+      note: "Then NPR 10,000 a year for hosting, backups, updates and support.",
+      points: ["No monthly subscription", "Every feature included", "Yearly care plan keeps it running"],
+    },
+  ],
+  offers: [
+    { title: "Launch offer", text: "The first 3 schools get 50% off their first year." },
+    { title: "Refer a school", text: "One month free for every school you bring to us." },
+  ],
+  extras: [
+    "Importing your data from Excel or old software: NPR 5,000",
+    "A custom report-card design",
+    "Extra training visits",
+    "Data entry by our team",
+    "New features made for your school",
+  ],
+  notYet: ["SMS and email notifications", "Timetable", "Library", "Transport", "Payroll", "Certificates", "Grade 11–12"],
+  faq: [
+    {
+      q: "How do we pay?",
+      a: "Yearly in advance, or the same amount in 10 monthly payments through the academic year. Setup is free.",
+    },
+    {
+      q: "Can we change plan later?",
+      a: "Yes. If your school grows past its plan, you move up at the start of the next year, or mid-year by paying the difference.",
+    },
+    {
+      q: "What happens to our data if we leave?",
+      a: "The data is yours. We hand you a full export of your students, results and fee records.",
+    },
+    {
+      q: "Is there a contract?",
+      a: "A simple yearly agreement that sets out the price, support and backups. No hidden charges.",
+    },
+  ],
+};
 
 // ---- Screenshots ---------------------------------------------------------
 

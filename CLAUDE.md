@@ -391,7 +391,7 @@ academic-year start to the exam end and freezes them on `ReportCard`
 (`daysPresent`, `daysLate`, `totalWorkingDays`). Rules in
 `utils/reportCardAttendance.js`.
 
-**Public product site ("Vidyalaya SMS")** at `/`, `/features`, `/portals`, `/tour`, `/contact`:
+**Public product site ("Vidyalaya SMS")** at `/`, `/features`, `/portals`, `/tour`, `/pricing`, `/contact`:
 - It presents the system to other schools, so it is not school-branded. The sign-in page
   keeps the school's name, logo and colour. `/` used to redirect to `/dashboard`; a signed-in
   user now sees the home page with "Go to dashboard".
@@ -410,6 +410,11 @@ academic-year start to the exam end and freezes them on `ReportCard`
   the seeded test database by `cd e2e && PW_CHANNEL=chrome npm run screenshots`
   (`e2e/screenshots/capture.spec.js`, its own config, not part of `npm test`). Look at every
   image before committing it.
+- **Pricing** (`/pricing`):
+  - **Prices** live in `PRICING` in `content.js` (yearly plans; monthly = yearly / 10 payments;
+    per student, modules, one-time; offers; extras). Change the figures only there.
+  - **"Choose …" buttons** open `/contact?plan=<name>#enquiry`. Contact prefills the message only
+    for names listed in `PRICING`.
 - Footer credit: "Created and Designed by Amir Shrestha" (https://amirlearner.me).
 
 **Partial or rough:**
