@@ -128,3 +128,60 @@ test("student-dashboard-mobile", async ({ browser }) => {
   await save(page, "student-dashboard-mobile");
   await context.close();
 });
+
+// The link-preview image (Open Graph) Facebook, WhatsApp and others show when the site is shared:
+// 1200 x 630, built from the screenshots above. Saved as frontend/public/og-image.jpg and
+// referenced by the og:image tag in frontend/index.html.
+test("og-image", async ({ browser }) => {
+  const base = process.env.E2E_BASE_URL;
+  const context = await browser.newContext({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1 });
+  const page = await context.newPage();
+  await page.setContent(`<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { width: 1200px; height: 630px; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: #fff;
+    background: linear-gradient(135deg, #020617 0%, #172554 55%, #1e40af 100%); position: relative; }
+  .grid { position: absolute; inset: 0; background-image: linear-gradient(to right, rgb(255 255 255 / .05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / .05) 1px, transparent 1px); background-size: 40px 40px; }
+  .glow { position: absolute; border-radius: 50%; filter: blur(80px); }
+  .text { position: absolute; left: 64px; top: 64px; width: 520px; }
+  .brand { display: flex; align-items: center; gap: 14px; font-size: 28px; font-weight: 800; letter-spacing: -.02em; }
+  .logo { width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg, #6366f1, #4338ca);
+    display: flex; align-items: center; justify-content: center; }
+  .brand b { color: #7dd3fc; }
+  h1 { margin-top: 40px; font-size: 54px; line-height: 1.05; font-weight: 800; letter-spacing: -.03em; }
+  h1 span { color: #7dd3fc; }
+  .tags { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px; }
+  .tags span { padding: 8px 14px; border-radius: 999px; background: rgb(255 255 255 / .1); border: 1px solid rgb(255 255 255 / .18);
+    font-size: 17px; font-weight: 600; }
+  .foot { position: absolute; left: 64px; bottom: 48px; font-size: 19px; font-weight: 600; color: #bfdbfe; }
+  .frame { position: absolute; left: 630px; top: 92px; width: 640px; border-radius: 14px; overflow: hidden; background: #fff;
+    box-shadow: 0 30px 60px -10px rgb(0 0 0 / .6); border: 1px solid rgb(255 255 255 / .15); transform: rotate(-2deg); }
+  .bar { height: 26px; background: #f1f5f9; display: flex; align-items: center; gap: 6px; padding-left: 12px; }
+  .bar i { width: 9px; height: 9px; border-radius: 50%; display: block; }
+  .frame img { display: block; width: 100%; }
+  .phone { position: absolute; left: 560px; top: 300px; width: 150px; padding: 6px; border-radius: 26px; background: #0f172a;
+    box-shadow: 0 25px 50px -10px rgb(0 0 0 / .7); transform: rotate(3deg); }
+  .phone img { display: block; width: 100%; height: 280px; object-fit: cover; object-position: top; border-radius: 20px; }
+</style></head><body>
+  <div class="grid"></div>
+  <div class="glow" style="width:420px;height:420px;right:-120px;top:-140px;background:rgb(56 189 248 / .35)"></div>
+  <div class="glow" style="width:380px;height:380px;left:-140px;bottom:-160px;background:rgb(59 130 246 / .35)"></div>
+  <div class="text">
+    <div class="brand"><div class="logo"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></svg></div>Vidyalaya <b>SMS</b></div>
+    <h1>Run your whole school from <span>one place</span></h1>
+    <div class="tags"><span>Attendance</span><span>NEB report cards</span><span>Fees &amp; receipts</span><span>Parent app</span></div>
+  </div>
+  <div class="foot">KG to Grade 10 · Bikram Sambat · Made for Nepal</div>
+  <div class="frame"><div class="bar"><i style="background:#fca5a5"></i><i style="background:#fcd34d"></i><i style="background:#6ee7b7"></i></div>
+    <img src="${base}/screenshots/admin-dashboard.jpg"></div>
+  <div class="phone"><img src="${base}/screenshots/student-dashboard-mobile.jpg"></div>
+</body></html>`);
+  await page.waitForLoadState("networkidle");
+  await page.evaluate(() => document.fonts.ready);
+  await expect(page.locator("img")).toHaveCount(2);
+  await page.waitForFunction(() => [...document.images].every((i) => i.complete && i.naturalWidth > 0));
+  await page.screenshot({ path: path.join(OUT, "..", "og-image.jpg"), type: "jpeg", quality: 88 });
+  await context.close();
+});

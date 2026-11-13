@@ -52,7 +52,7 @@ running app, signed in as each role on the seeded test database:
 PW_CHANNEL=chrome npm run screenshots   # playwright.screenshots.config.js -> screenshots/capture.spec.js
 ```
 
-It is a separate config, so `npm test` never runs it. **Look at every image before committing.**
+It is a separate config, so `npm test` never runs it. It also renders the 1200×630 link-preview image `frontend/public/og-image.jpg` (Facebook / WhatsApp), referenced by the `og:image` tag in `frontend/index.html`. **Look at every image before committing.**
 The integration and e2e tests leave fee plans named "Integration …" / "Dashboard dash-…" in the
 test database, and the capture skips students who have them. Check for empty states and test
 leftovers anyway. To add a screen, add a `shot(...)` line there and an entry in

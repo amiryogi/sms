@@ -77,6 +77,12 @@ test.describe("public site", () => {
       expect(res.status(), src).toBe(200);
       expect(res.headers()["content-type"], src).toContain("image/jpeg");
     }
+    // the link-preview image (og:image) is served, at the size the tags announce
+    const og = await page.locator('meta[property="og:image"]').getAttribute("content");
+    expect(og).toMatch(/^https:\/\/.+\/og-image\.jpg$/);
+    const ogRes = await page.request.get("/og-image.jpg");
+    expect(ogRes.status()).toBe(200);
+    expect(ogRes.headers()["content-type"]).toContain("image/jpeg");
     // the lightbox opens, steps with the arrow keys and closes with Escape
     await page.getByRole("button", { name: "Open Admin dashboard" }).click();
     const dialog = page.getByRole("dialog");
