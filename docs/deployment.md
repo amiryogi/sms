@@ -202,6 +202,9 @@ npm run seed                 # demo school, demo users, demo fees
 - `npm run seed` never wipes data. `--clean` against this database is refused without
   `--yes-really`. **Do not use it in production.**
 
+**Seeded before 2026-11-13?** Then the demo accounts still end in `@svi.edu.np`. Rename them
+once, in place: `node scripts/rename-demo-domain.js --dry-run`, then without `--dry-run`.
+
 ### 2.6 Start and check
 
 Setup Node.js App → **Restart**. Then:

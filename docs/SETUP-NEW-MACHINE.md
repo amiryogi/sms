@@ -137,13 +137,13 @@ Demo logins, all with password `password123`:
 
 | Role | Email |
 |---|---|
-| Super admin | `superadmin@svi.edu.np` |
-| Admin | `admin@svi.edu.np` |
-| Teacher | `teacher1@svi.edu.np` … `teacher8@svi.edu.np` |
-| Exam officer | `examofficer@svi.edu.np` |
-| Accountant | `accountant@svi.edu.np` |
-| Student | `student1@svi.edu.np` … `student30@svi.edu.np` |
-| Parent | `parent.stu2024xxxx@svi.edu.np` |
+| Super admin | `superadmin@demo.edu.np` |
+| Admin | `admin@demo.edu.np` |
+| Teacher | `teacher1@demo.edu.np` … `teacher8@demo.edu.np` |
+| Exam officer | `examofficer@demo.edu.np` |
+| Accountant | `accountant@demo.edu.np` |
+| Student | `student1@demo.edu.np` … `student20@demo.edu.np` |
+| Parent | `parent.stu2024xxxx@demo.edu.np` |
 
 ## 8. Check it works
 

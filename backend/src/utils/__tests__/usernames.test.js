@@ -32,7 +32,7 @@ describe("suggestUsername", () => {
   });
 
   test("staff get the email's first part, else first.last", () => {
-    expect(suggestUsername({ kind: "staff", email: "Teacher1@svi.edu.np" })).toBe("teacher1");
+    expect(suggestUsername({ kind: "staff", email: "Teacher1@demo.edu.np" })).toBe("teacher1");
     expect(suggestUsername({ kind: "staff", firstName: "Ram Bahadur", lastName: "Thapa" })).toBe("ram.bahadur.thapa");
   });
 
@@ -60,7 +60,7 @@ describe("uniqueUsername", () => {
 
 describe("parseIdentifier", () => {
   test("an @ makes it an email, otherwise a username; both lower case", () => {
-    expect(parseIdentifier(" Admin@SVI.edu.np ")).toEqual({ kind: "email", value: "admin@svi.edu.np" });
+    expect(parseIdentifier(" Admin@DEMO.edu.np ")).toEqual({ kind: "email", value: "admin@demo.edu.np" });
     expect(parseIdentifier("STU20240001")).toEqual({ kind: "username", value: "stu20240001" });
     expect(parseIdentifier("  ")).toBeNull();
     expect(parseIdentifier(undefined)).toBeNull();

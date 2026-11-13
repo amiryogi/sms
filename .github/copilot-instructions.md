@@ -127,7 +127,7 @@ npm run seed                # Seed demo data
 npm run dev                 # Vite dev server on :5173
 ```
 
-**Default login:** admin@svi.edu.np / password123 / School: DEMO001
+**Default login:** admin@demo.edu.np / password123 / School: DEMO001
 
 ## Marks Entry Flow
 

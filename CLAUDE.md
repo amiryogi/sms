@@ -70,7 +70,7 @@ Health check: `GET http://localhost:5000/health`. API root: `GET /api/v1`.
 Frontend reads `VITE_API_URL` (`frontend/.env`), default `http://localhost:5000/api/v1`.
 
 Demo logins (after seed, password `password123`): sign in with a **username or the email**:
-`admin` / `admin@svi.edu.np`, `superadmin`, `teacher1`…`teacher8`, `examofficer`, `accountant`,
+`admin` / `admin@demo.edu.np`, `superadmin`, `teacher1`…`teacher8`, `examofficer`, `accountant`,
 students by admission number (`stu20240001`), parents as `p.<child's admission number>`
 (`p.stu20240001`). School code `DEMO001`.
 

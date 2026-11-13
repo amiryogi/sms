@@ -34,7 +34,7 @@ beforeAll(async () => {
   const school = await prisma.school.findFirst({ where: { code: { not: "" } }, orderBy: { id: "asc" } });
   ctx.schoolId = school.id;
   const byEmail = (email) => prisma.user.findFirst({ where: { email, schoolId: school.id } });
-  [ctx.admin, ctx.superAdmin, ctx.accountant] = await Promise.all([byEmail("admin@svi.edu.np"), byEmail("superadmin@svi.edu.np"), byEmail("accountant@svi.edu.np")]);
+  [ctx.admin, ctx.superAdmin, ctx.accountant] = await Promise.all([byEmail("admin@demo.edu.np"), byEmail("superadmin@demo.edu.np"), byEmail("accountant@demo.edu.np")]);
   expect(ctx.admin && ctx.superAdmin && ctx.accountant).toBeTruthy();
 
   const year = await prisma.academicYear.findFirst({ where: { schoolId: school.id, isCurrent: true } });

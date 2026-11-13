@@ -94,7 +94,7 @@ for (const [role, { home, allowed, forbidden }] of Object.entries(HOMES)) {
 test.describe("middle name", () => {
   test.use({ storageState: stateFor("admin") });
   const RUN = Date.now().toString(36);
-  const email = `e2e.middle.${RUN}@svi.edu.np`;
+  const email = `e2e.middle.${RUN}@demo.edu.np`;
 
   test.afterAll(async () => {
     const { call } = require("../helpers/api");

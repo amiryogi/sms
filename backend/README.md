@@ -86,8 +86,8 @@ backend/
 
 ### Demo logins
 
-Password `password123` for every seeded account: `superadmin@svi.edu.np`, `admin@svi.edu.np`,
-`teacher1@svi.edu.np`, `accountant@svi.edu.np`, `student1@svi.edu.np` and more (see the
+Password `password123` for every seeded account: `superadmin@demo.edu.np`, `admin@demo.edu.np`,
+`teacher1@demo.edu.np`, `accountant@demo.edu.np`, `student1@demo.edu.np` and more (see the
 root `CLAUDE.md`). School code `DEMO001`.
 
 ## API Endpoints

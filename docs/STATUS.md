@@ -26,6 +26,11 @@ Runbook: [deployment.md](deployment.md).
   - disk uploads are written to an absolute `backend/uploads`, the folder `/uploads` serves,
     whatever directory the app starts in;
   - `frontend/vercel.json` holds the SPA fallback and asset caching.
+- **Demo email domain:** the seeded demo accounts moved from `@svi.edu.np` to `@demo.edu.np`
+  (seed, tests, docs). `node scripts/rename-demo-domain.js` renames them in place in an
+  already-seeded database. It touches only the seed's own addresses in DEMO001 and is safe to
+  re-run. Done on dev, the MySQL test database and the Supabase test project. On production it
+  is run once from the server. The school's contact address `info@svi.edu.np` is unchanged.
 - **Next:**
   1. Measure Supabase latency and the firewall from the cPanel Terminal (deployment.md §1.1).
   2. Create the Supabase project.
@@ -486,7 +491,7 @@ browser sweep, all unchanged.
 
 ### Super admin and staff student directory (2026-11-07) — verified
 - `SUPER_ADMIN` is seeded (role id 7, every permission) with the login
-  `superadmin@svi.edu.np`. It is an admin everywhere (`authenticate` adds
+  `superadmin@demo.edu.np`. It is an admin everywhere (`authenticate` adds
   `ADMIN`; frontend `hasRole("ADMIN")` is true) and alone can grant, change or
   remove ADMIN/SUPER_ADMIN on others. School admins can't edit, deactivate,
   demote or delete a super admin. Same school only — there is still no

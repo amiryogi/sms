@@ -17,13 +17,13 @@ const { getScaleResolver } = require("../services/gradeScale.service");
 const RUN = Date.now().toString(36).toUpperCase();
 const PASSWORD = "password123";
 const EMAILS = {
-  superadmin: "superadmin@svi.edu.np",
-  admin: "admin@svi.edu.np",
-  teacher: "teacher1@svi.edu.np",
-  examofficer: "examofficer@svi.edu.np",
-  accountant: "accountant@svi.edu.np",
-  student: "student1@svi.edu.np",
-  parent: "parent.stu20240001@svi.edu.np",
+  superadmin: "superadmin@demo.edu.np",
+  admin: "admin@demo.edu.np",
+  teacher: "teacher1@demo.edu.np",
+  examofficer: "examofficer@demo.edu.np",
+  accountant: "accountant@demo.edu.np",
+  student: "student1@demo.edu.np",
+  parent: "parent.stu20240001@demo.edu.np",
 };
 const T = {}; // access tokens by role
 const ctx = {};
@@ -363,7 +363,7 @@ describe("middle names", () => {
   });
 
   test("a staff member keeps a middle name through create, list, search, /auth/me and update", async () => {
-    const email = `middle.${RUN.toLowerCase()}@svi.edu.np`;
+    const email = `middle.${RUN.toLowerCase()}@demo.edu.np`;
     const created = await api("post", "/users", "admin").send({
       email, password: "Password123", firstName: "Ram", middleName: "  Bahadur ", lastName: `Thapa${RUN}`, role: "TEACHER",
     });
@@ -390,7 +390,7 @@ describe("middle names", () => {
 
   test("a new student keeps a middle name; it is admin-only to change", async () => {
     const res = await api("post", "/students", "admin").send({
-      email: `middle.student.${RUN.toLowerCase()}@svi.edu.np`,
+      email: `middle.student.${RUN.toLowerCase()}@demo.edu.np`,
       firstName: "Sita", middleName: "Kumari", lastName: `Rai${RUN}`,
       admissionNumber: `MN-${RUN}`, dateOfBirth: "2012-04-01", gender: "female", admissionDate: "2024-04-14",
       classId: ctx.enrolment.classId, sectionId: ctx.enrolment.sectionId, academicYearId: ctx.year.id,

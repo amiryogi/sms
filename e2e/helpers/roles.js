@@ -2,13 +2,13 @@ const path = require("node:path");
 
 /** Seeded demo accounts (backend/prisma/seed.js), one per role. */
 const ROLES = {
-  superadmin: "superadmin@svi.edu.np",
-  admin: "admin@svi.edu.np",
-  teacher: "teacher1@svi.edu.np",
-  examofficer: "examofficer@svi.edu.np",
-  accountant: "accountant@svi.edu.np",
-  student: "student1@svi.edu.np",
-  parent: "parent.stu20240001@svi.edu.np",
+  superadmin: "superadmin@demo.edu.np",
+  admin: "admin@demo.edu.np",
+  teacher: "teacher1@demo.edu.np",
+  examofficer: "examofficer@demo.edu.np",
+  accountant: "accountant@demo.edu.np",
+  student: "student1@demo.edu.np",
+  parent: "parent.stu20240001@demo.edu.np",
 };
 
 const AUTH_DIR = path.join(__dirname, "..", ".auth");

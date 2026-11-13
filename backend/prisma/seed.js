@@ -468,12 +468,12 @@ async function main() {
 
   // Admin User
   const adminUser = await prisma.user.upsert({
-    where: { email_schoolId: { email: "admin@svi.edu.np", schoolId: school.id } },
+    where: { email_schoolId: { email: "admin@demo.edu.np", schoolId: school.id } },
     update: {},
     create: {
       schoolId: school.id,
       username: "admin",
-      email: "admin@svi.edu.np",
+      email: "admin@demo.edu.np",
       passwordHash,
       firstName: "Amir",
       lastName: "Shrestha",
@@ -486,18 +486,18 @@ async function main() {
     update: {},
     create: { userId: adminUser.id, roleId: adminRole.id },
   });
-  console.log(`   ✓ Admin: admin@svi.edu.np`);
+  console.log(`   ✓ Admin: admin@demo.edu.np`);
 
   // Super Admin: everything an admin can do, plus managing admins and super
   // admins. School admins cannot edit, deactivate or delete this account.
   const superAdminRole = await prisma.role.findUnique({ where: { name: "SUPER_ADMIN" } });
   const superAdminUser = await prisma.user.upsert({
-    where: { email_schoolId: { email: "superadmin@svi.edu.np", schoolId: school.id } },
+    where: { email_schoolId: { email: "superadmin@demo.edu.np", schoolId: school.id } },
     update: {},
     create: {
       schoolId: school.id,
       username: "superadmin",
-      email: "superadmin@svi.edu.np",
+      email: "superadmin@demo.edu.np",
       passwordHash,
       firstName: "Super",
       lastName: "Admin",
@@ -509,7 +509,7 @@ async function main() {
     update: {},
     create: { userId: superAdminUser.id, roleId: superAdminRole.id },
   });
-  console.log(`   ✓ Super admin: superadmin@svi.edu.np`);
+  console.log(`   ✓ Super admin: superadmin@demo.edu.np`);
 
   // Create 8 Teachers
   const teachers = [];
@@ -527,12 +527,12 @@ async function main() {
   for (let i = 0; i < teacherData.length; i++) {
     const t = teacherData[i];
     const teacherUser = await prisma.user.upsert({
-      where: { email_schoolId: { email: `teacher${i + 1}@svi.edu.np`, schoolId: school.id } },
+      where: { email_schoolId: { email: `teacher${i + 1}@demo.edu.np`, schoolId: school.id } },
       update: {},
       create: {
         schoolId: school.id,
         username: `teacher${i + 1}`,
-        email: `teacher${i + 1}@svi.edu.np`,
+        email: `teacher${i + 1}@demo.edu.np`,
         passwordHash,
         firstName: t.firstName,
         middleName: t.middleName || null,
@@ -552,12 +552,12 @@ async function main() {
 
   // Exam Officer
   const examOfficerUser = await prisma.user.upsert({
-    where: { email_schoolId: { email: "examofficer@svi.edu.np", schoolId: school.id } },
+    where: { email_schoolId: { email: "examofficer@demo.edu.np", schoolId: school.id } },
     update: {},
     create: {
       schoolId: school.id,
       username: "examofficer",
-      email: "examofficer@svi.edu.np",
+      email: "examofficer@demo.edu.np",
       passwordHash,
       firstName: "Exam",
       lastName: "Officer",
@@ -570,16 +570,16 @@ async function main() {
     update: {},
     create: { userId: examOfficerUser.id, roleId: examOfficerRole.id },
   });
-  console.log(`   ✓ Exam Officer: examofficer@svi.edu.np`);
+  console.log(`   ✓ Exam Officer: examofficer@demo.edu.np`);
 
   // Accountant
   const accountantUser = await prisma.user.upsert({
-    where: { email_schoolId: { email: "accountant@svi.edu.np", schoolId: school.id } },
+    where: { email_schoolId: { email: "accountant@demo.edu.np", schoolId: school.id } },
     update: {},
     create: {
       schoolId: school.id,
       username: "accountant",
-      email: "accountant@svi.edu.np",
+      email: "accountant@demo.edu.np",
       passwordHash,
       firstName: "Accounts",
       lastName: "Officer",
@@ -592,7 +592,7 @@ async function main() {
     update: {},
     create: { userId: accountantUser.id, roleId: accountantRole.id },
   });
-  console.log(`   ✓ Accountant: accountant@svi.edu.np`);
+  console.log(`   ✓ Accountant: accountant@demo.edu.np`);
 
   // 11. Assign Teachers to Classes
   console.log("\n🔗 Assigning teachers to class subjects...");
@@ -656,7 +656,7 @@ async function main() {
         const gender = i % 2 === 0 ? "female" : "male";
         const firstName = getRandomElement(firstNames[gender]);
         const lastName = getRandomElement(lastNames);
-        const email = `student${studentIndex}@svi.edu.np`;
+        const email = `student${studentIndex}@demo.edu.np`;
         
         const studentUser = await prisma.user.upsert({
           where: { email_schoolId: { email, schoolId: school.id } },
@@ -732,7 +732,7 @@ async function main() {
   for (const studentData of createdStudents) {
     const parentFirstName = getRandomElement(firstNames.male);
     const parentLastName = studentData.user.lastName;
-    const parentEmail = `parent.${studentData.student.admissionNumber.toLowerCase()}@svi.edu.np`;
+    const parentEmail = `parent.${studentData.student.admissionNumber.toLowerCase()}@demo.edu.np`;
     
     const parentUser = await prisma.user.upsert({
       where: { email_schoolId: { email: parentEmail, schoolId: school.id } },
@@ -1133,13 +1133,13 @@ async function main() {
   console.log("   ┌─────────────────────────────────────────────────────────────────┐");
   console.log("   │ Role           │ Email                                         │");
   console.log("   ├─────────────────────────────────────────────────────────────────┤");
-  console.log("   │ Super Admin    │ superadmin@svi.edu.np                         │");
-  console.log("   │ Admin          │ admin@svi.edu.np                              │");
-  console.log("   │ Teachers (8)   │ teacher1@svi.edu.np ... teacher8@svi.edu.np   │");
-  console.log("   │ Exam Officer   │ examofficer@svi.edu.np                        │");
-  console.log("   │ Accountant     │ accountant@svi.edu.np                         │");
-  console.log("   │ Students (30)  │ student1@svi.edu.np ... student30@svi.edu.np  │");
-  console.log("   │ Parents (30)   │ parent.stu2024xxxx@svi.edu.np                 │");
+  console.log("   │ Super Admin    │ superadmin@demo.edu.np                        │");
+  console.log("   │ Admin          │ admin@demo.edu.np                             │");
+  console.log("   │ Teachers (8)   │ teacher1@demo.edu.np ... teacher8@demo.edu.np │");
+  console.log("   │ Exam Officer   │ examofficer@demo.edu.np                       │");
+  console.log("   │ Accountant     │ accountant@demo.edu.np                        │");
+  console.log("   │ Students (20)  │ student1@demo.edu.np ... student20@demo.edu.np│");
+  console.log("   │ Parents (20)   │ parent.stu2024xxxx@demo.edu.np                │");
   console.log("   └─────────────────────────────────────────────────────────────────┘");
   console.log("\n📊 Data Summary:");
   console.log(`   • ${createdClasses.length} Classes (Grade 1-10)`);
