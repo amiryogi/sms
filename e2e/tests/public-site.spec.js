@@ -107,6 +107,13 @@ test.describe("public site", () => {
       await page.getByRole("button", { name: "Open menu" }).click();
       await page.keyboard.press("Escape");
       await expect(page.locator("#public-mobile-menu")).toBeHidden();
+      // the contact buttons stack full-width at their normal height (they were squashed once)
+      await page.goto("/contact");
+      for (const name of ["Send by email", "Send on WhatsApp"]) {
+        const box = await page.getByRole("button", { name }).boundingBox();
+        expect(box.height, `${name} height`).toBeGreaterThanOrEqual(40);
+        expect(box.width, `${name} width`).toBeGreaterThan(250);
+      }
       for (const url of ["/", ...PAGES.map((p) => p.url)]) {
         await page.goto(url);
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

@@ -102,10 +102,10 @@ const EnquiryForm = ({ plan }) => {
         />
       </Field>
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Button type="submit" size="lg" icon={Send} className="flex-1">
+        <Button type="submit" size="lg" icon={Send} className="w-full sm:w-auto sm:flex-1">
           Send by email
         </Button>
-        <Button type="button" size="lg" variant="success" icon={MessageCircle} onClick={byWhatsapp} className="flex-1">
+        <Button type="button" size="lg" variant="success" icon={MessageCircle} onClick={byWhatsapp} className="w-full sm:w-auto sm:flex-1">
           Send on WhatsApp
         </Button>
       </div>
