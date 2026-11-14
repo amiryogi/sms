@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, View } from "react-native";
+import { View } from "react-native";
 import { router, Stack } from "expo-router";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -56,7 +56,7 @@ export const ChangePasswordScreen = () => {
   return (
     <Screen edges={forced ? ["top", "left", "right"] : ["left", "right"]}>
       <Stack.Screen options={{ headerShown: !forced, title: t("password.changeTitle"), gestureEnabled: !forced }} />
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <View>
         <View className="mb-6 gap-2">
           <KeyRound size={36} color={colors.brand} />
           <AppText variant="title" accessibilityRole="header">
@@ -127,7 +127,7 @@ export const ChangePasswordScreen = () => {
           <Button title={t("password.submit")} loading={isSubmitting} onPress={() => onSubmit()} fullWidth className="mt-2" />
           {forced ? <Button title={t("common.signOut")} variant="ghost" onPress={logout} fullWidth /> : null}
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Screen>
   );
 };

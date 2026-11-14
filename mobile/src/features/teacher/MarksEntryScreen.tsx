@@ -100,7 +100,7 @@ export const MarksEntryScreen = ({ examSubjectId, sectionId, title, examName }: 
   };
 
   return (
-    <KeyboardAvoidingView className="flex-1 bg-canvas" behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}>
+    <KeyboardAvoidingView className="flex-1 bg-canvas" behavior="padding" keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}>
       {header}
       <OfflineBanner />
       <View className="gap-2 px-4 pt-3">
