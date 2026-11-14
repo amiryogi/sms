@@ -49,7 +49,16 @@ describe("provider schemas", () => {
   test("the PostgreSQL baseline creates every model and enum, with no MySQL syntax", () => {
     const sql = read(path.join(BACKEND, "prisma/postgresql/migrations/0_init/migration.sql"));
     const models = read(MODELS);
-    expect((sql.match(/^CREATE TABLE /gm) || []).length).toBe((models.match(/^model /gm) || []).length);
+    // Tables added after the baseline (device_tokens) come from later migrations.
+    const dir = path.join(BACKEND, "prisma/postgresql/migrations");
+    const later = fs
+      .readdirSync(dir, { withFileTypes: true })
+      .filter((e) => e.isDirectory() && e.name !== "0_init")
+      .map((e) => read(path.join(dir, e.name, "migration.sql")))
+      .join("\n");
+    expect(later).not.toMatch(/`|AUTO_INCREMENT|ENGINE=|INSERT IGNORE/);
+    const tables = (text) => (text.match(/^CREATE TABLE /gm) || []).length;
+    expect(tables(sql) + tables(later)).toBe((models.match(/^model /gm) || []).length);
     expect((sql.match(/^CREATE TYPE .* AS ENUM/gm) || []).length).toBe((models.match(/^enum /gm) || []).length);
     expect(sql).not.toMatch(/`|AUTO_INCREMENT|ENGINE=|INSERT IGNORE/);
   });

@@ -1,10 +1,11 @@
-import { Alert, View } from "react-native";
+import { Alert, Linking, View } from "react-native";
 import { router, type Href } from "expo-router";
 import Constants from "expo-constants";
 import { useTranslation } from "react-i18next";
-import { ArrowLeftRight, Info, KeyRound, LogOut, type LucideIcon } from "lucide-react-native";
+import { ArrowLeftRight, BellRing, Info, KeyRound, LogOut, type LucideIcon } from "lucide-react-native";
 import { AppText, Avatar, Divider, ListItem, Screen, SectionHeader, SegmentedControl, Sheet } from "@/components/ui";
 import { useAuth, useUser } from "@/contexts/AuthContext";
+import { registerForPush, usePushStatus } from "@/features/push/pushNotifications";
 import { useTheme, type SchemePreference } from "@/theme/ThemeProvider";
 import { resolveAssetUrl } from "@/utils/assets";
 import { fullName } from "@/utils/format";
@@ -33,7 +34,11 @@ export const MoreScreen = ({ area, links = [] }: { area: RoleArea; links?: MoreL
   const user = useUser();
   const { logout } = useAuth();
   const { preference, setPreference } = useTheme();
+  const push = usePushStatus();
   const name = fullName(user);
+  // What a tap can do about notifications depends on why they are off.
+  const pushAction =
+    push === "denied" ? () => Linking.openSettings() : push === "undetermined" || push === "error" ? () => registerForPush({ ask: true }) : undefined;
   const otherAreas = areasFor(user.roles).filter((a) => a !== area);
 
   const confirmSignOut = () =>
@@ -97,6 +102,14 @@ export const MoreScreen = ({ area, links = [] }: { area: RoleArea; links?: MoreL
       <SectionHeader title={t("profile.account")} />
       <Rows>
         {[
+          <ListItem
+            key="push"
+            title={t("push.title")}
+            subtitle={t(`push.status.${push}`)}
+            icon={BellRing}
+            iconTone={push === "on" ? "success" : push === "denied" || push === "error" ? "warning" : "neutral"}
+            onPress={pushAction}
+          />,
           <ListItem key="pw" title={t("password.changeTitle")} icon={KeyRound} iconTone="neutral" onPress={() => router.push("/change-password")} />,
           <ListItem key="about" title={t("profile.about")} icon={Info} iconTone="neutral" onPress={() => router.push("/shared/about")} />,
           <ListItem key="out" title={t("common.signOut")} icon={LogOut} iconTone="danger" onPress={confirmSignOut} />,

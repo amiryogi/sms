@@ -51,6 +51,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       monochromeImage: "./assets/android-icon-monochrome.png",
     },
     predictiveBackGestureEnabled: false,
+    // Firebase config for Android push (FCM). Not in git: set the path, or an EAS file secret.
+    ...(process.env.GOOGLE_SERVICES_JSON ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON } : {}),
   },
   web: {
     bundler: "metro",
@@ -62,6 +64,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     "expo-sharing",
     "expo-asset",
     "expo-font",
+    [
+      "expo-notifications",
+      // The emblem as a white silhouette (scripts/build-brand-assets.py), tinted with the logo blue.
+      { icon: "./assets/notification-icon.png", color: "#1D5FD1", defaultChannel: "default" },
+    ],
     "expo-image",
     [
       "expo-splash-screen",
@@ -97,5 +104,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   extra: {
     appEnv: APP_ENV,
+    // Needed for push notifications: the id `eas init` prints (docs/BUILD_AND_DEPLOYMENT.md).
+    ...(process.env.EAS_PROJECT_ID ? { eas: { projectId: process.env.EAS_PROJECT_ID } } : {}),
   },
 });

@@ -7,7 +7,7 @@ smallest backward-compatible change.
 
 | # | Gap | Effect in the app today | Proposed change | Priority |
 |---|---|---|---|---|
-| 1 | Push notifications | In-app notification center only, built from existing lists; local notifications fire only while the app runs | §1 below | High |
+| 1 | Push notifications | **Built 2026-11-14** (owner approved). Remaining: fee-due reminders and a school on/off setting for absence alerts | §1 below | Done |
 | 2 | Logout signs out everywhere | Signing out of the app also signs the user out of the web (and the reverse) | §2 | Medium |
 | 3 | No school-wide attendance summary | Admin home shows no "today's attendance" figure; admin can open one section on one day | §3 | Medium |
 | 4 | No class-wise student counts | Admin home shows the school total only (`pagination.total`) | §3 | Low |
@@ -22,9 +22,18 @@ smallest backward-compatible change.
 
 ---
 
-## 1. Push notifications (proposal)
+## 1. Push notifications (built 2026-11-14)
 
-**Today:** the app has an in-app notification center (`/shared/notifications`, a bell with an
+**Built as proposed below**, with these differences:
+- the table also has `school_id`, so every query is scoped by school;
+- signing out (and an admin resetting the password) deletes the user's device rows on the
+  server, so the app does not need to call `DELETE /devices/:token` first;
+- "absent" needs no school setting yet: it is sent for today's register only, to parents only,
+  and once per absence;
+- **not built:** the daily fee-due reminder (it needs a scheduled job on the host), and checking
+  Expo's delivery receipts (tokens are removed when Expo refuses them at send time).
+
+**Before:** the app had an in-app notification center (`/shared/notifications`, a bell with an
 unread count). It is built from published notices, assignments, grades, published report cards
 and overdue fees, with read state kept on the phone. It shows nothing while the app is closed.
 

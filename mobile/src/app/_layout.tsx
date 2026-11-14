@@ -17,6 +17,7 @@ import { canOpenArea } from "@/utils/roles";
 import { useStackScreenOptions } from "@/navigation/screenOptions";
 import { ConfigError, RestoreError } from "@/features/auth/StartupScreens";
 import { BrandIntro } from "@/features/brand/BrandIntro";
+import { PushGate } from "@/features/push/PushGate";
 
 // The native splash stays until BrandIntro's first frame (the same picture), then fades into it.
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -81,6 +82,7 @@ function Routes() {
   return (
     <>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+      {ready ? <PushGate /> : null}
       <Stack screenOptions={screenOptions}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
 

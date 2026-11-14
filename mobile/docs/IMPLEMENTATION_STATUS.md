@@ -14,9 +14,38 @@ teacher → admin roles → advanced → release (see MOBILE_ARCHITECTURE.md).
 | 7. Notifications, offline, PDF, uploads, i18n, dark mode | **Done**, except moving every screen's text into translations (see below) |
 | 8. Testing and release | **Done in code**: release config, security review, tests. **Not done**: EAS builds and device checks, which need the owner's Expo login and phones |
 
-No backend or web code has changed. Proposals for backend changes are in API_GAPS.md.
+The only backend change is push notifications (below). Other proposals are in API_GAPS.md.
 
 ---
+
+## Push notifications (2026-11-14)
+
+The first backend change made for the app, approved by the owner (API_GAPS §1).
+
+- **Server:** table `device_tokens`, `POST` / `DELETE /devices`, and `services/push/` sending
+  through Expo after five events: notice published, assignment published, work graded, report
+  cards published, absent today (parents).
+- **App** (`src/features/push/`):
+  - after sign-in it asks permission once, gets the Expo push token and registers it;
+  - tapping a notification opens the notice, assignment, report card or attendance screen, for
+    the right child;
+  - one arriving while the app is open refreshes the screen and the bell;
+  - More → Notifications shows the state, and opens the phone's settings when it is off there.
+- **Privacy:** a notification holds a title, one line and ids. The screen it opens loads the
+  rest through the API, which checks access again. Signing out removes the registration on the
+  server.
+- **Also fixed on the server:** an attendance register was stored a day early, and could not be
+  saved twice, when the server ran in Nepal time (it was correct on a UTC server).
+- **Tests:**
+  - server: 20 unit tests (sending, recipients, messages) and 9 integration tests, on MySQL and
+    PostgreSQL;
+  - app: 7 tests (links, registration, tapping) and 4 contract tests against the real server.
+- **Not verified:** real delivery to a phone. It needs a development build with the Firebase
+  and Apple credentials (BUILD_AND_DEPLOYMENT.md → Push notifications).
+- **Not built:** fee-due reminders (needs a scheduled job); a school setting to switch absence
+  alerts off; checking Expo's delivery receipts.
+- **Known limit:** if a session expires without signing out, that phone keeps receiving the
+  user's notifications until someone signs in or out on it.
 
 ## Sign-in and home photo (2026-11-14)
 

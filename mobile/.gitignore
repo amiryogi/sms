@@ -47,3 +47,10 @@ yarn-error.*
 
 # test coverage
 coverage/
+
+# Firebase / FCM credentials (docs/BUILD_AND_DEPLOYMENT.md -> Push notifications).
+# The service-account key is a secret; never commit it.
+google-services.json
+GoogleService-Info.plist
+*service-account*.json
+*firebase-adminsdk*.json

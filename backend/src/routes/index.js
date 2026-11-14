@@ -31,6 +31,7 @@ const promotionRoutes = require('./promotion.routes');
 const gradeScaleRoutes = require("./gradeScale.routes");
 const reportCardLayoutRoutes = require("./reportCardLayout.routes");
 const portalRoutes = require("./portal.routes");
+const deviceRoutes = require("./device.routes");
 
 // API Version prefix
 const API_VERSION = "/v1";
@@ -65,6 +66,7 @@ router.use(`${API_VERSION}/promotions`, promotionRoutes);
 router.use(`${API_VERSION}/grade-scales`, gradeScaleRoutes);
 router.use(`${API_VERSION}/report-card-layout`, reportCardLayoutRoutes);
 router.use(`${API_VERSION}/portal`, portalRoutes);
+router.use(`${API_VERSION}/devices`, deviceRoutes);
 
 // Root route
 router.get("/", (req, res) => {

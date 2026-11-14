@@ -13,6 +13,7 @@ Outputs (assets/brand/ unless noted), all transparent PNGs:
   waves.png                    the welcome screen's waves, white turned into transparency
   ../splash-icon.png           body.png centred on a square: the native splash shows the book
                                and student, and the intro starts from exactly that picture
+  ../notification-icon.png     the emblem as a white silhouette, for Android notifications
 Sizes are written to src/features/brand/brandAssets.json for the layout maths.
 """
 import json
@@ -104,6 +105,16 @@ def main():
     square = Image.new("RGBA", (body_png.width, body_png.width))
     square.alpha_composite(body_png, (0, (body_png.width - body_png.height) // 2))
     square.save(os.path.join(ROOT, "assets", "splash-icon.png"), optimize=True)
+
+    # Android status-bar icon for push notifications: the emblem as a white silhouette
+    # (Android draws only the alpha channel), 96 px square.
+    mark_png = Image.open(os.path.join(OUT, "mark.png"))
+    white = Image.new("RGBA", mark_png.size, (255, 255, 255, 0))
+    white.putalpha(mark_png.getchannel("A"))
+    white.thumbnail((88, 88), Image.LANCZOS)
+    icon = Image.new("RGBA", (96, 96))
+    icon.alpha_composite(white, ((96 - white.width) // 2, (96 - white.height) // 2))
+    icon.save(os.path.join(ROOT, "assets", "notification-icon.png"), optimize=True)
 
     sizes["wordmark"] = save(words, words.getbbox(), "wordmark.png")
     sms_box = union_bbox(sms, rules)

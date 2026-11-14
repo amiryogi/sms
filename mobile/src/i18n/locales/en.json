@@ -89,5 +89,17 @@
     "name": "Vidyalaya SMS",
     "tagline": "Smart School Management for a Better Tomorrow",
     "skipIntro": "Skip the introduction"
+  },
+  "push": {
+    "title": "Notifications",
+    "status": {
+      "unknown": "Checking…",
+      "on": "On for this phone",
+      "undetermined": "Off. Tap to turn on.",
+      "denied": "Off in the phone's settings. Tap to open them.",
+      "unsupported": "Not available on this device",
+      "not-configured": "Not set up in this version of the app",
+      "error": "Couldn't turn on. Tap to try again."
+    }
   }
 }

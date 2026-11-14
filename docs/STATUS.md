@@ -39,8 +39,8 @@ It is a client of the existing API. **No backend or web code changed.**
   - an in-app notification center (there is no push API yet), the offline cache, a dark-mode
     pass, `eas.json` and a security review.
 - **Verified:**
-  - `cd mobile && npm test`: 193 passed;
-  - `npm run test:contract`: 38 passed, against a backend it starts on the MySQL test
+  - `cd mobile && npm test`: 200 passed;
+  - `npm run test:contract`: 42 passed, against a backend it starts on the MySQL test
     database (port 5013);
   - typecheck, lint, `expo-doctor` and Android/iOS bundle export are clean.
 - **Phone test (2026-11-14):** the owner reported a plain design, clipped digits in marks
@@ -50,6 +50,11 @@ It is a client of the existing API. **No backend or web code changed.**
   Details in `mobile/docs/IMPLEMENTATION_STATUS.md`. **Re-check on the phone.**
 - **Brand (2026-11-14):** the Vidyalaya SMS logo and welcome design are in: a launch animation
   that starts from the native splash, and the logo on sign-in, onboarding and About.
+- **Push notifications (2026-11-14):** built on both sides. The backend has a new table
+  (`device_tokens`; run `npm run db:migrate:deploy` on every database, then restart), `/devices`
+  endpoints and `services/push/`. Details in CLAUDE.md §6 and
+  `mobile/docs/IMPLEMENTATION_STATUS.md`. Real delivery is untested: it needs a development build
+  with Firebase and Apple credentials (`mobile/docs/BUILD_AND_DEPLOYMENT.md`).
 - **Not verified:** EAS builds need the owner's Expo login.
 - **Next (the owner):**
   - `eas login`, then a preview build;

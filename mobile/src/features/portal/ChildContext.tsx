@@ -21,6 +21,18 @@ const ChildContext = createContext<ChildValue | null>(null);
  * is never used. The choice is remembered per parent on this phone and is
  * deleted at sign-out.
  */
+/**
+ * Ask the parent area to show one child (a tapped notification about them).
+ * Kept until a ChildProvider that lists the child takes it; an id the server
+ * does not list for this parent is ignored, as everywhere else.
+ */
+let requested: number | null = null;
+const requestListeners = new Set<() => void>();
+export const requestChild = (studentId: number) => {
+  requested = studentId;
+  requestListeners.forEach((l) => l());
+};
+
 export const ChildProvider = ({ children: node }: { children: ReactNode }) => {
   const user = useUser();
   const query = useChildrenQuery();
@@ -33,6 +45,24 @@ export const ChildProvider = ({ children: node }: { children: ReactNode }) => {
 
   const list = useMemo(() => query.data ?? [], [query.data]);
   const child = list.find((c) => c.studentId === wanted) ?? list[0] ?? null;
+
+  // Take a child requested from outside, once the list is known.
+  useEffect(() => {
+    const take = () => {
+      if (requested === null || !list.length) return;
+      const id = requested;
+      requested = null;
+      if (list.some((c) => c.studentId === id)) {
+        setWanted(id);
+        writeJson(key, id);
+      }
+    };
+    take();
+    requestListeners.add(take);
+    return () => {
+      requestListeners.delete(take);
+    };
+  }, [list, key]);
 
   const selectChild = useCallback(
     (studentId: number) => {

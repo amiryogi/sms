@@ -768,6 +768,27 @@ CREATE TABLE refresh_tokens (
 ) ENGINE=InnoDB;
 
 -- =====================================================
+-- DEVICE_TOKENS TABLE (phones that receive push notifications)
+-- =====================================================
+
+CREATE TABLE device_tokens (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    school_id INT NOT NULL,
+    user_id INT NOT NULL,
+    token VARCHAR(255) NOT NULL,          -- "ExponentPushToken[...]"
+    platform VARCHAR(10) NOT NULL,        -- "ios" | "android"
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+
+    UNIQUE KEY uq_device_tokens_token (token),
+    INDEX idx_device_tokens_user (user_id),
+    INDEX idx_device_tokens_school (school_id)
+) ENGINE=InnoDB;
+
+-- =====================================================
 -- VIEWS FOR COMMON QUERIES
 -- =====================================================
 

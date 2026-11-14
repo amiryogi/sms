@@ -52,6 +52,8 @@ studentName, class, section, rollNumber, relationship, isPrimary }] }`.
 | `POST /submissions` | STUDENT | multipart: `assignmentId`, `content?`, `files[]` (≤ 3) | the submission | `submissions.submit` | Submit |
 | `GET /notices` | authenticate; visibility in service | paginated; `?status&priority&search&page&limit` | `notices.list` | Notices, notification center |
 | `GET /notices/:id` | authenticate; visibility | one notice | `notices.get` | Notice detail |
+| `POST /devices` | authenticate (any role; always for the caller) | body `{ token, platform }`; `{ id, platform, lastSeenAt }` | `devices.register` | Push registration after sign-in |
+| `DELETE /devices/:token` | authenticate (own registration only) | 204 | `devices.unregister` | (available; sign-out already removes it on the server) |
 | `GET /fees/accounts/:studentId` | ADMIN, ACCOUNTANT, or the student/parent (ownership) | `{ student, years[{ academicYear, fees[{ feeType, amountDue, discount, paid, balance, status, overdue, installments[] }], totals, status }], discounts[], transactions[] }` | `fees.statement` | Fees |
 | `GET /fees/bills/student/:studentId` | ownership | `{ school, bill }` | `fees.studentBill` | Fees → Bill |
 | `GET /fees/transactions/:id` | ownership | receipt | `fees.transaction` | Receipt |

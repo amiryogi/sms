@@ -43,6 +43,41 @@ owner: "<expo account or organization>",
 For a CI server, create an access token in the Expo dashboard and set `EXPO_TOKEN` instead of
 logging in.
 
+## Push notifications
+
+Push needs a **development or release build**. Expo Go cannot receive push on Android, and the
+app shows "Not available on this device" there (More → Notifications).
+
+1. **Project id.** The app reads it from the `EAS_PROJECT_ID` environment variable (or the
+   `extra.eas.projectId` you added above). Without it the More screen says "Not set up in this
+   version of the app".
+2. **Android (Firebase Cloud Messaging):**
+   - create a Firebase project and add an Android app with the package name from
+     `app.config.ts` (one per environment suffix you build);
+   - download `google-services.json` into `mobile/` and set the `GOOGLE_SERVICES_JSON`
+     environment variable to its path (`./google-services.json`) for the build; `app.config.ts`
+     passes it to `android.googleServicesFile`. `.gitignore` excludes the file, and EAS Build
+     uploads only files git tracks, so for cloud builds store it as an EAS file variable named
+     `GOOGLE_SERVICES_JSON` (see "Environment variables" in the EAS docs). It holds public
+     identifiers only, so the alternative is to remove it from `.gitignore` and commit it;
+   - in Firebase (Settings → Service accounts) generate a private key, then run
+     `npx eas-cli@latest credentials` → Android → production → Google Service Account →
+     "Manage your Google Service Account Key for Push Notifications (FCM V1)" → set up →
+     upload the key. Expo uses it to deliver. This key is secret: never commit it.
+   - Source: https://docs.expo.dev/push-notifications/fcm-credentials/
+3. **iOS:** `npx eas-cli@latest credentials` creates the APNs key (needs the Apple Developer
+   account). Push does not work in the iOS simulator.
+4. **Server:** apply the migration (`npm run db:migrate:deploy`) and restart. Nothing else is
+   needed: it sends through Expo. See `PUSH_ENABLED` and `EXPO_ACCESS_TOKEN` in
+   `backend/.env.example`.
+5. **Try it:** sign in on the phone as a parent and allow notifications; More → Notifications
+   says "On for this phone". On the web, publish a notice for that child's class. The phone
+   shows it within a few seconds; tapping it opens the notice.
+
+What is sent, and to whom: notice published (its audience); assignment published and work graded
+(the section's students and their parents); report cards published (same); a student marked
+absent today (parents). A notification holds a title and one line, never marks or amounts.
+
 ## Builds
 
 | Purpose | Command | Result |
@@ -84,6 +119,8 @@ it when the release process is settled (`npx expo install expo-updates`, then `e
 ## First run on a phone: what to check
 
 These can't be verified without a device:
+0. **Push:** the steps under "Push notifications" above, on Android and on iOS; then sign out
+   and publish another notice: nothing arrives.
 1. **Sign-in and restore:** sign in; close and reopen the app; you are still signed in.
    Airplane mode → reopen → "can't reach the server", still signed in.
 2. **Forced password change:** an account with an admin-set password goes straight to

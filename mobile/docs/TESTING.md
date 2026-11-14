@@ -123,3 +123,4 @@ To see the backend's log: `CONTRACT_BACKEND_LOGS=1`.
 | 2026-11-14 (device feedback) | 187 passed (19 suites) | not rerun (no service changes) | clean / clean | Android and iOS export OK; `expo-doctor` 20/20 |
 | 2026-11-14 (brand intro) | 191 passed (20 suites) | not rerun (no service changes) | clean / clean | Android and iOS export OK; `expo-doctor` 20/20 |
 | 2026-11-14 (sign-in, home photo) | 193 passed (21 suites) | not rerun (no service changes) | clean / clean | Android and iOS export OK; `expo-doctor` 20/20 |
+| 2026-11-14 (push notifications) | 200 passed (22 suites) | 42 passed | clean / clean | Android and iOS export OK; `expo-doctor` 20/20; backend `npm test` 517 passed, integration 104 passed on MySQL and on PostgreSQL |
