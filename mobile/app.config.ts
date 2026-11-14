@@ -25,10 +25,15 @@ const IDS = {
 // after the first store release (docs/BUILD_AND_DEPLOYMENT.md).
 const BUNDLE_ID = "com.vidyalayasms.app";
 
+// From `eas init` (2026-11-14). The slug and owner below must match this project.
+const EAS_PROJECT_ID = "19be50e2-ef43-44fa-9a74-dc771ab18427";
+const EAS_OWNER = "amiryogi20361001";
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: IDS[APP_ENV].name,
   slug: "vidyalaya-sms",
+  owner: process.env.EAS_OWNER ?? EAS_OWNER,
   version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/icon.png",
@@ -104,7 +109,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   extra: {
     appEnv: APP_ENV,
-    // Needed for push notifications: the id `eas init` prints (docs/BUILD_AND_DEPLOYMENT.md).
-    ...(process.env.EAS_PROJECT_ID ? { eas: { projectId: process.env.EAS_PROJECT_ID } } : {}),
+    // The EAS project (expo.dev/accounts/amiryogi20361001/projects/vidyalaya-sms). Builds and
+    // push notifications need it. Not a secret. EAS_PROJECT_ID overrides it for another account.
+    eas: { projectId: process.env.EAS_PROJECT_ID ?? EAS_PROJECT_ID },
   },
 });

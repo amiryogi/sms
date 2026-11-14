@@ -32,13 +32,10 @@ npx eas-cli@latest login          # the school's or company's Expo account
 npx eas-cli@latest init           # creates the EAS project
 ```
 
-`eas init` prints a project id. Because the config is `app.config.ts` (dynamic), add it by hand:
-
-```ts
-// app.config.ts, inside the returned object
-extra: { appEnv: APP_ENV, eas: { projectId: "<the id>" } },
-owner: "<expo account or organization>",
-```
+**Done 2026-11-14:** the project is `@amiryogi20361001/vidyalaya-sms`. Its id and owner are
+constants at the top of `app.config.ts` (`EAS_PROJECT_ID`, `EAS_OWNER`); `eas init` cannot write
+to a dynamic config, so they were added by hand. To build under another Expo account, set the
+`EAS_PROJECT_ID` and `EAS_OWNER` environment variables.
 
 For a CI server, create an access token in the Expo dashboard and set `EXPO_TOKEN` instead of
 logging in.
@@ -48,9 +45,7 @@ logging in.
 Push needs a **development or release build**. Expo Go cannot receive push on Android, and the
 app shows "Not available on this device" there (More → Notifications).
 
-1. **Project id.** The app reads it from the `EAS_PROJECT_ID` environment variable (or the
-   `extra.eas.projectId` you added above). Without it the More screen says "Not set up in this
-   version of the app".
+1. **Project id.** Set in `app.config.ts` (see "One-time set-up").
 2. **Android (Firebase Cloud Messaging):**
    - create a Firebase project and add an Android app with the package name from
      `app.config.ts` (one per environment suffix you build);
