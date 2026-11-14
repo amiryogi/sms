@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/theme/ThemeProvider";
 
 const Frame = ({ children }: { children: React.ReactNode }) => (
-  <SafeAreaView className="flex-1 items-center justify-center gap-3 bg-slate-50 px-8 dark:bg-slate-950">{children}</SafeAreaView>
+  <SafeAreaView className="flex-1 items-center justify-center gap-3 bg-canvas px-8">{children}</SafeAreaView>
 );
 
 /** The build has no (or an insecure) API URL: nothing can work, so say so. */

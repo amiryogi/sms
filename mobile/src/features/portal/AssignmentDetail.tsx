@@ -206,7 +206,7 @@ const SubmitForm = ({ assignmentId }: { assignmentId: number }) => {
     <Card className="gap-3">
       <TextField label="Answer or note (optional)" value={content} onChangeText={setContent} multiline numberOfLines={5} textAlignVertical="top" />
       {files.map((f, i) => (
-        <View key={`${f.uri}-${i}`} className="flex-row items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 dark:bg-slate-800">
+        <View key={`${f.uri}-${i}`} className="flex-row items-center gap-2 rounded-lg bg-sunken px-3 py-2">
           <Paperclip size={16} color={colors.muted} />
           <AppText className="flex-1 text-sm" numberOfLines={1}>
             {f.name}
@@ -223,7 +223,7 @@ const SubmitForm = ({ assignmentId }: { assignmentId: number }) => {
       ) : null}
       <AppText variant="caption">Up to {MAX_FILES} files, 5 MB each: images, PDF, Word, Excel or text.</AppText>
       {error ? (
-        <AppText accessibilityRole="alert" className="text-sm text-red-600 dark:text-red-400">
+        <AppText accessibilityRole="alert" className="text-sm text-bad">
           {error}
         </AppText>
       ) : null}

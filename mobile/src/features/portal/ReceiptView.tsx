@@ -23,7 +23,7 @@ export const ReceiptView = ({ id }: { id: number }) => {
           <>
             <Card className="items-center gap-1">
               <AppText variant="caption">{r.type === "REVERSAL" ? "Reversal" : "Payment received"}</AppText>
-              <AppText variant="display" className={r.type === "REVERSAL" ? "text-red-600 dark:text-red-400" : undefined}>
+              <AppText variant="display" className={r.type === "REVERSAL" ? "text-bad" : undefined}>
                 {r.type === "REVERSAL" ? "−" : ""}
                 {formatMoney(r.amount)}
               </AppText>

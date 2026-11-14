@@ -128,7 +128,7 @@ export const SubjectRow = ({ sub }: { sub: SubjectResult }) => {
   const { colors } = useTheme();
   return (
   <Card
-    className={cn("gap-2", !sub.isPassed && "border-red-200 dark:border-red-900")}
+    className={cn("gap-2", !sub.isPassed && "border-bad/40")}
     accessible
     accessibilityLabel={`${sub.subjectName}: grade ${sub.finalGrade ?? "none"}${sub.isPassed ? "" : ", not passed"}`}
   >

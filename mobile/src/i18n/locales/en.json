@@ -84,5 +84,10 @@
     "about": "About",
     "signOutConfirm": "Sign out of this phone? The school's system also signs you out on the web.",
     "version": "Version"
+  },
+  "brand": {
+    "name": "Vidyalaya SMS",
+    "tagline": "Smart School Management for a Better Tomorrow",
+    "skipIntro": "Skip the introduction"
   }
 }

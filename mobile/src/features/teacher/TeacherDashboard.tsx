@@ -4,8 +4,8 @@ import { router } from "expo-router";
 import { useQueries } from "@tanstack/react-query";
 import { CheckCircle2, CircleDashed, ClipboardList, Megaphone, PenLine, Users } from "lucide-react-native";
 import { attendanceService } from "@/api/services/attendance";
-import { AppText, Badge, Card, Divider, ListItem, QueryView, Screen, SectionHeader, StatCard } from "@/components/ui";
-import { HomeHeader } from "@/features/dashboard/HomeHeader";
+import { AppText, Badge, Divider, LinkText, ListItem, QueryView, Screen, SectionHeader, Sheet, StatCard } from "@/components/ui";
+import { HeroMeter, HomeHeader } from "@/features/dashboard/HomeHeader";
 import { useNotices } from "@/features/portal/hooks";
 import { formatDate } from "@/utils/format";
 import { kathmanduToday } from "@/utils/nepaliDate";
@@ -35,6 +35,9 @@ export const TeacherDashboard = () => {
 
   const marksOpen = (exams.data ?? []).reduce((n, e) => n + e.examSubjects.reduce((m, es) => m + es.assignedSectionIds.length, 0), 0);
   const summary = students.data && !Array.isArray(students.data) ? students.data.summary : null;
+  const isDone = (rows: { status: unknown }[] | undefined) => !!rows && rows.length > 0 && rows.every((r) => r.status);
+  const daysLoaded = sections.length > 0 && days.every((d) => d.data !== undefined);
+  const doneCount = days.filter((d) => isDone(d.data)).length;
 
   const refresh = () => {
     assignments.refetch();
@@ -47,30 +50,50 @@ export const TeacherDashboard = () => {
 
   return (
     <Screen onRefresh={refresh} refreshing={assignments.isRefetching}>
-      <HomeHeader />
+      <HomeHeader>
+        {daysLoaded ? (
+          <HeroMeter
+            text={doneCount === sections.length ? "Every register is marked today" : `${doneCount} of ${sections.length} registers marked today`}
+            percent={(doneCount / sections.length) * 100}
+            label={`Attendance today: ${doneCount} of ${sections.length} sections marked`}
+          />
+        ) : null}
+      </HomeHeader>
       <View className="flex-row gap-3">
-        <StatCard icon={Users} label="Students" value={summary ? String(summary.totalStudents) : "—"} hint={summary ? `${summary.totalSections} section(s)` : null} />
-        <StatCard icon={PenLine} label="Marks to enter" value={exams.data ? String(marksOpen) : "—"} hint="subject-sections open" tone="warning" />
+        <StatCard
+          icon={Users}
+          label="Students"
+          value={summary ? String(summary.totalStudents) : "—"}
+          hint={summary ? `in ${summary.totalSections} section${summary.totalSections === 1 ? "" : "s"}` : null}
+        />
+        <StatCard
+          icon={PenLine}
+          label="Marks to enter"
+          value={exams.data ? String(marksOpen) : "—"}
+          hint={marksOpen === 1 ? "subject open" : "subjects open"}
+          tone="warning"
+        />
       </View>
 
-      <SectionHeader title="Today's attendance" />
+      <SectionHeader title="Today's attendance" action={<LinkText title="Take register" onPress={() => router.push("/teacher/attendance")} />} />
       <QueryView query={assignments} isEmpty={() => sections.length === 0} empty={<AppText variant="muted">No classes this year.</AppText>}>
         {() => (
-          <Card className="p-0">
+          <Sheet>
             {sections.map((s, i) => {
               const day = days[i]?.data;
               const marked = day ? day.filter((r) => r.status).length : null;
-              const done = day && marked === day.length && day.length > 0;
+              const done = isDone(day);
               return (
                 <View key={s.key}>
-                  {i > 0 ? <Divider className="ml-16" /> : null}
+                  {i > 0 ? <Divider inset /> : null}
                   <ListItem
                     icon={done ? CheckCircle2 : CircleDashed}
+                    iconTone={done ? "success" : marked ? "warning" : "neutral"}
                     title={sectionLabel(s)}
                     subtitle={s.subjects.map((x) => x.subjectName).join(", ")}
                     right={
                       day ? (
-                        <Badge label={done ? "Marked" : marked ? `${marked}/${day.length}` : "Not marked"} tone={done ? "success" : marked ? "warning" : "neutral"} />
+                        <Badge label={done ? "Marked" : marked ? `${marked} of ${day.length}` : "Not marked"} tone={done ? "success" : marked ? "warning" : "neutral"} />
                       ) : null
                     }
                     onPress={() => router.push("/teacher/attendance")}
@@ -78,19 +101,19 @@ export const TeacherDashboard = () => {
                 </View>
               );
             })}
-          </Card>
+          </Sheet>
         )}
       </QueryView>
 
-      <SectionHeader title="Recent assignments" />
-      <Card className="p-0">
+      <SectionHeader title="Recent assignments" action={<LinkText title="See all" onPress={() => router.push("/teacher/assignments")} />} />
+      <Sheet>
         {(own.data ?? []).slice(0, 3).map((a, i) => (
           <View key={a.id}>
-            {i > 0 ? <Divider className="ml-16" /> : null}
+            {i > 0 ? <Divider inset /> : null}
             <ListItem
               icon={ClipboardList}
               title={a.title}
-              subtitle={`${a.teacherSubject.classSubject.class.name} ${a.teacherSubject.section.name} · ${a._count?.submissions ?? 0} handed in`}
+              subtitle={`${a.teacherSubject.classSubject.class.name} ${a.teacherSubject.section.name}, ${a._count?.submissions ?? 0} handed in`}
               onPress={() => router.push(`/teacher/assignments/${a.id}`)}
             />
           </View>
@@ -100,14 +123,19 @@ export const TeacherDashboard = () => {
             No assignments yet.
           </AppText>
         ) : null}
-      </Card>
+        {own.isLoading ? (
+          <AppText variant="muted" className="p-4">
+            Loading assignments…
+          </AppText>
+        ) : null}
+      </Sheet>
 
-      <SectionHeader title="Notices" />
-      <Card className="p-0">
+      <SectionHeader title="Notices" action={<LinkText title="See all" onPress={() => router.push("/teacher/notices")} />} />
+      <Sheet>
         {(notices.data?.pages[0]?.rows ?? []).slice(0, 3).map((n, i) => (
           <View key={n.id}>
-            {i > 0 ? <Divider className="ml-16" /> : null}
-            <ListItem icon={Megaphone} title={n.title} subtitle={formatDate(n.publishedAt ?? n.createdAt)} onPress={() => router.push(`/shared/notice/${n.id}`)} />
+            {i > 0 ? <Divider inset /> : null}
+            <ListItem icon={Megaphone} iconTone="info" title={n.title} subtitle={formatDate(n.publishedAt ?? n.createdAt)} onPress={() => router.push(`/shared/notice/${n.id}`)} />
           </View>
         ))}
         {notices.data && !notices.data.pages[0]?.rows.length ? (
@@ -115,7 +143,7 @@ export const TeacherDashboard = () => {
             No notices right now.
           </AppText>
         ) : null}
-      </Card>
+      </Sheet>
     </Screen>
   );
 };

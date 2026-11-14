@@ -1,6 +1,7 @@
 import "../global.css";
 import "@/i18n";
 import { useEffect } from "react";
+import { Mukta_300Light, Mukta_400Regular, Mukta_500Medium, Mukta_600SemiBold, Mukta_700Bold, Mukta_800ExtraBold, useFonts } from "@expo-google-fonts/mukta";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
@@ -13,9 +14,13 @@ import { connectNetworkToQuery } from "@/lib/network";
 import { connectAppStateToQuery, queryClient } from "@/lib/queryClient";
 import { ThemeProvider, useTheme } from "@/theme/ThemeProvider";
 import { canOpenArea } from "@/utils/roles";
+import { useStackScreenOptions } from "@/navigation/screenOptions";
 import { ConfigError, RestoreError } from "@/features/auth/StartupScreens";
+import { BrandIntro } from "@/features/brand/BrandIntro";
 
+// The native splash stays until BrandIntro's first frame (the same picture), then fades into it.
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
+SplashScreen.setOptions({ duration: 250, fade: true });
 connectNetworkToQuery();
 
 /**
@@ -24,6 +29,10 @@ connectNetworkToQuery();
  */
 export default function RootLayout() {
   useEffect(() => connectAppStateToQuery(), []);
+  // The app's typeface; the splash stays up until it is ready (a missing
+  // font falls back to the system one rather than blocking the app).
+  const [fontsLoaded, fontError] = useFonts({ Mukta_300Light, Mukta_400Regular, Mukta_500Medium, Mukta_600SemiBold, Mukta_700Bold, Mukta_800ExtraBold });
+  if (!fontsLoaded && !fontError) return null;
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
@@ -34,7 +43,10 @@ export default function RootLayout() {
                 <AppStack />
               </AuthProvider>
             ) : (
-              <ConfigError />
+              <>
+                <ConfigError />
+                <BrandIntro ready />
+              </>
             )}
           </ThemeProvider>
         </QueryClientProvider>
@@ -44,15 +56,23 @@ export default function RootLayout() {
 }
 
 function AppStack() {
+  const { status } = useAuth();
+
+  // BrandIntro covers the app (and hides the native splash) until the session is known.
+  // It always sits in the same place in the tree, so it keeps playing when the session
+  // resolves underneath it.
+  return (
+    <>
+      {status === "booting" ? null : status === "restoreError" ? <RestoreError /> : <Routes />}
+      <BrandIntro ready={status !== "booting"} />
+    </>
+  );
+}
+
+function Routes() {
   const { status, user } = useAuth();
-  const { scheme, colors } = useTheme();
-
-  useEffect(() => {
-    if (status !== "booting") SplashScreen.hideAsync().catch(() => undefined);
-  }, [status]);
-
-  if (status === "booting") return null; // the native splash stays up
-  if (status === "restoreError") return <RestoreError />;
+  const { scheme } = useTheme();
+  const screenOptions = useStackScreenOptions();
 
   const signedIn = status === "signedIn" && !!user;
   const ready = signedIn && !user.mustChangePassword;
@@ -61,15 +81,7 @@ function AppStack() {
   return (
     <>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
-      <Stack
-        screenOptions={{
-          headerShadowVisible: false,
-          headerStyle: { backgroundColor: colors.surface },
-          headerTintColor: colors.text,
-          headerTitleStyle: { fontWeight: "600" },
-          contentStyle: { backgroundColor: colors.background },
-        }}
-      >
+      <Stack screenOptions={screenOptions}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
 
         <Stack.Protected guard={!signedIn}>

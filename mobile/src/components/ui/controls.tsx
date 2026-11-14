@@ -2,7 +2,7 @@ import { Pressable, View } from "react-native";
 import type { LucideIcon } from "lucide-react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { cn } from "./cn";
-import { AppText, Card, type Tone } from "./primitives";
+import { AppText, type Tone } from "./primitives";
 
 /** A row of mutually exclusive options (tabs inside a screen). */
 export const SegmentedControl = <T extends string>({
@@ -16,7 +16,7 @@ export const SegmentedControl = <T extends string>({
   onChange: (v: T) => void;
   label: string;
 }) => (
-  <View accessibilityRole="tablist" accessibilityLabel={label} className="flex-row rounded-lg bg-slate-200/70 p-1 dark:bg-slate-800">
+  <View accessibilityRole="tablist" accessibilityLabel={label} className="flex-row rounded-2xl bg-sunken p-1">
     {options.map((o) => {
       const active = o.value === value;
       return (
@@ -25,13 +25,9 @@ export const SegmentedControl = <T extends string>({
           accessibilityRole="tab"
           accessibilityState={{ selected: active }}
           onPress={() => onChange(o.value)}
-          className={cn("min-h-10 flex-1 items-center justify-center rounded-md px-2", active && "bg-white shadow-sm dark:bg-slate-950")}
+          className={cn("min-h-11 flex-1 items-center justify-center rounded-xl px-2", active && "bg-surface")}
         >
-          <AppText
-            variant="label"
-            numberOfLines={1}
-            className={active ? "text-slate-900 dark:text-slate-50" : "text-slate-500 dark:text-slate-400"}
-          >
+          <AppText numberOfLines={1} className={cn("text-sm", active ? "font-bold text-ink" : "font-semibold text-ink-muted")}>
             {o.label}
           </AppText>
         </Pressable>
@@ -40,42 +36,36 @@ export const SegmentedControl = <T extends string>({
   </View>
 );
 
-/** Horizontally scrollable choice chips (class, section, child, month…). */
-export const Chip = ({ label, selected, onPress }: { label: string; selected?: boolean; onPress?: () => void }) => (
-  <Pressable
-    accessibilityRole="button"
-    accessibilityState={{ selected: !!selected }}
-    onPress={onPress}
-    className={cn(
-      "min-h-10 justify-center rounded-full border px-4",
-      selected
-        ? "border-brand-600 bg-brand-600"
-        : "border-slate-300 bg-white active:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:active:bg-slate-800",
-    )}
-  >
-    <ChipText label={label} selected={selected} />
-  </Pressable>
-);
-
-const ChipText = ({ label, selected }: { label: string; selected?: boolean }) => {
+/** Choice chips (class, section, child, month…). */
+export const Chip = ({ label, selected, onPress }: { label: string; selected?: boolean; onPress?: () => void }) => {
   const { onBrand } = useTheme();
   return (
-    <AppText variant="label" style={selected ? { color: onBrand } : undefined}>
-      {label}
-    </AppText>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: !!selected }}
+      onPress={onPress}
+      className={cn("min-h-11 justify-center rounded-full border px-4", selected ? "border-brand-600 bg-brand-600" : "border-line-strong bg-surface active:bg-sunken")}
+    >
+      <AppText className="text-sm font-semibold" style={selected ? { color: onBrand } : undefined}>
+        {label}
+      </AppText>
+    </Pressable>
   );
 };
 
 const STAT_TONE: Record<Tone, string> = {
-  neutral: "bg-slate-100 dark:bg-slate-800",
-  brand: "bg-brand-50 dark:bg-brand-950",
-  success: "bg-emerald-50 dark:bg-emerald-950",
-  warning: "bg-amber-50 dark:bg-amber-950",
-  danger: "bg-red-50 dark:bg-red-950",
-  info: "bg-sky-50 dark:bg-sky-950",
+  neutral: "bg-sunken",
+  brand: "bg-brand-soft",
+  success: "bg-ok-soft",
+  warning: "bg-warn-soft",
+  danger: "bg-bad-soft",
+  info: "bg-info-soft",
 };
 
-/** A figure with a label, for dashboards. Keep to a few per screen. */
+/**
+ * A figure with its label. The figure leads; the label and hint stay quiet.
+ * Use a few per screen, never as decoration.
+ */
 export const StatCard = ({
   label,
   value,
@@ -92,26 +82,27 @@ export const StatCard = ({
   className?: string;
 }) => {
   const { colors } = useTheme();
-  const iconColor = {
-    neutral: colors.muted,
-    brand: colors.brand,
-    success: colors.success,
-    warning: colors.warning,
-    danger: colors.danger,
-    info: colors.info,
-  }[tone];
+  const iconColor = { neutral: colors.muted, brand: colors.brand, success: colors.ok, warning: colors.warn, danger: colors.bad, info: colors.info }[tone];
   return (
-    <Card className={cn("flex-1 gap-2", className)} accessible accessibilityLabel={`${label}: ${value}${hint ? `, ${hint}` : ""}`}>
-      {Icon ? (
-        <View className={cn("h-9 w-9 items-center justify-center rounded-lg", STAT_TONE[tone])}>
-          <Icon size={18} color={iconColor} />
-        </View>
-      ) : null}
-      <AppText variant="caption">{label}</AppText>
-      <AppText variant="title" numberOfLines={1} adjustsFontSizeToFit>
+    <View className={cn("flex-1 gap-1 rounded-2xl border border-line bg-surface p-4", className)} accessible accessibilityLabel={`${label}: ${value}${hint ? `, ${hint}` : ""}`}>
+      <View className="flex-row items-center gap-2">
+        {Icon ? (
+          <View className={cn("h-7 w-7 items-center justify-center rounded-lg", STAT_TONE[tone])}>
+            <Icon size={15} color={iconColor} strokeWidth={2.2} />
+          </View>
+        ) : null}
+        <AppText variant="label" numberOfLines={1} className="flex-1">
+          {label}
+        </AppText>
+      </View>
+      <AppText numberOfLines={1} adjustsFontSizeToFit className="mt-1 text-2xl font-extrabold text-ink">
         {value}
       </AppText>
-      {hint ? <AppText variant="caption">{hint}</AppText> : null}
-    </Card>
+      {hint ? (
+        <AppText variant="caption" numberOfLines={2}>
+          {hint}
+        </AppText>
+      ) : null}
+    </View>
   );
 };

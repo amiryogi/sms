@@ -58,7 +58,7 @@ export const BreakdownBars = ({ rows, format }: { rows: { key: string | number; 
                 {format(r.value)} / {format(r.total)}
               </AppText>
             </View>
-            <View className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+            <View className="h-2 overflow-hidden rounded-full bg-sunken">
               <View style={{ width: `${pct}%`, backgroundColor: colors.brand }} className="h-full rounded-full" />
             </View>
           </View>

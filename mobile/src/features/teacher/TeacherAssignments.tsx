@@ -43,7 +43,7 @@ const MAX_FILES = 5; // POST /assignments accepts up to 5 files
 export const TeacherAssignmentsList = ({ base }: { base: string }) => {
   const query = useOwnAssignments();
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+    <View className="flex-1 bg-canvas">
       <OfflineBanner />
       <QueryView
         query={query}
@@ -163,7 +163,7 @@ export const NewAssignmentScreen = ({ base }: { base: string }) => {
           <TextField label="Instructions (optional)" value={description} onChangeText={setDescription} multiline numberOfLines={5} textAlignVertical="top" />
           <DateField label="Due date (optional)" value={dueDate} onChange={setDueDate} minimumDate={kathmanduToday()} optional />
           <TextField label="Total marks (optional)" value={totalMarks} onChangeText={setTotalMarks} keyboardType="number-pad" maxLength={4} />
-          <View className="flex-row items-center justify-between rounded-lg bg-white p-3 dark:bg-slate-900">
+          <View className="flex-row items-center justify-between rounded-lg bg-surface p-3">
             <View className="flex-1">
               <AppText className="font-medium">Publish now</AppText>
               <AppText variant="caption">Students and parents see it once it is published.</AppText>
@@ -171,7 +171,7 @@ export const NewAssignmentScreen = ({ base }: { base: string }) => {
             <Switch value={publish} onValueChange={setPublish} accessibilityLabel="Publish now" />
           </View>
           {files.map((f, i) => (
-            <View key={`${f.uri}-${i}`} className="flex-row items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 dark:bg-slate-800">
+            <View key={`${f.uri}-${i}`} className="flex-row items-center gap-2 rounded-lg bg-sunken px-3 py-2">
               <Paperclip size={16} color={colors.muted} />
               <AppText className="flex-1 text-sm" numberOfLines={1}>
                 {f.name}
@@ -181,7 +181,7 @@ export const NewAssignmentScreen = ({ base }: { base: string }) => {
           ))}
           {files.length < MAX_FILES ? <Button title="Attach a file" icon={FileUp} variant="secondary" onPress={pick} /> : null}
           {error ? (
-            <AppText accessibilityRole="alert" className="text-sm text-red-600 dark:text-red-400">
+            <AppText accessibilityRole="alert" className="text-sm text-bad">
               {error}
             </AppText>
           ) : null}
@@ -256,7 +256,7 @@ export const TeacherAssignmentDetail = ({ id }: { id: number }) => {
               <Button title={a.isPublished ? "Unpublish" : "Publish"} variant="secondary" size="sm" loading={update.isPending} onPress={() => togglePublish(a)} />
               <Button title="Delete" icon={Trash2} variant="ghost" size="sm" onPress={confirmDelete} disabled={(submissions.data?.length ?? 0) > 0} />
             </View>
-            {error ? <AppText className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</AppText> : null}
+            {error ? <AppText className="mt-2 text-sm text-bad">{error}</AppText> : null}
 
             <SectionHeader title={`Handed in (${submissions.data?.length ?? 0})`} />
             <QueryView query={submissions} isEmpty={(l) => l.length === 0} empty={<AppText variant="muted">No one has handed in yet.</AppText>}>
@@ -320,7 +320,7 @@ const SubmissionCard = ({ submission: s, assignmentId, totalMarks }: { submissio
         <View className="gap-3">
           <TextField label={`Marks${totalMarks ? ` (out of ${totalMarks})` : ""}`} value={marks} onChangeText={setMarks} keyboardType="decimal-pad" maxLength={6} />
           <TextField label="Feedback (optional)" value={feedback} onChangeText={setFeedback} multiline />
-          {error ? <AppText className="text-sm text-red-600 dark:text-red-400">{error}</AppText> : null}
+          {error ? <AppText className="text-sm text-bad">{error}</AppText> : null}
           <View className="flex-row gap-2">
             <Button title="Save grade" className="flex-1" loading={grade.isPending} disabled={grade.isPending} onPress={send} />
             <Button title="Cancel" variant="ghost" onPress={() => setOpen(false)} />

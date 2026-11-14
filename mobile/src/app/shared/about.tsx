@@ -2,9 +2,10 @@ import { Linking, View } from "react-native";
 import { Stack } from "expo-router";
 import Constants from "expo-constants";
 import { Globe, Mail, MapPin, Phone } from "lucide-react-native";
-import { AppText, Card, Divider, ListItem, Screen, SectionHeader } from "@/components/ui";
+import { AppText, Card, Divider, ListItem, Screen, SectionHeader, Sheet } from "@/components/ui";
 import { useUser } from "@/contexts/AuthContext";
 import { APP_ENV } from "@/config/env";
+import { BrandLogo } from "@/features/brand/BrandLogo";
 
 /** The school's contact details and what the app keeps on this phone. */
 export default function AboutScreen() {
@@ -25,14 +26,14 @@ export default function AboutScreen() {
       {contacts.length ? (
         <>
           <SectionHeader title="Contact the school" />
-          <Card className="p-0">
+          <Sheet>
             {contacts.map((c, i) => (
               <View key={c.title}>
-                {i > 0 ? <Divider className="ml-16" /> : null}
+                {i > 0 ? <Divider inset /> : null}
                 <ListItem title={c.title} icon={c.icon} onPress={c.url ? () => Linking.openURL(c.url!) : undefined} />
               </View>
             ))}
-          </Card>
+          </Sheet>
         </>
       ) : null}
 
@@ -47,10 +48,13 @@ export default function AboutScreen() {
         </AppText>
       </Card>
 
-      <AppText variant="caption" className="mt-6 text-center">
-        Vidyalaya SMS {Constants.expoConfig?.version ?? ""}
-        {APP_ENV !== "production" ? ` (${APP_ENV})` : ""}
-      </AppText>
+      <View className="mt-10 items-center gap-2">
+        <BrandLogo width={150} />
+        <AppText variant="caption" className="text-center">
+          Version {Constants.expoConfig?.version ?? ""}
+          {APP_ENV !== "production" ? ` (${APP_ENV})` : ""}
+        </AppText>
+      </View>
     </Screen>
   );
 }

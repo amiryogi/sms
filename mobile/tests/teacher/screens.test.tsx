@@ -15,7 +15,7 @@ jest.mock("@/api/services/teachers", () => ({ teacherService: { myAssignments: j
 jest.mock("@/api/services/attendance", () => ({ attendanceService: { forSection: jest.fn(), mark: jest.fn(), studentSummary: jest.fn() } }));
 jest.mock("@/api/services/marks", () => ({ marksService: { exams: jest.fn(), students: jest.fn(), save: jest.fn() } }));
 jest.mock("@/api/services/assignments", () => ({ assignmentService: { list: jest.fn(), get: jest.fn(), submissions: jest.fn(), grade: jest.fn(), update: jest.fn(), remove: jest.fn() } }));
-jest.mock("expo-router", () => ({ router: { push: jest.fn(), replace: jest.fn(), back: jest.fn() }, Stack: { Screen: () => null } }));
+jest.mock("expo-router", () => ({ router: { push: jest.fn(), replace: jest.fn(), back: jest.fn() }, Stack: { Screen: () => null }, useFocusEffect: () => undefined }));
 
 jest.setTimeout(20_000);
 
@@ -60,7 +60,7 @@ describe("attendance marking", () => {
     svc("@/api/services/attendance", "attendanceService").forSection!.mockResolvedValue(rows);
     const { AttendanceMarkScreen } = m.req<typeof import("@/features/teacher/AttendanceMarkScreen")>("@/features/teacher/AttendanceMarkScreen");
     await m.render(<AttendanceMarkScreen />, { signedIn: true });
-    await m.screen().findByText("1. Asha Gurung");
+    await m.screen().findByText("Asha Gurung");
   };
 
   it("loads only the teacher's own section and refuses to save a half-marked register", async () => {
@@ -105,7 +105,7 @@ describe("attendance marking", () => {
     m.req<{ __setState: (s: object) => void }>("expo-network").__setState({ isConnected: false });
     await open();
     m.rtl.fireEvent.press(m.screen().getByRole("button", { name: "Mark everyone else present" }));
-    expect(await m.screen().findByText(/offline. Your marks stay on this phone/)).toBeTruthy();
+    expect(await m.screen().findByText(/offline. This register stays on this phone/)).toBeTruthy();
     expect(m.screen().getByRole("button", { name: "Save attendance" }).props.accessibilityState).toMatchObject({ disabled: true });
     expect(svc("@/api/services/attendance", "attendanceService").mark).not.toHaveBeenCalled();
   });
@@ -119,7 +119,7 @@ describe("attendance marking", () => {
     await (storage.default ?? storage).setItem(`sms.draft.42.attendance.5.1.${kathmanduToday()}`, JSON.stringify(draft));
     await open();
     expect(await m.screen().findByText(/Unsent changes from earlier/)).toBeTruthy();
-    expect(m.screen().getByText("L 2")).toBeTruthy();
+    expect(m.screen().getByText("Late 2")).toBeTruthy();
     m.rtl.fireEvent.press(m.screen().getByRole("button", { name: "Discard" }));
     expect(await m.screen().findByText("2 not marked")).toBeTruthy();
   });
@@ -153,7 +153,7 @@ describe("marks entry", () => {
     svc("@/api/services/marks", "marksService").students!.mockResolvedValue(d);
     const { MarksEntryScreen } = m.req<typeof import("@/features/teacher/MarksEntryScreen")>("@/features/teacher/MarksEntryScreen");
     await m.render(<MarksEntryScreen examSubjectId={9} sectionId={1} title="Science · Grade 5 A" />, { signedIn: true });
-    await m.screen().findByText("1. Asha Gurung");
+    await m.screen().findByText("Asha Gurung");
   };
 
   const type = async (label: string, value: string) => {
@@ -165,7 +165,7 @@ describe("marks entry", () => {
     await open();
     expect(m.screen().getByText("Theory out of 75")).toBeTruthy();
     expect(m.screen().getByText("Practical out of 25")).toBeTruthy();
-    await type("Theory, Asha Gurung", "80");
+    await type("Theory, Asha Gurung, out of 75", "80");
     expect(await m.screen().findByText("Above 75")).toBeTruthy();
     m.rtl.fireEvent.press(m.screen().getByRole("button", { name: "Save marks" }));
     expect(await m.screen().findByText("Fix the 1 highlighted row(s) first.")).toBeTruthy();
@@ -177,10 +177,11 @@ describe("marks entry", () => {
     const save = svc("@/api/services/marks", "marksService").save!;
     save.mockResolvedValue({ data: [], message: "Successfully saved marks for 2 students." });
     confirm("Save");
-    await type("Theory, Asha Gurung", "60.5");
-    await type("Practical, Asha Gurung", "20");
+    await type("Theory, Asha Gurung, out of 75", "60.5");
+    await type("Practical, Asha Gurung, out of 25", "20");
     m.rtl.fireEvent.press(m.screen().getByRole("checkbox", { name: "Absent, Bikash Rai" }));
-    await m.rtl.waitFor(() => expect(m.screen().getByText(/1 entered · 1 absent/)).toBeTruthy());
+    await m.rtl.waitFor(() => expect(m.screen().getByText("1 entered")).toBeTruthy());
+    expect(m.screen().getByText("1 absent")).toBeTruthy();
     m.rtl.fireEvent.press(m.screen().getByRole("button", { name: "Save marks" }));
     await m.rtl.waitFor(() => expect(save).toHaveBeenCalledTimes(1));
     expect(save.mock.calls[0]![0]).toEqual({
@@ -197,7 +198,7 @@ describe("marks entry", () => {
     await open(data("LOCKED"));
     expect(m.screen().getByText(/This exam is locked/)).toBeTruthy();
     expect(m.screen().queryByRole("button", { name: "Save marks" })).toBeNull();
-    expect(m.screen().getByLabelText("Theory, Asha Gurung").props.editable).toBe(false);
+    expect(m.screen().getByLabelText("Theory, Asha Gurung, out of 75").props.editable).toBe(false);
   });
 });
 

@@ -55,7 +55,7 @@ const Statement = ({ data }: { data: FeeStatement }) => {
           <View>
             <AppText variant="caption">Balance · {year.academicYear.name}</AppText>
             <AppText variant="display">{formatMoney(t.balance)}</AppText>
-            {t.overdue > 0 ? <AppText className="text-sm font-medium text-red-600 dark:text-red-400">{formatMoney(t.overdue)} is overdue</AppText> : null}
+            {t.overdue > 0 ? <AppText className="text-sm font-medium text-bad">{formatMoney(t.overdue)} is overdue</AppText> : null}
           </View>
           <Badge label={status.label} tone={status.tone} />
         </View>
@@ -77,10 +77,10 @@ const Statement = ({ data }: { data: FeeStatement }) => {
             </View>
             {f.cancelled ? <Badge label={`Cancelled${f.cancelReason ? `: ${f.cancelReason}` : ""}`} tone="neutral" /> : null}
             {f.installments.map((i) => (
-              <View key={i.id} className="flex-row items-center justify-between gap-2 border-t border-slate-100 pt-2 dark:border-slate-800">
+              <View key={i.id} className="flex-row items-center justify-between gap-2 border-t border-line pt-2">
                 <View className="flex-1">
                   <AppText className="text-sm">{i.label}</AppText>
-                  <AppText variant="caption" className={i.overdue ? "text-red-600 dark:text-red-400" : undefined}>
+                  <AppText variant="caption" className={i.overdue ? "text-bad" : undefined}>
                     {i.dueDate ? `${i.overdue ? "Was due" : "Due"} ${formatDate(i.dueDate, "bs")}` : "No due date"}
                   </AppText>
                 </View>
@@ -103,14 +103,14 @@ const Statement = ({ data }: { data: FeeStatement }) => {
         {receipts.length ? (
           receipts.map((r, i) => (
             <View key={r.id}>
-              {i > 0 ? <Divider className="ml-16" /> : null}
+              {i > 0 ? <Divider inset /> : null}
               <ListItem
                 icon={ReceiptText}
                 title={r.receiptNumber}
                 subtitle={`${formatDate(r.paidOn, "bs")} · ${METHOD_LABEL[r.method] ?? r.method}`}
                 right={
                   <View className="items-end">
-                    <AppText className={cn("font-semibold", r.type === "REVERSAL" && "text-red-600 dark:text-red-400")}>
+                    <AppText className={cn("font-semibold", r.type === "REVERSAL" && "text-bad")}>
                       {r.type === "REVERSAL" ? "−" : ""}
                       {formatMoney(r.amount)}
                     </AppText>
@@ -134,12 +134,12 @@ const Statement = ({ data }: { data: FeeStatement }) => {
           <Card className="p-0">
             {discounts.map((d, i) => (
               <View key={d.id}>
-                {i > 0 ? <Divider className="ml-16" /> : null}
+                {i > 0 ? <Divider inset /> : null}
                 <ListItem
                   icon={BadgePercent}
                   title={d.name}
                   subtitle={d.kind === "PERCENT" ? `${Number(d.value)}%` : formatMoney(d.value)}
-                  right={<AppText className="font-semibold text-emerald-700 dark:text-emerald-400">−{formatMoney(d.appliedAmount)}</AppText>}
+                  right={<AppText className="font-semibold text-ok">−{formatMoney(d.appliedAmount)}</AppText>}
                 />
               </View>
             ))}

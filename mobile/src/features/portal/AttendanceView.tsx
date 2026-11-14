@@ -9,10 +9,10 @@ import { useStudentAttendance } from "./hooks";
 import { ATTENDANCE_LABEL } from "./labels";
 
 const CELL: Record<AttendanceStatus, string> = {
-  present: "bg-emerald-100 dark:bg-emerald-950",
-  late: "bg-amber-100 dark:bg-amber-950",
-  absent: "bg-red-100 dark:bg-red-950",
-  excused: "bg-sky-100 dark:bg-sky-950",
+  present: "bg-ok-soft",
+  late: "bg-warn-soft",
+  absent: "bg-bad-soft",
+  excused: "bg-info-soft",
 };
 
 /**

@@ -3,6 +3,7 @@ import { router, Stack, type Href } from "expo-router";
 import { Award, Bell, CheckCheck, ClipboardList, Megaphone, Star, Wallet, type LucideIcon } from "lucide-react-native";
 import { AppText, Button, cn, EmptyState, OfflineBanner } from "@/components/ui";
 import { useTheme } from "@/theme/ThemeProvider";
+import { TOKENS } from "@/theme/tokens";
 import { formatRelativeDay } from "@/utils/format";
 import type { FeedItem } from "./feed";
 import { useNotificationFeed } from "./useNotificationFeed";
@@ -30,7 +31,7 @@ export const NotificationsScreen = () => {
   };
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+    <View className="flex-1 bg-canvas">
       <Stack.Screen options={{ title: "Notifications" }} />
       <OfflineBanner />
       {feed.unreadCount ? (
@@ -57,7 +58,7 @@ export const NotificationsScreen = () => {
               onPress={() => open(item)}
               className={cn(
                 "flex-row gap-3 rounded-xl border p-3",
-                unread ? "border-brand-200 bg-brand-50 dark:border-brand-800 dark:bg-brand-950" : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900",
+                unread ? "border-brand-ink/30 bg-brand-soft" : "border-line bg-surface",
               )}
             >
               <Icon size={20} color={colors.brand} />
@@ -78,7 +79,7 @@ export const NotificationsScreen = () => {
 };
 
 /** The bell in each area's header, with the unread count. */
-export const NotificationBell = () => {
+export const NotificationBell = ({ color }: { color?: string }) => {
   const { unreadCount } = useNotificationFeed();
   const { colors } = useTheme();
   return (
@@ -87,12 +88,16 @@ export const NotificationBell = () => {
       accessibilityLabel={unreadCount ? `Notifications, ${unreadCount} unread` : "Notifications"}
       hitSlop={8}
       onPress={() => router.push("/shared/notifications")}
-      className="mr-2 h-11 w-11 items-center justify-center"
+      className="mr-1 h-11 w-11 items-center justify-center rounded-full active:bg-sunken"
     >
-      <Bell size={22} color={colors.text} />
+      <Bell size={22} color={color ?? colors.ink} strokeWidth={2} />
       {unreadCount ? (
-        <View className="absolute right-1 top-1 min-w-5 items-center rounded-full bg-red-600 px-1">
-          <AppText className="text-xs font-bold text-white">{unreadCount > 99 ? "99+" : unreadCount}</AppText>
+        // Marigold with dark text: readable on any school colour and in both themes
+        // (the light theme's ink, since the marigold is the same in both).
+        <View className="absolute right-0.5 top-0.5 min-w-5 items-center rounded-full bg-warn-solid px-1">
+          <AppText style={{ color: TOKENS.light.ink }} className="text-xs font-bold">
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </AppText>
         </View>
       ) : null}
     </Pressable>

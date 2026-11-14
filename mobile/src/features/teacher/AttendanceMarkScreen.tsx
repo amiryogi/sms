@@ -13,11 +13,13 @@ import { useDraft, useMarkAttendance, useSectionDay, useTeacherAssignments } fro
 import { sectionLabel, sectionsFrom } from "./sections";
 
 const STATUSES: AttendanceStatus[] = ["present", "absent", "late", "excused"];
-const STATUS_ON: Record<AttendanceStatus, string> = {
-  present: "bg-emerald-600 border-emerald-600",
-  absent: "bg-red-600 border-red-600",
-  late: "bg-amber-500 border-amber-500",
-  excused: "bg-sky-600 border-sky-600",
+// Selected: the status's soft fill, a 2 px border and bold text in its tone.
+// Tokens, so it reads in light and dark alike.
+const STATUS_ON: Record<AttendanceStatus, { box: string; text: string }> = {
+  present: { box: "border-ok bg-ok-soft", text: "text-ok" },
+  absent: { box: "border-bad bg-bad-soft", text: "text-bad" },
+  late: { box: "border-warn bg-warn-soft", text: "text-warn" },
+  excused: { box: "border-info bg-info-soft", text: "text-info" },
 };
 
 const shiftDay = (iso: string, days: number) => {
@@ -41,21 +43,21 @@ export const AttendanceMarkScreen = () => {
 
   if (assignments.data === undefined) {
     return (
-      <View className="flex-1 bg-slate-50 p-4 dark:bg-slate-950">
+      <View className="flex-1 bg-canvas p-4">
         {assignments.isError ? <ErrorState error={assignments.error} onRetry={() => assignments.refetch()} /> : <SkeletonList />}
       </View>
     );
   }
   if (!section) {
     return (
-      <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+      <View className="flex-1 bg-canvas">
         <EmptyState icon={ClipboardCheck} title="No classes assigned" message="You have no class this academic year. Ask the school office." />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+    <View className="flex-1 bg-canvas">
       <OfflineBanner />
       {sections.length > 1 ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-grow-0" contentContainerClassName="gap-2 px-4 pt-3">
@@ -64,13 +66,13 @@ export const AttendanceMarkScreen = () => {
           ))}
         </ScrollView>
       ) : null}
-      <View className="flex-row items-center gap-1 px-2 py-2">
+      <View className="mx-4 my-3 flex-row items-center gap-1 rounded-2xl border border-line bg-surface p-1">
         <IconButton icon={ChevronLeft} label="Previous day" onPress={() => setDate(shiftDay(date, -1))} />
         <View className="flex-1 items-center">
-          <AppText className="font-semibold">{formatBs(`${date}T00:00:00.000Z`)}</AppText>
+          <AppText className="text-lg font-bold">{formatBs(`${date}T00:00:00.000Z`)}</AppText>
           <AppText variant="caption">
+            {date === today ? "Today, " : ""}
             {formatAd(`${date}T00:00:00.000Z`)}
-            {date === today ? " · Today" : ""}
           </AppText>
         </View>
         <IconButton icon={ChevronRight} label="Next day" disabled={date >= today} onPress={() => setDate(shiftDay(date, 1))} />
@@ -132,7 +134,7 @@ const Register = ({ classId, sectionId, date, title }: { classId: number; sectio
     }
     Alert.alert(
       alreadyMarked ? "Update attendance?" : "Save attendance?",
-      `${title}, ${formatBs(`${date}T00:00:00.000Z`)}\nPresent ${t.present} · Absent ${t.absent} · Late ${t.late} · Excused ${t.excused}`,
+      `${title}, ${formatBs(`${date}T00:00:00.000Z`)}\nPresent ${t.present}, absent ${t.absent}, late ${t.late}, excused ${t.excused}`,
       [
         { text: "Check again", style: "cancel" },
         {
@@ -161,7 +163,7 @@ const Register = ({ classId, sectionId, date, title }: { classId: number; sectio
     <View className="flex-1">
       <View className="gap-2 px-4">
         {restored ? (
-          <View className="flex-row items-center justify-between gap-2 rounded-lg bg-amber-50 p-3 dark:bg-amber-950">
+          <View className="flex-row items-center justify-between gap-2 rounded-lg bg-warn-soft p-3">
             <AppText className="flex-1 text-sm">Unsent changes from earlier are shown. Save them or discard.</AppText>
             <Button
               title="Discard"
@@ -175,10 +177,10 @@ const Register = ({ classId, sectionId, date, title }: { classId: number; sectio
           </View>
         ) : null}
         <View className="flex-row flex-wrap items-center gap-2">
-          <Badge label={`P ${t.present}`} tone="success" />
-          <Badge label={`A ${t.absent}`} tone="danger" />
-          <Badge label={`L ${t.late}`} tone="warning" />
-          <Badge label={`E ${t.excused}`} tone="info" />
+          <Badge label={`Present ${t.present}`} tone="success" />
+          <Badge label={`Absent ${t.absent}`} tone="danger" />
+          <Badge label={`Late ${t.late}`} tone="warning" />
+          <Badge label={`Excused ${t.excused}`} tone="info" />
           {t.unmarked ? <Badge label={`${t.unmarked} not marked`} tone="neutral" /> : null}
           {alreadyMarked && changes === 0 ? <Badge label="Saved" tone="brand" /> : null}
         </View>
@@ -190,15 +192,19 @@ const Register = ({ classId, sectionId, date, title }: { classId: number; sectio
       <FlatList
         data={lines}
         keyExtractor={(l) => String(l.studentId)}
-        contentContainerClassName="gap-2 p-4 pb-32"
+        contentContainerClassName="gap-3 p-4 pb-40"
         refreshing={day.isRefetching}
         onRefresh={changes ? undefined : () => day.refetch()}
         renderItem={({ item }) => (
-          <View className="gap-2 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
-            <AppText className="font-medium" numberOfLines={1}>
-              {item.rollNumber ? `${item.rollNumber}. ` : ""}
-              {item.name}
-            </AppText>
+          <View className="gap-3 rounded-2xl border border-line bg-surface p-4">
+            <View className="flex-row items-center gap-3">
+              <View className="min-h-10 min-w-10 items-center justify-center rounded-lg bg-sunken px-1.5" accessibilityElementsHidden importantForAccessibility="no">
+                <AppText className="text-sm font-bold text-ink-muted">{item.rollNumber ?? "-"}</AppText>
+              </View>
+              <AppText className="flex-1 text-base font-semibold" numberOfLines={2}>
+                {item.name}
+              </AppText>
+            </View>
             <View className="flex-row gap-2" accessibilityRole="radiogroup" accessibilityLabel={`Attendance for ${item.name}`}>
               {STATUSES.map((s) => {
                 const on = item.status === s;
@@ -210,11 +216,13 @@ const Register = ({ classId, sectionId, date, title }: { classId: number; sectio
                     accessibilityLabel={`${ATTENDANCE_LABEL[s].label}, ${item.name}`}
                     onPress={() => edit(setStatus(lines, item.studentId, s))}
                     className={cn(
-                      "h-11 flex-1 items-center justify-center rounded-lg border",
-                      on ? STATUS_ON[s] : "border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900",
+                      "min-h-12 flex-1 items-center justify-center rounded-xl border-2 px-1 py-2",
+                      on ? STATUS_ON[s].box : "border-line bg-surface active:bg-sunken",
                     )}
                   >
-                    <AppText className={cn("font-semibold", on && "text-white")}>{ATTENDANCE_LABEL[s].short}</AppText>
+                    <AppText numberOfLines={1} adjustsFontSizeToFit className={cn("text-sm", on ? cn("font-bold", STATUS_ON[s].text) : "font-semibold text-ink-muted")}>
+                      {ATTENDANCE_LABEL[s].label}
+                    </AppText>
                   </Pressable>
                 );
               })}
@@ -223,13 +231,13 @@ const Register = ({ classId, sectionId, date, title }: { classId: number; sectio
         )}
       />
 
-      <View className="absolute bottom-0 left-0 right-0 gap-2 border-t border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+      <View className="absolute bottom-0 left-0 right-0 gap-2 border-t border-line bg-surface p-4">
         {message ? (
-          <AppText accessibilityRole="alert" className={cn("text-sm", message.tone === "success" ? "text-emerald-700 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
+          <AppText accessibilityRole="alert" className={cn("text-sm", message.tone === "success" ? "text-ok" : "text-bad")}>
             {message.text}
           </AppText>
         ) : offline ? (
-          <AppText variant="caption">You&apos;re offline. Your marks stay on this phone until you can save.</AppText>
+          <AppText variant="caption">You&apos;re offline. This register stays on this phone until you can save.</AppText>
         ) : changes ? (
           <AppText variant="caption">{changes} change(s) not saved yet.</AppText>
         ) : null}

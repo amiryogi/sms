@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { GraduationCap, ShieldCheck, Users, type LucideIcon } from "lucide-react-native";
 import { AppText, Button, cn } from "@/components/ui";
+import { BrandLogo } from "@/features/brand/BrandLogo";
 import { PREF_KEYS, writeJson } from "@/lib/storage";
 import { useTheme } from "@/theme/ThemeProvider";
 
@@ -14,7 +15,7 @@ type Slide = { key: string; icon: LucideIcon; title: string; body: string };
 export const OnboardingScreen = () => {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
-  const { brand } = useTheme();
+  const { colors } = useTheme();
   const [index, setIndex] = useState(0);
   const list = useRef<FlatList<Slide>>(null);
 
@@ -33,8 +34,7 @@ export const OnboardingScreen = () => {
     if (index < slides.length - 1) {
       list.current?.scrollToIndex({ index: index + 1, animated: true });
       setIndex(index + 1);
-    }
-    else finish();
+    } else finish();
   };
 
   const onScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -42,7 +42,7 @@ export const OnboardingScreen = () => {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-slate-950">
+    <SafeAreaView className="flex-1 bg-canvas">
       <View className="items-end px-4 pt-2">
         <Button title={t("onboarding.skip")} variant="ghost" size="sm" onPress={finish} />
       </View>
@@ -57,13 +57,18 @@ export const OnboardingScreen = () => {
         getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
         renderItem={({ item }) => (
           <View style={{ width }} className="flex-1 items-center justify-center gap-5 px-10">
-            <View style={{ backgroundColor: brand[50] }} className="h-32 w-32 items-center justify-center rounded-full">
-              <item.icon size={60} color={brand[600]} />
-            </View>
-            <AppText variant="title" className="text-center" accessibilityRole="header">
+            {item.key === "1" ? (
+              // The first slide follows the launch animation: the same logo, standing still.
+              <BrandLogo width={Math.min(width * 0.6, 240)} />
+            ) : (
+              <View className="h-36 w-36 items-center justify-center rounded-[40px] bg-brand-soft">
+                <item.icon size={64} color={colors.brand} strokeWidth={1.8} />
+              </View>
+            )}
+            <AppText variant="display" className="text-center text-3xl" accessibilityRole="header">
               {item.title}
             </AppText>
-            <AppText variant="body" className="text-center text-slate-600 dark:text-slate-300">
+            <AppText variant="body" className="text-center text-lg text-ink-muted">
               {item.body}
             </AppText>
           </View>
@@ -72,7 +77,7 @@ export const OnboardingScreen = () => {
       <View className="gap-6 px-6 pb-6">
         <View className="flex-row justify-center gap-2" accessibilityLabel={`Page ${index + 1} of ${slides.length}`}>
           {slides.map((s, i) => (
-            <View key={s.key} className={cn("h-2 rounded-full", i === index ? "w-6 bg-brand-600" : "w-2 bg-slate-300 dark:bg-slate-700")} />
+            <View key={s.key} className={cn("h-2 rounded-full", i === index ? "w-6 bg-brand-600" : "w-2 bg-line-strong")} />
           ))}
         </View>
         <Button title={index === slides.length - 1 ? t("onboarding.start") : t("onboarding.next")} onPress={next} fullWidth />

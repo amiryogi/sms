@@ -10,7 +10,7 @@ are done** and on `main`.
 
 ---
 
-## Mobile app (2026-11-13): built and tested in code; not yet on a device; not committed
+## Mobile app (2026-11-14): on branch `feature/mobile-app` (PR #1); first phone test done, its fixes not yet re-checked on a device
 
 A React Native (Expo SDK 58) app for all seven roles, in `mobile/` with its own `package.json`.
 It is a client of the existing API. **No backend or web code changed.**
@@ -39,12 +39,18 @@ It is a client of the existing API. **No backend or web code changed.**
   - an in-app notification center (there is no push API yet), the offline cache, a dark-mode
     pass, `eas.json` and a security review.
 - **Verified:**
-  - `cd mobile && npm test`: 185 passed;
+  - `cd mobile && npm test`: 191 passed;
   - `npm run test:contract`: 38 passed, against a backend it starts on the MySQL test
     database (port 5013);
   - typecheck, lint, `expo-doctor` and Android/iOS bundle export are clean.
-- **Not verified:** nothing has run on a device or emulator yet (none on this machine). EAS
-  builds need the owner's Expo login.
+- **Phone test (2026-11-14):** the owner reported a plain design, clipped digits in marks
+  entry and an error when changing the theme. All three are fixed in code: a redesign, the
+  input fix, and theme tokens with no `setColorScheme`. An audit (design, accessibility, code
+  review) also fixed class merging, a missing `expo-asset` and the status bar on home screens.
+  Details in `mobile/docs/IMPLEMENTATION_STATUS.md`. **Re-check on the phone.**
+- **Brand (2026-11-14):** the Vidyalaya SMS logo and welcome design are in: a launch animation
+  that starts from the native splash, and the logo on sign-in, onboarding and About.
+- **Not verified:** EAS builds need the owner's Expo login.
 - **Next (the owner):**
   - `eas login`, then a preview build;
   - the device checks in `mobile/docs/BUILD_AND_DEPLOYMENT.md`;

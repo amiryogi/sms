@@ -45,7 +45,8 @@ Rules the app relies on and must never work around:
 |---|---|
 | Framework | Expo SDK 58, React Native 0.88, TypeScript `strict` |
 | Navigation | Expo Router (file-based). Route groups per role |
-| Styling | NativeWind 4 (Tailwind 3 syntax). Tokens in `tailwind.config.js` and `src/theme/` |
+| Styling | NativeWind 4 (Tailwind 3 syntax), colours as CSS-variable tokens (see *Theme and type* below). `cn()` merges classes with `tailwind-merge` |
+| Type | Mukta (`@expo-google-fonts/mukta`, six weights), through the kit's `Text` / `TextInput` |
 | Server state | TanStack Query 5. Selected read-only queries are persisted to disk |
 | HTTP | Axios, one instance in `src/api/client.ts` |
 | Forms | React Hook Form + Zod |
@@ -64,6 +65,64 @@ own `package.json`. Where it needs the same logic it holds a **port**, with the 
 - `src/features/report-cards/html/` ports the report-card sheets.
 
 Grades, GPA, percentages, balances and totals are never recomputed. They come from the API.
+
+### Theme and type
+
+- **Tokens, not `dark:` classes.** Colours are named by role: `canvas`, `surface`, `sunken`,
+  `line(-strong)`, `ink(-muted, -subtle)`, and the tones `ok`, `warn`, `bad`, `info`, each
+  with a `-soft` fill. Brand colours are `brand-50…950`, plus `brand-soft` and `brand-ink`.
+  - `src/theme/tokens.ts` holds the light and dark values.
+  - `tailwind.config.js` maps each name to `rgb(var(--c-…))`.
+  - `ThemeProvider` sets the variables for the current scheme and school colour on the root
+    view (NativeWind `vars()`).
+  - Switching theme only swaps those values. The app never calls NativeWind's `setColorScheme`
+    or changes the phone's appearance setting: that path threw on a phone when the theme
+    changed.
+  - Screens use no hex colours and no `dark:` variants. Icons take `useTheme().colors`.
+- **Contrast:** every text token passes WCAG AA (4.5:1) on `canvas`, `surface` and `sunken` in
+  both themes. Check with a contrast calculator before changing one.
+- **Fonts:**
+  - React Native has no global font, so use the kit's `Text` and `TextInput` (or
+    `AppText` / `TextField`), never React Native's own.
+  - They map the resolved weight (`font-semibold`…) to the matching Mukta file.
+  - The input sets no line height and no fixed height. On Android a line height plus a fixed
+    height clipped the digits in marks entry.
+- **Classes:** NativeWind resolves conflicting utilities by stylesheet order, not by the order
+  they are written. `cn()` therefore merges with `tailwind-merge`, so a `className` passed to a
+  kit component overrides its defaults (`text-sm` over `text-base`, `p-0` over `p-4`).
+- **Home screens:** each area's first tab has no title bar.
+  - Its header is `HomeStatusBand`, a status-bar strip in the school's colour. It also sets the
+    status-bar icon style while that tab is focused.
+  - Under it, `HomeHeader` shows the school, today's BS date and a greeting, plus an optional
+    `HeroMeter` (a teacher's registers marked today, an accountant's collection rate) or the
+    parent's child switcher.
+
+### Brand and launch
+
+- **Sources:** the Vidyalaya SMS logo and the welcome-screen design are kept in
+  `assets/brand/source/`. `python -I scripts/build-brand-assets.py` (Pillow) turns them into:
+  - the emblem as layers on one shared canvas: `arc`, `cap`, `body`, plus `mark` for all three;
+  - the words: `wordmark`, `sms`, `rules`;
+  - the welcome screen's waves, with the white made transparent;
+  - the native splash image;
+  - the sizes and offsets, in `src/features/brand/brandAssets.json`.
+  Rerun it after changing a source image; never edit the outputs by hand.
+- **Launch:**
+  - The native splash shows the book and student (`assets/splash-icon.png`, `imageWidth` 150).
+  - `BrandIntro` draws the same picture in the same place on its first frame, hides the
+    splash, then plays about 1.6 s: the emblem rises, the sun comes up behind the book, the
+    mortarboard drops onto the student's head, and the name, rules, tagline and waves arrive.
+  - It fades out once it has played **and** the session is known, so it adds no wait beyond
+    its own length. A tap skips it; with Reduce Motion it doesn't move. Screen readers skip it.
+  - It sits at a fixed place in the root tree, so the session resolving under it does not
+    restart it.
+  - Keep `SPLASH_IMAGE_WIDTH` / `INTRO_BACKGROUND` and the splash config in `app.config.ts` equal.
+- **Logo elsewhere:** `BrandLogo` (lockup or mark) is rebuilt from the parts, so in dark mode
+  the words are drawn light. It appears on:
+  - the sign-in screen while the phone knows no school (with a school, its band shows instead
+    and the mark sits at the bottom);
+  - the first onboarding slide;
+  - About.
 
 ### Layers
 

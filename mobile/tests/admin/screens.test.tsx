@@ -24,7 +24,7 @@ jest.mock("expo-crypto", () => {
   let n = 0;
   return { randomUUID: jest.fn(() => `00000000-0000-4000-8000-00000000000${(n += 1)}`) };
 });
-jest.mock("expo-router", () => ({ router: { push: jest.fn(), replace: jest.fn(), back: jest.fn() }, Stack: { Screen: () => null } }));
+jest.mock("expo-router", () => ({ router: { push: jest.fn(), replace: jest.fn(), back: jest.fn() }, Stack: { Screen: () => null }, useFocusEffect: () => undefined }));
 
 jest.setTimeout(20_000);
 

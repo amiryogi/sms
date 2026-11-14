@@ -33,6 +33,15 @@ const toDate = (value: Date | string | number | null | undefined): Date | null =
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+const LONG_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+/** "Friday 13 November" for a calendar day ("2026-11-13"). */
+export const formatAdLong = (isoDay: string): string => {
+  const d = new Date(`${isoDay}T00:00:00.000Z`);
+  return Number.isNaN(d.getTime()) ? isoDay : `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${LONG_MONTHS[d.getUTCMonth()]}`;
+};
+
 /** True when the value is a date-only column (UTC midnight), as the backend sends @db.Date. */
 const isDateOnly = (d: Date) =>
   d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0 && d.getUTCMilliseconds() === 0;

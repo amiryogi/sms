@@ -30,7 +30,7 @@ export const AssignmentsView = ({ studentId, mode }: { studentId: number; mode: 
   }, [query.data, filter]);
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+    <View className="flex-1 bg-canvas">
       <OfflineBanner />
       <View className="px-4 pt-4">
         <SegmentedControl<Filter>

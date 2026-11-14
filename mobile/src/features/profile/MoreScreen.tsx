@@ -3,7 +3,7 @@ import { router, type Href } from "expo-router";
 import Constants from "expo-constants";
 import { useTranslation } from "react-i18next";
 import { ArrowLeftRight, Info, KeyRound, LogOut, type LucideIcon } from "lucide-react-native";
-import { AppText, Avatar, Card, Divider, ListItem, Screen, SectionHeader, SegmentedControl } from "@/components/ui";
+import { AppText, Avatar, Divider, ListItem, Screen, SectionHeader, SegmentedControl, Sheet } from "@/components/ui";
 import { useAuth, useUser } from "@/contexts/AuthContext";
 import { useTheme, type SchemePreference } from "@/theme/ThemeProvider";
 import { resolveAssetUrl } from "@/utils/assets";
@@ -11,6 +11,18 @@ import { fullName } from "@/utils/format";
 import { AREA_LABELS, areasFor, roleLabel, type RoleArea } from "@/utils/roles";
 
 export type MoreLink = { title: string; subtitle?: string; icon: LucideIcon; href: Href };
+
+/** Rows in a Sheet, with the divider indented past the icon tile. */
+const Rows = ({ children }: { children: React.ReactNode[] }) => (
+  <Sheet>
+    {children.map((child, i) => (
+      <View key={i}>
+        {i > 0 ? <Divider inset /> : null}
+        {child}
+      </View>
+    ))}
+  </Sheet>
+);
 
 /**
  * The last tab of every role area: the person, links to the area's secondary
@@ -32,47 +44,41 @@ export const MoreScreen = ({ area, links = [] }: { area: RoleArea; links?: MoreL
 
   return (
     <Screen>
-      <Card className="flex-row items-center gap-4">
-        <Avatar name={name} uri={resolveAssetUrl(user.avatarUrl)} size={56} />
+      <View className="flex-row items-center gap-4 rounded-2xl border border-brand-ink/20 bg-brand-soft p-4">
+        <Avatar name={name} uri={resolveAssetUrl(user.avatarUrl)} size={60} />
         <View className="flex-1 gap-0.5">
-          <AppText variant="heading" numberOfLines={1}>
+          <AppText className="text-xl font-bold text-ink" numberOfLines={2}>
             {name}
           </AppText>
-          <AppText variant="muted" numberOfLines={1}>
+          <AppText variant="label" numberOfLines={1}>
             {user.roles.map(roleLabel).join(", ")}
-            {user.username ? ` · ${user.username}` : ""}
+            {user.username ? `, ${user.username}` : ""}
           </AppText>
           <AppText variant="caption" numberOfLines={1}>
             {user.school.name}
           </AppText>
         </View>
-      </Card>
+      </View>
 
       {links.length ? (
         <>
           <SectionHeader title={AREA_LABELS[area]} />
-          <Card className="p-0">
-            {links.map((l, i) => (
-              <View key={String(l.href)}>
-                {i > 0 ? <Divider className="ml-16" /> : null}
-                <ListItem title={l.title} subtitle={l.subtitle} icon={l.icon} onPress={() => router.push(l.href)} />
-              </View>
+          <Rows>
+            {links.map((l) => (
+              <ListItem key={String(l.href)} title={l.title} subtitle={l.subtitle} icon={l.icon} onPress={() => router.push(l.href)} />
             ))}
-          </Card>
+          </Rows>
         </>
       ) : null}
 
       {otherAreas.length ? (
         <>
           <SectionHeader title={t("profile.switchArea")} />
-          <Card className="p-0">
-            {otherAreas.map((a, i) => (
-              <View key={a}>
-                {i > 0 ? <Divider className="ml-16" /> : null}
-                <ListItem title={AREA_LABELS[a]} icon={ArrowLeftRight} onPress={() => router.replace(`/${a}`)} />
-              </View>
+          <Rows>
+            {otherAreas.map((a) => (
+              <ListItem key={a} title={AREA_LABELS[a]} icon={ArrowLeftRight} iconTone="info" onPress={() => router.replace(`/${a}`)} />
             ))}
-          </Card>
+          </Rows>
         </>
       ) : null}
 
@@ -89,13 +95,13 @@ export const MoreScreen = ({ area, links = [] }: { area: RoleArea; links?: MoreL
       />
 
       <SectionHeader title={t("profile.account")} />
-      <Card className="p-0">
-        <ListItem title={t("password.changeTitle")} icon={KeyRound} onPress={() => router.push("/change-password")} />
-        <Divider className="ml-16" />
-        <ListItem title={t("profile.about")} icon={Info} onPress={() => router.push("/shared/about")} />
-        <Divider className="ml-16" />
-        <ListItem title={t("common.signOut")} icon={LogOut} onPress={confirmSignOut} />
-      </Card>
+      <Rows>
+        {[
+          <ListItem key="pw" title={t("password.changeTitle")} icon={KeyRound} iconTone="neutral" onPress={() => router.push("/change-password")} />,
+          <ListItem key="about" title={t("profile.about")} icon={Info} iconTone="neutral" onPress={() => router.push("/shared/about")} />,
+          <ListItem key="out" title={t("common.signOut")} icon={LogOut} iconTone="danger" onPress={confirmSignOut} />,
+        ]}
+      </Rows>
 
       <AppText variant="caption" className="mt-6 text-center">
         {t("profile.version")} {Constants.expoConfig?.version ?? "—"}

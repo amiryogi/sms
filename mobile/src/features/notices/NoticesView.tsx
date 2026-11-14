@@ -21,7 +21,7 @@ export const NoticesView = () => {
   const rows = query.data?.pages.flatMap((p) => p.rows) ?? [];
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+    <View className="flex-1 bg-canvas">
       <Stack.Screen options={{ title: "Notices" }} />
       <OfflineBanner />
       <View className="px-4 pt-4">

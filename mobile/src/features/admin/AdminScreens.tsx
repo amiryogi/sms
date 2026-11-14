@@ -10,15 +10,19 @@ import {
   Badge,
   Card,
   Chip,
+  cn,
   Divider,
   EmptyState,
   ErrorState,
+  LinkText,
   ListItem,
   OfflineBanner,
   PressableCard,
+  ProgressBar,
   QueryView,
   Screen,
   SectionHeader,
+  Sheet,
   SkeletonList,
   StatCard,
   TextField,
@@ -76,42 +80,58 @@ export const AdminDashboard = () => {
         <StatCard icon={Users} label="Teachers" value={teachers.data !== undefined ? String(teachers.data) : "—"} tone="info" />
       </View>
       {finance.data ? (
-        <PressableCard className="mt-3 gap-2" onPress={() => router.push("/admin/finance")}>
+        <PressableCard
+          className="mt-3 gap-3"
+          onPress={() => router.push("/admin/finance")}
+          accessibilityLabel={`Fees for ${finance.data.academicYear.name}: ${formatMoney(finance.data.kpis.collected)} collected, ${formatPercent(finance.data.kpis.collectionRate)}. ${formatMoney(finance.data.kpis.outstanding)} outstanding.`}
+        >
           <View className="flex-row items-center justify-between">
-            <AppText variant="label">Fees · {finance.data.academicYear.name}</AppText>
-            <Badge label={`${formatPercent(finance.data.kpis.collectionRate)} collected`} tone="success" />
+            <AppText variant="label">Fees, {finance.data.academicYear.name}</AppText>
+            <AppText className="text-sm font-bold text-ok">{formatPercent(finance.data.kpis.collectionRate)} collected</AppText>
           </View>
+          <ProgressBar value={finance.data.kpis.collectionRate} tone="success" />
           <View className="flex-row justify-between">
             <View>
               <AppText variant="caption">Collected</AppText>
-              <AppText variant="heading">{formatMoney(finance.data.kpis.collected)}</AppText>
+              <AppText className="text-xl font-extrabold text-ink">{formatMoney(finance.data.kpis.collected)}</AppText>
             </View>
             <View className="items-end">
               <AppText variant="caption">Outstanding</AppText>
-              <AppText variant="heading">{formatMoney(finance.data.kpis.outstanding)}</AppText>
+              <AppText className="text-xl font-extrabold text-ink">{formatMoney(finance.data.kpis.outstanding)}</AppText>
             </View>
           </View>
           {finance.data.kpis.overdue.amount > 0 ? (
-            <AppText className="text-sm text-red-600 dark:text-red-400">
-              {formatMoney(finance.data.kpis.overdue.amount)} overdue from {finance.data.kpis.overdue.students} student(s)
-            </AppText>
+            <View className="rounded-xl bg-bad-soft px-3 py-2">
+              <AppText className="text-sm font-semibold text-bad">
+                {formatMoney(finance.data.kpis.overdue.amount)} overdue from {finance.data.kpis.overdue.students} student
+                {finance.data.kpis.overdue.students === 1 ? "" : "s"}
+              </AppText>
+            </View>
           ) : null}
         </PressableCard>
       ) : null}
 
-      <SectionHeader title="Exams this year" />
-      <View className="flex-row gap-2">
-        {(Object.keys(EXAM_STATUS) as ExamStatus[]).map((s) => (
-          <StatCard key={s} label={EXAM_STATUS[s].label} value={exams.data ? String(byStatus[s]) : "—"} tone={EXAM_STATUS[s].tone} />
+      <SectionHeader title="Exams this year" action={<LinkText title="See all" onPress={() => router.push("/admin/exams")} />} />
+      <Sheet className="flex-row">
+        {(Object.keys(EXAM_STATUS) as ExamStatus[]).map((s, i) => (
+          <View
+            key={s}
+            className={cn("flex-1 items-center gap-0.5 py-4", i > 0 && "border-l border-line")}
+            accessible
+            accessibilityLabel={`${EXAM_STATUS[s].label}: ${exams.data ? byStatus[s] : "loading"}`}
+          >
+            <AppText className="text-3xl font-extrabold text-ink">{exams.data ? String(byStatus[s]) : "—"}</AppText>
+            <Badge label={EXAM_STATUS[s].label} tone={EXAM_STATUS[s].tone} className="self-center" />
+          </View>
         ))}
-      </View>
+      </Sheet>
 
-      <SectionHeader title="Notices" />
-      <Card className="p-0">
+      <SectionHeader title="Notices" action={<LinkText title="See all" onPress={() => router.push("/admin/notices")} />} />
+      <Sheet>
         {(notices.data?.pages[0]?.rows ?? []).slice(0, 3).map((n, i) => (
           <View key={n.id}>
-            {i > 0 ? <Divider className="ml-16" /> : null}
-            <ListItem icon={Megaphone} title={n.title} subtitle={formatDate(n.publishedAt ?? n.createdAt)} onPress={() => router.push(`/shared/notice/${n.id}`)} />
+            {i > 0 ? <Divider inset /> : null}
+            <ListItem icon={Megaphone} iconTone="info" title={n.title} subtitle={formatDate(n.publishedAt ?? n.createdAt)} onPress={() => router.push(`/shared/notice/${n.id}`)} />
           </View>
         ))}
         {notices.data && !notices.data.pages[0]?.rows.length ? (
@@ -119,7 +139,7 @@ export const AdminDashboard = () => {
             No notices right now.
           </AppText>
         ) : null}
-      </Card>
+      </Sheet>
       <AppText variant="caption" className="mt-6 text-center">
         Creating and changing records (students, exams, fees set-up) is done on the web.
       </AppText>
@@ -136,7 +156,7 @@ export const StudentDirectory = () => {
   const rows = query.data?.pages.flatMap((p) => p.rows) ?? [];
   const total = query.data?.pages[0]?.pagination.total;
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+    <View className="flex-1 bg-canvas">
       <OfflineBanner />
       <View className="px-4 pt-4">
         <TextField label="Search students" value={text} onChangeText={setText} placeholder="Name, username or admission number" returnKeyType="search" />
@@ -184,7 +204,7 @@ export const StaffDirectory = () => {
   const query = useStaffDirectory(role, search);
   const rows = query.data?.pages.flatMap((p) => p.rows) ?? [];
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+    <View className="flex-1 bg-canvas">
       <Stack.Screen options={{ title: "Staff" }} />
       <OfflineBanner />
       <View className="gap-2 px-4 pt-4">
@@ -347,7 +367,7 @@ export const ClassesView = () => {
             <Card className="mt-3 p-0">
               {list.map((c, i) => (
                 <View key={c.id}>
-                  {i > 0 ? <Divider className="ml-16" /> : null}
+                  {i > 0 ? <Divider inset /> : null}
                   <ListItem icon={School} title={c.name} subtitle={c.gradeLevel !== null ? `Grade level ${c.gradeLevel}` : null} />
                 </View>
               ))}

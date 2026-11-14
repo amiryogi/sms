@@ -1,6 +1,7 @@
 /** The mobile UI kit. Screens style with these and utilities; no hex colours in screens. */
 export { cn } from "./cn";
-export { AppText, Badge, Button, Card, Divider, IconButton, PressableCard, ProgressBar, SectionHeader } from "./primitives";
+export { AppText, Badge, Button, Card, Divider, IconButton, LinkText, PressableCard, ProgressBar, SectionHeader, Sheet } from "./primitives";
+export { Text, TextInput } from "./Text";
 export type { ButtonProps, TextVariant, Tone } from "./primitives";
 export { TextField } from "./TextField";
 export { Avatar, ListItem } from "./ListItem";

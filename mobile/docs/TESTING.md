@@ -120,3 +120,5 @@ To see the backend's log: `CONTRACT_BACKEND_LOGS=1`.
 | 2026-11-13 (phase 5) | 171 passed (14 suites) | 31 passed | clean / clean | Android and iOS export OK; `expo-doctor` 20/20 |
 | 2026-11-13 (phase 6) | 178 passed (15 suites) | 38 passed | clean / clean | Android and iOS export OK |
 | 2026-11-13 (phases 7–8) | 185 passed (18 suites) | 38 passed | clean / clean | Android and iOS export OK with `APP_ENV=production`; `expo-doctor` 20/20; backend `npm test` 497 passed |
+| 2026-11-14 (device feedback) | 187 passed (19 suites) | not rerun (no service changes) | clean / clean | Android and iOS export OK; `expo-doctor` 20/20 |
+| 2026-11-14 (brand intro) | 191 passed (20 suites) | not rerun (no service changes) | clean / clean | Android and iOS export OK; `expo-doctor` 20/20 |

@@ -14,6 +14,7 @@ import {
   Button,
   Card,
   Chip,
+  cn,
   DateField,
   Divider,
   EmptyState,
@@ -29,6 +30,7 @@ import {
   StatCard,
   TextField,
 } from "@/components/ui";
+import { HeroMeter, HomeHeader } from "@/features/dashboard/HomeHeader";
 import { FEE_STATUS, METHOD_LABEL } from "@/features/portal/labels";
 import { FeesView } from "@/features/portal/FeesView";
 import { useFeeStatement } from "@/features/portal/hooks";
@@ -42,17 +44,28 @@ import { useAccounts, useFinanceDashboard, useRecordPayment, useReport, useTrans
 /* ------------------------------------------------------------- dashboard */
 
 /** KPIs and charts exactly as GET /fees/dashboard computes them. */
-export const FinanceDashboardView = ({ base }: { base: string }) => {
+export const FinanceDashboardView = ({ base, home = false }: { base: string; home?: boolean }) => {
   const query = useFinanceDashboard();
+  const k0 = query.data?.kpis;
   return (
     <Screen onRefresh={() => query.refetch()} refreshing={query.isRefetching}>
+      {home ? (
+        <HomeHeader subtitle={query.data ? `Academic year ${query.data.academicYear.name}` : null}>
+          {k0 ? (
+            <HeroMeter
+              text={`${formatMoney(k0.collected)} collected, ${formatPercent(k0.collectionRate)} of ${formatMoney(k0.expectedNet)}`}
+              percent={Number(k0.collectionRate)}
+            />
+          ) : null}
+        </HomeHeader>
+      ) : null}
       <QueryView query={query}>
         {(d) => {
           const k = d.kpis;
           return (
             <>
-              <AppText variant="caption">Academic year {d.academicYear.name}</AppText>
-              <View className="mt-2 flex-row gap-3">
+              {home ? null : <AppText variant="label">Academic year {d.academicYear.name}</AppText>}
+              <View className={cn("flex-row gap-3", !home && "mt-2")}>
                 <StatCard icon={HandCoins} label="Collected" value={formatMoney(k.collected)} hint={`${formatPercent(k.collectionRate)} of ${formatMoney(k.expectedNet)}`} tone="success" />
                 <StatCard icon={Wallet} label="Outstanding" value={formatMoney(k.outstanding)} hint={`${k.pending.installments} installment(s)`} tone="warning" />
               </View>
@@ -89,12 +102,12 @@ export const FinanceDashboardView = ({ base }: { base: string }) => {
                   <Card className="p-0">
                     {d.overdueStudents.slice(0, 5).map((s, i) => (
                       <View key={s.studentId}>
-                        {i > 0 ? <Divider className="ml-16" /> : null}
+                        {i > 0 ? <Divider inset={36} /> : null}
                         <ListItem
                           left={<Avatar name={s.name} uri={resolveAssetUrl(s.avatarUrl)} size={36} />}
                           title={s.name}
                           subtitle={`${s.class.name} ${s.section.name}`}
-                          right={<AppText className="font-semibold text-red-600 dark:text-red-400">{formatMoney(s.overdue)}</AppText>}
+                          right={<AppText className="font-semibold text-bad">{formatMoney(s.overdue)}</AppText>}
                           onPress={() => router.push(`${base}/account/${s.studentId}` as Href)}
                         />
                       </View>
@@ -108,7 +121,7 @@ export const FinanceDashboardView = ({ base }: { base: string }) => {
                 {d.recentTransactions.length ? (
                   d.recentTransactions.slice(0, 5).map((t, i) => (
                     <View key={t.id}>
-                      {i > 0 ? <Divider className="ml-16" /> : null}
+                      {i > 0 ? <Divider inset /> : null}
                       <ListItem
                         icon={ReceiptText}
                         title={t.student ? fullName(t.student.user) : t.receiptNumber}
@@ -155,7 +168,7 @@ export const AccountsList = ({ base }: { base: string }) => {
   const rows = query.data?.pages.flatMap((p) => p.rows) ?? [];
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+    <View className="flex-1 bg-canvas">
       <OfflineBanner />
       <View className="gap-2 px-4 pt-4">
         <TextField label="Search students" value={text} onChangeText={setText} placeholder="Name or admission number" returnKeyType="search" />
@@ -304,7 +317,7 @@ export const RecordPaymentScreen = ({ studentId }: { studentId: number }) => {
         <DateField label="Paid on" value={paidOn} onChange={setPaidOn} maximumDate={kathmanduToday()} />
         <TextField label="Remarks (optional)" value={remarks} onChangeText={setRemarks} maxLength={500} />
         {error ? (
-          <AppText accessibilityRole="alert" className="text-sm text-red-600 dark:text-red-400">
+          <AppText accessibilityRole="alert" className="text-sm text-bad">
             {error}
           </AppText>
         ) : null}
@@ -333,7 +346,7 @@ export const TransactionsList = () => {
   const query = useTransactions({ type: type || undefined, from: day ?? undefined, to: day ?? undefined });
   const rows = query.data?.pages.flatMap((p) => p.rows) ?? [];
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+    <View className="flex-1 bg-canvas">
       <OfflineBanner />
       <View className="gap-2 px-4 pt-4">
         <View className="flex-row flex-wrap gap-2">
@@ -367,7 +380,7 @@ export const TransactionsList = () => {
                 </AppText>
               </View>
               <View className="items-end gap-1">
-                <AppText className={t.type === "REVERSAL" ? "font-semibold text-red-600 dark:text-red-400" : "font-semibold"}>
+                <AppText className={t.type === "REVERSAL" ? "font-semibold text-bad" : "font-semibold"}>
                   {t.type === "REVERSAL" ? "−" : ""}
                   {formatMoney(t.amount)}
                 </AppText>
@@ -430,7 +443,7 @@ export const ReportsView = () => {
                   </Card>
                 ))}
                 {r.totals ? (
-                  <Card className="gap-1 border-brand-200 dark:border-brand-800">
+                  <Card className="gap-1 border-brand-ink/30">
                     <AppText className="font-semibold">Total</AppText>
                     {rest
                       .filter((c) => r.totals?.[c.key] !== undefined)

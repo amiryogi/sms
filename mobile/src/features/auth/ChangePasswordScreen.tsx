@@ -66,7 +66,7 @@ export const ChangePasswordScreen = () => {
         </View>
 
         {error ? (
-          <View accessibilityRole="alert" className="mb-4 flex-row gap-2 rounded-lg bg-red-50 p-3 dark:bg-red-950">
+          <View accessibilityRole="alert" className="mb-4 flex-row gap-2 rounded-lg bg-bad-soft p-3">
             <AlertCircle size={18} color={colors.danger} />
             <AppText className="flex-1 text-sm">{error}</AppText>
           </View>

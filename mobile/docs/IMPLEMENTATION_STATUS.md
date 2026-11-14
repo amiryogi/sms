@@ -18,6 +18,77 @@ No backend or web code has changed. Proposals for backend changes are in API_GAP
 
 ---
 
+## Brand and launch animation (2026-11-14)
+
+The owner supplied the Vidyalaya SMS logo and a welcome-screen design.
+
+- **Welcome screen:** rebuilt as the launch animation (`src/features/brand/BrandIntro.tsx`) rather
+  than shown as one picture. Its words are real text, it works in dark mode, it scales to any
+  phone, and it can move. It starts from the native splash picture, so the handover is seamless.
+- **Logo:** split into layers by `scripts/build-brand-assets.py`. It appears on:
+  - the sign-in screen when no school is known yet;
+  - the first onboarding slide;
+  - About;
+  - the native splash.
+- **Tests:** `tests/brand/intro.test.tsx` checks the handover from the splash, that the intro
+  waits for the session, skip, Reduce Motion and that screen readers skip it.
+- **Not checked:** the splash alignment can only be seen in a release or development build;
+  Expo Go shows the app icon instead of the splash. The app icon itself is unchanged.
+
+---
+
+## Device feedback round (2026-11-14)
+
+The owner tried the app on a phone and reported four things. What changed for each:
+
+**a. The design was plain.**
+- A token-based palette with checked contrast, the Mukta typeface and a 44 px minimum touch
+  target throughout.
+- Each role's home opens on a band in the school's colour: the school, today's Bikram Sambat
+  date, a greeting, and the one number that role starts the day with:
+  - a teacher sees the registers marked today;
+  - an accountant sees the collection rate;
+  - a parent sees the child switcher.
+- Lists are grouped sheets with tinted icon tiles; badges are outlined stamps.
+- The login screen now has the same brand band as home.
+
+**b. Marks were partly hidden.**
+- **Cause:** a fixed 44 px input height plus a 24 px line height, which Android clips.
+- **Fix:** each mark box grows with the text (24 px digits, `/ max` inside the box) and uses
+  the kit input, which sets neither.
+- **Also changed:** the screen avoids the keyboard; the absent toggle and the attendance status
+  buttons use tone tokens (soft fill, 2 px border) with full words instead of P/A/L/E.
+
+**c. Changing the theme printed an error.**
+- **Cause:** NativeWind's `setColorScheme` throws unless dark mode is class-based, and it also
+  changed the phone's own appearance setting.
+- **Fix:** the theme is now CSS variables swapped by the provider, with no call into NativeWind
+  or the system.
+- **Tests:** `tests/theme/theme.test.tsx` checks the switch and that neither API is touched.
+
+**d. Audit.** I ran a design critique, an accessibility review (WCAG 2.1 AA adapted to touch)
+and a code review over `src`. Fixed from them:
+- **Class merging:** `cn()` did not merge, so overrides lost to the stylesheet order: chips
+  rendered at 16 px instead of 14 px, and `Card p-0` kept its padding. It now uses
+  `tailwind-merge`.
+- **Missing dependency:** `expo-asset`, which `expo-font` needs, was not installed; added with
+  its config plugin.
+- **Status bar on home:** content and the offline banner could sit under the status bar with
+  the title bar hidden. The brand status strip fixes that, and the status-bar style is now
+  declarative, so the root layout no longer resets it.
+- **Date picker:** the iOS date picker followed the phone's theme, not the app's
+  (`themeVariant`).
+- **Contrast:** caption colour `ink-subtle` was 3.9:1 on the light canvas; now 4.9:1.
+- **Clean-up:**
+  - divider insets come from the kit (`<Divider inset />`);
+  - no hex values in screens (except the white logo tile);
+  - removed the unused `src/theme/colors.ts`.
+
+Not verified on a device yet: the look itself, large-text settings, and the iOS status bar. See
+the device test plan in BUILD_AND_DEPLOYMENT.md.
+
+---
+
 ## Phase 8: testing and release
 
 **Release configuration:**

@@ -60,16 +60,20 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     "expo-router",
     "expo-secure-store",
     "expo-sharing",
+    "expo-asset",
     "expo-font",
     "expo-image",
     [
       "expo-splash-screen",
       {
+        // The book and student from the logo (scripts/build-brand-assets.py). BrandIntro's first
+        // frame draws the same picture at the same size, so keep imageWidth equal to
+        // SPLASH_IMAGE_WIDTH and the colours equal to INTRO_BACKGROUND (src/features/brand/).
         image: "./assets/splash-icon.png",
-        imageWidth: 160,
+        imageWidth: 150,
         resizeMode: "contain",
-        backgroundColor: "#ffffff",
-        dark: { image: "./assets/splash-icon.png", backgroundColor: "#0f172a" },
+        backgroundColor: "#FFFFFF",
+        dark: { image: "./assets/splash-icon.png", backgroundColor: "#0C111C" },
       },
     ],
     [

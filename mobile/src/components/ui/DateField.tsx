@@ -38,7 +38,7 @@ export const DateField = ({
   optional?: boolean;
   className?: string;
 }) => {
-  const { colors } = useTheme();
+  const { colors, scheme } = useTheme();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<string | null>(null);
 
@@ -56,6 +56,9 @@ export const DateField = ({
       value={toDate(pending ?? value ?? toIso(new Date()))}
       mode="date"
       display={Platform.OS === "ios" ? "inline" : "default"}
+      // The app's own light/dark choice, not the phone's (the theme no longer changes the system setting).
+      themeVariant={scheme}
+      accentColor={colors.brand}
       onChange={onPick}
       minimumDate={minimumDate ? toDate(minimumDate) : undefined}
       maximumDate={maximumDate ? toDate(maximumDate) : undefined}
@@ -73,7 +76,7 @@ export const DateField = ({
             setPending(null);
             setOpen(true);
           }}
-          className="min-h-12 flex-1 flex-row items-center gap-3 rounded-lg border border-slate-300 bg-white px-3 dark:border-slate-700 dark:bg-slate-900"
+          className="min-h-12 flex-1 flex-row items-center gap-3 rounded-lg border border-line-strong bg-surface px-3"
         >
           <CalendarDays size={18} color={colors.muted} />
           {value ? (
@@ -92,7 +95,7 @@ export const DateField = ({
       {Platform.OS === "ios" ? (
         <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
           <View className="flex-1 justify-end bg-black/40">
-            <View className="gap-3 rounded-t-2xl bg-white p-4 pb-8 dark:bg-slate-900">
+            <View className="gap-3 rounded-t-2xl bg-surface p-4 pb-8">
               {picker}
               <Button
                 title="Done"

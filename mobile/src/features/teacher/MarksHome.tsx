@@ -23,7 +23,7 @@ export const MarksHome = ({ mode }: { mode: "teacher" | "officer" }) => {
   const groups = useMemo(() => (exams.data ?? []).map((exam) => ({ exam, data: itemsOf(exam, mode, sectionName) })), [exams.data, mode, sectionName]);
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+    <View className="flex-1 bg-canvas">
       <OfflineBanner />
       <QueryView
         query={exams}

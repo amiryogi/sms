@@ -8,7 +8,8 @@ import { OfflineBanner } from "./states";
 /**
  * The frame of every screen: safe areas, the offline banner, and (when
  * `onRefresh` is given) pull to refresh. Screens with long lists pass
- * `scroll={false}` and render their own FlatList inside.
+ * `scroll={false}` and render their own FlatList inside. `bleed` removes the
+ * content padding so a hero (HomeHeader) can run edge to edge.
  */
 export const Screen = ({
   children,
@@ -33,19 +34,15 @@ export const Screen = ({
 }) => {
   const { colors } = useTheme();
   return (
-    <SafeAreaView edges={edges} className={cn("flex-1 bg-slate-50 dark:bg-slate-950", className)}>
+    <SafeAreaView edges={edges} className={cn("flex-1 bg-canvas", className)}>
       <OfflineBanner />
       {header}
       {scroll ? (
         <ScrollView
           className="flex-1"
-          contentContainerClassName={cn("px-4 pb-10 pt-4", contentClassName)}
+          contentContainerClassName={cn("px-4 pb-12 pt-4", contentClassName)}
           keyboardShouldPersistTaps="handled"
-          refreshControl={
-            onRefresh ? (
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} colors={[colors.brand]} />
-            ) : undefined
-          }
+          refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} colors={[colors.brandFill]} /> : undefined}
         >
           {children}
         </ScrollView>

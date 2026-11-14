@@ -19,7 +19,7 @@ jest.mock("@/api/services/fees", () => ({ feeService: { statement: jest.fn(), tr
 jest.mock("@/api/services/notices", () => ({
   noticeService: { list: jest.fn(async () => ({ rows: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } })), get: jest.fn() },
 }));
-jest.mock("expo-router", () => ({ router: { push: jest.fn(), replace: jest.fn() }, Stack: { Screen: () => null } }));
+jest.mock("expo-router", () => ({ router: { push: jest.fn(), replace: jest.fn() }, Stack: { Screen: () => null }, useFocusEffect: () => undefined }));
 
 jest.setTimeout(20_000);
 
@@ -112,12 +112,12 @@ describe("parent: children", () => {
     );
     await renderParentHome();
 
-    expect(await m.screen().findByText(/Asha · Grade 5 A/)).toBeTruthy();
+    expect(await m.screen().findByText(/Asha, Grade 5 A/)).toBeTruthy();
     expect(m.screen().getByText("Rs. 17,500")).toBeTruthy();
 
-    m.rtl.fireEvent.press(m.screen().getByRole("button", { name: "Bikash" }));
+    m.rtl.fireEvent.press(m.screen().getByRole("button", { name: /^Bikash/ }));
 
-    expect(await m.screen().findByText(/Bikash · Grade 5 A/)).toBeTruthy();
+    expect(await m.screen().findByText(/Bikash, Grade 5 A/)).toBeTruthy();
     expect(m.screen().queryByText("Rs. 17,500")).toBeNull(); // Asha's balance is gone
     expect(portal.overview).toHaveBeenCalledWith(8, expect.anything());
     // The choice is remembered for this parent.
@@ -133,7 +133,7 @@ describe("parent: children", () => {
     portal.myChildren!.mockResolvedValue([child(7, "Asha")]);
     portal.overview!.mockResolvedValue(overview());
     await renderParentHome();
-    expect(await m.screen().findByText(/Asha · Grade 5 A/)).toBeTruthy();
+    expect(await m.screen().findByText(/Asha, Grade 5 A/)).toBeTruthy();
     expect(portal.overview).not.toHaveBeenCalledWith(99, expect.anything());
   });
 

@@ -69,7 +69,7 @@ const Actions = ({ card }: { card: ReportCard }) => {
         <Button title="Share PDF" icon={Share2} className="flex-1" loading={busy === "share"} disabled={busy !== null} onPress={() => run("share")} />
         <Button title="Print" icon={Printer} variant="secondary" className="flex-1" loading={busy === "print"} disabled={busy !== null} onPress={() => run("print")} />
       </View>
-      {error ? <AppText className="text-sm text-red-600 dark:text-red-400">{error}</AppText> : null}
+      {error ? <AppText className="text-sm text-bad">{error}</AppText> : null}
     </View>
   );
 };

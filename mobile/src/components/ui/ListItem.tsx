@@ -6,8 +6,18 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { initials } from "@/utils/format";
 import { cn } from "./cn";
 import { AppText } from "./primitives";
+import { Text } from "./Text";
 
-/** A row in a list. With onPress it shows a chevron and is a button for screen readers. */
+const ICON_TONES = {
+  brand: "bg-brand-soft",
+  success: "bg-ok-soft",
+  warning: "bg-warn-soft",
+  danger: "bg-bad-soft",
+  info: "bg-info-soft",
+  neutral: "bg-sunken",
+} as const;
+
+/** A row in a Sheet. With onPress it shows a chevron and is a button for screen readers. */
 export const ListItem = ({
   title,
   subtitle,
@@ -15,6 +25,7 @@ export const ListItem = ({
   left,
   right,
   icon: Icon,
+  iconTone = "brand",
   onPress,
   className,
   accessibilityLabel,
@@ -25,21 +36,23 @@ export const ListItem = ({
   left?: ReactNode;
   right?: ReactNode;
   icon?: LucideIcon;
+  iconTone?: keyof typeof ICON_TONES;
   onPress?: () => void;
   className?: string;
   accessibilityLabel?: string;
 }) => {
   const { colors } = useTheme();
+  const iconColor = { brand: colors.brand, success: colors.ok, warning: colors.warn, danger: colors.bad, info: colors.info, neutral: colors.muted }[iconTone];
   const body = (
     <>
       {left ??
         (Icon ? (
-          <View className="h-10 w-10 items-center justify-center rounded-full bg-brand-50 dark:bg-brand-950">
-            <Icon size={20} color={colors.brand} />
+          <View className={cn("h-11 w-11 items-center justify-center rounded-xl", ICON_TONES[iconTone])}>
+            <Icon size={20} color={iconColor} strokeWidth={2} />
           </View>
         ) : null)}
       <View className="flex-1 gap-0.5">
-        <AppText variant="body" className="font-medium" numberOfLines={2}>
+        <AppText className="font-semibold" numberOfLines={2}>
           {title}
         </AppText>
         {subtitle ? (
@@ -53,13 +66,13 @@ export const ListItem = ({
       {onPress ? <ChevronRight size={18} color={colors.subtle} /> : null}
     </>
   );
-  const base = cn("min-h-14 flex-row items-center gap-3 px-4 py-3", className);
+  const base = cn("min-h-16 flex-row items-center gap-3.5 px-4 py-3", className);
   return onPress ? (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? [title, subtitle, meta].filter(Boolean).join(", ")}
       onPress={onPress}
-      className={cn(base, "active:bg-slate-50 dark:active:bg-slate-800")}
+      className={cn(base, "active:bg-sunken")}
     >
       {body}
     </Pressable>
@@ -85,14 +98,10 @@ export const Avatar = ({ name, uri, size = 44 }: { name: string; uri?: string | 
     );
   }
   return (
-    <View
-      accessibilityLabel={name}
-      style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: brand[600] }}
-      className="items-center justify-center"
-    >
-      <AppText style={{ color: onBrand, fontSize: size * 0.38 }} className="font-semibold">
+    <View accessibilityLabel={name} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: brand[600] }} className="items-center justify-center">
+      <Text style={{ color: onBrand, fontSize: size * 0.38 }} className="font-bold">
         {initials(name) || "?"}
-      </AppText>
+      </Text>
     </View>
   );
 };
