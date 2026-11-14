@@ -268,7 +268,7 @@ const Teachers = () => {
                 error={errors.username?.message}
                 autoCapitalize="none"
                 spellCheck={false}
-                hint={editingTeacher ? "Used to sign in." : "Leave empty to use the email's first part, or first.last."}
+                hint={editingTeacher ? "Used to sign in." : "Leave empty to generate one from the school's initials, like svi-0001."}
               />
               <Input label="Email (optional)" name="email" type="email" register={register} error={errors.email?.message} />
             </FormRow>

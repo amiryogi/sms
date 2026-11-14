@@ -198,7 +198,8 @@ const Students = ({ readOnly = false }) => {
           sectionId: parseInt(data.sectionId),
           rollNumber: data.rollNumber ? parseInt(data.rollNumber) : undefined,
         });
-        toast.success("Student added and enrolled");
+        const number = created?.data?.admissionNumber;
+        toast.success(number ? `Student added. Admission number ${number}` : "Student added and enrolled");
         // A generated password is shown once, now.
         if (created?.data?.temporaryPassword) {
           const s = created.data;
@@ -217,7 +218,9 @@ const Students = ({ readOnly = false }) => {
       fetchStudents();
       closeModal();
     } catch (error) {
-      toast.error(error.response?.data?.message || "Could not save the student");
+      // Say which field the server refused, not only "Validation failed".
+      const body = error.response?.data;
+      toast.error(body?.errors?.[0]?.message || body?.message || "Could not save the student");
     } finally {
       setSubmitting(false);
     }
@@ -380,6 +383,7 @@ const Students = ({ readOnly = false }) => {
                   register={register}
                   autoCapitalize="none"
                   spellCheck={false}
+                  autoComplete="off"
                   hint={editingStudent ? "Used to sign in." : "Leave empty to use the admission number."}
                 />
                 <Input label="Email (optional)" name="email" type="email" register={register} />
@@ -388,7 +392,7 @@ const Students = ({ readOnly = false }) => {
                 <Input label="Phone" name="phone" register={register} />
               </FormRow>
               {!editingStudent && (
-                <Input label="Password" name="password" type="password" register={register} hint="Leave empty to generate one. Either way the student chooses their own at the first sign-in." />
+                <Input label="Password" name="password" type="password" autoComplete="new-password" register={register} hint="Leave empty to generate one. Either way the student chooses their own at the first sign-in." />
               )}
               <FormRow>
                 <Input label="Emergency contact" name="emergencyContact" register={register} />
@@ -398,7 +402,13 @@ const Students = ({ readOnly = false }) => {
 
             <FormSection title="School">
               <FormRow>
-                <Input label="Admission number" name="admissionNumber" register={register} required />
+                <Input
+                  label="Admission number"
+                  name="admissionNumber"
+                  register={register}
+                  disabled={Boolean(editingStudent)}
+                  hint={editingStudent ? undefined : "Leave empty to generate one from the school's initials, like SVI-0001."}
+                />
                 {!editingStudent && <Input label="Roll number" name="rollNumber" register={register} />}
                 {!editingStudent && <Input label="Admission date" name="admissionDate" type="date" register={register} required />}
               </FormRow>

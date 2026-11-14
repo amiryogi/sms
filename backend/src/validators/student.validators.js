@@ -12,7 +12,8 @@ const studentRules = [
   body('phone').optional().trim(),
   
   // Student info
-  body('admissionNumber').trim().notEmpty().withMessage('Admission number is required'),
+  // Empty: the server generates one (school initials and a running number).
+  body('admissionNumber').optional({ values: 'falsy' }).isString().trim().isLength({ max: 50 }).withMessage('Admission number must be at most 50 characters'),
   body('dateOfBirth').isISO8601().withMessage('Valid date of birth is required'),
   body('gender').isIn(['male', 'female', 'other']).withMessage('Valid gender is required'),
   body('bloodGroup').optional().trim(),
