@@ -40,6 +40,8 @@ backend/            Express API + Prisma
   src/{routes,controllers,services,middleware,validators,utils,config}
 frontend/src/{api,pages,components,layouts,context}
 e2e/                        Playwright browser tests (own package.json)
+mobile/                     Expo / React Native app for all roles (own package.json); API client only,
+                            no business rules. Read mobile/README.md and mobile/docs/ first
 .github/                    feature specs written before implementation (read these)
 database/schema.sql         raw SQL mirror of the Prisma schema
 ```

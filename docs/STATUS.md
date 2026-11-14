@@ -10,6 +10,52 @@ are done** and on `main`.
 
 ---
 
+## Mobile app (2026-11-13): built and tested in code; not yet on a device; not committed
+
+A React Native (Expo SDK 58) app for all seven roles, in `mobile/` with its own `package.json`.
+It is a client of the existing API. **No backend or web code changed.**
+
+- **Read first:** `mobile/README.md`, then `mobile/docs/IMPLEMENTATION_STATUS.md` (what is
+  done and next), `mobile/docs/MOBILE_ARCHITECTURE.md` and `mobile/docs/API_GAPS.md`.
+  API_GAPS holds the backend changes proposed for approval: push device tokens, per-device
+  logout, and an attendance summary.
+- **Done:**
+  - analysis docs;
+  - the foundation: client with single-flight refresh, SecureStore tokens, theme from the
+    school's brand colour, UI kit, BS dates;
+  - authentication: sign-in, restore, forced and voluntary password change, sign-out with a
+    full wipe, role-guarded areas;
+  - student and parent portals: dashboard, BS attendance register, results, report card with
+    PDF share and print (an HTML port of the web sheets; the CSS is synced from `frontend/`),
+    assignments with hand-in, fees, receipts, notices, and a child switcher;
+  - the teacher portal: attendance marking (own sections, drafts, confirm, offline-safe), marks
+    entry (snapshot limits, absent, locked exams read-only), assignments with grading, and my
+    students;
+  - admin, super admin, exam officer and accountant: dashboards, student and staff
+    directories, exams with report-card publication per section, marks entry (any subject),
+    a finance dashboard with charts, accounts, statements, recording a payment (idempotency
+    key, confirm, over-balance refused), transactions, reports, classes and the school
+    profile. Set-up and lifecycle actions stay on the web;
+  - an in-app notification center (there is no push API yet), the offline cache, a dark-mode
+    pass, `eas.json` and a security review.
+- **Verified:**
+  - `cd mobile && npm test`: 185 passed;
+  - `npm run test:contract`: 38 passed, against a backend it starts on the MySQL test
+    database (port 5013);
+  - typecheck, lint, `expo-doctor` and Android/iOS bundle export are clean.
+- **Not verified:** nothing has run on a device or emulator yet (none on this machine). EAS
+  builds need the owner's Expo login.
+- **Next (the owner):**
+  - `eas login`, then a preview build;
+  - the device checks in `mobile/docs/BUILD_AND_DEPLOYMENT.md`;
+  - final bundle id, icon and splash;
+  - decide the API_GAPS proposals.
+- **Still to build:** move the role screens' text into translations, then a Nepali file.
+- **If you change a report-card stylesheet in `frontend/`:** run
+  `node mobile/scripts/sync-report-card-css.js`. A mobile test fails until you do.
+
+---
+
 ## Production deployment (2026-11-13): code ready, hosts not yet set up
 
 Runbook: [deployment.md](deployment.md).
