@@ -1,6 +1,6 @@
 import { useState, type ComponentRef, type Ref } from "react";
 import { Pressable, View, type TextInput as RNTextInput, type TextInputProps } from "react-native";
-import { Eye, EyeOff } from "lucide-react-native";
+import { Eye, EyeOff, type LucideIcon } from "lucide-react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { cn } from "./cn";
 import { AppText } from "./primitives";
@@ -12,12 +12,14 @@ export type TextFieldProps = TextInputProps & {
   hint?: string;
   /** Adds a show/hide toggle; the text is hidden by default. */
   password?: boolean;
+  /** An icon before the text (decorative: the label names the field). */
+  icon?: LucideIcon;
   className?: string;
   ref?: Ref<ComponentRef<typeof RNTextInput>>;
 };
 
 /** A labelled input with an error line. Works with react-hook-form through <Controller>. */
-export const TextField = ({ label, error, hint, password, className, editable = true, ref, multiline, ...props }: TextFieldProps) => {
+export const TextField = ({ label, error, hint, password, icon: Icon, className, editable = true, ref, multiline, ...props }: TextFieldProps) => {
   const { colors } = useTheme();
   const [hidden, setHidden] = useState(true);
   const [focused, setFocused] = useState(false);
@@ -32,6 +34,11 @@ export const TextField = ({ label, error, hint, password, className, editable = 
           !editable && "opacity-60",
         )}
       >
+        {Icon ? (
+          <View className="mr-2.5" accessibilityElementsHidden importantForAccessibility="no">
+            <Icon size={20} color={error ? colors.bad : focused ? colors.brand : colors.subtle} strokeWidth={2} />
+          </View>
+        ) : null}
         <TextInput
           ref={ref}
           accessibilityLabel={label}

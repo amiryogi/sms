@@ -5,9 +5,10 @@ import { School } from "lucide-react-native";
 import { Text } from "@/components/ui";
 import { useUser } from "@/contexts/AuthContext";
 import { NotificationBell } from "@/features/notifications/NotificationsScreen";
+import { HeroAvatar } from "./HeroAvatar";
 import { useTheme } from "@/theme/ThemeProvider";
 import { resolveAssetUrl } from "@/utils/assets";
-import { formatAdLong } from "@/utils/format";
+import { formatAdLong, fullName } from "@/utils/format";
 import { adToBs, BS_MONTHS, kathmanduToday } from "@/utils/nepaliDate";
 
 const greeting = (hour: number) => (hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening");
@@ -57,15 +58,18 @@ export const HomeHeader = ({ subtitle, children }: { subtitle?: string | null; c
         </Text>
       </View>
 
-      <View className="mt-5">
-        <Text accessibilityRole="header" style={{ color: onBrand }} className="text-xl font-bold">
-          {greeting(new Date().getHours())}, {user.firstName}
-        </Text>
-        {subtitle ? (
-          <Text style={soft} numberOfLines={1} className="text-sm">
-            {subtitle}
+      <View className="mt-5 flex-row items-center gap-4">
+        <HeroAvatar name={fullName(user)} uri={resolveAssetUrl(user.avatarUrl)} />
+        <View className="flex-1">
+          <Text accessibilityRole="header" style={{ color: onBrand }} className="text-xl font-bold" numberOfLines={2}>
+            {greeting(new Date().getHours())}, {user.firstName}
           </Text>
-        ) : null}
+          {subtitle ? (
+            <Text style={soft} numberOfLines={2} className="text-sm">
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
       </View>
       {children ? <View className="mt-4">{children}</View> : null}
     </View>

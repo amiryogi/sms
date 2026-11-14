@@ -39,7 +39,7 @@ It is a client of the existing API. **No backend or web code changed.**
   - an in-app notification center (there is no push API yet), the offline cache, a dark-mode
     pass, `eas.json` and a security review.
 - **Verified:**
-  - `cd mobile && npm test`: 191 passed;
+  - `cd mobile && npm test`: 193 passed;
   - `npm run test:contract`: 38 passed, against a backend it starts on the MySQL test
     database (port 5013);
   - typecheck, lint, `expo-doctor` and Android/iOS bundle export are clean.

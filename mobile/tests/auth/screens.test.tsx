@@ -118,7 +118,7 @@ describe("LoginScreen", () => {
     });
     auth.login.mockResolvedValue({ user: makeUser(["PARENT"]), accessToken: "a", refreshToken: "r" });
     await renderWithProviders(<LoginScreen />);
-    expect(await rtl.screen.findByText("Shree Vidya Mandir")).toBeTruthy();
+    expect(await rtl.screen.findByRole("header", { name: "Shree Vidya Mandir" })).toBeTruthy();
     expect(rtl.screen.getByText("Learning for life")).toBeTruthy();
     fill("p.stu20240001", "password123");
     await waitFor(() => expect(auth.login).toHaveBeenCalledWith(expect.objectContaining({ schoolCode: "DEMO001" })));

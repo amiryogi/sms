@@ -118,11 +118,20 @@ Grades, GPA, percentages, balances and totals are never recomputed. They come fr
     restart it.
   - Keep `SPLASH_IMAGE_WIDTH` / `INTRO_BACKGROUND` and the splash config in `app.config.ts` equal.
 - **Logo elsewhere:** `BrandLogo` (lockup or mark) is rebuilt from the parts, so in dark mode
-  the words are drawn light. It appears on:
-  - the sign-in screen while the phone knows no school (with a school, its band shows instead
-    and the mark sits at the bottom);
-  - the first onboarding slide;
-  - About.
+  the words are drawn light. It appears on the first onboarding slide, on About, and on sign-in
+  when the phone knows no school yet.
+- **Default colour:** a school that has not chosen one gets `#1D5FD1`, the blue of the logo
+  (`DEFAULT_BRAND` in `src/theme/brand.ts`; the web keeps its own indigo default).
+- **Sign-in (`LoginHeader`):**
+  - a gradient in the school's colour (brand 900 → 700 → 500) slides down;
+  - the logo (the school's, else the Vidyalaya mark) springs in with one ring;
+  - the name arrives word by word, then a marigold rule (the logo's sun) and the slogan;
+  - the form card rises into place over the gradient.
+  - Before moving it waits for the launch animation (`useIntroDone`) and for the school's
+    details, so it plays once, with the right name. With Reduce Motion
+    (`src/lib/motion.ts`) everything simply appears.
+- **Home:** `HeroAvatar` shows the signed-in person's photo in a white ring beside the greeting
+  (initials when there is none, or it fails to load), with a spring and one halo.
 
 ### Layers
 

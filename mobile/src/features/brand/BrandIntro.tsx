@@ -8,6 +8,7 @@ import { Text } from "@/components/ui";
 import { useTheme } from "@/theme/ThemeProvider";
 import { TOKENS } from "@/theme/tokens";
 import { BRAND_IMAGES, BRAND_LAYOUT as L, markHeight, SPLASH_IMAGE_WIDTH } from "./assets";
+import { setIntroCovering } from "./introState";
 
 /** Light: the welcome screen's white. Dark: the app's canvas. app.config.ts's splash uses the same two. */
 export const INTRO_BACKGROUND = { light: "#FFFFFF", dark: TOKENS.dark.canvas } as const;
@@ -77,8 +78,15 @@ export const BrandIntro = ({ ready }: { ready: boolean }) => {
       });
   };
 
+  // Screens underneath wait for this before playing their own entrance.
+  useEffect(() => {
+    setIntroCovering(true);
+    return () => setIntroCovering(false);
+  }, []);
+
   useEffect(() => {
     if (!played || !ready) return;
+    setIntroCovering(false); // the fade-out reveals the screen: let it start moving now
     const out = Animated.timing(exit, { toValue: 1, duration: 380, easing: Easing.in(Easing.cubic), useNativeDriver: true });
     out.start(() => setGone(true));
     return () => out.stop();

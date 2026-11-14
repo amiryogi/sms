@@ -7,7 +7,7 @@
  * those, so each shade is converted back to sRGB here.
  */
 
-export const DEFAULT_BRAND = "#4f46e5";
+export const DEFAULT_BRAND = "#1D5FD1";
 
 export const BRAND_SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
 export type BrandShade = (typeof BRAND_SHADES)[number];

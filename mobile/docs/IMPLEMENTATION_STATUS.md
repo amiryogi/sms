@@ -18,6 +18,24 @@ No backend or web code has changed. Proposals for backend changes are in API_GAP
 
 ---
 
+## Sign-in and home photo (2026-11-14)
+
+After the owner's second phone test:
+- **Sign-in header:**
+  - a gradient, sliding down, in the school's colour;
+  - the default colour, for a school that has not chosen one, is now the logo blue `#1D5FD1`
+    (it was indigo);
+  - the logo, the school's name (word by word, larger and centred) and the slogan animate in
+    one after another.
+- **Sign-in form:**
+  - a raised card over the header, with icons in the fields;
+  - the school-code link has an icon;
+  - the help line about forgotten passwords sits under the card.
+- **Home screens** show the signed-in person's photo (initials without one) with a short spring
+  and halo, for every role.
+- **Motion:** each animation respects Reduce Motion. The sign-in animation waits for the launch
+  animation, so it is seen.
+
 ## Brand and launch animation (2026-11-14)
 
 The owner supplied the Vidyalaya SMS logo and a welcome-screen design.
