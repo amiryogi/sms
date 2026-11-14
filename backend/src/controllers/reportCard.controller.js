@@ -8,6 +8,7 @@ const {
 } = require("../utils");
 const { toGradeReference } = require("../utils/gradeScale");
 const { fullName } = require("../utils/names");
+const { notify } = require("../services/push");
 const {
   SCHOOL_REPORT_SELECT,
   normalizeLayout,
@@ -716,6 +717,10 @@ const publishReportCards = asyncHandler(async (req, res) => {
     },
     data: { isPublished: true },
   });
+
+  if (result.count > 0) {
+    notify.reportCardsPublished(req.user.schoolId, { examId: parseInt(examId), classId: parseInt(classId), sectionId: parseInt(sectionId) });
+  }
 
   ApiResponse.success(
     res,

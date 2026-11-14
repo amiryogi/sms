@@ -1,0 +1,38 @@
+{
+  "cli": {
+    "version": ">= 27.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "APP_ENV": "development",
+        "GOOGLE_SERVICES_JSON": "./google-services.json"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "APP_ENV": "preview",
+        "EXPO_PUBLIC_API_URL": "https://sms.nevanhandicraft.com.np/api/v1",
+        "GOOGLE_SERVICES_JSON": "./google-services.json"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "APP_ENV": "production",
+        "EXPO_PUBLIC_API_URL": "https://sms.nevanhandicraft.com.np/api/v1",
+        "GOOGLE_SERVICES_JSON": "./google-services.json"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

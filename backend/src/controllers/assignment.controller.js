@@ -1,5 +1,6 @@
 const prisma = require("../config/database");
 const { ApiError, ApiResponse, asyncHandler } = require("../utils");
+const { notify } = require("../services/push");
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
@@ -306,6 +307,8 @@ const createAssignment = asyncHandler(async (req, res) => {
     include: { assignmentFiles: true },
   });
 
+  if (assignment.isPublished) notify.assignmentPublished(req.user.schoolId, assignment.id);
+
   ApiResponse.created(res, assignment, "Assignment created successfully");
 });
 
@@ -388,6 +391,9 @@ const updateAssignment = asyncHandler(async (req, res) => {
     },
     include: { assignmentFiles: true },
   });
+
+  // Only when it becomes visible: editing a published assignment sends nothing.
+  if (updated.isPublished && !assignment.isPublished) notify.assignmentPublished(req.user.schoolId, updated.id);
 
   ApiResponse.success(res, updated, "Assignment updated successfully");
 });

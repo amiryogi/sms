@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Defaults before ThemeProvider sets the real values (light theme, indigo brand).
+   Values are "r g b". Generated from src/theme/tokens.ts and brand.ts. */
+:root {
+  --c-canvas: 242 244 248;
+  --c-surface: 255 255 255;
+  --c-sunken: 233 237 243;
+  --c-line: 220 226 234;
+  --c-line-strong: 191 201 214;
+  --c-ink: 19 27 44;
+  --c-ink-muted: 78 91 115;
+  --c-ink-subtle: 95 107 128;
+  --c-ok: 23 112 63;
+  --c-ok-soft: 225 242 232;
+  --c-warn: 138 88 0;
+  --c-warn-solid: 242 169 0;
+  --c-warn-soft: 255 242 211;
+  --c-bad: 179 38 30;
+  --c-bad-soft: 251 231 230;
+  --c-info: 29 91 166;
+  --c-info-soft: 227 237 249;
+  --brand-50: 240 245 254;
+  --brand-100: 222 234 254;
+  --brand-200: 192 215 254;
+  --brand-300: 149 187 253;
+  --brand-400: 100 154 248;
+  --brand-500: 60 123 233;
+  --brand-600: 29 95 209;
+  --brand-700: 23 83 186;
+  --brand-800: 21 67 149;
+  --brand-900: 24 58 117;
+  --brand-950: 16 36 71;
+  --brand-soft: 240 245 254;
+  --brand-ink: 23 83 186;
+}

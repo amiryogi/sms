@@ -483,6 +483,8 @@ const logout = asyncHandler(async (req, res) => {
   await prisma.refreshToken.deleteMany({
     where: { userId: req.user.id },
   });
+  // Every session is over, so no phone should keep receiving this user's pushes.
+  await prisma.deviceToken.deleteMany({ where: { userId: req.user.id } });
 
   ApiResponse.success(res, null, "Logout successful");
 });
@@ -653,6 +655,9 @@ const changePassword = asyncHandler(async (req, res) => {
   await prisma.refreshToken.deleteMany({
     where: { userId: req.user.id },
   });
+  // A voluntary change signs every device out: stop their pushes too. After a forced
+  // change this phone stays signed in, and it registers itself again.
+  await prisma.deviceToken.deleteMany({ where: { userId: req.user.id } });
 
   // Replacing an admin-set password is the first step of a sign-in, so this
   // device stays signed in with a fresh session; a voluntary change signs out.

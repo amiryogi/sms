@@ -1,8 +1,23 @@
 const prisma = require("../config/database");
 const { ApiError, ApiResponse, asyncHandler } = require("../utils");
+const { notify } = require("../services/push");
 const { normalizeLayout } = require("../utils/reportCardLayout");
 const { tally, rateOf, byBsMonth } = require("../utils/attendanceRate");
 const { convertADToBS } = require("../utils/dateConverter");
+
+/**
+ * The register's day as stored in the DATE column: midnight UTC of that
+ * calendar day. Built from the date's own digits, never from local time: with
+ * the server in Nepal time (UTC+5:45), local midnight is still the previous day
+ * in UTC, so the row was saved a day early and saving it again conflicted (409).
+ * Accepts "YYYY-MM-DD" or a full ISO timestamp; null when it is not a date.
+ */
+const attendanceDay = (value) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value ?? ""));
+  if (!match) return null;
+  const day = new Date(`${match[1]}-${match[2]}-${match[3]}T00:00:00.000Z`);
+  return Number.isNaN(day.getTime()) ? null : day;
+};
 
 const isAdminUser = (user) =>
   user.roles.includes("ADMIN") || user.roles.includes("SUPER_ADMIN");
@@ -25,8 +40,8 @@ const getAttendance = asyncHandler(async (req, res) => {
     throw ApiError.badRequest("Class ID, Section ID, and Date are required");
   }
 
-  const attendanceDate = new Date(date);
-  attendanceDate.setHours(0, 0, 0, 0);
+  const attendanceDate = attendanceDay(date);
+  if (!attendanceDate) throw ApiError.badRequest("Date must be a valid date (YYYY-MM-DD)");
 
   // Validate class and section belong to school
   const classRecord = await prisma.class.findFirst({
@@ -174,8 +189,20 @@ const markAttendance = asyncHandler(async (req, res) => {
     }
   }
 
-  const attendanceDate = new Date(date);
-  attendanceDate.setHours(0, 0, 0, 0);
+  const attendanceDate = attendanceDay(date);
+  if (!attendanceDate) throw ApiError.badRequest("Date must be a valid date (YYYY-MM-DD)");
+
+  // Who was already absent on this day: saving the register again must not
+  // notify their parents a second time.
+  const alreadyAbsent = new Set(
+    (
+      await prisma.attendance.findMany({
+        where: { schoolId: req.user.schoolId, attendanceDate, status: "absent", studentClass: { classId: parseInt(classId), sectionId: parseInt(sectionId) } },
+        select: { studentId: true },
+        orderBy: { id: "asc" },
+      })
+    ).map((a) => a.studentId),
+  );
 
   // Start transaction for bulk marking
   const results = await prisma.$transaction(async (tx) => {
@@ -241,6 +268,11 @@ const markAttendance = asyncHandler(async (req, res) => {
       records.push(attendance);
     }
     return records;
+  });
+
+  notify.absencesMarked(req.user.schoolId, {
+    studentIds: results.filter((r) => r.status === "absent" && !alreadyAbsent.has(r.studentId)).map((r) => r.studentId),
+    date,
   });
 
   ApiResponse.success(res, results, "Attendance marked successfully");

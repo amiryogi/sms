@@ -1,5 +1,6 @@
 const prisma = require("../config/database");
 const { ApiError, ApiResponse, asyncHandler } = require("../utils");
+const { notify } = require("../services/push");
 
 const isAdminUser = (user) =>
   user.roles.includes("ADMIN") || user.roles.includes("SUPER_ADMIN");
@@ -225,6 +226,9 @@ const gradeSubmission = asyncHandler(async (req, res) => {
       gradedAt: new Date(),
     },
   });
+
+  // The first time it is graded; changing the marks later sends nothing.
+  if (submission.status !== "graded") notify.submissionGraded(req.user.schoolId, updated.id);
 
   ApiResponse.success(res, updated, "Submission graded successfully");
 });

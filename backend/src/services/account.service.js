@@ -78,6 +78,7 @@ const setTemporaryPassword = async (db, userId, typed) => {
   const passwordHash = await bcrypt.hash(plain, BCRYPT_ROUNDS);
   await db.user.update({ where: { id: userId }, data: { passwordHash, mustChangePassword: true } });
   await db.refreshToken.deleteMany({ where: { userId } });
+  await db.deviceToken.deleteMany({ where: { userId } }); // no pushes to signed-out phones
   return plain;
 };
 

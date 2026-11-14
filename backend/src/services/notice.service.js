@@ -22,6 +22,7 @@
 const prisma = require("../config/database");
 const { dialect } = require("../database");
 const { ApiError, parsePagination } = require("../utils");
+const { notify } = require("./push");
 
 // =============================================================================
 // CONSTANTS
@@ -437,6 +438,8 @@ const publishNotice = async (user, noticeId) => {
       attachments: true,
     },
   });
+
+  notify.noticePublished(schoolId, updated.id);
 
   return formatNotice(updated);
 };

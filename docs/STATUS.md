@@ -10,6 +10,63 @@ are done** and on `main`.
 
 ---
 
+## Mobile app (2026-11-14): on branch `feature/mobile-app` (PR #1); first phone test done, its fixes not yet re-checked on a device
+
+A React Native (Expo SDK 58) app for all seven roles, in `mobile/` with its own `package.json`.
+It is a client of the existing API. **No backend or web code changed.**
+
+- **Read first:** `mobile/README.md`, then `mobile/docs/IMPLEMENTATION_STATUS.md` (what is
+  done and next), `mobile/docs/MOBILE_ARCHITECTURE.md` and `mobile/docs/API_GAPS.md`.
+  API_GAPS holds the backend changes proposed for approval: push device tokens, per-device
+  logout, and an attendance summary.
+- **Done:**
+  - analysis docs;
+  - the foundation: client with single-flight refresh, SecureStore tokens, theme from the
+    school's brand colour, UI kit, BS dates;
+  - authentication: sign-in, restore, forced and voluntary password change, sign-out with a
+    full wipe, role-guarded areas;
+  - student and parent portals: dashboard, BS attendance register, results, report card with
+    PDF share and print (an HTML port of the web sheets; the CSS is synced from `frontend/`),
+    assignments with hand-in, fees, receipts, notices, and a child switcher;
+  - the teacher portal: attendance marking (own sections, drafts, confirm, offline-safe), marks
+    entry (snapshot limits, absent, locked exams read-only), assignments with grading, and my
+    students;
+  - admin, super admin, exam officer and accountant: dashboards, student and staff
+    directories, exams with report-card publication per section, marks entry (any subject),
+    a finance dashboard with charts, accounts, statements, recording a payment (idempotency
+    key, confirm, over-balance refused), transactions, reports, classes and the school
+    profile. Set-up and lifecycle actions stay on the web;
+  - an in-app notification center (there is no push API yet), the offline cache, a dark-mode
+    pass, `eas.json` and a security review.
+- **Verified:**
+  - `cd mobile && npm test`: 200 passed;
+  - `npm run test:contract`: 42 passed, against a backend it starts on the MySQL test
+    database (port 5013);
+  - typecheck, lint, `expo-doctor` and Android/iOS bundle export are clean.
+- **Phone test (2026-11-14):** the owner reported a plain design, clipped digits in marks
+  entry and an error when changing the theme. All three are fixed in code: a redesign, the
+  input fix, and theme tokens with no `setColorScheme`. An audit (design, accessibility, code
+  review) also fixed class merging, a missing `expo-asset` and the status bar on home screens.
+  Details in `mobile/docs/IMPLEMENTATION_STATUS.md`. **Re-check on the phone.**
+- **Brand (2026-11-14):** the Vidyalaya SMS logo and welcome design are in: a launch animation
+  that starts from the native splash, and the logo on sign-in, onboarding and About.
+- **Push notifications (2026-11-14):** built on both sides. The backend has a new table
+  (`device_tokens`; run `npm run db:migrate:deploy` on every database, then restart), `/devices`
+  endpoints and `services/push/`. Details in CLAUDE.md §6 and
+  `mobile/docs/IMPLEMENTATION_STATUS.md`. Real delivery is untested: it needs a development build
+  with Firebase and Apple credentials (`mobile/docs/BUILD_AND_DEPLOYMENT.md`).
+- **Not verified:** EAS builds need the owner's Expo login.
+- **Next (the owner):**
+  - `eas login`, then a preview build;
+  - the device checks in `mobile/docs/BUILD_AND_DEPLOYMENT.md`;
+  - final bundle id, icon and splash;
+  - decide the API_GAPS proposals.
+- **Still to build:** move the role screens' text into translations, then a Nepali file.
+- **If you change a report-card stylesheet in `frontend/`:** run
+  `node mobile/scripts/sync-report-card-css.js`. A mobile test fails until you do.
+
+---
+
 ## Production deployment (2026-11-13): code ready, hosts not yet set up
 
 Runbook: [deployment.md](deployment.md).

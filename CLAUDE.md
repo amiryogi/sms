@@ -30,7 +30,7 @@ Repo layout:
 
 ```
 backend/            Express API + Prisma
-  prisma/schema/models.prisma  ~1200 lines, 45 models — the source of truth (edit only this)
+  prisma/schema/models.prisma  ~1200 lines, 46 models — the source of truth (edit only this)
   prisma/{mysql,postgresql}/  generated schema.prisma + that provider's migrations
   prisma/build-schemas.js   models.prisma -> both provider schemas
   prisma/seed.js            roles, permissions, demo school, classes, students
@@ -40,6 +40,8 @@ backend/            Express API + Prisma
   src/{routes,controllers,services,middleware,validators,utils,config}
 frontend/src/{api,pages,components,layouts,context}
 e2e/                        Playwright browser tests (own package.json)
+mobile/                     Expo / React Native app for all roles (own package.json); API client only,
+                            no business rules. Read mobile/README.md and mobile/docs/ first
 .github/                    feature specs written before implementation (read these)
 database/schema.sql         raw SQL mirror of the Prisma schema
 ```
@@ -74,7 +76,7 @@ Demo logins (after seed, password `password123`): sign in with a **username or t
 students by admission number (`stu20240001`), parents as `p.<child's admission number>`
 (`p.stu20240001`). School code `DEMO001`.
 
-**Tests:** `npm test` (Jest) runs 494 unit tests over the pure utilities in
+**Tests:** `npm test` (Jest) runs 517 unit tests over the pure utilities in
 `backend/src/utils/__tests__/` — grade calculation, grade scales, report-card
 layouts and attendance, BS date conversion, pagination, the response helpers and the fee
 maths (`finance.test.js`: money, allocation, discounts, fiscal year, attendance rate) — plus the grade-scale service
@@ -95,7 +97,9 @@ provider:
   case-insensitive search;
 - the HTTP API through supertest (`api.test.js`): auth, RBAC, school isolation, ownership,
   the exam lifecycle and snapshot rule, result and report-card publication gating, fees,
-  promotions.
+  promotions;
+- push notifications (`push.test.js`, the sender replaced by a recorder): device registration,
+  and who is told about a notice or an absence.
 
 `scripts/with-test-db.js --provider mysql|pg` points any command at the test database and
 refuses one the app is configured to use:
@@ -286,6 +290,24 @@ Rules the RBAC audit (2026-11-07) established — keep them:
 
 ## 6. Feature state
 
+**Push notifications (mobile app):** `services/push/`, table `device_tokens` (migration
+`20261114100000_device_tokens`).
+- **Devices:** `POST /devices { token, platform }` and `DELETE /devices/:token`, any signed-in
+  user, always for `req.user`. A token that signs in as someone else moves to them. Signing out,
+  and everything else that ends a user's sessions, deletes their device rows.
+- **Sending:** Expo's push service (`expoPush.js`), after the response, never failing the
+  request. `PUSH_ENABLED=false` switches it off; it is off in tests unless a test installs a
+  transport (`push.setTransport`).
+- **Triggers** (`notify.*`, called after the write succeeds): notice published; assignment
+  published; submission graded (first time); report cards published; a student newly marked
+  absent on today's register (parents only).
+- **Recipients** (`recipients.js`) mirror what the read endpoints show each person, with
+  `schoolId` on every query. A message carries a title, one line and ids, never marks or amounts.
+  Add a new trigger the same way: a recipients function, a message, a `notify` entry.
+- **Attendance days** are calendar dates: `attendanceDay()` in `attendance.controller.js` builds
+  UTC midnight from the date's digits. Never `setHours(0,0,0,0)`: with the server in Nepal time
+  that stored the previous day and made a second save fail (fixed 2026-11-14).
+
 **Sign-in names:** every user has a `username`, unique per school and stored lower case
 (`utils/usernames.js`); `email` is optional. `POST /auth/login` takes `{ identifier, password,
 schoolCode? }`, where an identifier with "@" is an email (the old `email` field still works).
@@ -422,7 +444,7 @@ academic-year start to the exam end and freezes them on `ReportCard`
 - The admin and teacher dashboards are stat cards; only the finance dashboard has charts.
 
 **Not built:** timetable/routine, library, transport, hostel, SMS/email
-notifications, payroll, certificates and transfer certificates, audit-log UI,
+notifications (push to the mobile app exists), payroll, certificates and transfer certificates, audit-log UI,
 multi-school admin UI.
 
 **Divergence from `.github/backend-rules.md`:** that file prescribes

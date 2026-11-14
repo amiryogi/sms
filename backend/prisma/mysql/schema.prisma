@@ -207,6 +207,7 @@ model School {
 
   // Relations
   users         User[]
+  deviceTokens  DeviceToken[]
   academicYears AcademicYear[]
   classes       Class[]
   sections      Section[]
@@ -378,6 +379,7 @@ model User {
   parent          Parent?
   teacherSubjects TeacherSubject[]
   refreshTokens   RefreshToken[]
+  deviceTokens    DeviceToken[]
 
   // Attendance marked by this user (teacher)
   attendanceMarked Attendance[] @relation("MarkedBy")
@@ -1348,6 +1350,30 @@ model RefreshToken {
   @@index([expiresAt])
   @@index([revokedAt])
   @@map("refresh_tokens")
+}
+
+/// A phone that receives push notifications for a user (the mobile app registers it
+/// after sign-in). One row per Expo push token: a token that signs in as someone else
+/// moves to that user. Removed at sign-out and whenever the user's sessions are ended.
+model DeviceToken {
+  id         Int      @id @default(autoincrement())
+  schoolId   Int      @map("school_id")
+  userId     Int      @map("user_id")
+  /// "ExponentPushToken[...]"
+  token      String   @db.VarChar(255)
+  /// "ios" | "android"
+  platform   String   @db.VarChar(10)
+  createdAt  DateTime @default(now()) @map("created_at")
+  lastSeenAt DateTime @default(now()) @map("last_seen_at")
+
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@index([schoolId])
+  @@map("device_tokens")
 }
 
 // =====================================================
