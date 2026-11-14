@@ -201,7 +201,7 @@ describe("usernames and sign-in", () => {
   test("a student added without an email gets the admission number as username and can sign in", async () => {
     const admissionNumber = `UN-${RUN}`;
     const res = await api("post", "/students", "admin").send({
-      password: "Password123", firstName: "Hari", lastName: `Nomail${RUN}`,
+      password: "Password123", firstName: "Hari", lastName: `Nomail${RUN}`, avatarUrl: "/uploads/avatars/hari.png",
       admissionNumber, dateOfBirth: "2012-04-01", gender: "male", admissionDate: "2024-04-14",
       classId: ctx.enrolment.classId, sectionId: ctx.enrolment.sectionId, academicYearId: ctx.year.id,
     });
@@ -209,6 +209,7 @@ describe("usernames and sign-in", () => {
     const user = await prisma.user.findFirst({ where: { student: { admissionNumber } } });
     made.push(user.id);
     expect(user.email).toBeNull();
+    expect(user.avatarUrl).toBe("/uploads/avatars/hari.png"); // the photo chosen in the form is kept
     expect(user.username).toBe(admissionNumber.toLowerCase());
     const login = await api("post", "/auth/login").send({ identifier: admissionNumber, password: "Password123" });
     expect(login.status).toBe(200);
