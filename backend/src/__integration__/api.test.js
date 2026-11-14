@@ -13,6 +13,7 @@ const app = require("../app");
 const { prisma } = require("../database");
 const { calculateSubjectGrade } = require("../utils/gradeCalculator");
 const { getScaleResolver } = require("../services/gradeScale.service");
+const { admissionPrefix } = require("../utils/admissionNumbers");
 
 const RUN = Date.now().toString(36).toUpperCase();
 const PASSWORD = "password123";
@@ -213,17 +214,41 @@ describe("usernames and sign-in", () => {
     expect(login.status).toBe(200);
   });
 
+  test("a student added without an admission number gets the school's initials and a running number", async () => {
+    const school = await prisma.school.findUnique({ where: { id: ctx.schoolId }, select: { name: true } });
+    const prefix = admissionPrefix(school.name);
+    const add = (n) => api("post", "/students", "admin").send({
+      password: "Password123", firstName: `Auto${n}`, lastName: `Number${RUN}`, admissionNumber: "",
+      dateOfBirth: "2012-04-01", gender: "female", admissionDate: "2024-04-14",
+      classId: ctx.enrolment.classId, sectionId: ctx.enrolment.sectionId, academicYearId: ctx.year.id,
+    });
+    // two at once must not share a number
+    const results = await Promise.all([add(1), add(2)]);
+    const numbers = [];
+    for (const res of results) {
+      expect(res.status).toBe(201);
+      made.push(res.body.data.user.id);
+      expect(res.body.data.admissionNumber).toMatch(new RegExp(`^${prefix}\\d{4,}$`));
+      expect(res.body.data.user.username).toBe(res.body.data.admissionNumber.toLowerCase());
+      numbers.push(res.body.data.admissionNumber);
+    }
+    expect(new Set(numbers).size).toBe(2);
+    const login = await api("post", "/auth/login").send({ identifier: numbers[0], password: "Password123" });
+    expect(login.status).toBe(200);
+  });
+
   test("usernames are unique per school; only an admin changes one", async () => {
     const taken = await prisma.user.findFirst({ where: { email: EMAILS.teacher } });
     const dup = await api("post", "/users", "admin").send({ username: taken.username.toUpperCase(), password: "Password123", firstName: "Dup", lastName: "User", role: "TEACHER" });
     expect(dup.status).toBe(409);
     const bad = await api("post", "/users", "admin").send({ username: "has space", password: "Password123", firstName: "Bad", lastName: "User", role: "TEACHER" });
     expect(bad.status).toBe(400);
-    // a staff member with neither email nor username gets first.last
+    // a staff member with no username gets the school's initials and a running number
     const res = await api("post", "/users", "admin").send({ password: "Password123", firstName: "Sita", lastName: `Noemail${RUN}`, role: "TEACHER" });
     expect(res.status).toBe(201);
     made.push(res.body.data.id);
-    expect(res.body.data.username).toBe(`sita.noemail${RUN.toLowerCase()}`);
+    const school = await prisma.school.findUnique({ where: { id: ctx.schoolId }, select: { name: true } });
+    expect(res.body.data.username).toMatch(new RegExp(`^${admissionPrefix(school.name).toLowerCase()}\\d{4,}$`));
     expect(res.body.data.email).toBeNull();
     // the student may not rename themselves
     expect((await api("put", `/students/${ctx.studentId}`, "student").send({ username: "renamed" })).status).toBe(403);

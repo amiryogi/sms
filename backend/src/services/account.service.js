@@ -8,6 +8,7 @@ const { ApiError } = require("../utils");
 const { generateTemporaryPassword } = require("../utils/passwords");
 const { dialect } = require("../database");
 const { normalizeUsername, usernameProblem, suggestUsername, uniqueUsername } = require("../utils/usernames");
+const { admissionPrefix, nextAdmissionNumber } = require("../utils/admissionNumbers");
 
 /** An optional email as stored: trimmed, lower case, null when empty. */
 const normalizeEmail = (v) => {
@@ -85,4 +86,44 @@ const setTemporaryPassword = async (db, userId, typed) => {
 const logPasswordSet = (actor, target, how) =>
   console.info(`[account] ${how}: user ${target.id} (${target.username || "?"}) by user ${actor.id} at ${new Date().toISOString()}`);
 
-module.exports = { normalizeEmail, resolveUsername, assertEmailFree, initialPassword, setTemporaryPassword, logPasswordSet, BCRYPT_ROUNDS };
+/**
+ * Create an account whose number the system chooses: the school's initials and
+ * a running number (SVI-0001), one series for students and staff.
+ *   create(number, username): does the insert. `number` is upper case (a
+ *     student's admission number); `username` is `typedUsername`, or the number
+ *     in lower case.
+ * Unless a username was typed, two admins saving at once cannot get the same
+ * number: the second insert fails on the unique username and is retried with
+ * the next one.
+ */
+const createWithGeneratedNumber = async (db, schoolId, create, { typedUsername = null } = {}) => {
+  const school = await db.school.findUnique({ where: { id: schoolId }, select: { name: true } });
+  const prefix = admissionPrefix(school?.name);
+
+  for (let skip = 0; skip < 20; skip += 1) {
+    const [students, users] = await Promise.all([
+      db.student.findMany({ where: { schoolId, admissionNumber: { startsWith: prefix } }, select: { admissionNumber: true } }),
+      db.user.findMany({ where: { schoolId, username: { startsWith: prefix.toLowerCase() } }, select: { username: true } }),
+    ]);
+    const used = [...students.map((s) => s.admissionNumber), ...users.map((u) => u.username)];
+    const number = nextAdmissionNumber(used, prefix, skip);
+    try {
+      return await create(number, typedUsername || number.toLowerCase());
+    } catch (error) {
+      if (!typedUsername && dialect.isUniqueViolationOn(error, "username")) continue;
+      throw error;
+    }
+  }
+  throw ApiError.conflict("Could not choose a number. Type one and try again.");
+};
+
+/**
+ * Create a staff account under the username the admin typed, or, when none was
+ * typed, under a generated number (svi-0001).
+ *   typedUsername: already checked with resolveUsername, or null
+ *   create(username): does the insert
+ */
+const createWithSignInName = (db, schoolId, typedUsername, create) =>
+  typedUsername ? create(typedUsername) : createWithGeneratedNumber(db, schoolId, (_number, username) => create(username));
+
+module.exports = { createWithGeneratedNumber, createWithSignInName, normalizeEmail, resolveUsername, assertEmailFree, initialPassword, setTemporaryPassword, logPasswordSet, BCRYPT_ROUNDS };

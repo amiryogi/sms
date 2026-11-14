@@ -7,7 +7,7 @@ const prisma = require("../config/database");
 const { ApiError, ApiResponse, asyncHandler } = require("../utils");
 const { fullName, normalizeMiddleName } = require("../utils/names");
 const { parseIdentifier } = require("../utils/usernames");
-const { normalizeEmail, resolveUsername, assertEmailFree, initialPassword, BCRYPT_ROUNDS } = require("../services/account.service");
+const { normalizeEmail, resolveUsername, assertEmailFree, initialPassword, createWithSignInName, BCRYPT_ROUNDS } = require("../services/account.service");
 const { dialect } = require("../database");
 
 // One message for every failed sign-in, so it never tells which part was wrong.
@@ -303,7 +303,8 @@ const register = asyncHandler(async (req, res) => {
   const schoolId = req.user.schoolId;
   const email = normalizeEmail(req.body.email);
   await assertEmailFree(prisma, schoolId, email);
-  const username = await resolveUsername(prisma, schoolId, { requested: req.body.username, suggestion: { kind: "staff", email, firstName, lastName } });
+  // With no username typed, the account gets a generated number (svi-0001).
+  const typedUsername = req.body.username ? await resolveUsername(prisma, schoolId, { requested: req.body.username }) : null;
 
   const roleRecord = await prisma.role.findUnique({
     where: { name: role },
@@ -317,7 +318,7 @@ const register = asyncHandler(async (req, res) => {
   const { passwordHash, mustChangePassword, temporaryPassword } = await initialPassword(password);
 
   // Create user and role in one write
-  const user = await prisma.user.create({
+  const user = await createWithSignInName(prisma, schoolId, typedUsername, (username) => prisma.user.create({
     data: {
       schoolId,
       username,
@@ -333,7 +334,7 @@ const register = asyncHandler(async (req, res) => {
         create: [{ roleId: roleRecord.id }],
       },
     },
-  });
+  }));
 
   ApiResponse.created(
     res,

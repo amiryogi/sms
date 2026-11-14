@@ -2,7 +2,7 @@ const prisma = require('../config/database');
 const { dialect } = require('../database');
 const { ApiError, ApiResponse, asyncHandler, parsePagination, parseSort, buildSearchQuery } = require('../utils');
 const { normalizeMiddleName } = require('../utils/names');
-const { normalizeEmail, resolveUsername, assertEmailFree, initialPassword, logPasswordSet } = require('../services/account.service');
+const { normalizeEmail, resolveUsername, assertEmailFree, initialPassword, logPasswordSet, createWithGeneratedNumber } = require('../services/account.service');
 const credentials = require('../services/credentials.service');
 
 const isAdminUser = (user) => user.roles.includes('ADMIN') || user.roles.includes('SUPER_ADMIN');
@@ -275,16 +275,15 @@ const createStudent = asyncHandler(async (req, res) => {
   const email = normalizeEmail(req.body.email);
   await assertEmailFree(prisma, req.user.schoolId, email);
 
-  // Check if admission number exists
-  const existingStudent = await prisma.student.findFirst({
-    where: { admissionNumber, user: { schoolId: req.user.schoolId } },
-  });
-
-  if (existingStudent) {
-    throw ApiError.conflict('Admission number already exists');
+  // A typed admission number must be free. An empty one is generated below.
+  const typedNumber = typeof admissionNumber === 'string' ? admissionNumber.trim() : '';
+  if (typedNumber) {
+    const existingStudent = await prisma.student.findFirst({
+      where: { admissionNumber: dialect.text.equals(typedNumber), user: { schoolId: req.user.schoolId } },
+      select: { id: true },
+    });
+    if (existingStudent) throw ApiError.conflict('Admission number already exists');
   }
-
-  const username = await resolveUsername(prisma, req.user.schoolId, { requested: req.body.username, suggestion: { kind: "student", admissionNumber } });
 
   // Class, section and academic year must all belong to the caller's school
   await assertEnrollmentTargetsInSchool(req.user.schoolId, { classId, sectionId, academicYearId });
@@ -297,7 +296,7 @@ const createStudent = asyncHandler(async (req, res) => {
   const { passwordHash, mustChangePassword, temporaryPassword } = await initialPassword(password);
 
   // Transaction: Create User -> Create Student -> Create Enrollment
-  const student = await prisma.$transaction(async (tx) => {
+  const create = (admissionNumber, username) => prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
       data: {
         schoolId: req.user.schoolId,
@@ -364,8 +363,20 @@ const createStudent = asyncHandler(async (req, res) => {
     };
   });
 
+  let student;
+  if (typedNumber) {
+    const username = await resolveUsername(prisma, req.user.schoolId, { requested: req.body.username, suggestion: { kind: "student", admissionNumber: typedNumber } });
+    student = await create(typedNumber, username);
+  } else {
+    // Generated: the school's initials and a running number (SVI-0001), also the sign-in name.
+    const typedUsername = req.body.username
+      ? await resolveUsername(prisma, req.user.schoolId, { requested: req.body.username })
+      : null;
+    student = await createWithGeneratedNumber(prisma, req.user.schoolId, create, { typedUsername });
+  }
+
   // A generated password is shown to the admin once, here; it is not stored anywhere.
-  logPasswordSet(req.user, { id: student.userId ?? student.user?.id, username }, "account created");
+  logPasswordSet(req.user, { id: student.userId ?? student.user?.id, username: student.user.username }, "account created");
   ApiResponse.created(res, { ...student, temporaryPassword }, 'Student created and enrolled successfully');
 });
 

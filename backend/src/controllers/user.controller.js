@@ -2,7 +2,7 @@ const prisma = require('../config/database');
 const { dialect } = require('../database');
 const { ApiError, ApiResponse, asyncHandler, parsePagination, parseSort, buildSearchQuery } = require('../utils');
 const { normalizeMiddleName, fullName } = require('../utils/names');
-const { normalizeEmail, resolveUsername, assertEmailFree, initialPassword, setTemporaryPassword, logPasswordSet } = require('../services/account.service');
+const { normalizeEmail, resolveUsername, assertEmailFree, initialPassword, setTemporaryPassword, logPasswordSet, createWithSignInName } = require('../services/account.service');
 
 // Roles that need a profile row (Student / Parent). They are created through
 // their own flows — POST /students and POST /admin/parents — never by
@@ -184,10 +184,12 @@ const createUser = asyncHandler(async (req, res) => {
     throw ApiError.badRequest('At least one role is required');
   }
 
-  // Email is optional; the username defaults to the email's first part (or first.last).
+  // Email is optional. With no username typed, the account gets a generated number (svi-0001).
   const email = normalizeEmail(req.body.email);
   await assertEmailFree(prisma, req.user.schoolId, email);
-  const username = await resolveUsername(prisma, req.user.schoolId, { requested: req.body.username, suggestion: { kind: "staff", email, firstName, lastName } });
+  const typedUsername = req.body.username
+    ? await resolveUsername(prisma, req.user.schoolId, { requested: req.body.username })
+    : null;
 
   // Handle role string payload (e.g., "TEACHER")
   const finalRoleIds = [...(roleIds || [])];
@@ -219,7 +221,7 @@ const createUser = asyncHandler(async (req, res) => {
   const { passwordHash, mustChangePassword, temporaryPassword } = await initialPassword(password);
 
   // Create user with roles
-  const user = await prisma.user.create({
+  const user = await createWithSignInName(prisma, req.user.schoolId, typedUsername, (username) => prisma.user.create({
     data: {
       schoolId: req.user.schoolId,
       username,
@@ -245,7 +247,7 @@ const createUser = asyncHandler(async (req, res) => {
         },
       },
     },
-  });
+  }));
 
   ApiResponse.created(res, {
     id: user.id,

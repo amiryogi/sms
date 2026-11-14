@@ -74,7 +74,7 @@ Demo logins (after seed, password `password123`): sign in with a **username or t
 students by admission number (`stu20240001`), parents as `p.<child's admission number>`
 (`p.stu20240001`). School code `DEMO001`.
 
-**Tests:** `npm test` (Jest) runs 494 unit tests over the pure utilities in
+**Tests:** `npm test` (Jest) runs 509 unit tests over the pure utilities in
 `backend/src/utils/__tests__/` — grade calculation, grade scales, report-card
 layouts and attendance, BS date conversion, pagination, the response helpers and the fee
 maths (`finance.test.js`: money, allocation, discounts, fiscal year, attendance rate) — plus the grade-scale service
@@ -289,10 +289,19 @@ Rules the RBAC audit (2026-11-07) established — keep them:
 **Sign-in names:** every user has a `username`, unique per school and stored lower case
 (`utils/usernames.js`); `email` is optional. `POST /auth/login` takes `{ identifier, password,
 schoolCode? }`, where an identifier with "@" is an email (the old `email` field still works).
-Defaults: students get their admission number, parents `p.<child's admission number>`, staff the
-email's first part or `first.last` (migration `20261113100000_usernames` backfilled the same).
+Defaults: students get their admission number, parents `p.<child's admission number>`, staff a
+generated number (see below). Accounts older than that keep the names migration
+`20261113100000_usernames` gave them (staff: the email's first part or `first.last`).
 Create and edit accounts only through `services/account.service.js` (`resolveUsername`,
 `assertEmailFree`, `normalizeEmail`), never by checking email uniqueness by hand.
+
+**Generated numbers:** the admission number on `POST /students` and the username on
+`POST /users` / `POST /auth/register` are optional. Left empty, the server generates the
+school's initials and a running number (`SVI-0001`; `utils/admissionNumbers.js`, unit-tested),
+one series per school shared by students and staff, and the person signs in with it
+(`svi-0001`). Always create through `createWithGeneratedNumber` / `createWithSignInName` in
+`services/account.service.js`: they retry on a username clash, so two admins saving at once
+never share a number. Renaming the school changes the prefix for new accounts only.
 
 **Names:** every user has a first, an optional middle (`User.middleName`, migration
 `20261112100000_user_middle_name`) and a last name. Build a display name only with
