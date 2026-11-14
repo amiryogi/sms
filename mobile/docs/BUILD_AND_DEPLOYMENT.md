@@ -54,12 +54,12 @@ app shows "Not available on this device" there (More → Notifications).
 2. **Android (Firebase Cloud Messaging):**
    - create a Firebase project and add an Android app with the package name from
      `app.config.ts` (one per environment suffix you build);
-   - download `google-services.json` into `mobile/` and set the `GOOGLE_SERVICES_JSON`
-     environment variable to its path (`./google-services.json`) for the build; `app.config.ts`
-     passes it to `android.googleServicesFile`. `.gitignore` excludes the file, and EAS Build
-     uploads only files git tracks, so for cloud builds store it as an EAS file variable named
-     `GOOGLE_SERVICES_JSON` (see "Environment variables" in the EAS docs). It holds public
-     identifiers only, so the alternative is to remove it from `.gitignore` and commit it;
+   - add one Android app per package (`com.vidyalayasms.app`, `.dev`, `.preview`), then download
+     `google-services.json` once into `mobile/`: the one file lists all of them;
+   - the file is committed (public identifiers only; EAS Build uploads only tracked files),
+     and `eas.json` sets `GOOGLE_SERVICES_JSON=./google-services.json` for every profile, which
+     `app.config.ts` passes to `android.googleServicesFile`. For `npx expo run:android` set the
+     same variable in `mobile/.env`;
    - in Firebase (Settings → Service accounts) generate a private key, then run
      `npx eas-cli@latest credentials` → Android → production → Google Service Account →
      "Manage your Google Service Account Key for Push Notifications (FCM V1)" → set up →

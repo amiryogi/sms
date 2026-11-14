@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "834867890563",
+    "project_id": "mobilesms-16245",
+    "storage_bucket": "mobilesms-16245.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:834867890563:android:f631d27e38e6aead07ceb6",
+        "android_client_info": {
+          "package_name": "com.vidyalayasms.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDGkPSHveJ8JCwUMYsrHhA6L9kl4ojMwTc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:834867890563:android:7d592e77f6131de107ceb6",
+        "android_client_info": {
+          "package_name": "com.vidyalayasms.app.dev"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDGkPSHveJ8JCwUMYsrHhA6L9kl4ojMwTc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:834867890563:android:30bc1866adc94ccb07ceb6",
+        "android_client_info": {
+          "package_name": "com.vidyalayasms.app.preview"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDGkPSHveJ8JCwUMYsrHhA6L9kl4ojMwTc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

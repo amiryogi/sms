@@ -49,8 +49,8 @@ yarn-error.*
 coverage/
 
 # Firebase / FCM credentials (docs/BUILD_AND_DEPLOYMENT.md -> Push notifications).
-# The service-account key is a secret; never commit it.
-google-services.json
+# google-services.json is committed: it holds public identifiers only, and EAS Build
+# uploads only tracked files. The service-account key is a secret; never commit it.
 GoogleService-Info.plist
 *service-account*.json
 *firebase-adminsdk*.json
