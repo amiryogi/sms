@@ -10,6 +10,7 @@ const studentRules = [
   middleNameRule,
   body('lastName').trim().notEmpty().withMessage('Last name is required'),
   body('phone').optional().trim(),
+  body('avatarUrl').optional({ values: 'falsy' }).isString().isLength({ max: 500 }).withMessage('Photo address is too long'),
   
   // Student info
   // Empty: the server generates one (school initials and a running number).

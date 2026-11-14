@@ -266,7 +266,7 @@ const getStudent = asyncHandler(async (req, res) => {
  */
 const createStudent = asyncHandler(async (req, res) => {
   const {
-    password, firstName, middleName, lastName, phone,
+    password, firstName, middleName, lastName, phone, avatarUrl,
     admissionNumber, dateOfBirth, gender, bloodGroup, address, emergencyContact, admissionDate,
     classId, sectionId, academicYearId, rollNumber
   } = req.body;
@@ -308,6 +308,7 @@ const createStudent = asyncHandler(async (req, res) => {
         middleName: normalizeMiddleName(middleName),
         lastName,
         phone,
+        avatarUrl: avatarUrl || null, // the photo uploaded in the add-student form
         status: 'active',
         userRoles: {
           create: { roleId: studentRole.id },
