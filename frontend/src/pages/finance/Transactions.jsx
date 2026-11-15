@@ -4,11 +4,11 @@ import { ReceiptText, Undo2, CheckCircle2, XCircle, Inbox, Printer, BookOpen } f
 import { useAuth } from "../../context/AuthContext";
 import DataTable from "../../components/common/DataTable";
 import { feeService } from "../../api/feeService";
-import { PageHeader, Tabs, Badge, Button, Card, EmptyState, LoadingBlock, SelectInput, TextInput, toast } from "../../components/ui";
+import { PageHeader, Tabs, Badge, Button, Card, EmptyState, LoadingBlock, SelectInput, TextInput, NepaliDatePicker, toast } from "../../components/ui";
 import ReasonDialog from "../../components/finance/ReasonDialog";
 import { ApprovalBadge } from "../../components/finance/FeeStatusBadge";
 import { PAYMENT_METHODS, methodLabel, fullName } from "../../components/finance/financeLabels";
-import { formatCurrency, formatDate, formatDateTime } from "../../utils/format";
+import { formatCurrency, formatDate, formatDateTime, todayAd } from "../../utils/format";
 
 const signed = (t) => (
   <span className={`font-semibold tabular-nums ${t.type === "REVERSAL" ? "text-red-600" : "text-slate-900"}`}>
@@ -104,7 +104,7 @@ const Ledger = () => {
 
   // The day book prints this ledger as filtered; with no dates, today.
   const printDaybook = () => {
-    const today = new Date().toLocaleDateString("en-CA"); // local YYYY-MM-DD (toISOString would be UTC)
+    const today = todayAd(); // the day in Nepal
     const q = new URLSearchParams({ from: filters.from || filters.to || today, to: filters.to || filters.from || today });
     for (const k of ["type", "method", "search"]) if (filters[k]) q.set(k, filters[k]);
     navigate(`/finance/daybook?${q}`);
@@ -121,8 +121,8 @@ const Ledger = () => {
       actions={<Button variant="secondary" icon={BookOpen} onClick={printDaybook}>Print day book</Button>}
       toolbar={
         <>
-          <TextInput type="date" aria-label="From date" value={filters.from} onChange={(e) => setFilter("from", e.target.value)} wrapperClassName="w-full sm:w-auto" />
-          <TextInput type="date" aria-label="To date" value={filters.to} onChange={(e) => setFilter("to", e.target.value)} wrapperClassName="w-full sm:w-auto" />
+          <NepaliDatePicker aria-label="From date" value={filters.from} max={filters.to || undefined} onChange={(ad) => setFilter("from", ad)} placeholder="From date" className="w-full sm:w-56" />
+          <NepaliDatePicker aria-label="To date" value={filters.to} min={filters.from || undefined} onChange={(ad) => setFilter("to", ad)} placeholder="To date" className="w-full sm:w-56" />
           <div className="w-full sm:w-36">
             <SelectInput aria-label="Type" value={filters.type} onChange={(e) => setFilter("type", e.target.value)}>
               <option value="">All entries</option>

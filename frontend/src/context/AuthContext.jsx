@@ -9,6 +9,7 @@ import React, {
 import { authService } from "../api/authService";
 import { API_EVENTS, clearAuthStorage } from "../api/apiClient";
 import { applyBrand } from "../lib/brand";
+import { setSchoolDatePrefs } from "../lib/calendar/datePrefs";
 import { Button } from "../components/ui/Button";
 
 const AuthContext = createContext(null);
@@ -36,6 +37,12 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (user) applyBrand(brandColor);
   }, [user, brandColor]);
+
+  // How dates are shown by default (BS / AD, weekly holidays): Calendar Settings.
+  const schoolCalendar = user?.school?.calendar || null;
+  useEffect(() => {
+    setSchoolDatePrefs(schoolCalendar);
+  }, [schoolCalendar]);
 
   const initializeAuth = useCallback(async () => {
     initializingRef.current = true;

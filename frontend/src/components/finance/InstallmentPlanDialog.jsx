@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Plus, Trash2, Save, SplitSquareHorizontal } from "lucide-react";
 import Modal from "../common/Modal";
-import { Button, DialogActions, IconButton, TextInput, Alert, LoadingBlock, toast } from "../ui";
+import { Button, DialogActions, IconButton, TextInput, NepaliDatePicker, Alert, LoadingBlock, toast } from "../ui";
 import { cn } from "../../lib/cn";
 import { feeService } from "../../api/feeService";
 import { formatCurrency } from "../../utils/format";
@@ -122,7 +122,7 @@ const InstallmentPlanDialog = ({ structure, onClose, onSaved }) => {
                         <TextInput aria-label={`Label ${idx + 1}`} value={r.label} maxLength={100} onChange={(e) => update(idx, "label", e.target.value)} className="h-9" />
                       </td>
                       <td className="px-2 py-2">
-                        <TextInput aria-label={`Due date ${idx + 1}`} type="date" value={r.dueDate} onChange={(e) => update(idx, "dueDate", e.target.value)} className="h-9" />
+                        <NepaliDatePicker aria-label={`Due date ${idx + 1}`} value={r.dueDate} onChange={(ad) => update(idx, "dueDate", ad)} className="min-w-44" />
                       </td>
                       <td className="px-2 py-2">
                         <TextInput

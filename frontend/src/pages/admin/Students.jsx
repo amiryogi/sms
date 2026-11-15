@@ -5,12 +5,12 @@ import { Link } from "react-router-dom";
 import ResetPasswordDialog, { NewAccountDialog } from "../../components/admin/ResetPasswordDialog";
 import DataTable from "../../components/common/DataTable";
 import Modal from "../../components/common/Modal";
-import { Input, Select, Button, FormRow } from "../../components/common/FormElements";
+import { Input, DateInput, Select, Button, FormRow } from "../../components/common/FormElements";
 import { PageHeader, Badge, Avatar, IconButton, DialogActions, toast, buttonClasses } from "../../components/ui";
 import { studentService } from "../../api/studentService";
 import { academicService } from "../../api/academicService";
 import AvatarUpload from "../../components/common/AvatarUpload";
-import { toDateInput, fullName } from "../../utils/format";
+import { toDateInput, fullName, todayAd } from "../../utils/format";
 
 const GENDERS = [
   { value: "male", label: "Male" },
@@ -49,6 +49,7 @@ const Students = ({ readOnly = false }) => {
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     formState: { errors },
@@ -369,7 +370,7 @@ const Students = ({ readOnly = false }) => {
                 <Input label="Last name" name="lastName" register={register} error={errors.lastName?.message} required />
               </FormRow>
               <FormRow>
-                <Input label="Date of birth" name="dateOfBirth" type="date" register={register} required />
+                <DateInput label="Date of birth" name="dateOfBirth" control={control} max={todayAd()} required />
                 <Select label="Gender" name="gender" options={GENDERS} register={register} required />
                 <Input label="Blood group" name="bloodGroup" register={register} placeholder="e.g. A+" />
               </FormRow>
@@ -410,7 +411,7 @@ const Students = ({ readOnly = false }) => {
                   hint={editingStudent ? undefined : "Leave empty to generate one from the school's initials, like SVI-0001."}
                 />
                 {!editingStudent && <Input label="Roll number" name="rollNumber" register={register} />}
-                {!editingStudent && <Input label="Admission date" name="admissionDate" type="date" register={register} required />}
+                {!editingStudent && <DateInput label="Admission date" name="admissionDate" control={control} required />}
               </FormRow>
               {!editingStudent && (
                 <FormRow>

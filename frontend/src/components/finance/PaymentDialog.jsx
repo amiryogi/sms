@@ -1,16 +1,14 @@
 import React, { useMemo, useState } from "react";
 import { Wallet, ListChecks, Sparkles } from "lucide-react";
 import Modal from "../common/Modal";
-import { Button, DialogActions, Field, SelectInput, TextInput, TextArea, Alert, toast } from "../ui";
+import { Button, DialogActions, Field, SelectInput, TextInput, TextArea, NepaliDatePicker, Alert, toast } from "../ui";
 import { cn } from "../../lib/cn";
 import { feeService } from "../../api/feeService";
-import { formatCurrency, formatDate } from "../../utils/format";
+import { formatCurrency, formatDate, todayAd } from "../../utils/format";
 import { PAYMENT_METHODS, toPaisa, fromPaisa, isMoneyInput } from "./financeLabels";
 
-const localToday = () => {
-  const d = new Date();
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-};
+// The day in Nepal: the server refuses a payment dated after it.
+const localToday = todayAd;
 
 const dueKey = (i) => i.dueDate || "9999-12-31";
 
@@ -243,7 +241,7 @@ const PaymentDialog = ({ studentId, studentName, year, onClose, onPaid }) => {
                 </SelectInput>
               </Field>
               <Field label="Date received" htmlFor="pay-date">
-                <TextInput id="pay-date" type="date" value={paidOn} max={localToday()} onChange={(e) => setPaidOn(e.target.value)} />
+                <NepaliDatePicker id="pay-date" value={paidOn} max={localToday()} onChange={(ad) => setPaidOn(ad || localToday())} clearable={false} />
               </Field>
               <Field
                 label={needsReference ? "Reference" : "Reference (optional)"}

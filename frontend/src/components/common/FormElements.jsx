@@ -1,4 +1,5 @@
 import React, { useId, useState } from "react";
+import { useController } from "react-hook-form";
 import { UploadCloud, FileText } from "lucide-react";
 import { cn } from "../../lib/cn";
 import {
@@ -7,6 +8,7 @@ import {
   TextInput,
   SelectInput,
   TextArea,
+  NepaliDatePicker,
 } from "../ui";
 
 /*
@@ -43,6 +45,39 @@ export const Input = ({ label, error, icon, register, name, hint, className, ...
     <TextInput id={name} name={name} icon={icon} invalid={Boolean(error)} {...bind(register, name, props)} />
   </Field>
 );
+
+/**
+ * Date field (Bikram Sambat picker) for react-hook-form. Pass the form's
+ * `control` where other fields take `register`. The form value is the AD
+ * date "YYYY-MM-DD", exactly what a native date input gave, so submit code is
+ * unchanged. `required` is enforced by the form (there is no native check).
+ */
+export const DateInput = ({ label, error, control, name, rules, hint, className, required, min, max, isDateDisabled, placeholder, disabled, clearable }) => {
+  const mergedRules = required && !rules?.required ? { ...rules, required: `${label || "Date"} is required` } : rules;
+  const {
+    field: { value, onChange, onBlur, ref },
+    fieldState,
+  } = useController({ name, control, rules: mergedRules, defaultValue: "" });
+  const message = error || fieldState.error?.message;
+  return (
+    <Field label={label} htmlFor={name} error={message} hint={hint} required={required} className={cn("mb-4", className)}>
+      <NepaliDatePicker
+        ref={ref}
+        id={name}
+        value={value || ""}
+        onChange={(ad) => onChange(ad)}
+        onBlur={onBlur}
+        min={min}
+        max={max}
+        isDateDisabled={isDateDisabled}
+        invalid={Boolean(message)}
+        placeholder={placeholder}
+        disabled={disabled}
+        clearable={clearable ?? !required}
+      />
+    </Field>
+  );
+};
 
 export const Select = ({ label, error, options = [], register, name, placeholder = "Select...", hint, className, ...props }) => (
   <Field label={label} htmlFor={name} error={error} hint={hint} required={props.required} className={cn("mb-4", className)}>

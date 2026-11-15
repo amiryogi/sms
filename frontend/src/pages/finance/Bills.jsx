@@ -4,7 +4,7 @@ import { ReceiptText } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { feeService } from "../../api/feeService";
 import { academicService } from "../../api/academicService";
-import { Card, EmptyState, Field, LoadingBlock, SelectInput, TextInput } from "../../components/ui";
+import { Card, EmptyState, Field, LoadingBlock, SelectInput, NepaliDatePicker } from "../../components/ui";
 import PrintToolbar from "../../components/finance/print/PrintToolbar";
 import SlipSheet from "../../components/finance/print/SlipSheet";
 import BillSlip from "../../components/finance/print/BillSlip";
@@ -106,7 +106,7 @@ const Bills = () => {
             </SelectInput>
           </Field>
           <Field label="Fees due by" htmlFor="bill-due" hint="Empty: everything owed">
-            <TextInput id="bill-due" type="date" value={params.dueBy || ""} onChange={(e) => set("dueBy", e.target.value)} />
+            <NepaliDatePicker id="bill-due" value={params.dueBy || ""} onChange={(ad) => set("dueBy", ad)} placeholder="Any date" />
           </Field>
         </div>
       </Card>

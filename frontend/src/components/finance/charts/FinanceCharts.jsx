@@ -1,7 +1,7 @@
 import React from "react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area, ReferenceLine } from "recharts";
 import { CheckCircle2, Clock, AlertTriangle, CircleDashed } from "lucide-react";
-import { formatCurrency, formatDate } from "../../../utils/format";
+import { formatCurrency, formatDate, formatShortDay } from "../../../utils/format";
 import ChartCard, { LegendItem } from "./ChartCard";
 import { SERIES, STATUS_COLORS, AXIS, compactRs, niceMax, shortBsMonth, clip } from "./chartTheme";
 
@@ -27,7 +27,7 @@ const Tip = ({ active, payload, label, formatLabel }) => {
   );
 };
 
-const shortDay = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+const shortDay = (iso) => formatShortDay(iso);
 const axisProps = { tick: AXIS.tick, axisLine: { stroke: AXIS.line }, tickLine: false };
 const yAxisProps = { tick: AXIS.tick, axisLine: false, tickLine: false, tickFormatter: compactRs, width: 48, tickCount: 5, allowDecimals: false };
 // Tidy ticks: zero (or the lowest value, if negative) up to a round maximum.

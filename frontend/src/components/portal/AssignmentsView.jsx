@@ -5,9 +5,9 @@ import { Card, Badge, Button, Tabs, EmptyState, LoadingBlock, Field, TextArea, A
 import { FileUpload } from "../common/FormElements";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "../shadcn/accordion";
 import { resolveAssetUrl } from "../../utils/assets";
-import { formatDate, formatDateTime } from "../../utils/format";
+import { formatDate, formatDateTime, daysFromToday } from "../../utils/format";
 
-const dayDiff = (iso) => Math.round((new Date(iso).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86400000);
+const dayDiff = (iso) => daysFromToday(iso);
 
 const stateOf = (a) => {
   const sub = a.submissions?.[0];

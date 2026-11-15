@@ -3,7 +3,7 @@ import { useForm, Controller } from "react-hook-form";
 import { Plus, Pencil, Trash2, Send, Archive, Eye, Megaphone, Users, BookOpen, Globe, X, Info } from "lucide-react";
 import DataTable from "../../components/common/DataTable";
 import Modal from "../../components/common/Modal";
-import { Input, Select, Textarea, Button, FormRow } from "../../components/common/FormElements";
+import { Input, DateInput, Select, Textarea, Button, FormRow } from "../../components/common/FormElements";
 import { PageHeader, Badge, IconButton, Tabs, SelectInput, DialogActions, toast, confirmDialog } from "../../components/ui";
 import { cn } from "../../lib/cn";
 import { noticeService } from "../../api/noticeService";
@@ -516,8 +516,8 @@ const Notices = () => {
                 />
               )}
             />
-            <Input label="Show from" name="publishFrom" type="date" register={register} hint="Optional" />
-            <Input label="Show until" name="publishTo" type="date" register={register} hint="Optional" />
+            <DateInput label="Show from" name="publishFrom" control={control} hint="Optional" />
+            <DateInput label="Show until" name="publishTo" control={control} hint="Optional" />
           </FormRow>
 
           <p className="flex items-center gap-2 text-xs text-slate-500">

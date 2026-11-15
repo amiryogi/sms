@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { CalendarCheck, Award, Wallet, NotebookPen, CalendarClock, BookOpen, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Card, CardHeader, Badge } from "../ui";
 import { Progress } from "../shadcn/progress";
-import { formatCurrency, formatDate, formatRelative } from "../../utils/format";
+import { formatCurrency, formatDate, formatRelative, dayParts } from "../../utils/format";
 
 /*
  * Dashboard cards built from GET /portal/students/:id/overview. Shared by the
@@ -104,8 +104,8 @@ export const UpcomingExamsCard = ({ exams }) => (
         {exams.map((e) => (
           <li key={e.id} className="flex items-center gap-3">
             <span className="flex w-12 shrink-0 flex-col items-center rounded-lg bg-brand-50 py-1 text-brand-700">
-              <span className="text-[10px] font-semibold uppercase">{e.startDate ? new Date(e.startDate).toLocaleDateString("en-GB", { month: "short" }) : "—"}</span>
-              <span className="text-lg leading-none font-bold tabular-nums">{e.startDate ? new Date(e.startDate).getDate() : "?"}</span>
+              <span className="text-[10px] font-semibold uppercase">{dayParts(e.startDate)?.monthShort ?? "—"}</span>
+              <span className="text-lg leading-none font-bold tabular-nums">{dayParts(e.startDate)?.day ?? "?"}</span>
             </span>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-slate-900">{e.name}</p>
