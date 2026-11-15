@@ -789,6 +789,86 @@ CREATE TABLE device_tokens (
 ) ENGINE=InnoDB;
 
 -- =====================================================
+-- SCHOOL CALENDAR (events and holidays, audiences, holiday imports)
+-- Dates are AD calendar days; BS is worked out when shown.
+-- The school's settings live in schools.calendar_config (JSON, NULL = defaults).
+-- =====================================================
+
+ALTER TABLE schools ADD COLUMN calendar_config JSON NULL;
+
+CREATE TABLE calendar_imports (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    school_id INT NOT NULL,
+    calendar_year INT NOT NULL,           -- BS year of the list
+    source VARCHAR(255) NOT NULL,
+    source_document VARCHAR(500) NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'COMPLETED',
+    created_count INT NOT NULL DEFAULT 0,
+    skipped_count INT NOT NULL DEFAULT 0,
+    imported_by_id INT NOT NULL,
+    imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE,
+    FOREIGN KEY (imported_by_id) REFERENCES users(id) ON DELETE RESTRICT,
+
+    INDEX idx_calendar_imports_school_year (school_id, calendar_year)
+) ENGINE=InnoDB;
+
+CREATE TABLE calendar_events (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    school_id INT NOT NULL,
+    academic_year_id INT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NULL,
+    category VARCHAR(40) NOT NULL,        -- PUBLIC_HOLIDAY, SCHOOL_EVENT, ... (utils/calendar/calendarRules.js)
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    is_all_day BOOLEAN NOT NULL DEFAULT TRUE,
+    start_time VARCHAR(5) NULL,           -- "HH:mm", Nepal time
+    end_time VARCHAR(5) NULL,
+    recurrence VARCHAR(20) NOT NULL DEFAULT 'NONE',   -- NONE, WEEKLY, MONTHLY_BS, YEARLY_BS, YEARLY_AD
+    recurrence_until DATE NULL,
+    audience_type VARCHAR(10) NOT NULL DEFAULT 'ALL', -- ALL, ROLE, CLASS
+    status VARCHAR(10) NOT NULL DEFAULT 'PUBLISHED',  -- DRAFT, PUBLISHED
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    source VARCHAR(255) NULL,
+    source_document VARCHAR(500) NULL,
+    source_published_date VARCHAR(20) NULL,           -- the date as published, normally BS
+    applicability VARCHAR(500) NULL,
+    source_key VARCHAR(100) NULL,
+    import_id INT NULL,
+    created_by_id INT NOT NULL,
+    updated_by_id INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE,
+    FOREIGN KEY (academic_year_id) REFERENCES academic_years(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by_id) REFERENCES users(id) ON DELETE RESTRICT,
+    FOREIGN KEY (updated_by_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (import_id) REFERENCES calendar_imports(id) ON DELETE SET NULL,
+
+    INDEX idx_calendar_events_school_dates (school_id, start_date, end_date),
+    INDEX idx_calendar_events_school_category (school_id, category),
+    INDEX idx_calendar_events_school_source_key (school_id, source_key)
+) ENGINE=InnoDB;
+
+CREATE TABLE calendar_event_audiences (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    event_id INT NOT NULL,
+    role_id INT NULL,
+    class_id INT NULL,
+    section_id INT NULL,                  -- NULL = the whole class
+
+    FOREIGN KEY (event_id) REFERENCES calendar_events(id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+    FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE,
+    FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE CASCADE,
+
+    INDEX idx_calendar_event_audiences_event (event_id)
+) ENGINE=InnoDB;
+
+-- =====================================================
 -- VIEWS FOR COMMON QUERIES
 -- =====================================================
 

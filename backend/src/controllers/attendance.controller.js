@@ -4,6 +4,7 @@ const { notify } = require("../services/push");
 const { normalizeLayout } = require("../utils/reportCardLayout");
 const { tally, rateOf, byBsMonth } = require("../utils/attendanceRate");
 const { convertADToBS } = require("../utils/dateConverter");
+const { checkWorkingDay } = require("../services/calendar/workingDays");
 
 /**
  * The register's day as stored in the DATE column: midnight UTC of that
@@ -191,6 +192,17 @@ const markAttendance = asyncHandler(async (req, res) => {
 
   const attendanceDate = attendanceDay(date);
   if (!attendanceDate) throw ApiError.badRequest("Date must be a valid date (YYYY-MM-DD)");
+
+  // The school calendar: no register on a weekly holiday or a holiday that
+  // applies to this class, unless the school has switched the rule off
+  // (Calendar Settings). Attendance already saved is never touched.
+  const workingDay = await checkWorkingDay(req.user.schoolId, attendanceDate.toISOString().slice(0, 10), {
+    classId: parseInt(classId),
+    sectionId: parseInt(sectionId),
+  });
+  if (workingDay.blocksAttendance) {
+    throw ApiError.badRequest(`Attendance cannot be marked on this day. ${workingDay.reason}.`);
+  }
 
   // Who was already absent on this day: saving the register again must not
   // notify their parents a second time.

@@ -1,4 +1,5 @@
 const bcrypt = require("bcryptjs");
+const { normalizeConfig } = require("../utils/calendar/calendarConfig");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const { randomUUID } = require("node:crypto");
@@ -271,6 +272,7 @@ const login = asyncHandler(async (req, res) => {
           instagramUrl: user.school.instagramUrl,
           youtubeUrl: user.school.youtubeUrl,
           brandColor: user.school.brandColor,
+          calendar: normalizeConfig(user.school.calendarConfig),
         },
         student: user.student
           ? {
@@ -606,6 +608,8 @@ const getMe = asyncHandler(async (req, res) => {
       instagramUrl: user.school.instagramUrl,
       youtubeUrl: user.school.youtubeUrl,
       brandColor: user.school.brandColor,
+      // Calendar settings (default calendar, weekly holidays): utils/calendar/calendarConfig.js
+      calendar: normalizeConfig(user.school.calendarConfig),
     },
     student: user.student
       ? {

@@ -1,12 +1,13 @@
 const { body } = require('express-validator');
+const { isDateOnly } = require('../utils/calendar/dateValidation');
 const { isValidWorkingDays, MAX_WORKING_DAYS } = require('../utils/reportCardAttendance');
 
 const examRules = [
   body('name').trim().notEmpty().withMessage('Exam name is required'),
   body('examType').isIn(['unit_test', 'midterm', 'final', 'board']).withMessage('Invalid exam type'),
   body('academicYearId').isInt().withMessage('Valid Academic Year ID is required'),
-  body('startDate').optional().isISO8601().withMessage('Valid start date required'),
-  body('endDate').optional().isISO8601().withMessage('Valid end date required'),
+  body('startDate').optional().custom(isDateOnly).withMessage('Valid start date required'),
+  body('endDate').optional().custom(isDateOnly).withMessage('Valid end date required'),
   body('classIds').optional().isArray().withMessage('Class IDs must be an array'),
 ];
 
@@ -22,7 +23,7 @@ const examSubjectUpdateRules = [
   body('subjects.*.classSubjectId').isInt().withMessage('Valid class subject ID required'),
   body('subjects.*.fullMarks').optional().isInt({ min: 1 }),
   body('subjects.*.passMarks').optional().isInt({ min: 1 }),
-  body('subjects.*.examDate').optional().isISO8601(),
+  body('subjects.*.examDate').optional().custom(isDateOnly),
 ];
 
 const resultSaveRules = [

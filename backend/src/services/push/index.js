@@ -15,7 +15,7 @@
  */
 const prisma = require("../../config/database");
 const { sendExpoPush } = require("./expoPush");
-const { sectionAudience, studentAudience, noticeAudience } = require("./recipients");
+const { sectionAudience, studentAudience, noticeAudience, calendarEventAudience } = require("./recipients");
 
 const IN_LIST = 1000; // user ids per query
 
@@ -84,6 +84,7 @@ const clip = (text, max = 120) => {
 /* ------------------------------------------------------------- messages */
 
 const messages = {
+  calendarEvent: (event) => () => ({ title: "School calendar", body: clip(event.title), data: { type: "calendar", id: event.id } }),
   notice: (notice) => () => ({ title: "New notice", body: clip(notice.title), data: { type: "notice", id: notice.id } }),
   assignment: (assignment, subject) => (row) => ({
     title: row.childName ? `New assignment for ${row.childName}` : "New assignment",
@@ -110,6 +111,29 @@ const messages = {
 /* ------------------------------------------------------------- triggers */
 
 const notify = {
+  /** A calendar event or holiday was published and its author asked for it to be announced. */
+  calendarEventPublished: (schoolId, eventId, actorId = null) =>
+    dispatch("calendar", async () => {
+      const event = await prisma.calendarEvent.findFirst({
+        where: { id: eventId, schoolId },
+        select: {
+          id: true,
+          schoolId: true,
+          title: true,
+          status: true,
+          isActive: true,
+          audienceType: true,
+          createdById: true,
+          audiences: { select: { roleId: true, classId: true, sectionId: true }, orderBy: { id: "asc" } },
+        },
+      });
+      if (!event) return;
+      const year = await prisma.academicYear.findFirst({ where: { schoolId, isCurrent: true }, select: { id: true } });
+      // The person who pressed the button is left out, not only the first author.
+      const rows = await calendarEventAudience(prisma, { ...event, createdById: actorId ?? event.createdById }, { currentAcademicYearId: year?.id ?? null });
+      await deliver(schoolId, rows, messages.calendarEvent(event));
+    }),
+
   /** A notice went DRAFT -> PUBLISHED. */
   noticePublished: (schoolId, noticeId) =>
     dispatch("notice", async () => {

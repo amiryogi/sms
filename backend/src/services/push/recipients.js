@@ -115,4 +115,31 @@ const noticeAudience = async (db, notice, { now = new Date(), currentAcademicYea
   return unique(rows.filter((r) => r.userId !== notice.createdById));
 };
 
-module.exports = { sectionAudience, studentAudience, noticeAudience };
+/**
+ * The audience of a published calendar event. `event` needs schoolId, status,
+ * isActive, audienceType, createdById and audiences ({ roleId, classId,
+ * sectionId }). Same people as a notice with the same targeting; class events
+ * reach this year's students of the class, their parents and its teachers.
+ */
+const calendarEventAudience = async (db, event, { currentAcademicYearId = null } = {}) => {
+  if (!event?.schoolId || event.status !== "PUBLISHED" || !event.isActive) return [];
+  if (event.audienceType === "CLASS" && !currentAcademicYearId) return [];
+  const targetType = { ALL: "GLOBAL", ROLE: "ROLE_SPECIFIC", CLASS: "CLASS_SPECIFIC" }[event.audienceType];
+  if (!targetType) return [];
+  return noticeAudience(
+    db,
+    {
+      schoolId: event.schoolId,
+      status: "PUBLISHED",
+      createdById: event.createdById,
+      targetType,
+      roleTargets: (event.audiences ?? []).filter((a) => a.roleId).map((a) => ({ roleId: a.roleId })),
+      classTargets: (event.audiences ?? [])
+        .filter((a) => a.classId)
+        .map((a) => ({ classId: a.classId, sectionId: a.sectionId ?? null, academicYearId: currentAcademicYearId })),
+    },
+    { currentAcademicYearId },
+  );
+};
+
+module.exports = { sectionAudience, studentAudience, noticeAudience, calendarEventAudience };

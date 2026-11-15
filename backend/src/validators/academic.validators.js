@@ -1,9 +1,10 @@
 const { body } = require('express-validator');
+const { isDateOnly } = require('../utils/calendar/dateValidation');
 
 const academicYearRules = [
   body('name').trim().notEmpty().withMessage('Name is required'),
-  body('startDate').isISO8601().withMessage('Valid start date is required'),
-  body('endDate').isISO8601().withMessage('Valid end date is required')
+  body('startDate').custom(isDateOnly).withMessage('Valid start date is required'),
+  body('endDate').custom(isDateOnly).withMessage('Valid end date is required')
     .custom((value, { req }) => {
       if (new Date(value) <= new Date(req.body.startDate)) {
         throw new Error('End date must be after start date');

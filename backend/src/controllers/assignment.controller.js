@@ -1,4 +1,5 @@
 const prisma = require("../config/database");
+const { parseDateOnly } = require("../utils/calendar/dateValidation");
 const { ApiError, ApiResponse, asyncHandler } = require("../utils");
 const { notify } = require("../services/push");
 
@@ -281,7 +282,7 @@ const createAssignment = asyncHandler(async (req, res) => {
       teacherSubjectId: parseInt(teacherSubjectId),
       title,
       description,
-      dueDate: dueDate ? new Date(dueDate) : null,
+      dueDate: dueDate ? parseDateOnly(dueDate) : null,
       totalMarks: totalMarks ? parseInt(totalMarks) : 100,
       isPublished: isPublished === "true" || isPublished === true,
       assignmentFiles: {
@@ -363,7 +364,7 @@ const updateAssignment = asyncHandler(async (req, res) => {
     data: {
       title: title || assignment.title,
       description: description || assignment.description,
-      dueDate: dueDate ? new Date(dueDate) : assignment.dueDate,
+      dueDate: dueDate ? parseDateOnly(dueDate) : assignment.dueDate,
       totalMarks: totalMarks ? parseInt(totalMarks) : assignment.totalMarks,
       isPublished:
         isPublished !== undefined

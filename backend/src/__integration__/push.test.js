@@ -7,7 +7,7 @@
  */
 const request = require("supertest");
 const app = require("../app");
-const { prisma } = require("../database");
+const { prisma, Prisma } = require("../database");
 const push = require("../services/push");
 
 const RUN = Date.now().toString(36);
@@ -50,6 +50,12 @@ beforeAll(async () => {
     where: { studentId: ctx.studentId, academicYearId: ctx.year.id, status: "active" },
     orderBy: { id: "asc" },
   });
+  // These tests save the register for today, whatever day that is: switch off
+  // the school calendar's "no attendance on a holiday" rule while they run.
+  const school = await prisma.school.findUnique({ where: { id: ctx.schoolId }, select: { calendarConfig: true } });
+  ctx.calendarConfig = school.calendarConfig;
+  ctx.calendarConfigSaved = true;
+  await prisma.school.update({ where: { id: ctx.schoolId }, data: { calendarConfig: { blockAttendanceOnNonWorkingDays: false } } });
   push.setTransport(async (messages) => {
     sent.push(...messages);
     return { sent: messages.length, failed: 0, invalidTokens: [] };
@@ -63,6 +69,10 @@ beforeEach(() => {
 afterAll(async () => {
   push.setTransport(null);
   const steps = [
+    () =>
+      ctx.calendarConfigSaved
+        ? prisma.school.update({ where: { id: ctx.schoolId }, data: { calendarConfig: ctx.calendarConfig === null ? Prisma.DbNull : ctx.calendarConfig } })
+        : null,
     () => prisma.deviceToken.deleteMany({ where: { token: { in: Object.values(TOKENS) } } }),
     () => (ctx.noticeId ? prisma.notice.delete({ where: { id: ctx.noticeId } }) : null),
     async () => {
