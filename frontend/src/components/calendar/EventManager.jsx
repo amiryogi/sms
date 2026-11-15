@@ -101,11 +101,11 @@ const EventManager = ({ kind }) => {
               Print list
             </Link>
             {isHolidays && isAdmin && (
-              <Button variant="secondary" icon={Download} onClick={() => setImporting(true)}>
+              <Button variant="secondary" icon={Download} onClick={() => setImporting(true)} data-guide="holidays.import">
                 Import holidays
               </Button>
             )}
-            <Button icon={Plus} onClick={() => setDialog({ event: null })}>
+            <Button icon={Plus} onClick={() => setDialog({ event: null })} data-guide={isHolidays ? "holidays.add" : "events.add"}>
               {isHolidays ? "Add holiday" : "Add event"}
             </Button>
           </>

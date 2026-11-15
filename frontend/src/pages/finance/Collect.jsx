@@ -82,7 +82,9 @@ const Collect = () => {
       <PageHeader icon={HandCoins} title="Collect fees" description="Find a student, take a payment and print the receipt." />
 
       <Card>
-        <StudentPicker value={pickerValue} onChange={choose} placeholder="Search by name, admission number or roll…" autoFocus={!studentId} />
+        <div data-guide="collect.picker">
+          <StudentPicker value={pickerValue} onChange={choose} placeholder="Search by name, admission number or roll…" autoFocus={!studentId} />
+        </div>
       </Card>
 
       {lastReceipt && (
@@ -154,7 +156,7 @@ const Collect = () => {
               <p className="text-sm text-slate-500">Balance due</p>
               <p className="mt-1 text-3xl font-semibold text-slate-900 tabular-nums">{formatCurrency(year.totals.balance)}</p>
               {year.totals.overdue > 0 && <p className="mt-1 text-sm font-medium text-red-600">{formatCurrency(year.totals.overdue)} overdue</p>}
-              <Button className="mt-4 w-full" size="lg" icon={Wallet} disabled={year.totals.balance <= 0} onClick={() => setPaying(true)}>
+              <Button className="mt-4 w-full" size="lg" icon={Wallet} disabled={year.totals.balance <= 0} onClick={() => setPaying(true)} data-guide="collect.record">
                 Record payment
               </Button>
               <Link
@@ -165,7 +167,7 @@ const Collect = () => {
               </Link>
             </Card>
 
-            <Card>
+            <Card data-guide="collect.receipts">
               <CardHeader title="Recent receipts" />
               {recent.length === 0 ? (
                 <p className="text-sm text-slate-500">No payments this year yet.</p>

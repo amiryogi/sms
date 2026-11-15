@@ -323,7 +323,7 @@ const MarksEntry = () => {
 
       <Card>
         <div className={cn("grid gap-4", useTeacherFlow ? "sm:grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-4")}>
-          <Field label="Exam" htmlFor="me-exam">
+          <Field label="Exam" htmlFor="me-exam" data-guide="marks.exam">
             <SelectInput id="me-exam" value={filters.examId} onChange={(e) => handleFilterChange("examId", e.target.value)} disabled={loadingExams}>
               <option value="">{loadingExams ? "Loading…" : exams.length ? "Select exam" : "No published exams"}</option>
               {exams.map((e) => (
@@ -334,6 +334,7 @@ const MarksEntry = () => {
 
           {useTeacherFlow ? (
             <Field
+              data-guide="marks.subject"
               label="Class, section and subject"
               htmlFor="me-assignment"
               error={filters.examId && !loadingAssignments && teacherAssignmentOptions.length === 0 ? "None of your subjects are in this exam." : undefined}
@@ -352,7 +353,7 @@ const MarksEntry = () => {
             </Field>
           ) : (
             <>
-              <Field label="Class" htmlFor="me-class">
+              <Field label="Class" htmlFor="me-class" data-guide="marks.subject">
                 <SelectInput id="me-class" value={filters.classId} onChange={(e) => handleFilterChange("classId", e.target.value)} disabled={!filters.examId || availableClasses.length === 0}>
                   <option value="">Select class</option>
                   {availableClasses.map((c) => (
@@ -425,7 +426,7 @@ const MarksEntry = () => {
             <EmptyState icon={Users} title="No students" description="No students are enrolled in this section for the current year." />
           ) : (
             <>
-              <div ref={gridRef} className="max-h-[calc(100vh-18rem)] min-h-64 overflow-auto">
+              <div ref={gridRef} className="max-h-[calc(100vh-18rem)] min-h-64 overflow-auto" data-guide="marks.table">
                 <table className="w-full min-w-[720px] border-separate border-spacing-0 text-sm">
                   <thead className="sticky top-0 z-10 bg-slate-50 text-left text-xs font-medium tracking-wide text-slate-500 uppercase">
                     <tr>
@@ -541,7 +542,7 @@ const MarksEntry = () => {
                 <p className="hidden items-center gap-1.5 text-xs text-slate-500 sm:flex">
                   <Keyboard size={14} aria-hidden="true" /> Enter or ↓ moves down a row, ↑ moves up.
                 </p>
-                <Button icon={Save} loading={saving} onClick={handleSave} disabled={stats.changed === 0}>
+                <Button icon={Save} loading={saving} onClick={handleSave} disabled={stats.changed === 0} data-guide="marks.save">
                   Save Marks
                 </Button>
               </div>

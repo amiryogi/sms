@@ -401,7 +401,7 @@ const Notices = () => {
         icon={Megaphone}
         title="Notices"
         description="Announcements for the whole school, particular roles or particular classes."
-        actions={<Button icon={Plus} onClick={openCreateModal}>New Notice</Button>}
+        actions={<Button icon={Plus} onClick={openCreateModal} data-guide="notices.new">New Notice</Button>}
         className="mb-2"
       />
 

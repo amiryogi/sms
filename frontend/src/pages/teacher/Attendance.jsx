@@ -159,7 +159,7 @@ const Attendance = () => {
 
       <Card>
         <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_220px]">
-          <Field label="Class and section" htmlFor="att-class">
+          <Field label="Class and section" htmlFor="att-class" data-guide="attendance.class">
             <SelectInput
               id="att-class"
               value={selected}
@@ -175,7 +175,7 @@ const Attendance = () => {
               ))}
             </SelectInput>
           </Field>
-          <Field label="Date" htmlFor="att-date" hint={filters.date === today ? "Today" : undefined}>
+          <Field label="Date" htmlFor="att-date" data-guide="attendance.date" hint={filters.date === today ? "Today" : undefined}>
             <NepaliDatePicker
               id="att-date"
               value={filters.date}
@@ -216,7 +216,7 @@ const Attendance = () => {
               </p>
             </div>
             {alreadyTaken ? <Badge tone="success" dot>Taken</Badge> : <Badge tone="warning" dot>Not taken yet</Badge>}
-            <Button size="sm" variant="secondary" icon={CheckCheck} onClick={() => markAll("present")}>All present</Button>
+            <Button size="sm" variant="secondary" icon={CheckCheck} onClick={() => markAll("present")} data-guide="attendance.allPresent">All present</Button>
           </div>
 
           <div className="grid grid-cols-2 gap-px border-b border-slate-200 bg-slate-200 sm:grid-cols-4">
@@ -279,7 +279,7 @@ const Attendance = () => {
               {records.length} students · <span className="text-emerald-700">{counts.present} present</span>
               {counts.absent > 0 && <span className="text-red-700"> · {counts.absent} absent</span>}
             </p>
-            <Button icon={Save} loading={saving} disabled={dayBlocked} onClick={handleSave}>Save Attendance</Button>
+            <Button icon={Save} loading={saving} disabled={dayBlocked} onClick={handleSave} data-guide="attendance.save">Save Attendance</Button>
           </div>
         </Card>
       )}

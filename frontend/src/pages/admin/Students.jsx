@@ -321,10 +321,10 @@ const Students = ({ readOnly = false }) => {
         actions={
           readOnly ? null : (
             <>
-              <Link to="/admin/login-slips" className={buttonClasses({ variant: "secondary" })}>
+              <Link to="/admin/login-slips" className={buttonClasses({ variant: "secondary" })} data-guide="students.classLogins">
                 <KeyRound size={16} aria-hidden="true" /> Class logins
               </Link>
-              <Button icon={Plus} onClick={() => openModal()}>Add student</Button>
+              <Button icon={Plus} onClick={() => openModal()} data-guide="students.add">Add student</Button>
             </>
           )
         }

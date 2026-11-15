@@ -119,7 +119,7 @@ const AcademicYears = () => {
         title="Academic Years"
         description="The current year scopes classes, enrolments, exams and fees across the system."
         actions={
-          <Button icon={Plus} onClick={() => openModal()}>
+          <Button icon={Plus} onClick={() => openModal()} data-guide="academicYears.add">
             Add academic year
           </Button>
         }

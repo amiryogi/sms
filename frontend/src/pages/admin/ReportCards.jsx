@@ -213,7 +213,7 @@ const ReportCards = () => {
 
       {/* Selection */}
       <Card padding="md">
-        <div className="grid items-end gap-x-4 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_auto]">
+        <div className="grid items-end gap-x-4 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_auto]" data-guide="reportCards.filters">
           <Select label="Exam" name="examId" options={examOptions} value={selectedExam} onChange={(e) => setSelectedExam(e.target.value)} placeholder="Select exam…" />
           <Select label="Class" name="classId" options={classOptions} value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)} placeholder="Select class…" />
           <Select
@@ -242,11 +242,11 @@ const ReportCards = () => {
               <Stat icon={XCircle} label="Failed" value={summary.failed || 0} tone="text-red-600" />
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" icon={RefreshCw} onClick={handleGenerate} loading={generating} disabled={students.length === 0}>
+              <Button variant="secondary" icon={RefreshCw} onClick={handleGenerate} loading={generating} disabled={students.length === 0} data-guide="reportCards.generate">
                 {allGenerated ? "Regenerate" : "Generate"} Report Cards
               </Button>
               {allGenerated && !allPublished && (
-                <Button variant="success" icon={Eye} onClick={() => setPublished(true)} loading={publishing}>
+                <Button variant="success" icon={Eye} onClick={() => setPublished(true)} loading={publishing} data-guide="reportCards.publish">
                   Publish All
                 </Button>
               )}
@@ -256,7 +256,7 @@ const ReportCards = () => {
                 </Button>
               )}
               {allGenerated && (
-                <Button icon={Printer} onClick={handleBulkPrint} loading={bulkPrintLoading}>
+                <Button icon={Printer} onClick={handleBulkPrint} loading={bulkPrintLoading} data-guide="reportCards.printAll">
                   Print All
                 </Button>
               )}

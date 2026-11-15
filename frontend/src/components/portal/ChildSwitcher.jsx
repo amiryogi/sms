@@ -34,7 +34,7 @@ const ChildSwitcher = ({ kids, child, select, loading, error }) => {
   }
 
   return (
-    <div role="radiogroup" aria-label="Choose a child" className="flex flex-wrap gap-2 print:hidden">
+    <div role="radiogroup" aria-label="Choose a child" className="flex flex-wrap gap-2 print:hidden" data-guide="children.switcher">
       {kids.map((c) => {
         const on = c.id === child?.id;
         return (

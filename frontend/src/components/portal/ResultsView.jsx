@@ -76,7 +76,7 @@ const ResultsView = ({ studentId }) => {
         <Tabs value={examId} onChange={setExamId} tabs={options} />
       ) : (
         <div className="max-w-sm">
-          <SelectInput aria-label="Exam" value={examId} onChange={(e) => setExamId(e.target.value)}>
+          <SelectInput aria-label="Exam" value={examId} onChange={(e) => setExamId(e.target.value)} data-guide="results.exam">
             {options.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}

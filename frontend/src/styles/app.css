@@ -204,3 +204,53 @@
     }
   }
 }
+
+/* Help assistant walkthroughs (driver.js, components/assistant/guides/GuideRunner.jsx).
+   driver.css is unlayered, so these overrides are unlayered too, scoped to .sms-guide. */
+.driver-popover.sms-guide {
+  max-width: 340px;
+  border-radius: var(--radius-lg);
+  font-family: inherit;
+  color: var(--color-slate-700);
+}
+.driver-popover.sms-guide .driver-popover-title {
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--color-slate-900);
+}
+.driver-popover.sms-guide .driver-popover-description {
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.driver-popover.sms-guide .driver-popover-progress-text {
+  color: var(--color-slate-500);
+  font-size: 12px;
+}
+.driver-popover.sms-guide .driver-popover-footer button,
+.driver-popover.sms-guide .sms-guide-pause {
+  font-family: inherit;
+  font-size: 13px;
+  text-shadow: none;
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.driver-popover.sms-guide .driver-popover-next-btn {
+  background: var(--color-brand-600);
+  border-color: var(--color-brand-600);
+  color: white;
+}
+.driver-popover.sms-guide .driver-popover-next-btn:hover {
+  background: var(--color-brand-700);
+}
+.driver-popover.sms-guide .driver-popover-footer {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.driver-popover.sms-guide .sms-guide-pause {
+  background: white;
+  border: 1px solid var(--color-slate-300);
+  color: var(--color-slate-700);
+  margin-right: 4px;
+}

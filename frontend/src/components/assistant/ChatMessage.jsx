@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, AlertTriangle, BookOpen } from "lucide-react";
+import { Copy, Check, ThumbsUp, ThumbsDown, RotateCcw, AlertTriangle, BookOpen, PlayCircle } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { IconButton, Button } from "../ui";
 import AssistantMarkdown from "./AssistantMarkdown";
@@ -8,9 +8,9 @@ import { errorText } from "./strings";
 /**
  * One question or answer. Answers show the help pages they came from, copy and
  * thumbs up/down (a thumbs down can carry a comment for the school's administrators),
- * and any walkthroughs offered with them (rendered by `renderGuides`).
+ * and the walkthroughs the server offered with them (`onStartGuide` starts one).
  */
-export default function ChatMessage({ message, t, allowedPaths, onNavigate, onRetry, onRate, renderGuides }) {
+export default function ChatMessage({ message, t, lang, allowedPaths, onNavigate, onRetry, onRate, onStartGuide }) {
   const [copied, setCopied] = useState(false);
   const [commenting, setCommenting] = useState(false);
   const [comment, setComment] = useState("");
@@ -94,7 +94,15 @@ export default function ChatMessage({ message, t, allowedPaths, onNavigate, onRe
         </p>
       )}
 
-      {finished && renderGuides?.(message)}
+      {finished && onStartGuide && message.guides?.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 px-1">
+          {message.guides.map((g) => (
+            <Button key={g.id} size="sm" variant="secondary" icon={PlayCircle} onClick={() => onStartGuide(g.id)} data-testid="guide-offer">
+              {t.guide.start}: {g.title?.[lang] || g.title?.en}
+            </Button>
+          ))}
+        </div>
+      )}
 
       {failed && message.question && (
         <div className="px-1">

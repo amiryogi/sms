@@ -398,7 +398,7 @@ const Exams = () => {
         icon={ClipboardList}
         title="Exams"
         description="Create an exam, publish it for marks entry, then lock it before generating report cards."
-        actions={<Button icon={Plus} onClick={() => openModal()}>Create exam</Button>}
+        actions={<Button icon={Plus} onClick={() => openModal()} data-guide="exams.create">Create exam</Button>}
         className="mb-2"
       />
 

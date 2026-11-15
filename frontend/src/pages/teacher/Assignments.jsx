@@ -259,7 +259,7 @@ const Assignments = () => {
         title="Assignments"
         description="Set work for your classes, collect submissions and grade them."
         actions={
-          <Button icon={Plus} onClick={() => openModal()} disabled={!loading && teachingOptions.length === 0}>
+          <Button icon={Plus} onClick={() => openModal()} disabled={!loading && teachingOptions.length === 0} data-guide="assignments.create">
             Create Assignment
           </Button>
         }

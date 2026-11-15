@@ -36,8 +36,16 @@ Audit and role matrix: `docs/ai-assistant/`.
   - Auto / English / नेपाली, history, feedback, stop and retry;
   - links only to the user's own pages; full screen on phones.
   - Checked in Chrome with live Gemini as a teacher and a parent; vitest 45, lint and build pass.
-- **Next:** M4, guided walkthroughs (driver.js, `data-guide` targets). The `assistant-settings`
-  help document stays a draft until the admin page exists (M5).
+- **Done: M4, guided walkthroughs** (`components/assistant/guides/`, driver.js 1.10.2 pinned):
+  - 14 walkthroughs over 32 `data-guide` targets on real controls;
+  - Back, Pause (survives a reload), Resume and Exit; a "go to page" card when a step is on
+    another page; directions when a control is not on the page yet; on phones the menu button
+    first;
+  - registry tests against `guides.json`, `App.jsx` and each role's menu;
+  - e2e `tests/assistant.spec.js` (7 tests, fake provider); full e2e: 88 passed, 1 skipped as
+    before.
+- **Next:** M5, the admin page `/admin/assistant` (settings, test connection, usage). The
+  `assistant-settings` help document stays a draft until then.
 
 ## Public site: calendar, mobile app, app pricing (2026-11-15): branch `feature/site-calendar-and-app`
 

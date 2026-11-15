@@ -53,7 +53,8 @@ module.exports = defineConfig({
     {
       command: "node scripts/with-test-db.js --provider mysql node src/server.js",
       cwd: path.join(root, "backend"),
-      env: { PORT: String(API_PORT), FRONTEND_URL: BASE_URL },
+      // The help assistant answers with canned text: e2e runs never call an AI provider.
+      env: { PORT: String(API_PORT), FRONTEND_URL: BASE_URL, ASSISTANT_FAKE_PROVIDER: "true" },
       url: `http://localhost:${API_PORT}/health`,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,

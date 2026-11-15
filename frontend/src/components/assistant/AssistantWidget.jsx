@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useLocation } from "react-router-dom";
-import { MessageCircleQuestion, X, Maximize2, Minimize2, SquarePen, History, ArrowLeft, Sparkles } from "lucide-react";
+import { MessageCircleQuestion, X, Maximize2, Minimize2, SquarePen, History, ArrowLeft, Sparkles, Play } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { useAuth } from "../../context/AuthContext";
 import { assistantService } from "../../api/assistantService";
@@ -18,9 +18,10 @@ import HistoryList from "./HistoryList";
  * Rendered by DashboardLayout only, so never on the public site. It shows nothing at all
  * when the assistant is off for this user (the server decides: GET /assistant/bootstrap).
  *
- * `renderGuides` (optional) draws the walkthrough offers under an answer.
+ * Walkthroughs: `onGuidesLoaded(guides)` receives the ones the server allows this user,
+ * `onStartGuide(id)` starts one, and `guideActive` hides the help button while one runs.
  */
-export default function AssistantWidget({ renderGuides, onGuidesLoaded }) {
+export default function AssistantWidget({ onGuidesLoaded, onStartGuide, guideActive = false }) {
   const { user } = useAuth();
   // Kept with the user it belongs to, so a different sign-in never sees the previous answer.
   const [loaded, setLoaded] = useState({ userId: null, data: null });
@@ -44,10 +45,10 @@ export default function AssistantWidget({ renderGuides, onGuidesLoaded }) {
   }, [boot, onGuidesLoaded]);
 
   if (!boot?.enabled) return null;
-  return <AssistantRoot boot={boot} renderGuides={renderGuides} />;
+  return <AssistantRoot boot={boot} onStartGuide={onStartGuide} guideActive={guideActive} />;
 }
 
-function AssistantRoot({ boot, renderGuides }) {
+function AssistantRoot({ boot, onStartGuide, guideActive }) {
   const { hasRole } = useAuth();
   const location = useLocation();
   const prefs = useSyncExternalStore(subscribeAssistantPrefs, getAssistantPrefs);
@@ -60,7 +61,8 @@ function AssistantRoot({ boot, renderGuides }) {
 
   // No personal choice yet: the widget follows the school's default language.
   const language = prefs.language;
-  const t = stringsFor(language || (boot.defaultLanguage === "ne" ? "ne" : "en"));
+  const lang = language === "ne" || (!language && boot.defaultLanguage === "ne") ? "ne" : "en";
+  const t = stringsFor(lang);
   const page = titleForPath(location.pathname).title;
   const chat = useAssistantChat({ language: language || undefined, route: location.pathname });
 
@@ -98,9 +100,15 @@ function AssistantRoot({ boot, renderGuides }) {
 
   const suggestions = (boot.suggestions || []).map((s) => (language === "ne" ? s.ne : s.en));
 
+  // The panel would cover the page the walkthrough points at.
+  const startGuide = (id) => {
+    setOpen(false);
+    onStartGuide?.(id);
+  };
+
   return (
     <>
-      {!open && (
+      {!open && !guideActive && (
         <button
           ref={buttonRef}
           type="button"
@@ -220,6 +228,26 @@ function AssistantRoot({ boot, renderGuides }) {
                         </ul>
                       </div>
                     )}
+                    {onStartGuide && boot.guides?.length > 0 && (
+                      <div>
+                        <p className="mb-2 px-1 text-xs font-medium tracking-wide text-slate-500 uppercase">{t.guide.walkthroughs}</p>
+                        <ul className="flex flex-wrap gap-1.5">
+                          {boot.guides.map((g) => (
+                            <li key={g.id}>
+                              <button
+                                type="button"
+                                onClick={() => startGuide(g.id)}
+                                data-testid="guide-start"
+                                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-800 hover:bg-brand-100"
+                              >
+                                <Play size={12} aria-hidden="true" />
+                                {g.title?.[lang] || g.title?.en}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 )}
                 {chat.messages.map((m) => (
@@ -227,11 +255,12 @@ function AssistantRoot({ boot, renderGuides }) {
                     key={m.localId}
                     message={m}
                     t={t}
+                    lang={lang}
                     allowedPaths={allowedPaths}
                     onNavigate={onNavigate}
                     onRetry={chat.retry}
                     onRate={chat.rate}
-                    renderGuides={renderGuides ? (msg) => renderGuides(msg, { t, close: () => setOpen(false) }) : undefined}
+                    onStartGuide={onStartGuide ? startGuide : undefined}
                   />
                 ))}
               </div>
