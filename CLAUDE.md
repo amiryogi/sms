@@ -24,7 +24,7 @@ has `school_id`) but only one school is seeded and used.
 | Backend  | Node.js ≥18, Express 4, Prisma 5.22, JWT (access + refresh). Database: **MySQL 8 or Supabase PostgreSQL**, one per deployment (`DATABASE_PROVIDER`; see §4.12 and `docs/database/`) |
 | Frontend | React 19 + Vite 7, React Router 7, Axios, react-hook-form, lucide-react |
 | Styling  | **Tailwind CSS 4** (`@tailwindcss/vite`), tokens in `frontend/src/styles/app.css`, kit in `src/components/ui/`. No CSS-in-JS. shadcn/ui pieces in `src/components/shadcn/` (see §9). Charts: `recharts`, colours in `components/finance/charts/chartTheme.js` |
-| Dates    | AD stored in DB; BS (Bikram Sambat) rendered via `backend/src/utils/dateConverter.js` |
+| Dates    | AD stored in DB; BS (Bikram Sambat) shown and entered through `utils/calendar/` (server) and `lib/calendar/` (web) over `@inicrea/bikram-sambat-core`. See §6 "Dates and the school calendar" |
 
 Repo layout:
 
@@ -76,7 +76,7 @@ Demo logins (after seed, password `password123`): sign in with a **username or t
 students by admission number (`stu20240001`), parents as `p.<child's admission number>`
 (`p.stu20240001`). School code `DEMO001`.
 
-**Tests:** `npm test` (Jest) runs 529 unit tests over the pure utilities in
+**Tests:** `npm test` (Jest) runs 593 unit tests over the pure utilities in
 `backend/src/utils/__tests__/` — grade calculation, grade scales, report-card
 layouts and attendance, BS date conversion, pagination, the response helpers and the fee
 maths (`finance.test.js`: money, allocation, discounts, fiscal year, attendance rate) — plus the grade-scale service
@@ -112,9 +112,12 @@ the same with `npm run seed`.
 `node scripts/reconcile.js` checks every cached fee balance against the ledger.
 
 **Browser tests** live in `e2e/` (Playwright; see `e2e/README.md`):
-- 68 tests over report-card printing (real PDFs), the exam lifecycle and marks entry, the
+- 79 tests over report-card printing (real PDFs), the exam lifecycle and marks entry, the
   exam pilot, the pages of every role, fees and the fee printouts, sign-in by username, password
-  reset with the forced change, class login slips, and the public site.
+  reset with the forced change, class login slips, the public site, and the BS date picker and
+  school calendar (`calendar.spec.js`).
+- The app's date fields are `NepaliDatePicker`s, not native inputs: choose a date with
+  `pickDate(page, label, ad)` from `helpers/fixtures.js`.
 - They start their own servers on the MySQL test database (ports 5012 / 5184).
 - Run with `cd e2e && PW_CHANNEL=chrome npm test`.
 - A test fails on any unexpected console error.
@@ -447,6 +450,36 @@ academic-year start to the exam end and freezes them on `ReportCard`
   - **"Choose …" buttons** open `/contact?plan=<name>#enquiry`. Contact prefills the message only
     for names listed in `PRICING`.
 - Footer credit: "Created and Designed by Amir Shrestha" (https://amirlearner.me).
+
+**Dates and the school calendar** (docs in `docs/calendar/`; start with
+`bs-date-architecture.md`):
+- **Storage:** AD only. Calendar days are `@db.Date`; write them with `parseDateOnly()` and
+  validate with `isDateOnly` (`utils/calendar/dateValidation.js`), never `new Date(value)`.
+  The API never accepts BS.
+- **Conversion:** only through the adapters, `backend/src/utils/calendar/bsDateAdapter.js` and
+  `frontend/src/lib/calendar/bsDateAdapter.js` (same functions; the only files that import
+  `@inicrea/bikram-sambat-core`). Range BS 1975–2100; out of range returns `null`.
+- **Old converter:** `utils/dateConverter.js` still makes the older server BS strings
+  (attendance `bsDate`, receipts, day book, report-card issue date, fiscal year). Its table is
+  wrong for BS 2062, 2081, 2082, 2083 and 2087 (audit §6). It was left alone because it feeds
+  receipt numbering: switching it is the owner's decision. Do not copy its table anywhere.
+- **Web display:** every date goes through `utils/format.js` (`formatDate`, `formatDateTime`,
+  `dayParts`, `todayAd`), which follows the preference (school default in
+  `School.calendarConfig`, a person's own BS/AD/both choice in `localStorage`
+  `sms.calendar.prefs`). No `toLocaleDateString` on dates, no browser-zone "today".
+- **Web input:** `NepaliDatePicker` (kit) or `DateInput` (react-hook-form, pass `control`).
+  The value is AD `YYYY-MM-DD`.
+- **School calendar:** tables `calendar_events` (events and holidays), `calendar_event_audiences`,
+  `calendar_imports` (migration `20261115100000_school_calendar`); `/api/v1/calendar`;
+  pages under `/calendar`. Exams, assignment and fee due dates, notices and the academic year
+  are read from their own tables by `services/calendar/feed.js`, never copied. Audience rules in
+  `services/calendar/audience.js`.
+- **Holidays:** built-in lists in `backend/src/data/holidays/<bsYear>.json` (2083 transcribed
+  from the Nepal Gazette notice; a unit test checks every date's weekday). Import previews and
+  never overwrites.
+- **Attendance:** `POST /attendance` is refused on a weekly holiday or a holiday for the class
+  unless `calendarConfig.blockAttendanceOnNonWorkingDays` is false. A test that saves attendance
+  must pick a working day or switch the rule off.
 
 **Partial or rough:**
 - No admin-facing attendance report page (the API exists).

@@ -61,6 +61,15 @@ const FinanceBills = React.lazy(() => import("./pages/finance/Bills"));
 const ChangePassword = React.lazy(() => import("./pages/account/ChangePassword"));
 const LoginSlips = React.lazy(() => import("./pages/admin/LoginSlips"));
 const FinanceDaybook = React.lazy(() => import("./pages/finance/Daybook"));
+
+// School calendar (every role; management pages are role-checked below and by the API)
+const CalendarOverview = React.lazy(() => import("./pages/calendar/Overview"));
+const CalendarEvents = React.lazy(() => import("./pages/calendar/Events"));
+const CalendarHolidays = React.lazy(() => import("./pages/calendar/Holidays"));
+const CalendarExamSchedule = React.lazy(() => import("./pages/calendar/ExamSchedule"));
+const CalendarAcademic = React.lazy(() => import("./pages/calendar/AcademicCalendar"));
+const CalendarSettings = React.lazy(() => import("./pages/calendar/Settings"));
+const CalendarPrint = React.lazy(() => import("./pages/calendar/Print"));
 // Printable statement and bill: one module, a wrapper per role (pages/finance/FeePrintPages.jsx)
 const feePrint = (name) => React.lazy(() => import("./pages/finance/FeePrintPages").then((m) => ({ default: m[name] })));
 const StaffStatement = feePrint("StaffStatement");
@@ -349,6 +358,39 @@ function App() {
                 path="/staff/students"
                 element={<AdminStudents readOnly />}
               />
+            </Route>
+
+            {/* School calendar: everyone reads it; what each person sees is decided by the API */}
+            <Route
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/calendar" element={<CalendarOverview />} />
+              <Route path="/calendar/exams" element={<CalendarExamSchedule />} />
+              <Route path="/calendar/academic" element={<CalendarAcademic />} />
+              <Route path="/calendar/print/:kind" element={<CalendarPrint />} />
+            </Route>
+            <Route
+              element={
+                <ProtectedRoute roles={["ADMIN", "TEACHER"]}>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/calendar/events" element={<CalendarEvents />} />
+            </Route>
+            <Route
+              element={
+                <ProtectedRoute roles={["ADMIN"]}>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/calendar/holidays" element={<CalendarHolidays />} />
+              <Route path="/calendar/settings" element={<CalendarSettings />} />
             </Route>
 
             {/* Your own password (every role). Standalone: also where a user lands after

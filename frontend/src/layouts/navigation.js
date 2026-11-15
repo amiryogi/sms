@@ -29,6 +29,12 @@ import {
   ChartColumn,
   FileSpreadsheet,
   Table2,
+  CalendarDays,
+  CalendarPlus,
+  PartyPopper,
+  CalendarClock,
+  CalendarFold,
+  Settings2,
 } from "lucide-react";
 
 /*
@@ -36,6 +42,29 @@ import {
  * every section; a link that appears twice is kept once. Paths must exist in
  * App.jsx with matching ProtectedRoute roles.
  */
+
+// The school calendar. Everyone reads it; the management pages are per role.
+const CALENDAR_VIEW = [
+  { title: "Calendar", icon: CalendarDays, path: "/calendar" },
+  { title: "Exam Schedule", icon: CalendarClock, path: "/calendar/exams" },
+  { title: "Academic Calendar", icon: CalendarFold, path: "/calendar/academic" },
+];
+const CALENDAR_ADMIN = {
+  label: "Calendar",
+  items: [
+    CALENDAR_VIEW[0],
+    { title: "Events", icon: CalendarPlus, path: "/calendar/events" },
+    { title: "Holidays", icon: PartyPopper, path: "/calendar/holidays" },
+    CALENDAR_VIEW[1],
+    CALENDAR_VIEW[2],
+    { title: "Calendar Settings", icon: Settings2, path: "/calendar/settings" },
+  ],
+};
+const CALENDAR_TEACHER = {
+  label: "Calendar",
+  items: [CALENDAR_VIEW[0], { title: "My Class Events", icon: CalendarPlus, path: "/calendar/events" }, CALENDAR_VIEW[1], CALENDAR_VIEW[2]],
+};
+const CALENDAR_READER = { label: "Calendar", items: CALENDAR_VIEW };
 
 const ADMIN = [
   { label: "Overview", items: [{ title: "Dashboard", icon: LayoutDashboard, path: "/admin/dashboard" }] },
@@ -163,12 +192,14 @@ const PARENT = [
 /** Sections for this user. `hasRole("ADMIN")` is also true for SUPER_ADMIN. */
 export const getNavSections = (hasRole) => {
   const sections = [];
-  if (hasRole("ADMIN")) sections.push(...ADMIN);
-  if (hasRole("TEACHER")) sections.push(...TEACHER);
+  if (hasRole("ADMIN")) sections.push(...ADMIN, CALENDAR_ADMIN);
+  if (hasRole("TEACHER")) sections.push(...TEACHER, CALENDAR_TEACHER);
   if (hasRole("EXAM_OFFICER") && !hasRole("TEACHER") && !hasRole("ADMIN")) sections.push(...EXAM_OFFICER);
   if (hasRole("ACCOUNTANT") && !hasRole("ADMIN")) sections.push(...ACCOUNTANT);
   if (hasRole("STUDENT")) sections.push(...STUDENT);
   if (hasRole("PARENT")) sections.push(...PARENT);
+  // Everyone else reads the calendar (links already added above are kept once).
+  sections.push(CALENDAR_READER);
 
   const seen = new Set();
   return sections
@@ -183,7 +214,7 @@ export const getNavSections = (hasRole) => {
     .filter((s) => s.items.length > 0);
 };
 
-const ALL = [ADMIN, TEACHER, EXAM_OFFICER, ACCOUNTANT, STUDENT, PARENT].flat();
+const ALL = [ADMIN, TEACHER, EXAM_OFFICER, ACCOUNTANT, STUDENT, PARENT, [CALENDAR_ADMIN]].flat();
 
 /** Page title for a path, for breadcrumbs and the document title. */
 export const titleForPath = (pathname) => {

@@ -1,6 +1,6 @@
 # Where this project is
 
-Updated 2026-11-13. Keep this current when you stop work — it is the handover
+Updated 2026-11-15. Keep this current when you stop work — it is the handover
 between machines and between sessions.
 
 New machine? Start with [SETUP-NEW-MACHINE.md](SETUP-NEW-MACHINE.md).
@@ -9,6 +9,34 @@ New machine? Start with [SETUP-NEW-MACHINE.md](SETUP-NEW-MACHINE.md).
 are done** and on `main`.
 
 ---
+
+## BS calendar (2026-11-15): on branch `feature/bs-calendar` (cut from `feature/mobile-app`), not merged
+
+Bikram Sambat dates across the web app and a School Calendar module. Docs: `docs/calendar/`
+(start with `calendar-implementation-audit.md` and `bs-date-architecture.md`).
+
+- **Done:** verified BS engine behind adapters on both sides; `NepaliDatePicker` in all 13 date
+  fields; BS / AD / both display everywhere with a school default and a personal choice; school
+  calendar (month / week / list, events, holidays, exam schedule, year view, settings, A4
+  printouts); 2083 government holiday list with a preview-and-confirm import; weekly holidays
+  configurable; attendance refused on non-working days (switchable); date-only writes no longer
+  shift a day.
+- **Deploy:** run `npm run db:migrate:deploy` (migration `20261115100000_school_calendar`, new
+  tables and one nullable column) on every database, then restart. `npm install` in `backend/`
+  and `frontend/` (new package `@inicrea/bikram-sambat-core`).
+- **Verified (2026-11-15):** backend unit 593 passed; integration 131 passed on MySQL and the
+  calendar suite (26) on PostgreSQL; frontend lint, build and 34 vitest tests; Playwright 79
+  (one existing test, `smoke` super-admin refusal, is skipped as before).
+- **Decisions for the owner:**
+  1. **The old BS table is wrong** for BS 2062, 2081, 2082, 2083 and 2087 (audit §6): attendance
+     BS dates, receipts' BS dates and the day book can be a day off, e.g. 17 Oct–15 Dec 2026.
+     Recommended: make `utils/dateConverter.js` delegate to the new adapter. It changes the
+     fiscal year of exactly one day (16 July 2025); stored receipt numbers are not touched.
+  2. A notice "show until" date expires at 05:45 that morning, and a submission after 05:45 on
+     its due date is marked late (both are stored as UTC midnight). Not changed.
+  3. Timed reminders (a day before an event) need a scheduler the deployment does not have.
+- **Next:** decisions above; a per-subject exam schedule editor (`ExamSubject.examDate` has no
+  UI); calendar in the mobile app.
 
 ## Mobile app (2026-11-14): on branch `feature/mobile-app` (PR #1); first phone test done, its fixes not yet re-checked on a device
 
