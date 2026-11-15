@@ -49,16 +49,18 @@ export const MonthView = ({ weeks, byDay, prefs, mode, today, selected, onSelect
                   data-day={cell.ad}
                   aria-label={`${formatByPrefs(cell.ad, { ...prefs, calendar: "both" })}, ${items.length} item${items.length === 1 ? "" : "s"}`}
                   className={cn(
-                    "flex h-full min-h-16 w-full cursor-pointer flex-col items-stretch gap-1 p-1 text-left transition-colors sm:min-h-24 sm:p-1.5",
+                    // The day number sits in the middle of the box; the other calendar's
+                    // number in the lower right corner (pb- keeps room for it under the events).
+                    "relative flex h-full min-h-20 w-full cursor-pointer flex-col items-stretch gap-1 p-1 pb-5 text-left transition-colors sm:min-h-28 sm:p-1.5 sm:pb-6",
                     "focus-visible:relative focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-brand-600",
                     !cell.inMonth ? "bg-slate-50" : holiday || weekly ? "bg-red-50/60" : "bg-white",
                     isSelected ? "ring-2 ring-brand-500 ring-inset" : "hover:bg-brand-50/60",
                   )}
                 >
-                  <span className="flex items-start justify-between gap-1">
+                  <span className="flex flex-1 items-center justify-center">
                     <span
                       className={cn(
-                        "inline-flex size-6 items-center justify-center rounded-full text-sm leading-none font-semibold tabular-nums sm:size-7",
+                        "inline-flex size-9 items-center justify-center rounded-full text-xl leading-none font-semibold tabular-nums sm:size-12 sm:text-3xl",
                         isToday
                           ? "bg-brand-600 text-brand-fg"
                           : !cell.inMonth
@@ -70,9 +72,12 @@ export const MonthView = ({ weeks, byDay, prefs, mode, today, selected, onSelect
                     >
                       {cell.label === null ? "" : digits(cell.label, prefs.numerals)}
                     </span>
-                    <span className={cn("text-[10px] tabular-nums", cell.inMonth ? "text-slate-400" : "text-slate-300")} aria-hidden="true">
-                      {cell.altLabel === null ? "" : digits(cell.altLabel, mode === "bs" ? "en" : prefs.numerals)}
-                    </span>
+                  </span>
+                  <span
+                    className={cn("absolute right-1.5 bottom-1 text-xs leading-none font-medium tabular-nums sm:right-2 sm:bottom-1.5 sm:text-sm", cell.inMonth ? "text-slate-500" : "text-slate-300")}
+                    aria-hidden="true"
+                  >
+                    {cell.altLabel === null ? "" : digits(cell.altLabel, mode === "bs" ? "en" : prefs.numerals)}
                   </span>
                   {/* Names on wide screens, dots on phones */}
                   <span className="hidden flex-col gap-0.5 sm:flex">
