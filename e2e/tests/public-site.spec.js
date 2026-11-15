@@ -59,7 +59,20 @@ test.describe("public site", () => {
     await page.getByRole("tab", { name: /yearly/i }).click();
     await expect(basic).toHaveText("NPR 35,000");
 
-    await page.getByRole("link", { name: "Choose Basic" }).click();
+    // the optional mobile app, priced under each plan, follows the switch too
+    const app = page.getByTestId("addon-basic");
+    await expect(app).toHaveText("NPR 10,000");
+    await page.getByRole("tab", { name: /monthly/i }).click();
+    await expect(app).toHaveText("NPR 1,000");
+    await page.getByRole("tab", { name: /yearly/i }).click();
+    await expect(page.getByTestId("price-basic")).toHaveText("NPR 35,000");
+
+    await page.getByRole("link", { name: "Choose Basic + app" }).click();
+    await expect(page).toHaveURL(/\/contact\?plan=Basic%20%2B%20mobile%20app#enquiry$/);
+    await expect(page.locator("#c-message")).toHaveValue(/interested in the "Basic \+ mobile app" option/);
+
+    await page.goto("/pricing");
+    await page.getByRole("link", { name: "Choose Basic", exact: true }).click();
     await expect(page).toHaveURL(/\/contact\?plan=Basic#enquiry$/);
     await expect(page.locator("#c-message")).toHaveValue(/interested in the "Basic" option/);
     // an unknown plan name is ignored
@@ -67,11 +80,31 @@ test.describe("public site", () => {
     await expect(page.locator("#c-message")).toHaveValue("");
   });
 
+  test("the mobile app section shows real screens on iPhone and Android, coming soon to the stores", async ({ page }) => {
+    await page.goto("/");
+    const section = page.locator("#mobile-app");
+    await expect(section.getByRole("heading", { name: "The school in your pocket" })).toBeVisible();
+    await expect(section.getByRole("list", { name: "App stores" })).toContainText("Google Play");
+    await expect(section.getByRole("list", { name: "App stores" })).toContainText("App Store");
+    await expect(section.getByRole("link", { name: /Google Play|App Store/ })).toHaveCount(0);
+    for (const [tab, platform] of [["iPhone", "ios"], ["Android", "android"]]) {
+      await section.getByRole("tab", { name: tab }).click();
+      const shots = section.getByRole("list", { name: `App screens on ${tab}` }).locator("img");
+      await expect(shots).toHaveCount(5);
+      for (const src of await shots.evaluateAll((imgs) => imgs.map((i) => i.getAttribute("src")))) {
+        expect(src).toMatch(new RegExp(`^/screenshots/app/${platform}-`));
+        const res = await page.request.get(src);
+        expect(res.status(), src).toBe(200);
+        expect(res.headers()["content-type"], src).toContain("image/jpeg");
+      }
+    }
+  });
+
   test("every screenshot on the tour exists", async ({ page }) => {
     await page.goto("/tour");
     await expect(page.getByRole("button", { name: "Open Admin dashboard" })).toBeVisible();
     const sources = await page.locator("main ul img").evaluateAll((imgs) => imgs.map((i) => i.getAttribute("src")));
-    expect(sources.length).toBeGreaterThanOrEqual(18);
+    expect(sources.length).toBeGreaterThanOrEqual(20);
     for (const src of sources) {
       const res = await page.request.get(src);
       expect(res.status(), src).toBe(200);

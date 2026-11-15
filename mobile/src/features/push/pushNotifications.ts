@@ -25,7 +25,8 @@ export type PushStatus =
   | "error"; // could not reach Expo or the server; retried on the next launch
 
 const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
-export const pushSupported = Device.isDevice && !(isExpoGo && Platform.OS === "android");
+// The web build (only used to capture screenshots for the public site) has no push.
+export const pushSupported = Platform.OS !== "web" && Device.isDevice && !(isExpoGo && Platform.OS === "android");
 
 type Notifications = typeof import("expo-notifications");
 /** Loaded on first use, and only where push can work. */

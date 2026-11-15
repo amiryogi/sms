@@ -3,11 +3,15 @@ import { Link } from "react-router-dom";
 import { ArrowRight, CheckCircle2, Lock, ShieldCheck } from "lucide-react";
 import { buttonClasses } from "../../components/ui";
 import { cn } from "../../lib/cn";
+import AppShowcase from "../../components/public/AppShowcase";
 import PageHero from "../../components/public/PageHero";
+import ShotStage from "../../components/public/ShotStage";
 import ShotSwitcher from "../../components/public/ShotSwitcher";
 import { Reveal, Stagger, StaggerItem } from "../../components/public/Reveal";
 import usePageTitle from "../../components/public/usePageTitle";
 import { FEATURES, ROLES, SCREENSHOTS } from "./content";
+
+const COUNT_WORDS = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve"];
 
 /** Shown beside the security section, which has no single screen to picture. */
 const SecurityPanel = () => (
@@ -56,8 +60,16 @@ const FeatureSection = ({ feature, index }) => {
             ))}
           </ul>
         </Reveal>
-        <Reveal delay={0.1} className={cn(flipped && "lg:order-1")}>
-          {shots.length ? <ShotSwitcher shots={shots} label={feature.title} /> : <SecurityPanel />}
+        <Reveal delay={0.1} className={cn("min-w-0", flipped && "lg:order-1")}>
+          {feature.app ? (
+            <ShotStage className="px-3 py-6 sm:px-6">
+              <AppShowcase />
+            </ShotStage>
+          ) : shots.length ? (
+            <ShotSwitcher shots={shots} label={feature.title} />
+          ) : (
+            <SecurityPanel />
+          )}
         </Reveal>
       </div>
     </section>
@@ -71,7 +83,7 @@ const Features = () => {
       <PageHero
         eyebrow="Features"
         title="Built for the whole school year"
-        intro="Eight areas that work together: what a teacher records in the morning is on the parent's phone that afternoon, and on the report card at the end of term."
+        intro={`${COUNT_WORDS[FEATURES.length] ?? FEATURES.length} areas that work together: what a teacher records in the morning is on the parent's phone that afternoon, and on the report card at the end of term.`}
       >
         <nav aria-label="Features on this page" className="mt-8 flex flex-wrap justify-center gap-2">
           {FEATURES.map((f) => (

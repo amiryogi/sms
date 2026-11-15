@@ -444,11 +444,18 @@ academic-year start to the exam end and freezes them on `ReportCard`
   the seeded test database by `cd e2e && PW_CHANNEL=chrome npm run screenshots`
   (`e2e/screenshots/capture.spec.js`, its own config, not part of `npm test`). Look at every
   image before committing it.
+- **Mobile app screenshots** (`frontend/public/screenshots/app/{ios,android}-*.jpg`) come from
+  the app's web build (`npm run screenshots:mobile`; steps in `e2e/README.md`). That build exists
+  only for the capture and is never shipped. `components/public/DeviceFrame.jsx` draws the iPhone
+  or Android outline and status bar; `AppShowcase.jsx` switches platforms. The app is not in the
+  stores yet: `StoreBadges.jsx` says "Coming soon" and links nowhere. Don't claim app features the
+  app lacks (it has no calendar yet).
 - **Pricing** (`/pricing`):
   - **Prices** live in `PRICING` in `content.js` (yearly plans; monthly = yearly / 10 payments;
-    per student, modules, one-time; offers; extras). Change the figures only there.
-  - **"Choose …" buttons** open `/contact?plan=<name>#enquiry`. Contact prefills the message only
-    for names listed in `PRICING`.
+    the optional mobile app `mobileApp`, NPR 10,000 a year on the three plans only; per student,
+    modules, one-time; offers; extras). Change the figures only there.
+  - **"Choose …" buttons** open `/contact?plan=<name>#enquiry` ("Choose Basic + app" sends
+    `Basic + mobile app`). Contact prefills the message only for names built from `PRICING`.
 - Footer credit: "Created and Designed by Amir Shrestha" (https://amirlearner.me).
 
 **Dates and the school calendar** (docs in `docs/calendar/`; start with

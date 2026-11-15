@@ -8,7 +8,8 @@
     "test:visual": "playwright test --grep @visual",
     "update-baselines": "playwright test --grep @visual --update-snapshots",
     "report": "playwright show-report",
-    "screenshots": "playwright test --config playwright.screenshots.config.js"
+    "screenshots": "playwright test --config playwright.screenshots.config.js",
+    "screenshots:mobile": "playwright test --config playwright.mobile-shots.config.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.0"

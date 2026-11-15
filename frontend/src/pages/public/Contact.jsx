@@ -10,7 +10,11 @@ import usePageTitle from "../../components/public/usePageTitle";
 import { CONTACT, FAQ, PRICING, mailtoLink, whatsappLink } from "./content";
 
 // Names a pricing button may pass as ?plan= (anything else is ignored).
-const PLAN_NAMES = [...PRICING.plans.map((p) => p.name), ...PRICING.options.map((o) => o.title)];
+const PLAN_NAMES = [
+  ...PRICING.plans.map((p) => p.name),
+  ...PRICING.plans.map((p) => `${p.name} + mobile app`),
+  ...PRICING.options.map((o) => o.title),
+];
 
 /** Opening message when the visitor came from a "Choose …" button on the pricing page. */
 const planMessage = (plan) =>
