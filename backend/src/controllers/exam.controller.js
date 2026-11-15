@@ -1,4 +1,5 @@
 const prisma = require("../config/database");
+const { parseDateOnly } = require("../utils/calendar/dateValidation");
 const { ApiError, ApiResponse, asyncHandler } = require("../utils");
 
 // Only admins see DRAFT exams; every other role sees PUBLISHED and LOCKED only.
@@ -148,8 +149,8 @@ const createExam = asyncHandler(async (req, res) => {
       examType,
       status: "DRAFT",
       createdBy: req.user.id,
-      startDate: startDate ? new Date(startDate) : null,
-      endDate: endDate ? new Date(endDate) : null,
+      startDate: startDate ? parseDateOnly(startDate) : null,
+      endDate: endDate ? parseDateOnly(endDate) : null,
     },
   });
 
@@ -287,7 +288,7 @@ const updateExamSubjects = asyncHandler(async (req, res) => {
           },
         },
         update: {
-          examDate: sub.examDate ? new Date(sub.examDate) : undefined,
+          examDate: sub.examDate ? parseDateOnly(sub.examDate) : undefined,
           startTime: sub.startTime ? new Date(sub.startTime) : undefined,
           endTime: sub.endTime ? new Date(sub.endTime) : undefined,
           fullMarks: resolvedFull,
@@ -299,7 +300,7 @@ const updateExamSubjects = asyncHandler(async (req, res) => {
         create: {
           examId,
           classSubjectId: parseInt(sub.classSubjectId),
-          examDate: sub.examDate ? new Date(sub.examDate) : null,
+          examDate: sub.examDate ? parseDateOnly(sub.examDate) : null,
           startTime: sub.startTime ? new Date(sub.startTime) : null,
           endTime: sub.endTime ? new Date(sub.endTime) : null,
           // Copy evaluation flags from ClassSubject (snapshot)
@@ -358,8 +359,8 @@ const updateExam = asyncHandler(async (req, res) => {
     data: {
       name: name || exam.name,
       examType: examType || exam.examType,
-      startDate: startDate ? new Date(startDate) : exam.startDate,
-      endDate: endDate ? new Date(endDate) : exam.endDate,
+      startDate: startDate ? parseDateOnly(startDate) : exam.startDate,
+      endDate: endDate ? parseDateOnly(endDate) : exam.endDate,
       academicYearId: academicYearId
         ? parseInt(academicYearId)
         : exam.academicYearId,

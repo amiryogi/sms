@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { LayoutDashboard, Wallet, AlertTriangle, CalendarDays, Coins, HandCoins, FileSpreadsheet, ArrowRight, RotateCw } from "lucide-react";
 import { feeService } from "../../api/feeService";
 import { academicService } from "../../api/academicService";
-import { PageHeader, Card, CardHeader, Button, SelectInput, TextInput, Skeleton, EmptyState, Avatar, Badge, toast } from "../../components/ui";
+import { PageHeader, Card, CardHeader, Button, SelectInput, NepaliDatePicker, Skeleton, EmptyState, Avatar, Badge, toast } from "../../components/ui";
 import { DailyCollectionChart, MonthlyCollectionChart, CollectedVsOutstandingChart, FeeStateBar, OverdueTrendChart } from "../../components/finance/charts/FinanceCharts";
 import { PAYMENT_METHODS, methodLabel, fullName } from "../../components/finance/financeLabels";
 import { SERIES } from "../../components/finance/charts/chartTheme";
@@ -125,8 +125,8 @@ const FinanceDashboard = () => {
               <option key={m.value} value={m.value}>{methodLabel(m.value)}</option>
             ))}
           </SelectInput>
-          <TextInput type="date" aria-label="Collections from" value={filters.from} onChange={(e) => set("from", e.target.value)} title="Collections from (default: last 30 days)" />
-          <TextInput type="date" aria-label="Collections to" value={filters.to} onChange={(e) => set("to", e.target.value)} title="Collections to (default: today)" />
+          <NepaliDatePicker aria-label="Collections from" value={filters.from} max={filters.to || undefined} onChange={(ad) => set("from", ad)} placeholder="From (last 30 days)" className="w-full sm:w-56" />
+          <NepaliDatePicker aria-label="Collections to" value={filters.to} min={filters.from || undefined} onChange={(ad) => set("to", ad)} placeholder="To (today)" className="w-full sm:w-56" />
         </div>
         {(filtered || filters.from || filters.to) && (
           <p className="mt-2 text-xs text-slate-500">

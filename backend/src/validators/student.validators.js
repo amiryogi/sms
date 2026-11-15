@@ -1,4 +1,5 @@
 const { body } = require('express-validator');
+const { isDateOnly } = require('../utils/calendar/dateValidation');
 const { middleNameRule, optionalEmailRule, usernameRule, optionalPasswordRule } = require('./common.validators');
 
 const studentRules = [
@@ -15,12 +16,12 @@ const studentRules = [
   // Student info
   // Empty: the server generates one (school initials and a running number).
   body('admissionNumber').optional({ values: 'falsy' }).isString().trim().isLength({ max: 50 }).withMessage('Admission number must be at most 50 characters'),
-  body('dateOfBirth').isISO8601().withMessage('Valid date of birth is required'),
+  body('dateOfBirth').custom(isDateOnly).withMessage('Valid date of birth is required'),
   body('gender').isIn(['male', 'female', 'other']).withMessage('Valid gender is required'),
   body('bloodGroup').optional().trim(),
   body('address').optional().trim(),
   body('emergencyContact').optional().trim(),
-  body('admissionDate').isISO8601().withMessage('Valid admission date is required'),
+  body('admissionDate').custom(isDateOnly).withMessage('Valid admission date is required'),
   
   // Enrollment info
   body('classId').isInt().withMessage('Valid Class ID is required'),
@@ -36,7 +37,7 @@ const updateStudentRules = [
   middleNameRule,
   body('lastName').optional().trim().notEmpty().withMessage('Last name cannot be empty'),
   body('phone').optional().trim(),
-  body('dateOfBirth').optional().isISO8601().withMessage('Valid date of birth is required'),
+  body('dateOfBirth').optional().custom(isDateOnly).withMessage('Valid date of birth is required'),
   body('gender').optional().isIn(['male', 'female', 'other']).withMessage('Valid gender is required'),
   body('bloodGroup').optional().trim(),
   body('address').optional().trim(),

@@ -95,6 +95,7 @@ const classLogins = async ({ actor, schoolId, classId, sectionId, academicYearId
       await tx.user.update({ where: { id: a.user.id }, data: { passwordHash: a.passwordHash, mustChangePassword: true } });
     }
     await tx.refreshToken.deleteMany({ where: { userId: { in: withPasswords.map((a) => a.user.id) } } });
+    await tx.deviceToken.deleteMany({ where: { userId: { in: withPasswords.map((a) => a.user.id) } } });
   });
   for (const a of withPasswords) logPasswordSet(actor, a.user, "class login slip");
 

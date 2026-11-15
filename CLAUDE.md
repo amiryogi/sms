@@ -24,13 +24,13 @@ has `school_id`) but only one school is seeded and used.
 | Backend  | Node.js ≥18, Express 4, Prisma 5.22, JWT (access + refresh). Database: **MySQL 8 or Supabase PostgreSQL**, one per deployment (`DATABASE_PROVIDER`; see §4.12 and `docs/database/`) |
 | Frontend | React 19 + Vite 7, React Router 7, Axios, react-hook-form, lucide-react |
 | Styling  | **Tailwind CSS 4** (`@tailwindcss/vite`), tokens in `frontend/src/styles/app.css`, kit in `src/components/ui/`. No CSS-in-JS. shadcn/ui pieces in `src/components/shadcn/` (see §9). Charts: `recharts`, colours in `components/finance/charts/chartTheme.js` |
-| Dates    | AD stored in DB; BS (Bikram Sambat) rendered via `backend/src/utils/dateConverter.js` |
+| Dates    | AD stored in DB; BS (Bikram Sambat) shown and entered through `utils/calendar/` (server) and `lib/calendar/` (web) over `@inicrea/bikram-sambat-core`. See §6 "Dates and the school calendar" |
 
 Repo layout:
 
 ```
 backend/            Express API + Prisma
-  prisma/schema/models.prisma  ~1200 lines, 45 models — the source of truth (edit only this)
+  prisma/schema/models.prisma  ~1200 lines, 46 models — the source of truth (edit only this)
   prisma/{mysql,postgresql}/  generated schema.prisma + that provider's migrations
   prisma/build-schemas.js   models.prisma -> both provider schemas
   prisma/seed.js            roles, permissions, demo school, classes, students
@@ -40,6 +40,8 @@ backend/            Express API + Prisma
   src/{routes,controllers,services,middleware,validators,utils,config}
 frontend/src/{api,pages,components,layouts,context}
 e2e/                        Playwright browser tests (own package.json)
+mobile/                     Expo / React Native app for all roles (own package.json); API client only,
+                            no business rules. Read mobile/README.md and mobile/docs/ first
 .github/                    feature specs written before implementation (read these)
 database/schema.sql         raw SQL mirror of the Prisma schema
 ```
@@ -74,7 +76,7 @@ Demo logins (after seed, password `password123`): sign in with a **username or t
 students by admission number (`stu20240001`), parents as `p.<child's admission number>`
 (`p.stu20240001`). School code `DEMO001`.
 
-**Tests:** `npm test` (Jest) runs 509 unit tests over the pure utilities in
+**Tests:** `npm test` (Jest) runs 593 unit tests over the pure utilities in
 `backend/src/utils/__tests__/` — grade calculation, grade scales, report-card
 layouts and attendance, BS date conversion, pagination, the response helpers and the fee
 maths (`finance.test.js`: money, allocation, discounts, fiscal year, attendance rate) — plus the grade-scale service
@@ -95,7 +97,9 @@ provider:
   case-insensitive search;
 - the HTTP API through supertest (`api.test.js`): auth, RBAC, school isolation, ownership,
   the exam lifecycle and snapshot rule, result and report-card publication gating, fees,
-  promotions.
+  promotions;
+- push notifications (`push.test.js`, the sender replaced by a recorder): device registration,
+  and who is told about a notice or an absence.
 
 `scripts/with-test-db.js --provider mysql|pg` points any command at the test database and
 refuses one the app is configured to use:
@@ -108,9 +112,12 @@ the same with `npm run seed`.
 `node scripts/reconcile.js` checks every cached fee balance against the ledger.
 
 **Browser tests** live in `e2e/` (Playwright; see `e2e/README.md`):
-- 68 tests over report-card printing (real PDFs), the exam lifecycle and marks entry, the
+- 79 tests over report-card printing (real PDFs), the exam lifecycle and marks entry, the
   exam pilot, the pages of every role, fees and the fee printouts, sign-in by username, password
-  reset with the forced change, class login slips, and the public site.
+  reset with the forced change, class login slips, the public site, and the BS date picker and
+  school calendar (`calendar.spec.js`).
+- The app's date fields are `NepaliDatePicker`s, not native inputs: choose a date with
+  `pickDate(page, label, ad)` from `helpers/fixtures.js`.
 - They start their own servers on the MySQL test database (ports 5012 / 5184).
 - Run with `cd e2e && PW_CHANNEL=chrome npm test`.
 - A test fails on any unexpected console error.
@@ -286,6 +293,24 @@ Rules the RBAC audit (2026-11-07) established — keep them:
 
 ## 6. Feature state
 
+**Push notifications (mobile app):** `services/push/`, table `device_tokens` (migration
+`20261114100000_device_tokens`).
+- **Devices:** `POST /devices { token, platform }` and `DELETE /devices/:token`, any signed-in
+  user, always for `req.user`. A token that signs in as someone else moves to them. Signing out,
+  and everything else that ends a user's sessions, deletes their device rows.
+- **Sending:** Expo's push service (`expoPush.js`), after the response, never failing the
+  request. `PUSH_ENABLED=false` switches it off; it is off in tests unless a test installs a
+  transport (`push.setTransport`).
+- **Triggers** (`notify.*`, called after the write succeeds): notice published; assignment
+  published; submission graded (first time); report cards published; a student newly marked
+  absent on today's register (parents only).
+- **Recipients** (`recipients.js`) mirror what the read endpoints show each person, with
+  `schoolId` on every query. A message carries a title, one line and ids, never marks or amounts.
+  Add a new trigger the same way: a recipients function, a message, a `notify` entry.
+- **Attendance days** are calendar dates: `attendanceDay()` in `attendance.controller.js` builds
+  UTC midnight from the date's digits. Never `setHours(0,0,0,0)`: with the server in Nepal time
+  that stored the previous day and made a second save fail (fixed 2026-11-14).
+
 **Sign-in names:** every user has a `username`, unique per school and stored lower case
 (`utils/usernames.js`); `email` is optional. `POST /auth/login` takes `{ identifier, password,
 schoolCode? }`, where an identifier with "@" is an email (the old `email` field still works).
@@ -426,12 +451,42 @@ academic-year start to the exam end and freezes them on `ReportCard`
     for names listed in `PRICING`.
 - Footer credit: "Created and Designed by Amir Shrestha" (https://amirlearner.me).
 
+**Dates and the school calendar** (docs in `docs/calendar/`; start with
+`bs-date-architecture.md`):
+- **Storage:** AD only. Calendar days are `@db.Date`; write them with `parseDateOnly()` and
+  validate with `isDateOnly` (`utils/calendar/dateValidation.js`), never `new Date(value)`.
+  The API never accepts BS.
+- **Conversion:** only through the adapters, `backend/src/utils/calendar/bsDateAdapter.js` and
+  `frontend/src/lib/calendar/bsDateAdapter.js` (same functions; the only files that import
+  `@inicrea/bikram-sambat-core`). Range BS 1975–2100; out of range returns `null`.
+- **Old converter:** `utils/dateConverter.js` still makes the older server BS strings
+  (attendance `bsDate`, receipts, day book, report-card issue date, fiscal year). Its table is
+  wrong for BS 2062, 2081, 2082, 2083 and 2087 (audit §6). It was left alone because it feeds
+  receipt numbering: switching it is the owner's decision. Do not copy its table anywhere.
+- **Web display:** every date goes through `utils/format.js` (`formatDate`, `formatDateTime`,
+  `dayParts`, `todayAd`), which follows the preference (school default in
+  `School.calendarConfig`, a person's own BS/AD/both choice in `localStorage`
+  `sms.calendar.prefs`). No `toLocaleDateString` on dates, no browser-zone "today".
+- **Web input:** `NepaliDatePicker` (kit) or `DateInput` (react-hook-form, pass `control`).
+  The value is AD `YYYY-MM-DD`.
+- **School calendar:** tables `calendar_events` (events and holidays), `calendar_event_audiences`,
+  `calendar_imports` (migration `20261115100000_school_calendar`); `/api/v1/calendar`;
+  pages under `/calendar`. Exams, assignment and fee due dates, notices and the academic year
+  are read from their own tables by `services/calendar/feed.js`, never copied. Audience rules in
+  `services/calendar/audience.js`.
+- **Holidays:** built-in lists in `backend/src/data/holidays/<bsYear>.json` (2083 transcribed
+  from the Nepal Gazette notice; a unit test checks every date's weekday). Import previews and
+  never overwrites.
+- **Attendance:** `POST /attendance` is refused on a weekly holiday or a holiday for the class
+  unless `calendarConfig.blockAttendanceOnNonWorkingDays` is false. A test that saves attendance
+  must pick a working day or switch the rule off.
+
 **Partial or rough:**
 - No admin-facing attendance report page (the API exists).
 - The admin and teacher dashboards are stat cards; only the finance dashboard has charts.
 
 **Not built:** timetable/routine, library, transport, hostel, SMS/email
-notifications, payroll, certificates and transfer certificates, audit-log UI,
+notifications (push to the mobile app exists), payroll, certificates and transfer certificates, audit-log UI,
 multi-school admin UI.
 
 **Divergence from `.github/backend-rules.md`:** that file prescribes

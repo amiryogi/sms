@@ -4,10 +4,11 @@ import { FileSpreadsheet, Printer, Download, TrendingUp, AlertTriangle, BadgePer
 import { useAuth } from "../../context/AuthContext";
 import { feeService } from "../../api/feeService";
 import { academicService } from "../../api/academicService";
-import { PageHeader, Tabs, Card, Button, Field, SelectInput, TextInput, Switch, EmptyState, LoadingBlock, toast } from "../../components/ui";
+import { PageHeader, Tabs, Card, Button, Field, SelectInput, NepaliDatePicker, Switch, EmptyState, LoadingBlock, toast } from "../../components/ui";
 import { PAYMENT_METHODS, methodLabel } from "../../components/finance/financeLabels";
 import { cn } from "../../lib/cn";
-import { formatCurrency, formatDate } from "../../utils/format";
+import { formatCurrency, formatDate, formatDateTime, todayAd } from "../../utils/format";
+import { adToBs, bsToAd } from "../../lib/calendar/bsDateAdapter";
 
 const REPORTS = [
   { value: "collections", label: "Collections", icon: TrendingUp },
@@ -16,17 +17,17 @@ const REPORTS = [
   { value: "reversals", label: "Reversals", icon: Undo2 },
 ];
 
-const localToday = () => {
-  const d = new Date();
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-};
-const monthStart = () => `${localToday().slice(0, 8)}01`;
+const localToday = todayAd;
+// Reports open on the current Nepali month, and reversals on the Nepali year so far.
+const bsToday = () => adToBs(localToday());
+const monthStart = () => bsToAd({ ...bsToday(), day: 1 });
+const yearStart = () => bsToAd({ year: bsToday().year, month: 1, day: 1 });
 
 const DEFAULTS = {
   collections: { from: monthStart(), to: localToday(), groupBy: "day", classId: "", feeTypeId: "", method: "", academicYearId: "" },
   outstanding: { academicYearId: "", classId: "", overdueOnly: "false" },
   discounts: { academicYearId: "", status: "" },
-  reversals: { from: `${localToday().slice(0, 4)}-01-01`, to: localToday() },
+  reversals: { from: yearStart(), to: localToday() },
 };
 
 const cellValue = (col, value) => {
@@ -121,10 +122,10 @@ const Reports = () => {
   const dateRange = (
     <>
       <Field label="From" htmlFor="r-from">
-        <TextInput id="r-from" type="date" value={current.from} max={current.to || undefined} onChange={(e) => set("from", e.target.value)} />
+        <NepaliDatePicker id="r-from" value={current.from} max={current.to || undefined} onChange={(ad) => set("from", ad)} />
       </Field>
       <Field label="To" htmlFor="r-to">
-        <TextInput id="r-to" type="date" value={current.to} max={localToday()} onChange={(e) => set("to", e.target.value)} />
+        <NepaliDatePicker id="r-to" value={current.to} min={current.from || undefined} max={localToday()} onChange={(ad) => set("to", ad)} />
       </Field>
     </>
   );
@@ -219,7 +220,7 @@ const Reports = () => {
               <p className="hidden text-sm font-semibold text-slate-900 print:block">{user?.school?.name}</p>
               <h2 className="text-lg font-semibold text-slate-900">{result.title}</h2>
               <p className="text-sm text-slate-500">{result.subtitle}</p>
-              <p className="hidden text-xs text-slate-500 print:block">Printed {new Date().toLocaleString("en-GB")}</p>
+              <p className="hidden text-xs text-slate-500 print:block">Printed {formatDateTime(new Date())}</p>
             </div>
             <div className="flex gap-2 print:hidden">
               <Button variant="secondary" icon={Printer} onClick={() => window.print()} disabled={!result.rows.length}>Print</Button>

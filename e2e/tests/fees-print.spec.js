@@ -1,7 +1,7 @@
 // Fee printouts: bills four to an A4 page, a receipt as a quarter-page slip,
 // the A4 statement and the day book. Totals on paper must equal the API's.
 const fs = require("node:fs");
-const { test, expect, data, stateFor, pdfPageCount, pdfPageSize, printPdf } = require("../helpers/fixtures");
+const { test, expect, data, stateFor, pdfPageCount, pdfPageSize, printPdf, pickDate } = require("../helpers/fixtures");
 const { call } = require("../helpers/api");
 
 const SLIP_HEIGHT_MM = 148.5;
@@ -178,8 +178,8 @@ test.describe("day book", () => {
     expect(api.status).toBe(200);
 
     await page.goto("/finance/transactions");
-    await page.getByLabel("From date").fill(from);
-    await page.getByLabel("To date").fill(to);
+    await pickDate(page, "To date", to);
+    await pickDate(page, "From date", from);
     await page.getByRole("button", { name: "Print day book" }).click();
     await expect(page).toHaveURL(new RegExp(`/finance/daybook\\?from=${from}&to=${to}`));
     await expect(page.locator(".daybook-row")).toHaveCount(api.body.data.rows.length);

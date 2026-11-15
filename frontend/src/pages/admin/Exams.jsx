@@ -3,7 +3,7 @@ import { useForm, Controller } from "react-hook-form";
 import { Plus, Eye, Trash2, Pencil, Lock, Unlock, Send, ClipboardList, Check, FlaskConical } from "lucide-react";
 import DataTable from "../../components/common/DataTable";
 import Modal from "../../components/common/Modal";
-import { Input, Select, Button, FormRow } from "../../components/common/FormElements";
+import { Input, DateInput, Select, Button, FormRow } from "../../components/common/FormElements";
 import { PageHeader, Badge, IconButton, Tabs, Alert, DialogActions, toast, confirmDialog } from "../../components/ui";
 import { cn } from "../../lib/cn";
 import { examService } from "../../api/examService";
@@ -431,8 +431,8 @@ const Exams = () => {
           </FormRow>
           <FormRow>
             <Select label="Academic year" name="academicYearId" options={academicYearOptions} register={register} error={errors.academicYearId?.message} required />
-            <Input label="Starts" name="startDate" type="date" register={register} error={errors.startDate?.message} required />
-            <Input label="Ends" name="endDate" type="date" register={register} error={errors.endDate?.message} required />
+            <DateInput label="Starts" name="startDate" control={control} error={errors.startDate?.message} required />
+            <DateInput label="Ends" name="endDate" control={control} error={errors.endDate?.message} required />
           </FormRow>
           {!editingExam && <ClassPicker classes={classes} control={control} name="classIds" />}
           <DialogActions>

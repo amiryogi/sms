@@ -1,4 +1,5 @@
 const prisma = require('../config/database');
+const { parseDateOnly } = require("../utils/calendar/dateValidation");
 const { dialect } = require('../database');
 const { ApiError, ApiResponse, asyncHandler, parsePagination, parseSort, buildSearchQuery } = require('../utils');
 const { normalizeMiddleName } = require('../utils/names');
@@ -321,12 +322,12 @@ const createStudent = asyncHandler(async (req, res) => {
         userId: user.id,
         schoolId: req.user.schoolId,
         admissionNumber,
-        dateOfBirth: new Date(dateOfBirth),
+        dateOfBirth: parseDateOnly(dateOfBirth),
         gender,
         bloodGroup,
         address,
         emergencyContact,
-        admissionDate: new Date(admissionDate),
+        admissionDate: parseDateOnly(admissionDate),
       },
     });
 
@@ -450,7 +451,7 @@ const updateStudent = asyncHandler(async (req, res) => {
     await tx.student.update({
       where: { id: studentId },
       data: {
-        ...(dateOfBirth && isAdmin && { dateOfBirth: new Date(dateOfBirth) }),
+        ...(dateOfBirth && isAdmin && { dateOfBirth: parseDateOnly(dateOfBirth) }),
         ...(gender && isAdmin && { gender }),
         ...(bloodGroup !== undefined && isAdmin && { bloodGroup }),
         ...(address !== undefined && { address }),

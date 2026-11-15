@@ -1,5 +1,7 @@
 const prisma = require("../config/database");
+const { parseDateOnly } = require("../utils/calendar/dateValidation");
 const { ApiError, ApiResponse, asyncHandler } = require("../utils");
+const { notify } = require("../services/push");
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
@@ -280,7 +282,7 @@ const createAssignment = asyncHandler(async (req, res) => {
       teacherSubjectId: parseInt(teacherSubjectId),
       title,
       description,
-      dueDate: dueDate ? new Date(dueDate) : null,
+      dueDate: dueDate ? parseDateOnly(dueDate) : null,
       totalMarks: totalMarks ? parseInt(totalMarks) : 100,
       isPublished: isPublished === "true" || isPublished === true,
       assignmentFiles: {
@@ -305,6 +307,8 @@ const createAssignment = asyncHandler(async (req, res) => {
     },
     include: { assignmentFiles: true },
   });
+
+  if (assignment.isPublished) notify.assignmentPublished(req.user.schoolId, assignment.id);
 
   ApiResponse.created(res, assignment, "Assignment created successfully");
 });
@@ -360,7 +364,7 @@ const updateAssignment = asyncHandler(async (req, res) => {
     data: {
       title: title || assignment.title,
       description: description || assignment.description,
-      dueDate: dueDate ? new Date(dueDate) : assignment.dueDate,
+      dueDate: dueDate ? parseDateOnly(dueDate) : assignment.dueDate,
       totalMarks: totalMarks ? parseInt(totalMarks) : assignment.totalMarks,
       isPublished:
         isPublished !== undefined
@@ -388,6 +392,9 @@ const updateAssignment = asyncHandler(async (req, res) => {
     },
     include: { assignmentFiles: true },
   });
+
+  // Only when it becomes visible: editing a published assignment sends nothing.
+  if (updated.isPublished && !assignment.isPublished) notify.assignmentPublished(req.user.schoolId, updated.id);
 
   ApiResponse.success(res, updated, "Assignment updated successfully");
 });

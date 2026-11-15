@@ -1,0 +1,21 @@
+{
+  "note": "AD <-> BS pairs checked against sources outside the conversion package. The backend and frontend unit tests both read this file.",
+  "pairs": [
+    { "ad": "2026-10-18", "bs": [2083, 7, 1], "weekday": 0, "source": "Kathmandu Metropolitan City calendar (kathmandu.gov.np/en/calendar), Kartik 2083" },
+    { "ad": "2026-11-16", "bs": [2083, 7, 30], "weekday": 1, "source": "Kathmandu Metropolitan City calendar, Kartik 2083 (last day)" },
+    { "ad": "2026-10-21", "bs": [2083, 7, 4], "weekday": 3, "source": "Kathmandu Metropolitan City calendar: Vijaya Dashami" },
+    { "ad": "2026-11-11", "bs": [2083, 7, 25], "weekday": 3, "source": "Kathmandu Metropolitan City calendar: Bhai Tika" },
+    { "ad": "2025-10-20", "bs": [2082, 7, 3], "weekday": 1, "source": "Hamro Patro public holidays 2082: 3 Kartik 2082" },
+    { "ad": "2025-07-17", "bs": [2082, 4, 1], "weekday": 4, "source": "Fiscal year 2082/83 began on Shrawan 1, Thursday 17 July 2025 (Nepal Rastra Bank, press reports)" },
+    { "ad": "2024-06-24", "bs": [2081, 3, 10], "weekday": 1, "source": "Daily almanac: 24 June 2024 = Asar 10, 2081" },
+    { "ad": "2026-04-14", "bs": [2083, 1, 1], "weekday": 2, "source": "Nepali New Year 2083" },
+    { "ad": "2025-04-14", "bs": [2082, 1, 1], "weekday": 1, "source": "Nepali New Year 2082" },
+    { "ad": "2024-04-13", "bs": [2081, 1, 1], "weekday": 6, "source": "Nepali New Year 2081" },
+    { "ad": "2023-04-14", "bs": [2080, 1, 1], "weekday": 5, "source": "Nepali New Year 2080" },
+    { "ad": "2020-04-13", "bs": [2077, 1, 1], "weekday": 1, "source": "Nepali New Year 2077" },
+    { "ad": "2010-04-14", "bs": [2067, 1, 1], "weekday": 3, "source": "Nepali New Year 2067" },
+    { "ad": "2000-01-01", "bs": [2056, 9, 17], "weekday": 6, "source": "Widely published: 1 January 2000 = 17 Poush 2056" },
+    { "ad": "1944-01-01", "bs": [2000, 9, 17], "weekday": 6, "source": "Widely published reference point: 1 January 1944 = 17 Poush 2000" },
+    { "ad": "2024-01-01", "bs": [2080, 9, 16], "weekday": 1, "source": "1 January 2024 = 16 Poush 2080" }
+  ]
+}

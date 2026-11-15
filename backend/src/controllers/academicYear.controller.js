@@ -1,4 +1,5 @@
 const prisma = require('../config/database');
+const { parseDateOnly } = require("../utils/calendar/dateValidation");
 const { ApiError, ApiResponse, asyncHandler } = require('../utils');
 
 /**
@@ -64,8 +65,8 @@ const createAcademicYear = asyncHandler(async (req, res) => {
     data: {
       schoolId: req.user.schoolId,
       name,
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
+      startDate: parseDateOnly(startDate),
+      endDate: parseDateOnly(endDate),
       isCurrent: !!isCurrent,
     },
   });
@@ -102,8 +103,8 @@ const updateAcademicYear = asyncHandler(async (req, res) => {
     where: { id: parseInt(id) },
     data: {
       name: name || year.name,
-      startDate: startDate ? new Date(startDate) : year.startDate,
-      endDate: endDate ? new Date(endDate) : year.endDate,
+      startDate: startDate ? parseDateOnly(startDate) : year.startDate,
+      endDate: endDate ? parseDateOnly(endDate) : year.endDate,
       isCurrent: isCurrent !== undefined ? isCurrent : year.isCurrent,
     },
   });

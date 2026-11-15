@@ -1,5 +1,6 @@
 const { prisma, dialect, label } = require("../src/database");
 const { seedDemoFinance } = require("./seeds/demoFinance");
+const { seedDemoCalendar } = require("./seeds/demoCalendar");
 const bcrypt = require("bcryptjs");
 const {
   GRADE_SCALE_PRESETS,
@@ -984,6 +985,10 @@ async function main() {
   // 18b. Demo fee data (skipped when the school already has fee transactions)
   console.log("💳 Creating demo fee data...");
   await seedDemoFinance(prisma, { school, academicYear, adminUser, superAdminUser, accountantUser });
+
+  // 18c. Demo calendar events (skipped when the school already has some)
+  console.log("🗓  Creating demo calendar events...");
+  await seedDemoCalendar(prisma, { school, academicYear, adminUser });
 
   // 19. Create Notices
   console.log("📢 Creating notices...");

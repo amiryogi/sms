@@ -14,6 +14,7 @@ import {
   Youtube,
   ChevronDown,
   KeyRound,
+  Check,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import PermissionNotice from "../components/common/PermissionNotice";
@@ -21,6 +22,9 @@ import { Avatar, Menu, MenuItem, MenuLabel, MenuSeparator } from "../components/
 import { academicService } from "../api/academicService";
 import { resolveAssetUrl } from "../utils/assets";
 import { cn } from "../lib/cn";
+import { useDatePrefs } from "../hooks/useDatePrefs";
+import { setPersonalDatePrefs } from "../lib/calendar/datePrefs";
+import { CALENDAR_OPTIONS } from "../lib/calendar/calendarConstants";
 import { getNavSections, titleForPath, formatRoleName } from "./navigation";
 import { fullName } from "../utils/format";
 
@@ -111,6 +115,7 @@ const SidebarNav = ({ sections, collapsed, onNavigate }) => {
 
 const DashboardLayout = () => {
   const { user, logout, hasRole } = useAuth();
+  const datePrefs = useDatePrefs();
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(readCollapsed);
@@ -321,6 +326,21 @@ const DashboardLayout = () => {
               </>
             )}
             <MenuSeparator />
+            <MenuLabel>Show dates in</MenuLabel>
+            {CALENDAR_OPTIONS.map((option) => (
+              <MenuItem
+                key={option.value}
+                icon={datePrefs.calendar === option.value ? Check : undefined}
+                aria-checked={datePrefs.calendar === option.value}
+                onClick={() => setPersonalDatePrefs({ calendar: option.value })}
+              >
+                <span className={datePrefs.calendar === option.value ? "font-medium text-slate-900" : "pl-[26px]"}>{option.label}</span>
+              </MenuItem>
+            ))}
+            <MenuItem onClick={() => setPersonalDatePrefs(datePrefs.language === "ne" ? { language: "en", numerals: "en" } : { language: "ne", numerals: "ne" })}>
+              <span className="pl-[26px]">{datePrefs.language === "ne" ? "Dates in English" : "मिति नेपालीमा"}</span>
+            </MenuItem>
+            <MenuSeparator />
             <MenuItem icon={KeyRound} as={Link} to="/account/password">
               Change password
             </MenuItem>
@@ -332,7 +352,8 @@ const DashboardLayout = () => {
 
         {/* Page */}
         <main className="page-content flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8 print:p-0">
-          <div key={location.pathname} className="animate-fade-in">
+          {/* Keyed by the date preference too: every date on the page is redrawn when it changes. */}
+          <div key={`${location.pathname}|${datePrefs.calendar}|${datePrefs.language}|${datePrefs.numerals}`} className="animate-fade-in">
             <Outlet />
           </div>
         </main>

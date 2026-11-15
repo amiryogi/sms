@@ -7,7 +7,7 @@ import { Card, EmptyState, LoadingBlock } from "../../components/ui";
 import PrintToolbar from "../../components/finance/print/PrintToolbar";
 import { SchoolHeading, SignatureLine } from "../../components/finance/print/SlipParts";
 import { methodLabel, fullName } from "../../components/finance/financeLabels";
-import { formatCurrency, formatDate, formatDateTime } from "../../utils/format";
+import { formatCurrency, formatDate, formatDateTime, todayAd } from "../../utils/format";
 
 /**
  * The printed day book: every payment and reversal in a date range, oldest
@@ -25,7 +25,7 @@ const Daybook = () => {
   useEffect(() => {
     let alive = true;
     // Opened without dates (a bookmark, a typed URL): today's day book.
-    const today = new Date().toLocaleDateString("en-CA"); // local YYYY-MM-DD
+    const today = todayAd(); // the day in Nepal
     const query = { from: params.from || params.to || today, to: params.to || params.from || today };
     for (const k of ["type", "method", "search"]) if (params[k]) query[k] = params[k];
     feeService

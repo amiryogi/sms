@@ -190,8 +190,13 @@ model School {
   /// Null = the original NEB grade sheet.
   reportCardConfig Json?   @map("report_card_config")
 
+  /// Calendar settings: default calendar, weekly holidays (utils/calendar/calendarConfig.js).
+  /// Null = the defaults (BS, Saturday off).
+  calendarConfig   Json?   @map("calendar_config")
+
   // Relations
   users         User[]
+  deviceTokens  DeviceToken[]
   academicYears AcademicYear[]
   classes       Class[]
   sections      Section[]
@@ -214,6 +219,8 @@ model School {
   feeDiscounts   FeeDiscount[]
   receiptSequences ReceiptSequence[]
   gradeScales    GradeScale[]
+  calendarEvents  CalendarEvent[]
+  calendarImports CalendarImport[]
 
   @@index([code])
   @@index([isActive])
@@ -284,6 +291,7 @@ model Role {
   userRoles         UserRole[]
   rolePermissions   RolePermission[]
   noticeRoleTargets NoticeRoleTarget[]
+  calendarEventAudiences CalendarEventAudience[]
 
   @@index([name])
   @@map("roles")
@@ -363,6 +371,7 @@ model User {
   parent          Parent?
   teacherSubjects TeacherSubject[]
   refreshTokens   RefreshToken[]
+  deviceTokens    DeviceToken[]
 
   // Attendance marked by this user (teacher)
   attendanceMarked Attendance[] @relation("MarkedBy")
@@ -378,6 +387,9 @@ model User {
 
   // Notices created by this user
   noticesCreated Notice[] @relation("NoticeCreatedBy")
+  calendarEventsCreated CalendarEvent[] @relation("CalendarEventCreatedBy")
+  calendarEventsUpdated CalendarEvent[] @relation("CalendarEventUpdatedBy")
+  calendarImports       CalendarImport[]
 
   // Promotions processed by this user (admin)
   promotionsProcessed Promotion[] @relation("ProcessedBy")
@@ -451,6 +463,7 @@ model AcademicYear {
   promotionsFrom     Promotion[]         @relation("FromYear")
   promotionsTo       Promotion[]         @relation("ToYear")
   noticeClassTargets NoticeClassTarget[]
+  calendarEvents     CalendarEvent[]
   feeTransactions    FeeTransaction[]
   feeDiscounts       FeeDiscount[]
   feeStructures      FeeStructure[]
@@ -483,6 +496,7 @@ model Class {
   promotionsFrom     Promotion[]         @relation("FromClass")
   promotionsTo       Promotion[]         @relation("ToClass")
   noticeClassTargets NoticeClassTarget[]
+  calendarEventAudiences CalendarEventAudience[]
   feeStructures      FeeStructure[]
 
   @@unique([schoolId, name])
@@ -508,6 +522,7 @@ model Section {
   teacherSubjects    TeacherSubject[]
   studentClasses     StudentClass[]
   noticeClassTargets NoticeClassTarget[]
+  calendarEventAudiences CalendarEventAudience[]
 
   @@unique([schoolId, name])
   @@index([schoolId])
@@ -1335,6 +1350,30 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
+/// A phone that receives push notifications for a user (the mobile app registers it
+/// after sign-in). One row per Expo push token: a token that signs in as someone else
+/// moves to that user. Removed at sign-out and whenever the user's sessions are ended.
+model DeviceToken {
+  id         Int      @id @default(autoincrement())
+  schoolId   Int      @map("school_id")
+  userId     Int      @map("user_id")
+  /// "ExponentPushToken[...]"
+  token      String   @db.VarChar(255)
+  /// "ios" | "android"
+  platform   String   @db.VarChar(10)
+  createdAt  DateTime @default(now()) @map("created_at")
+  lastSeenAt DateTime @default(now()) @map("last_seen_at")
+
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@index([schoolId])
+  @@map("device_tokens")
+}
+
 // =====================================================
 // FEE LEDGER (docs/plans/finance-and-portals.md)
 // =====================================================
@@ -1538,4 +1577,119 @@ model ReceiptSequence {
 
   @@id([schoolId, series, fiscalYear])
   @@map("receipt_sequences")
+}
+
+// =====================================================
+// SCHOOL CALENDAR (docs/calendar/calendar-database-design.md)
+// =====================================================
+
+/// One school event or holiday. Dates are AD calendar days; BS is worked out
+/// when shown. Exams, assignments, fee due dates and notices are NOT copied
+/// here: the calendar reads them from their own tables.
+/// category, recurrence, audienceType and status hold the names listed in
+/// utils/calendar/calendarRules.js and utils/calendar/recurrence.js.
+model CalendarEvent {
+  id             Int       @id @default(autoincrement())
+  schoolId       Int       @map("school_id")
+  /// The academic year the first day falls in (null when outside every year).
+  academicYearId Int?      @map("academic_year_id")
+  title          String    @db.VarChar(255)
+  description    String?   @db.Text
+  /// PUBLIC_HOLIDAY, LOCAL_HOLIDAY, SCHOOL_HOLIDAY (the school is closed), EXAMINATION, ...
+  category       String    @db.VarChar(40)
+  startDate      DateTime  @map("start_date") @db.Date
+  endDate        DateTime  @map("end_date") @db.Date
+  isAllDay       Boolean   @default(true) @map("is_all_day")
+  /// "HH:mm", 24 hour, Nepal time. Null for an all-day event.
+  startTime      String?   @map("start_time") @db.VarChar(5)
+  endTime        String?   @map("end_time") @db.VarChar(5)
+  /// NONE, WEEKLY, MONTHLY_BS, YEARLY_BS, YEARLY_AD
+  recurrence     String    @default("NONE") @db.VarChar(20)
+  /// Last day a repeat may start on (null = no end).
+  recurrenceUntil DateTime? @map("recurrence_until") @db.Date
+  /// ALL (everyone in the school), ROLE or CLASS (see CalendarEventAudience)
+  audienceType   String    @default("ALL") @map("audience_type") @db.VarChar(10)
+  /// DRAFT (only admins and the author see it) or PUBLISHED
+  status         String    @default("PUBLISHED") @db.VarChar(10)
+  isActive       Boolean   @default(true) @map("is_active")
+
+  // Where a holiday came from
+  /// The publisher, for example the Ministry of Home Affairs
+  source              String?  @db.VarChar(255)
+  /// Title or link of the published list
+  sourceDocument      String?  @map("source_document") @db.VarChar(500)
+  /// The date exactly as published, normally BS: 2083-07-04
+  sourcePublishedDate String?  @map("source_published_date") @db.VarChar(20)
+  /// Who the holiday applies to, as published (women only, Kathmandu valley, ...)
+  applicability       String?  @db.VarChar(500)
+  /// The row of the imported list this came from, to recognise it on a second import
+  sourceKey           String?  @map("source_key") @db.VarChar(100)
+  importId            Int?     @map("import_id")
+
+  createdById Int      @map("created_by_id")
+  updatedById Int?     @map("updated_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  school       School                  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear?           @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
+  createdBy    User                    @relation("CalendarEventCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    User?                   @relation("CalendarEventUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  import       CalendarImport?         @relation(fields: [importId], references: [id], onDelete: SetNull)
+  audiences    CalendarEventAudience[]
+
+  @@index([schoolId, startDate, endDate])
+  @@index([schoolId, category])
+  @@index([schoolId, sourceKey])
+  @@index([academicYearId])
+  @@index([createdById])
+  @@index([updatedById])
+  @@index([importId])
+  @@map("calendar_events")
+}
+
+/// Who a ROLE or CLASS event is for: one row per role, or per class (with an
+/// optional section; no section = the whole class).
+model CalendarEventAudience {
+  id        Int  @id @default(autoincrement())
+  eventId   Int  @map("event_id")
+  roleId    Int? @map("role_id")
+  classId   Int? @map("class_id")
+  sectionId Int? @map("section_id")
+
+  event   CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  role    Role?         @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  class   Class?        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  section Section?      @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([roleId])
+  @@index([classId])
+  @@index([sectionId])
+  @@map("calendar_event_audiences")
+}
+
+/// One confirmed holiday import: which list, which BS year, who ran it.
+model CalendarImport {
+  id             Int      @id @default(autoincrement())
+  schoolId       Int      @map("school_id")
+  /// BS year the list is for
+  calendarYear   Int      @map("calendar_year")
+  source         String   @db.VarChar(255)
+  sourceDocument String?  @map("source_document") @db.VarChar(500)
+  /// COMPLETED
+  status         String   @default("COMPLETED") @db.VarChar(20)
+  createdCount   Int      @default(0) @map("created_count")
+  skippedCount   Int      @default(0) @map("skipped_count")
+  importedById   Int      @map("imported_by_id")
+  importedAt     DateTime @default(now()) @map("imported_at")
+
+  school     School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  importedBy User            @relation(fields: [importedById], references: [id], onDelete: Restrict)
+  events     CalendarEvent[]
+
+  @@index([schoolId, calendarYear])
+  @@index([importedById])
+  @@map("calendar_imports")
 }

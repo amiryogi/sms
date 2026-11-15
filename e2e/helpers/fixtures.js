@@ -56,4 +56,18 @@ const overflowing = (sheet) =>
     return out.slice(0, 5);
   });
 
-module.exports = { test, expect: base.expect, data, stateFor, pdfPageCount, pdfPageSize, printPdf, overflowing };
+/**
+ * Choose a date in a NepaliDatePicker (the app's date fields): open the field
+ * named `label`, switch the picker to A.D. and type the AD date. The field's
+ * value is the AD date, so this is what a native date input's fill() did.
+ */
+const pickDate = async (page, label, ad) => {
+  await page.getByRole("button", { name: new RegExp(`^${label}\\b`) }).first().click();
+  const picker = page.getByRole("dialog", { name: "Choose a date" });
+  await picker.getByRole("button", { name: "A.D.", exact: true }).click();
+  await picker.getByLabel("Type an A.D. date, year-month-day").fill(ad);
+  await picker.getByRole("button", { name: "Set", exact: true }).click();
+  await base.expect(picker).toBeHidden();
+};
+
+module.exports = { test, expect: base.expect, data, stateFor, pdfPageCount, pdfPageSize, printPdf, overflowing, pickDate };

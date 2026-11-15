@@ -4,19 +4,19 @@ import { Plus, Pencil, Trash2, FileText, Inbox, NotebookPen, Paperclip, Save, X 
 import { useAuth } from "../../context/AuthContext";
 import DataTable from "../../components/common/DataTable";
 import Modal from "../../components/common/Modal";
-import { Input, Select, Textarea, Button, FormRow, FileUpload } from "../../components/common/FormElements";
+import { Input, DateInput, Select, Textarea, Button, FormRow, FileUpload } from "../../components/common/FormElements";
 import { PageHeader, Badge, IconButton, Avatar, EmptyState, LoadingBlock, DialogActions, TextInput, TextArea, toast, confirmDialog } from "../../components/ui";
 import { assignmentService } from "../../api/assignmentService";
 import { teacherService } from "../../api/teacherService";
 import { resolveAssetUrl } from "../../utils/assets";
-import { formatDate, formatDateTime, toDateInput, fullName } from "../../utils/format";
+import { formatDate, formatDateTime, toDateInput, fullName, daysFromToday } from "../../utils/format";
 
 const SUBMISSION_TONE = { submitted: "info", late: "warning", graded: "success", returned: "neutral" };
 
 /** "Due in 3 days" / "Due today" / "Overdue" from the due date. */
 const dueBadge = (dueDate) => {
   if (!dueDate) return null;
-  const days = Math.round((new Date(dueDate).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86400000);
+  const days = daysFromToday(dueDate);
   if (days < 0) return <Badge tone="neutral">Closed</Badge>;
   if (days === 0) return <Badge tone="warning" dot>Due today</Badge>;
   if (days <= 3) return <Badge tone="warning">Due in {days} day{days === 1 ? "" : "s"}</Badge>;
@@ -55,6 +55,7 @@ const Assignments = () => {
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     formState: { errors },
@@ -304,7 +305,7 @@ const Assignments = () => {
           )}
           <Textarea label="Instructions" name="description" placeholder="What students need to do" register={register} rows={4} />
           <FormRow>
-            <Input label="Due date" name="dueDate" type="date" register={register} rules={{ required: "Set a due date" }} error={errors.dueDate?.message} required />
+            <DateInput label="Due date" name="dueDate" control={control} rules={{ required: "Set a due date" }} error={errors.dueDate?.message} required />
             <Input label="Total marks" name="totalMarks" type="number" min="0" register={register} hint="Optional" />
           </FormRow>
           <FileUpload

@@ -3,11 +3,15 @@ import { useSearchParams } from "react-router-dom";
 import { CalendarCheck, Check, X, Clock, ShieldCheck, Save, Users, CheckCheck } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { attendanceService } from "../../api/attendanceService";
+import { calendarService } from "../../api/calendarService";
 import { teacherService } from "../../api/teacherService";
 import { studentService } from "../../api/studentService";
-import { PageHeader, Card, Badge, Button, Field, SelectInput, TextInput, Avatar, EmptyState, LoadingBlock, toast } from "../../components/ui";
+import { PageHeader, Card, Badge, Button, Field, SelectInput, NepaliDatePicker, Alert, Avatar, EmptyState, LoadingBlock, toast } from "../../components/ui";
 import { cn } from "../../lib/cn";
-import { fullName } from "../../utils/format";
+import { fullName, formatDate, todayAd } from "../../utils/format";
+import { weekdayNameOf } from "../../lib/calendar/dateFormatter";
+import { weekdayOf } from "../../lib/calendar/bsDateAdapter";
+import { useDatePrefs } from "../../hooks/useDatePrefs";
 
 const STATUSES = [
   { value: "present", short: "P", label: "Present", icon: Check, on: "bg-emerald-600 text-white ring-emerald-600", soft: "bg-emerald-50 text-emerald-700" },
@@ -16,11 +20,8 @@ const STATUSES = [
   { value: "excused", short: "E", label: "Excused", icon: ShieldCheck, on: "bg-sky-600 text-white ring-sky-600", soft: "bg-sky-50 text-sky-700" },
 ];
 
-// Today's date in the user's own time zone (toISOString would give UTC's date).
-const localToday = () => {
-  const d = new Date();
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-};
+// The register is for a day in Nepal, whatever the device's own time zone.
+const localToday = todayAd;
 
 // The students endpoint pages by 10 by default; ask for the maximum it allows.
 const MAX_SECTION_SIZE = 100;
@@ -29,6 +30,10 @@ const Attendance = () => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const today = localToday();
+  const prefs = useDatePrefs();
+  // Calendar Settings: no register on weekly holidays and holidays (the server enforces it).
+  const blocksOnHolidays = user?.school?.calendar?.blockAttendanceOnNonWorkingDays !== false;
+  const [dayInfo, setDayInfo] = useState(null);
   const [assignments, setAssignments] = useState([]);
   const [records, setRecords] = useState([]);
   const [alreadyTaken, setAlreadyTaken] = useState(false);
@@ -102,6 +107,22 @@ const Attendance = () => {
     };
   }, [filters]);
 
+  // Is the chosen day a working day for this class? (weekly holiday, school holiday)
+  useEffect(() => {
+    const { classId, sectionId, date } = filters;
+    setDayInfo(null);
+    if (!date) return undefined;
+    let cancelled = false;
+    calendarService
+      .getWorkingDay({ date, ...(classId ? { classId } : {}), ...(sectionId ? { sectionId } : {}) })
+      .then((res) => !cancelled && setDayInfo(res.data))
+      .catch(() => {}); // the save itself is still checked by the server
+    return () => {
+      cancelled = true;
+    };
+  }, [filters]);
+  const dayBlocked = Boolean(dayInfo?.blocksAttendance);
+
   const counts = useMemo(() => {
     const c = Object.fromEntries(STATUSES.map((s) => [s.value, 0]));
     records.forEach((r) => (c[r.status] = (c[r.status] || 0) + 1));
@@ -155,10 +176,25 @@ const Attendance = () => {
             </SelectInput>
           </Field>
           <Field label="Date" htmlFor="att-date" hint={filters.date === today ? "Today" : undefined}>
-            <TextInput id="att-date" type="date" value={filters.date} max={today} onChange={(e) => setFilters((prev) => ({ ...prev, date: e.target.value }))} />
+            <NepaliDatePicker
+              id="att-date"
+              value={filters.date}
+              max={today}
+              clearable={false}
+              isDateDisabled={(ad) => blocksOnHolidays && prefs.weeklyHolidayDays.includes(weekdayOf(ad))}
+              onChange={(ad) => setFilters((prev) => ({ ...prev, date: ad || today }))}
+            />
           </Field>
         </div>
       </Card>
+
+      {dayInfo && !dayInfo.isWorkingDay && (
+        <Alert tone={dayBlocked ? "warning" : "info"} title={dayInfo.reason} className="mb-4">
+          {dayBlocked
+            ? "Attendance is not taken on this day. Choose a working day."
+            : "This is not a working day on the school calendar. You can still save the register."}
+        </Alert>
+      )}
 
       {!filters.classId ? (
         <Card>
@@ -176,7 +212,7 @@ const Attendance = () => {
             <div className="mr-auto min-w-0">
               <h2 className="text-base font-semibold text-slate-900">{selectedLabel}</h2>
               <p className="text-sm text-slate-500">
-                {new Date(`${filters.date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                {weekdayNameOf(filters.date, prefs.language)}, {formatDate(filters.date, "", { calendar: "both" })}
               </p>
             </div>
             {alreadyTaken ? <Badge tone="success" dot>Taken</Badge> : <Badge tone="warning" dot>Not taken yet</Badge>}
@@ -243,7 +279,7 @@ const Attendance = () => {
               {records.length} students · <span className="text-emerald-700">{counts.present} present</span>
               {counts.absent > 0 && <span className="text-red-700"> · {counts.absent} absent</span>}
             </p>
-            <Button icon={Save} loading={saving} onClick={handleSave}>Save Attendance</Button>
+            <Button icon={Save} loading={saving} disabled={dayBlocked} onClick={handleSave}>Save Attendance</Button>
           </div>
         </Card>
       )}

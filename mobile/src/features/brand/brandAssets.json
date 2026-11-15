@@ -1,0 +1,40 @@
+{
+  "arc": {
+    "width": 720,
+    "height": 461
+  },
+  "cap": {
+    "width": 720,
+    "height": 461
+  },
+  "body": {
+    "width": 720,
+    "height": 461
+  },
+  "mark": {
+    "width": 720,
+    "height": 461,
+    "x": 55,
+    "y": 0
+  },
+  "wordmark": {
+    "width": 830,
+    "height": 165,
+    "x": 0,
+    "y": 469
+  },
+  "sms": {
+    "width": 804,
+    "height": 98,
+    "x": 13,
+    "y": 640
+  },
+  "logo": {
+    "width": 830,
+    "height": 738
+  },
+  "waves": {
+    "width": 852,
+    "height": 443
+  }
+}

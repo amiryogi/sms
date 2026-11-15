@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { Plus, Pencil, Trash2, CalendarRange } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
-import { Input, Button, FormRow } from '../../components/common/FormElements';
+import { Input, DateInput, Button, FormRow } from '../../components/common/FormElements';
 import { PageHeader, Badge, IconButton, Checkbox, DialogActions, toast, confirmDialog } from '../../components/ui';
 import { academicService } from '../../api/academicService';
 import { formatDate, toDateInput } from '../../utils/format';
@@ -15,7 +15,7 @@ const AcademicYears = () => {
   const [editingYear, setEditingYear] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm();
+  const { register, control, handleSubmit, reset, formState: { errors } } = useForm();
 
   useEffect(() => {
     fetchYears();
@@ -150,22 +150,8 @@ const AcademicYears = () => {
             required
           />
           <FormRow>
-            <Input
-              label="Start Date"
-              name="startDate"
-              type="date"
-              register={register}
-              error={errors.startDate?.message}
-              required
-            />
-            <Input
-              label="End Date"
-              name="endDate"
-              type="date"
-              register={register}
-              error={errors.endDate?.message}
-              required
-            />
+            <DateInput label="Start Date" name="startDate" control={control} error={errors.startDate?.message} required />
+            <DateInput label="End Date" name="endDate" control={control} error={errors.endDate?.message} required />
           </FormRow>
           <Checkbox
             id="isCurrent"

@@ -14,3 +14,4 @@ export { Toaster } from "./Toast";
 export { toast, confirmDialog, dismissToast } from "./toastStore";
 export { Menu, MenuItem, MenuLabel, MenuSeparator } from "./Menu";
 export { default as Tabs } from "./Tabs";
+export { default as NepaliDatePicker } from "./NepaliDatePicker";
