@@ -10,6 +10,29 @@ are done** and on `main`.
 
 ---
 
+## AI help assistant (2026-11-16): branch `feature/ai-assistant` (cut from `feature/site-calendar-and-app`), not committed yet
+
+Plan: milestones M1–M6 (audit + knowledge, backend, chat widget, walkthroughs, admin page, hardening + docs).
+Audit and role matrix: `docs/ai-assistant/`.
+
+- **Done: M1** (audit and 39 help documents in `backend/src/data/assistant/knowledge/`) and **M2**
+  (backend: `services/assistant/`, `/api/v1/assistant`, migration `20261116100000_ai_assistant`).
+- **Providers:**
+  - Gemini (default) and NVIDIA (fallback) are verified live on their free tiers.
+  - OpenAI and Claude are mock-tested only. By the owner's choice there is no Claude key and no
+    Claude calls.
+  - Keys live only in `backend/.env`.
+- **Verified 2026-11-16:**
+  - unit tests: 706;
+  - integration: 158 on MySQL and 158 on PostgreSQL;
+  - live smoke (`node scripts/assistant-smoke.js --provider gemini|nvidia`): 8/8 steps on each;
+  - evaluation set: Gemini 33/36 (two failures were transient free-tier "unavailable" errors,
+    one was a check that was too strict); NVIDIA 9/10, with weaker Nepali.
+- **Deploy (later):** `npm install` in `backend/` (new SDKs), `npm run db:migrate:deploy`, and
+  `GEMINI_API_KEY` / `NVIDIA_API_KEY` set on the server.
+- **Next:** M3, the chat widget in the web app. The `assistant-settings` help document stays a
+  draft until the admin page exists (M5).
+
 ## Public site: calendar, mobile app, app pricing (2026-11-15): branch `feature/site-calendar-and-app`
 
 - **Audit fixes:** "Nothing to install" and "there is nothing to install" contradicted the app;

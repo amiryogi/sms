@@ -1,0 +1,16 @@
+[
+  { "id": "teacher.attendance", "roles": ["TEACHER"], "module": "attendance", "route": "/teacher/attendance", "title": { "en": "Take the attendance register", "ne": "हाजिरी लिने" } },
+  { "id": "teacher.assignment", "roles": ["TEACHER"], "module": "assignments", "route": "/teacher/assignments", "title": { "en": "Set an assignment", "ne": "गृहकार्य दिने" } },
+  { "id": "marks.entry", "roles": ["TEACHER", "EXAM_OFFICER", "ADMIN"], "module": "marks", "route": "/teacher/marks", "title": { "en": "Enter exam marks", "ne": "परीक्षाको अंक हाल्ने" } },
+  { "id": "admin.academicYear", "roles": ["ADMIN"], "module": "academics", "route": "/admin/academic-years", "title": { "en": "Create an academic year", "ne": "शैक्षिक वर्ष बनाउने" } },
+  { "id": "admin.student", "roles": ["ADMIN"], "module": "students", "route": "/admin/students", "title": { "en": "Add a student", "ne": "विद्यार्थी थप्ने" } },
+  { "id": "admin.exam", "roles": ["ADMIN"], "module": "examinations", "route": "/admin/exams", "title": { "en": "Create and publish an exam", "ne": "परीक्षा बनाउने र प्रकाशित गर्ने" } },
+  { "id": "admin.reportCards", "roles": ["ADMIN"], "module": "report-cards", "route": "/admin/report-cards", "title": { "en": "Generate, publish and print report cards", "ne": "रिपोर्ट कार्ड बनाउने, प्रकाशित र प्रिन्ट गर्ने" } },
+  { "id": "admin.notice", "roles": ["ADMIN"], "module": "notices", "route": "/admin/notices", "title": { "en": "Publish a notice", "ne": "सूचना प्रकाशित गर्ने" } },
+  { "id": "calendar.holidays", "roles": ["ADMIN"], "module": "holidays", "route": "/calendar/holidays", "title": { "en": "Import public holidays", "ne": "सार्वजनिक बिदा आयात गर्ने" } },
+  { "id": "calendar.event", "roles": ["ADMIN", "TEACHER"], "module": "calendar", "route": "/calendar/events", "title": { "en": "Add a calendar event", "ne": "पात्रोमा कार्यक्रम थप्ने" } },
+  { "id": "finance.collect", "roles": ["ACCOUNTANT", "ADMIN"], "module": "finance", "route": "/finance/collect", "title": { "en": "Collect a fee payment", "ne": "शुल्क संकलन गर्ने" } },
+  { "id": "finance.reports", "roles": ["ACCOUNTANT", "ADMIN"], "module": "finance", "route": "/finance/reports", "title": { "en": "Produce a financial report", "ne": "आर्थिक प्रतिवेदन निकाल्ने" } },
+  { "id": "portal.results", "roles": ["STUDENT", "PARENT"], "module": "results", "route": "/student/results", "routeByRole": { "PARENT": "/parent/results" }, "title": { "en": "See exam results", "ne": "परीक्षाको नतिजा हेर्ने" } },
+  { "id": "parent.fees", "roles": ["PARENT"], "module": "fees", "route": "/parent/fees", "title": { "en": "Check your child's fees", "ne": "बच्चाको शुल्क हेर्ने" } }
+]

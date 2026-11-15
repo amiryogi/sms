@@ -33,6 +33,7 @@ const reportCardLayoutRoutes = require("./reportCardLayout.routes");
 const portalRoutes = require("./portal.routes");
 const deviceRoutes = require("./device.routes");
 const calendarRoutes = require("./calendar.routes");
+const assistantRoutes = require("./assistant.routes");
 
 // API Version prefix
 const API_VERSION = "/v1";
@@ -69,6 +70,7 @@ router.use(`${API_VERSION}/report-card-layout`, reportCardLayoutRoutes);
 router.use(`${API_VERSION}/portal`, portalRoutes);
 router.use(`${API_VERSION}/devices`, deviceRoutes);
 router.use(`${API_VERSION}/calendar`, calendarRoutes);
+router.use(`${API_VERSION}/assistant`, assistantRoutes);
 
 // Root route
 router.get("/", (req, res) => {

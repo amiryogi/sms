@@ -79,6 +79,16 @@ module.exports = {
     origin: corsOrigins(process.env.FRONTEND_URL),
   },
 
+  // AI help assistant. Provider API keys are read from the environment by
+  // services/assistant/providers (GEMINI_API_KEY, NVIDIA_API_KEY, OPENAI_API_KEY,
+  // ANTHROPIC_API_KEY) and never leave the server.
+  assistant: {
+    // Deployment-wide switch; each school also has its own on/off setting.
+    enabled: process.env.ASSISTANT_ENABLED !== 'false',
+    // Questions per user per 5 minutes (on top of the school's daily limit).
+    rateLimitPerFiveMinutes: parseInt(process.env.ASSISTANT_RATE_LIMIT, 10) || 20,
+  },
+
   // Pagination defaults
   pagination: {
     defaultPage: 1,
