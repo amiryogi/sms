@@ -18,6 +18,18 @@ The only backend change is push notifications (below). Other proposals are in AP
 
 ---
 
+## Web build for the site's screenshots (2026-11-15)
+
+The public product site shows the app's real screens on an iPhone and on Android. With no
+emulator or Mac available, they are captured from a web build of the app (react-native-web) by
+Playwright at phone sizes, with the safe areas emulated (`e2e/mobile-shots/`).
+
+- **Added:** `react-native-web` and `@expo/metro-runtime`; `src/api/tokenStore.web.ts` (the
+  session in `sessionStorage`; Metro picks it only for web); push is reported unsupported on
+  web (`pushSupported`). Nothing changes on a phone.
+- **Not a product:** the web build is never deployed.
+- **Tests:** `npm test`, typecheck, lint and `expo-doctor` as before (see STATUS).
+
 ## Push notifications (2026-11-14)
 
 The first backend change made for the app, approved by the owner (API_GAPS §1).

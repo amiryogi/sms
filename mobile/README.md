@@ -38,6 +38,11 @@ print). Expo Go runs most of it. For everything, make a development build:
 - `stu20240001`
 - `p.stu20240001`
 
+**Web build (screenshots only):** `react-native-web` is installed so the public site's phone
+screenshots can be captured from the real screens (`e2e/README.md`, "Mobile app screenshots").
+It is not a product: on web the session sits in `sessionStorage` (`src/api/tokenStore.web.ts`),
+and push is off. Phones always use SecureStore.
+
 ## Commands
 
 | Command | What it does |
