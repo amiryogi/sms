@@ -24,8 +24,8 @@ Bikram Sambat dates across the web app and a School Calendar module. Docs: `docs
 - **Deploy:** run `npm run db:migrate:deploy` (migration `20261115100000_school_calendar`, new
   tables and one nullable column) on every database, then restart. `npm install` in `backend/`
   and `frontend/` (new package `@inicrea/bikram-sambat-core`).
-- **Verified (2026-11-15):** backend unit 593 passed; integration 131 passed on MySQL and the
-  calendar suite (26) on PostgreSQL; frontend lint, build and 34 vitest tests; Playwright 79
+- **Verified (2026-11-15):** backend unit 593 passed; integration 131 passed on MySQL and 131 on PostgreSQL;
+  frontend lint, build and 34 vitest tests; Playwright 79
   (one existing test, `smoke` super-admin refusal, is skipped as before).
 - **Decisions for the owner:**
   1. **The old BS table is wrong** for BS 2062, 2081, 2082, 2083 and 2087 (audit §6): attendance
