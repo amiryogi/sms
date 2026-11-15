@@ -164,17 +164,21 @@ const CalendarPrint = () => {
                         const list = byDay.get(cell.ad) || [];
                         const red = list.some((i) => i.isHoliday) || prefs.weeklyHolidayDays.includes(cell.weekday);
                         return (
-                          <td key={cell.ad} className={cn("border border-slate-500 p-1 align-top", weeks.length > 5 ? "h-[23mm]" : "h-[27mm]", red && "bg-red-50")}>
-                            <div className="flex items-baseline justify-between">
-                              <span className={cn("text-[13pt] leading-none font-bold", red && "text-red-700")}>{digits(cell.label, prefs.numerals)}</span>
-                              <span className="text-[7pt] text-slate-600">{cell.altLabel === null ? "" : digits(cell.altLabel, mode === "bs" ? "en" : prefs.numerals)}</span>
+                          // Same layout as the screen: the day number large in the middle, the
+                          // other calendar's number in the lower right corner.
+                          <td key={cell.ad} className={cn("relative border border-slate-500 p-1 pb-[3.5mm] align-top", weeks.length > 5 ? "h-[23mm]" : "h-[27mm]", red && "bg-red-50")}>
+                            <div className="flex flex-col items-center">
+                              <span className={cn("text-[20pt] leading-none font-bold", red && "text-red-700")}>{digits(cell.label, prefs.numerals)}</span>
+                              <ul className="mt-0.5 w-full space-y-px text-[6.5pt] leading-tight">
+                                {list.slice(0, 3).map((item) => (
+                                  <li key={item.key} className={cn("truncate", item.isHoliday && "font-semibold text-red-700")}>{item.title}</li>
+                                ))}
+                                {list.length > 3 && <li className="text-slate-600">+{list.length - 3} more</li>}
+                              </ul>
                             </div>
-                            <ul className="mt-0.5 space-y-px text-[6.5pt] leading-tight">
-                              {list.slice(0, 4).map((item) => (
-                                <li key={item.key} className={cn("truncate", item.isHoliday && "font-semibold text-red-700")}>{item.title}</li>
-                              ))}
-                              {list.length > 4 && <li className="text-slate-600">+{list.length - 4} more</li>}
-                            </ul>
+                            <span className="absolute right-[1.2mm] bottom-[0.8mm] text-[9pt] leading-none font-medium text-slate-600">
+                              {cell.altLabel === null ? "" : digits(cell.altLabel, mode === "bs" ? "en" : prefs.numerals)}
+                            </span>
                           </td>
                         );
                       })}
@@ -183,7 +187,7 @@ const CalendarPrint = () => {
                 </tbody>
               </table>
               <p className="mt-1 text-[7pt] text-slate-600">
-                Large numbers: {mode === "bs" ? "B.S." : "A.D."} · small numbers: {mode === "bs" ? "A.D." : "B.S."} · red: holiday or weekly holiday · {digits(monthItems.length, prefs.numerals)} item{monthItems.length === 1 ? "" : "s"} this month
+                Large numbers: {mode === "bs" ? "B.S." : "A.D."} · small numbers, lower right: {mode === "bs" ? "A.D." : "B.S."} · red: holiday or weekly holiday · {digits(monthItems.length, prefs.numerals)} item{monthItems.length === 1 ? "" : "s"} this month
               </p>
             </>
           )}
