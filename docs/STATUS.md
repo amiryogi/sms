@@ -10,6 +10,24 @@ are done** and on `main`.
 
 ---
 
+## Public site: calendar, mobile app, app pricing (2026-11-15): branch `feature/site-calendar-and-app`
+
+- **Audit fixes:** "Nothing to install" and "there is nothing to install" contradicted the app;
+  the hero, facts, Nepal points, roles and FAQ now mention the calendar and the app; the
+  Features intro counts its sections instead of saying "Eight".
+- **Calendar:** a Features section, a home card and showcase tab, and two tour screenshots
+  (BS month view with demo events; the 2083 government holiday import preview).
+- **Mobile app:** a home section and a Features section with the app's real screens on iPhone
+  and Android (`DeviceFrame`, `AppShowcase`), "Coming soon" Google Play / App Store badges (no
+  links), and the hero phone is now the app. Screens come from the app's web build
+  (`npm run screenshots:mobile`, `e2e/README.md`).
+- **Pricing:** each plan card shows the optional app, + NPR 10,000 a year (NPR 1,000 a month),
+  with "Choose <plan> + app"; plan prices and the other ways to pay are unchanged.
+- **Open:** the app's home screens say "30 Kartik 2083" for 15 Nov 2026 while the web says
+  29 Kartik: the app's BS converter is a port of the old server table that is wrong for 2083
+  (decision 1 under "BS calendar" below). Switching the app to the verified engine would fix it.
+- **When the app is published:** replace `StoreBadges.jsx` with real store links and badges.
+
 ## BS calendar (2026-11-15): on branch `feature/bs-calendar` (cut from `feature/mobile-app`), not merged
 
 Bikram Sambat dates across the web app and a School Calendar module. Docs: `docs/calendar/`

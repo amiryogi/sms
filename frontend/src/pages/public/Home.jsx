@@ -14,13 +14,14 @@ import {
 } from "lucide-react";
 import { buttonClasses } from "../../components/ui";
 import { cn } from "../../lib/cn";
+import AppShowcase from "../../components/public/AppShowcase";
 import BrowserFrame from "../../components/public/BrowserFrame";
-import PhoneFrame from "../../components/public/PhoneFrame";
+import DeviceFrame from "../../components/public/DeviceFrame";
 import ShotStage from "../../components/public/ShotStage";
 import SectionHeading from "../../components/public/SectionHeading";
 import { Reveal, Stagger, StaggerItem } from "../../components/public/Reveal";
 import usePageTitle from "../../components/public/usePageTitle";
-import { CONTACT, FACTS, HOME_FEATURES, MOBILE_SHOT, NEPAL_POINTS, ROLES, SCREENSHOTS } from "./content";
+import { APP_SHOTS, CONTACT, FACTS, HOME_FEATURES, MOBILE_APP, NEPAL_POINTS, ROLES, SCREENSHOTS } from "./content";
 
 const EASE = [0.16, 1, 0.3, 1];
 
@@ -92,8 +93,8 @@ const Hero = () => (
           transition={{ duration: 0.6, delay: 0.16, ease: EASE }}
           className="mt-6 max-w-xl text-lg leading-relaxed text-pretty text-slate-600"
         >
-          Vidyalaya SMS brings attendance, exams, NEB report cards, fees and parent access together, built around the
-          Bikram Sambat calendar and the way Nepali schools already work.
+          Vidyalaya SMS brings attendance, exams, NEB report cards, fees, the school calendar and parent access together,
+          on the web and in an Android and iPhone app, built around Bikram Sambat and the way Nepali schools already work.
         </Motion.p>
 
         <Motion.div
@@ -119,7 +120,7 @@ const Hero = () => (
           transition={{ duration: 0.6, delay: 0.4 }}
           className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-600"
         >
-          {["Nothing to install", "Works on phones", "Prints on A4"].map((t) => (
+          {["Works in any browser", "Android & iPhone app", "Prints on A4"].map((t) => (
             <li key={t} className="inline-flex items-center gap-1.5">
               <Check size={16} className="text-emerald-600" aria-hidden="true" />
               {t}
@@ -147,7 +148,7 @@ const Hero = () => (
           className="absolute -right-2 -bottom-14 hidden w-36 sm:block lg:-right-6 xl:w-44"
         >
           <Motion.div animate={{ y: [0, 10, 0] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1.6 }}>
-            <PhoneFrame shot={MOBILE_SHOT} />
+            <DeviceFrame shot={APP_SHOTS.ios[0]} priority />
           </Motion.div>
         </Motion.div>
 
@@ -199,7 +200,7 @@ const FeatureGrid = () => (
       title="Everything a school year needs"
       intro="From the first day's register to the last report card and every fee receipt in between."
     />
-    <Stagger className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <Stagger className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
       {HOME_FEATURES.map((f) => (
         <StaggerItem key={f.id}>
           <Motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300, damping: 22 }} className="h-full">
@@ -226,6 +227,7 @@ const FeatureGrid = () => (
 
 const SHOWCASE = [
   { label: "Admin", shot: SCREENSHOTS.adminDashboard },
+  { label: "Calendar", shot: SCREENSHOTS.calendarMonth },
   { label: "Marks entry", shot: SCREENSHOTS.marks },
   { label: "Report card", shot: SCREENSHOTS.reportCard },
   { label: "Finance", shot: SCREENSHOTS.financeDashboard },
@@ -324,6 +326,38 @@ const Showcase = () => {
   );
 };
 
+/** The Android and iPhone app: what it does, its real screens, and where it will be. */
+const MobileApp = () => (
+  <section id="mobile-app" className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8" aria-labelledby="mobile-app-title">
+    <div className="grid items-end gap-8 lg:grid-cols-[1.1fr_1fr]">
+      <Reveal>
+        <p className="text-sm font-semibold tracking-wide text-brand-600 uppercase">Mobile app</p>
+        <h2 id="mobile-app-title" className="mt-2 text-3xl font-bold tracking-tight text-balance text-slate-900 sm:text-4xl">
+          {MOBILE_APP.title}
+        </h2>
+        <p className="mt-4 max-w-2xl text-lg text-pretty text-slate-600">{MOBILE_APP.intro}</p>
+        <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-sm font-medium text-amber-800 ring-1 ring-amber-200">
+          <Sparkles size={14} aria-hidden="true" />
+          {MOBILE_APP.status}
+        </p>
+      </Reveal>
+      <Stagger as="ul" className="grid gap-3 sm:grid-cols-2">
+        {MOBILE_APP.points.map((p) => (
+          <StaggerItem as="li" key={p} className="flex gap-2.5 rounded-xl bg-slate-50 p-3.5 text-sm text-slate-700 ring-1 ring-slate-200">
+            <Check size={17} className="mt-0.5 shrink-0 text-emerald-600" aria-hidden="true" />
+            {p}
+          </StaggerItem>
+        ))}
+      </Stagger>
+    </div>
+    <Reveal className="mt-12">
+      <ShotStage className="px-4 py-8 sm:px-8 sm:py-10">
+        <AppShowcase wide />
+      </ShotStage>
+    </Reveal>
+  </section>
+);
+
 const BuiltForNepal = () => (
   <section className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-blue-900 py-20 text-white sm:py-28">
     <div aria-hidden="true" className="pointer-events-none absolute -right-40 -bottom-40 size-[36rem] rounded-full bg-sky-500/20 blur-3xl" />
@@ -420,6 +454,7 @@ const Home = () => {
       <Facts />
       <FeatureGrid />
       <Showcase />
+      <MobileApp />
       <BuiltForNepal />
       <RolesStrip />
       <ContactBand />

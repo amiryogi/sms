@@ -1,14 +1,18 @@
 /*
- * Copy and data for the public product site (Home, Features, Portals, Tour, Contact).
+ * Copy and data for the public product site (Home, Features, Portals, Tour, Pricing, Contact).
  * The pages only render what is here. Describe only what the system really does
- * (CLAUDE.md §6). Screenshots are captured from the real app on demo data by
- * `cd e2e && npm run screenshots` and live in public/screenshots/.
+ * (CLAUDE.md §6). Screenshots are captured from the real app on demo data:
+ *   - web screens: `cd e2e && npm run screenshots` -> public/screenshots/;
+ *   - mobile app screens: `cd e2e && npm run screenshots:mobile` -> public/screenshots/app/
+ *     (the app's web build at an iPhone and an Android size; see e2e/README.md).
+ * The mobile app is not in the stores yet: say "coming soon", never link a store.
  */
 import {
   BadgeCheck,
   BookOpenCheck,
   Briefcase,
   CalendarCheck,
+  CalendarDays,
   ClipboardList,
   GraduationCap,
   Megaphone,
@@ -16,6 +20,7 @@ import {
   Receipt,
   School,
   ShieldCheck,
+  Smartphone,
   UserRound,
   Users,
   Wallet,
@@ -25,7 +30,7 @@ export const PRODUCT = {
   name: "Vidyalaya SMS",
   tagline: "School management for Nepali schools, KG to Grade 10",
   description:
-    "Attendance, exams, NEB report cards, fees and parent access in one system, built around the Bikram Sambat calendar.",
+    "Attendance, exams, NEB report cards, fees, a Bikram Sambat school calendar and parent access in one system, on the web and in an Android and iPhone app.",
 };
 
 // ---- Contact -------------------------------------------------------------
@@ -77,8 +82,10 @@ export const PRICING = {
     { id: "standard", name: "Standard", students: "500+ students", yearly: 45000, blurb: "For larger schools with more staff and families." },
   ],
   setup: { free: true, dataImport: 5000 },
+  // Optional on any of the three plans (not part of the other ways to pay).
+  mobileApp: { yearly: 10000, name: "Android & iPhone app" },
   included: [
-    "Every feature: attendance, exams, NEB report cards, fees, notices, portals",
+    "Every web feature: attendance, exams, NEB report cards, fees, calendar, notices, portals",
     "Hosting, daily backups and updates",
     "Bikram Sambat dates and NEB grading",
     "Unlimited staff, student and parent logins",
@@ -132,6 +139,10 @@ export const PRICING = {
       a: "Yearly in advance, or the same amount in 10 monthly payments through the academic year. Setup is free.",
     },
     {
+      q: "Is the mobile app included?",
+      a: "It is an optional NPR 10,000 a year on any plan (NPR 1,000 a month on monthly payments). Without it, everything still works in a phone's browser. The Android and iPhone app is coming soon to Google Play and the App Store.",
+    },
+    {
       q: "Can we change plan later?",
       a: "Yes. If your school grows past its plan, you move up at the start of the next year, or mid-year by paying the difference.",
     },
@@ -159,7 +170,7 @@ const shot = (name, title, caption, area, path) => ({
   path,
 });
 
-export const SHOT_AREAS = ["All", "Administration", "Exams & results", "Finance", "Portals"];
+export const SHOT_AREAS = ["All", "Administration", "Calendar", "Exams & results", "Finance", "Portals"];
 
 export const SCREENSHOTS = {
   adminDashboard: shot("admin-dashboard", "Admin dashboard", "Students, staff, classes and quick actions for the current academic year.", "Administration", "/admin/dashboard"),
@@ -170,6 +181,8 @@ export const SCREENSHOTS = {
   reportCards: shot("admin-report-cards", "Report card generation", "GPA, grade, rank and attendance for a whole section; publish when checked, print all at once.", "Exams & results", "/admin/report-cards"),
   reportCard: shot("student-report-card", "NEB grade sheet", "A print-ready A4 grade sheet on the national grade scale, saved as PDF from the browser.", "Exams & results", "/student/report-card"),
   teacherDashboard: shot("teacher-dashboard", "Teacher dashboard", "A teacher's classes, subjects and exams open for marks.", "Exams & results", "/teacher/dashboard"),
+  calendarMonth: shot("calendar-month", "School calendar", "Bikram Sambat months with the A.D. date in each box; events, holidays and exams in one place.", "Calendar", "/calendar"),
+  calendarHolidays: shot("calendar-holidays", "Government holidays, imported", "The 2083 public holiday list, checked date by date before anything is added.", "Calendar", "/calendar/holidays"),
   attendance: shot("teacher-attendance", "Daily attendance register", "Present, absent, late or excused for each student, all present in one click.", "Administration", "/teacher/attendance"),
   financeDashboard: shot("finance-dashboard", "Finance overview", "Collected, owed and overdue at a glance, by day and by Nepali month.", "Finance", "/finance/dashboard"),
   account: shot("finance-account", "Student fee account", "Fees by installment, payments with receipt numbers, discounts and the running balance.", "Finance", "/finance/accounts"),
@@ -182,12 +195,54 @@ export const SCREENSHOTS = {
   parentFees: shot("parent-fees", "Fees for parents", "What is due, what has been paid, receipts and printable bills.", "Portals", "/parent/fees"),
 };
 
-export const MOBILE_SHOT = {
-  src: "/screenshots/student-dashboard-mobile.jpg",
-  width: 780,
-  height: 1688,
-  title: "Student dashboard on a phone",
+// ---- Mobile app ----------------------------------------------------------
+
+export const MOBILE_APP = {
+  title: "The school in your pocket",
+  intro:
+    "An Android and iPhone app for every role: families follow attendance, results and fees, teachers take the register and enter marks, and the office keeps an eye on collections.",
+  status: "Coming soon to Google Play and the App Store",
+  points: [
+    "Notifications for notices, assignments, graded work and report cards",
+    "Parents are told the same day when a child is marked absent",
+    "Report cards as a PDF to share or print",
+    "The last data seen stays readable offline",
+  ],
 };
+
+export const APP_PLATFORMS = [
+  { value: "ios", label: "iPhone" },
+  { value: "android", label: "Android" },
+];
+
+/**
+ * The app's screens, the same five on each platform. `darkTop`: the screen starts with the
+ * school's colour band, so the frame draws a white status bar (the capture prints it).
+ */
+const APP_SCREENS = [
+  { name: "student-home", title: "Student home", caption: "Today's Bikram Sambat date, attendance, the latest result and the fee balance.", darkTop: true },
+  { name: "student-results", title: "Results", caption: "GPA, percentage and rank from published report cards, with every subject.", darkTop: false },
+  { name: "teacher-attendance", title: "Attendance register", caption: "A teacher marks their own sections, everyone else present in one tap.", darkTop: false },
+  { name: "student-attendance", title: "Attendance by month", caption: "The register by Nepali month: present, late and absent days at a glance.", darkTop: false },
+  { name: "finance-home", title: "Fee collection", caption: "Collected, outstanding, today's takings and overdue students.", darkTop: true },
+];
+
+/** Pixel size of the captured images (CSS size x 2). */
+const APP_SIZE = { ios: { width: 780, height: 1688 }, android: { width: 824, height: 1830 } };
+
+/** `APP_SHOTS.ios` / `APP_SHOTS.android`: the screens, in showcase order. */
+export const APP_SHOTS = Object.fromEntries(
+  APP_PLATFORMS.map(({ value: platform }) => [
+    platform,
+    APP_SCREENS.map((s) => ({
+      ...s,
+      ...APP_SIZE[platform],
+      platform,
+      src: `/screenshots/app/${platform}-${s.name}.jpg`,
+      alt: `${s.title} in the Vidyalaya SMS app on ${platform === "ios" ? "an iPhone" : "Android"}`,
+    })),
+  ]),
+);
 
 /** Every screenshot, in tour order. */
 export const TOUR = Object.values(SCREENSHOTS);
@@ -222,6 +277,21 @@ export const FEATURES = [
       "The school decides whether late counts as present",
     ],
     shots: ["attendance", "studentAttendance"],
+  },
+  {
+    id: "calendar",
+    icon: CalendarDays,
+    title: "School calendar",
+    summary: "One calendar in Bikram Sambat for holidays, exams, events and deadlines, printable on A4.",
+    points: [
+      "Month, week and list views in B.S. with the A.D. date alongside; each person picks B.S., A.D. or both",
+      "Nepal's 2083 public holidays imported from the government list, checked before anything is added",
+      "Weekly holidays set by the school; no attendance register on a holiday unless the school allows it",
+      "Exams, assignment and fee due dates and notices appear on their own",
+      "Events for everyone, for one role or for one class; teachers add events for their own classes",
+      "The academic year at a glance, and calendars and lists printed on A4",
+    ],
+    shots: ["calendarMonth", "calendarHolidays"],
   },
   {
     id: "exams",
@@ -275,7 +345,7 @@ export const FEATURES = [
       "Students: attendance, assignments, results, report card, fees and profile",
       "Parents: every linked child, with a switcher on every page",
       "Receipts, statements and bills printable from home",
-      "Works on a phone",
+      "Works in a phone's browser, and in the Android and iPhone app",
     ],
     shots: ["studentDashboard", "parentFees", "studentResults"],
   },
@@ -293,6 +363,22 @@ export const FEATURES = [
     shots: ["teacherDashboard", "parentDashboard"],
   },
   {
+    id: "mobile-app",
+    icon: Smartphone,
+    title: "Mobile app",
+    summary: "Android and iPhone, for all seven roles. Coming soon to Google Play and the App Store.",
+    points: [
+      "Students and parents: attendance by Nepali month, results, the report card as a PDF, assignments, fees and notices",
+      "Teachers take the register and enter marks for their own sections, with a confirm step",
+      "Accountants follow collections and record payments; admins follow students, exams and fees",
+      "Notifications for notices, assignments, graded work, report cards and absence",
+      "The last data seen stays readable offline; nothing is saved without a connection",
+      "In the school's colour, with a dark mode",
+    ],
+    shots: [],
+    app: true,
+  },
+  {
     id: "security",
     icon: ShieldCheck,
     title: "Accounts and security",
@@ -308,15 +394,15 @@ export const FEATURES = [
   },
 ];
 
-/** The six cards on the home page. */
-export const HOME_FEATURES = ["attendance", "exams", "report-cards", "fees", "portals", "communication"].map((id) =>
+/** The eight cards on the home page. */
+export const HOME_FEATURES = ["attendance", "calendar", "exams", "report-cards", "fees", "portals", "communication", "mobile-app"].map((id) =>
   FEATURES.find((f) => f.id === id),
 );
 
 // ---- Built for Nepal -----------------------------------------------------
 
 export const NEPAL_POINTS = [
-  { title: "Bikram Sambat dates", text: "Dates are stored in AD and shown in BS, so registers, receipts and reports read the way your school does." },
+  { title: "Bikram Sambat calendar", text: "Dates are shown and picked in B.S., and the school calendar runs on Nepali months with the government's public holidays." },
   { title: "NEB grading", text: "The national 8-band grade scale with grade points, or the legacy SLC scale, applied the same way on every card." },
   { title: "Nepali fiscal year", text: "Receipts restart each Shrawan and carry the fiscal year in their number: RCP-2083-84-00042." },
   { title: "KG to Grade 10", text: "Class-wide subjects with theory and practical marks, exactly how basic and secondary schools work." },
@@ -324,8 +410,8 @@ export const NEPAL_POINTS = [
 
 export const FACTS = [
   { value: "KG–10", label: "Every class, one system" },
-  { value: "7", label: "Role-based portals" },
-  { value: "BS", label: "Bikram Sambat dates" },
+  { value: "7", label: "Roles, on the web and the app" },
+  { value: "BS", label: "Bikram Sambat calendar" },
   { value: "A4", label: "Print-ready cards & bills" },
 ];
 
@@ -344,6 +430,7 @@ export const ROLES = [
       "Create, publish and lock exams",
       "Generate, publish and print report cards",
       "Promote classes at year end",
+      "Run the school calendar and import the government holidays",
       "Brand the school, choose the grade scale and the report card layout",
       "Approve fee reversals and discounts",
     ],
@@ -358,6 +445,8 @@ export const ROLES = [
       "Take the daily attendance register",
       "Enter theory and practical marks for their subjects",
       "Set assignments and grade what students hand in",
+      "Add events for their classes to the school calendar",
+      "Take the register and enter marks from the mobile app",
       "See their students and the school's notices",
     ],
   },
@@ -384,6 +473,7 @@ export const ROLES = [
       "Print fee bills, statements and the day book",
       "Request discounts and reversals for admin approval",
       "Run collection, outstanding and discount reports, or download them as CSV",
+      "Follow collections and record payments from the mobile app",
     ],
   },
   {
@@ -410,6 +500,7 @@ export const ROLES = [
       "Follow attendance, assignments and results",
       "Print report cards, receipts, statements and bills",
       "Read the school's notices",
+      "Get a notification in the mobile app when a child is marked absent",
     ],
   },
 ];
@@ -423,7 +514,7 @@ export const FAQ = [
   },
   {
     q: "Can parents and students use it on a phone?",
-    a: "Yes. Every page works in a phone's browser; there is nothing to install.",
+    a: "Yes. Every page works in a phone's browser, with nothing to install. An Android and iPhone app with notifications is coming soon to Google Play and the App Store.",
   },
   {
     q: "Can we print our own report card format?",

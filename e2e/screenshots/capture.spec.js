@@ -53,6 +53,18 @@ shot("admin-school-settings", "admin", "/admin/school-settings", async (page) =>
   await page.getByRole("tab", { name: "Report card" }).click();
 });
 
+// School calendar (BS month view, and the holidays list)
+shot("calendar-month", "admin", "/calendar", async (page) => {
+  // the demo events fall in the coming weeks: show the next month's grid
+  await page.getByRole("button", { name: "Next month" }).click();
+  await page.getByRole("button", { name: "Next month" }).evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 96));
+});
+shot("calendar-holidays", "admin", "/calendar/holidays", async (page) => {
+  // the government list, previewed before import (nothing is saved)
+  await page.getByRole("button", { name: "Import holidays" }).first().click();
+  await page.getByRole("dialog").getByRole("button", { name: /preview/i }).click();
+});
+
 // Exams and marks
 shot("marks-entry", "examofficer", "/teacher/marks", async (page) => {
   const { scope } = data();

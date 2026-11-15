@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion as Motion } from "framer-motion";
-import { ArrowRight, Check, ChevronDown, Gift, Minus, Sparkles, Users } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Gift, Minus, Plus, Smartphone, Sparkles, Users } from "lucide-react";
 import { Tabs, buttonClasses } from "../../components/ui";
 import { cn } from "../../lib/cn";
 import PageHero from "../../components/public/PageHero";
@@ -17,6 +17,36 @@ const BILLING = [
 
 // Opens the enquiry form with the choice already written in the message.
 const contactFor = (label) => `/contact?plan=${encodeURIComponent(label)}#enquiry`;
+
+const APP = PRICING.mobileApp;
+const appMonthly = Math.round(APP.yearly / PRICING.monthlyPayments);
+
+/** The optional mobile app, priced under each plan. */
+const AppAddOn = ({ plan, billing, dark }) => (
+  <div className={cn("mt-5 rounded-xl p-3.5 text-sm", dark ? "bg-white/10 ring-1 ring-white/15" : "bg-slate-50 ring-1 ring-slate-200")}>
+    <p className="flex items-start gap-2.5">
+      <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-lg", dark ? "bg-sky-400/20 text-sky-200" : "bg-brand-50 text-brand-600")}>
+        <Smartphone size={17} aria-hidden="true" />
+      </span>
+      <span className="leading-snug">
+        <span className={cn("block font-semibold", dark ? "text-white" : "text-slate-900")}>
+          <Plus size={13} strokeWidth={3} className="mr-0.5 inline align-[-1px]" aria-hidden="true" />
+          <span className="sr-only">Plus </span>
+          <span data-testid={`addon-${plan.id}`}>{npr(billing === "yearly" ? APP.yearly : appMonthly)}</span>
+          {billing === "yearly" ? " a year" : " a month"}
+        </span>
+        <span className={cn("block", dark ? "text-blue-100/80" : "text-slate-600")}>{APP.name}, optional</span>
+      </span>
+    </p>
+    <Link
+      to={contactFor(`${plan.name} + mobile app`)}
+      className={cn("mt-2.5 inline-flex items-center gap-1 text-sm font-semibold no-underline", dark ? "text-sky-200 hover:text-white" : "text-brand-700 hover:text-brand-800")}
+    >
+      Choose {plan.name} + app
+      <ArrowRight size={14} aria-hidden="true" />
+    </Link>
+  </div>
+);
 
 /** One plan card. The popular plan sits on the same dark blue gradient as the screenshots. */
 const PlanCard = ({ plan, billing }) => {
@@ -71,7 +101,7 @@ const PlanCard = ({ plan, billing }) => {
       </div>
 
       <ul className={cn("mt-6 flex-1 space-y-2.5 text-sm", dark ? "text-blue-50" : "text-slate-700")}>
-        {["Every feature included", "Free setup", "Unlimited logins", "Help by phone or WhatsApp"].map((item) => (
+        {["Every web feature included", "Free setup", "Unlimited logins", "Help by phone or WhatsApp"].map((item) => (
           <li key={item} className="flex gap-2.5">
             <Check size={17} className={cn("mt-0.5 shrink-0", dark ? "text-sky-300" : "text-emerald-600")} aria-hidden="true" />
             {item}
@@ -79,11 +109,13 @@ const PlanCard = ({ plan, billing }) => {
         ))}
       </ul>
 
+      <AppAddOn plan={plan} billing={billing} dark={dark} />
+
       <Link
         to={contactFor(plan.name)}
         className={cn(
           buttonClasses({ size: "lg" }),
-          "mt-8 w-full no-underline",
+          "mt-6 w-full no-underline",
           dark ? "bg-white text-blue-950 hover:bg-sky-50" : "",
         )}
       >
@@ -136,7 +168,7 @@ const Pricing = () => {
       <PageHero
         eyebrow="Pricing"
         title="Simple prices for every school"
-        intro={`Pay once a year, or in ${PRICING.monthlyPayments} monthly payments through the academic year. Setup is free.`}
+        intro={`Pay once a year, or in ${PRICING.monthlyPayments} monthly payments through the academic year. Setup is free. Add the Android and iPhone app to any plan for ${npr(APP.yearly)} a year.`}
       >
         <div className="mt-8 flex justify-center">
           <Tabs tabs={BILLING} value={billing} onChange={setBilling} className="bg-white shadow-sm ring-1 ring-slate-200" />
