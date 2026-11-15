@@ -131,6 +131,43 @@ test.describe("help assistant as a student", () => {
   });
 });
 
+test.describe("AI Assistant settings page", () => {
+  test.describe("as an admin", () => {
+    test.use({ storageState: stateFor("admin") });
+
+    test("shows key status only, tests the connection and saves a change", async ({ page }) => {
+      await page.goto("/admin/dashboard");
+      await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "AI Assistant" }).click();
+      await expect(page).toHaveURL(/\/admin\/assistant$/);
+      await expect(page.getByRole("heading", { name: "AI Assistant" })).toBeVisible();
+
+      await page.getByRole("tab", { name: "AI provider" }).click();
+      await expect(page.getByText("API keys on this server")).toBeVisible();
+      await page.getByRole("button", { name: "Test connection" }).first().click();
+      await expect(page.getByText(/Works: answered/)).toBeVisible();
+
+      await page.getByRole("tab", { name: "Assistant" }).click();
+      await page.locator("#ai-daily").fill("777");
+      await page.getByRole("button", { name: "Save settings" }).click();
+      await expect(page.getByText("Assistant settings saved")).toBeVisible();
+      const admin = await login(ROLES.admin);
+      const res = await call("GET", "/assistant/admin/settings", admin.accessToken);
+      expect(res.body.data.settings.userDailyLimit).toBe(777);
+
+      await page.getByRole("tab", { name: "Usage" }).click();
+      await expect(page.getByText("Comments from users")).toBeVisible();
+    });
+  });
+
+  test.describe("as a student", () => {
+    test.use({ storageState: stateFor("student") });
+    test("cannot open it", async ({ page }) => {
+      await page.goto("/admin/assistant");
+      await expect(page).toHaveURL(/\/unauthorized/);
+    });
+  });
+});
+
 test.describe("public site", () => {
   test("has no help assistant", async ({ page }) => {
     await page.goto("/");

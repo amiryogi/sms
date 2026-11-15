@@ -117,8 +117,9 @@ async function usageSummary(schoolId, { from, to }) {
     else totals.estimatedCostUsd += cost;
 
     const day = dayKey(e.createdAt);
-    const d = byDay.get(day) || { date: day, requests: 0, errors: 0, tokens: 0 };
+    const d = byDay.get(day) || { date: day, requests: 0, answered: 0, errors: 0, tokens: 0 };
     d.requests += 1;
+    if (e.status === "ok") d.answered += 1;
     if (e.status === "error") d.errors += 1;
     d.tokens += e.inputTokens + e.outputTokens;
     byDay.set(day, d);

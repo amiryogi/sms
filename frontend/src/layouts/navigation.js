@@ -35,6 +35,7 @@ import {
   CalendarClock,
   CalendarFold,
   Settings2,
+  Bot,
 } from "lucide-react";
 
 /*
@@ -111,7 +112,13 @@ const ADMIN = [
     ],
   },
   { label: "Communication", items: [{ title: "Notices", icon: Megaphone, path: "/admin/notices" }] },
-  { label: "Settings", items: [{ title: "School Settings", icon: Building2, path: "/admin/school-settings" }] },
+  {
+    label: "Settings",
+    items: [
+      { title: "School Settings", icon: Building2, path: "/admin/school-settings" },
+      { title: "AI Assistant", icon: Bot, path: "/admin/assistant" },
+    ],
+  },
 ];
 
 const TEACHER = [

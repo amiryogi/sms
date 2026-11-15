@@ -44,6 +44,7 @@ const AdminTeachers = React.lazy(() => import("./pages/admin/Teachers"));
 const AdminReportCards = React.lazy(() => import("./pages/admin/ReportCards"));
 const AdminNotices = React.lazy(() => import("./pages/admin/Notices"));
 const SchoolSettings = React.lazy(() => import("./pages/admin/SchoolSettings"));
+const AssistantSettings = React.lazy(() => import("./pages/admin/AssistantSettings"));
 const AdminFeeTypes = React.lazy(() => import("./pages/admin/FeeTypes"));
 const AdminFeeStructures = React.lazy(
   () => import("./pages/admin/FeeStructures"),
@@ -213,6 +214,7 @@ function App() {
                 path="/admin/school-settings"
                 element={<SchoolSettings />}
               />
+              <Route path="/admin/assistant" element={<AssistantSettings />} />
               <Route path="/admin/fee-types" element={<AdminFeeTypes />} />
               <Route
                 path="/admin/fee-structures"

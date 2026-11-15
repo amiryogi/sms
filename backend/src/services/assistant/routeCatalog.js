@@ -35,6 +35,7 @@ const ROUTES = [
   ["/admin/report-cards", "report-cards", "Report Cards", ADMIN],
   ["/admin/notices", "notices", "Notices", ADMIN],
   ["/admin/school-settings", "settings", "School Settings", ADMIN],
+  ["/admin/assistant", "assistant", "AI Assistant", ADMIN],
   ["/admin/fee-types", "fees", "Fee Types", ADMIN],
   ["/admin/fee-structures", "fees", "Fee Structures", ADMIN],
 

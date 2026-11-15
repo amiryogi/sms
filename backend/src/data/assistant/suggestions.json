@@ -2,7 +2,7 @@
   "SUPER_ADMIN": [
     { "doc": "super-admin-role", "en": "What can a super administrator do that an admin can't?", "ne": "सुपर एडमिनले एडमिनभन्दा के थप गर्न सक्छ?" },
     { "doc": "academic-years", "en": "How do I create a new academic year?", "ne": "नयाँ शैक्षिक वर्ष कसरी बनाउने?" },
-    { "doc": "holiday-management", "en": "How do I import public holidays?", "ne": "सार्वजनिक बिदा कसरी आयात गर्ने?" },
+    { "doc": "assistant-settings", "en": "How do I change the assistant's AI provider?", "ne": "सहायकको AI प्रदायक कसरी बदल्ने?" },
     { "doc": "admin-attendance-and-accounts", "en": "How do I reset someone's password?", "ne": "कसैको पासवर्ड कसरी रिसेट गर्ने?" }
   ],
   "ADMIN": [

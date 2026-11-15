@@ -44,8 +44,16 @@ Audit and role matrix: `docs/ai-assistant/`.
   - registry tests against `guides.json`, `App.jsx` and each role's menu;
   - e2e `tests/assistant.spec.js` (7 tests, fake provider); full e2e: 88 passed, 1 skipped as
     before.
-- **Next:** M5, the admin page `/admin/assistant` (settings, test connection, usage). The
-  `assistant-settings` help document stays a draft until then.
+- **Done: M5, the admin page** `/admin/assistant` (Settings → AI Assistant; `pages/admin/AssistantSettings.jsx`):
+  - **Assistant tab:** on/off, roles, default language and detection, retention, limits.
+  - **AI provider tab:** providers with an installed key only, model menu or custom id, Test
+    connection, fallback, timeout, answer length, temperature, key status (never the key).
+  - **Usage tab:** totals, questions per day, providers, roles and languages, errors, comments.
+  - The help document is published.
+  - Checked in Chrome: Test connection live on Gemini (1.2 s) and NVIDIA (1.3 s). The NVIDIA
+    fallback was switched on in the local dev school.
+- **Next:** M6: security review of the diff, full regression on both databases, the
+  `docs/ai-assistant/` documents, CLAUDE.md.
 
 ## Public site: calendar, mobile app, app pricing (2026-11-15): branch `feature/site-calendar-and-app`
 
