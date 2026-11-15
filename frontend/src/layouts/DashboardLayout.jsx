@@ -27,6 +27,7 @@ import { setPersonalDatePrefs } from "../lib/calendar/datePrefs";
 import { CALENDAR_OPTIONS } from "../lib/calendar/calendarConstants";
 import { getNavSections, titleForPath, formatRoleName } from "./navigation";
 import { fullName } from "../utils/format";
+import AssistantWidget from "../components/assistant/AssistantWidget";
 
 const COLLAPSE_KEY = "sms.sidebarCollapsed";
 
@@ -358,6 +359,9 @@ const DashboardLayout = () => {
           </div>
         </main>
       </div>
+
+      {/* Help assistant: floating button and chat panel (nothing when it is off for this user) */}
+      <AssistantWidget />
     </div>
   );
 };

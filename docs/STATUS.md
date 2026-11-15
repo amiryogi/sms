@@ -30,8 +30,14 @@ Audit and role matrix: `docs/ai-assistant/`.
     one was a check that was too strict); NVIDIA 9/10, with weaker Nepali.
 - **Deploy (later):** `npm install` in `backend/` (new SDKs), `npm run db:migrate:deploy`, and
   `GEMINI_API_KEY` / `NVIDIA_API_KEY` set on the server.
-- **Next:** M3, the chat widget in the web app. The `assistant-settings` help document stays a
-  draft until the admin page exists (M5).
+- **Done: M3, the chat widget** (`frontend/src/components/assistant/`, mounted in
+  `DashboardLayout`):
+  - streaming with a non-streaming fallback (`api/assistantStream.js`);
+  - Auto / English / नेपाली, history, feedback, stop and retry;
+  - links only to the user's own pages; full screen on phones.
+  - Checked in Chrome with live Gemini as a teacher and a parent; vitest 45, lint and build pass.
+- **Next:** M4, guided walkthroughs (driver.js, `data-guide` targets). The `assistant-settings`
+  help document stays a draft until the admin page exists (M5).
 
 ## Public site: calendar, mobile app, app pricing (2026-11-15): branch `feature/site-calendar-and-app`
 

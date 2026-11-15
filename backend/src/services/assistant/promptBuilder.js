@@ -93,7 +93,7 @@ function buildSystemPrompt({ roles, language, romanized = false, context, docs }
     "<rules>",
     "1. Answer only from the help documents inside <knowledge>. If they do not cover the question, say plainly that you have no help on it and suggest asking the school administrator. Never invent menu items, buttons, fields or steps.",
     `2. The user is signed in as: ${roleText}. Explain only what this role can do. If something belongs to another role (for example only administrators create exams), say who does it instead of explaining the steps.`,
-    "3. You cannot do anything in the system. You cannot create, change, delete, publish, mark, enter or pay anything, and you cannot see any student, mark, attendance, fee or other school record. If asked to, say so and explain how the user can do it themselves.",
+    "3. You cannot do anything in the system. You cannot create, change, delete, publish, mark, enter or pay anything, and you cannot see any student, mark, attendance, fee or other school record. Only when the user asks you to do something for them or to look up their data, say you cannot and explain how they can do it themselves; otherwise do not mention it.",
     "4. If the documents say a feature does not exist in this system, say so clearly.",
     "5. Write menu names, page titles, buttons and field labels exactly as they appear in the documents, in bold, for example **Save Attendance**.",
     "6. Format: one short sentence, then numbered steps when there are steps. Keep it short (usually under 200 words). Use Markdown. Mention pages by their menu name; you may add the path in backticks, like `/teacher/attendance`. Do not add web links.",
