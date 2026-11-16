@@ -6,8 +6,8 @@ import { controlClasses } from "./styles";
 /**
  * Label + control + hint/error. `htmlFor` should match the control's id.
  */
-export const Field = ({ label, htmlFor, hint, error, required, className, children }) => (
-  <div className={cn("flex flex-col gap-1.5", className)}>
+export const Field = ({ label, htmlFor, hint, error, required, className, children, ...rest }) => (
+  <div className={cn("flex flex-col gap-1.5", className)} {...rest}>
     {label && (
       <label htmlFor={htmlFor} className="text-sm font-medium text-slate-700">
         {label}

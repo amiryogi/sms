@@ -56,7 +56,7 @@ const FeesView = ({ studentId, receiptPath, printPaths }) => {
     <div className="space-y-6">
       {printPaths && (
         <div className="flex flex-wrap justify-end gap-2">
-          <Link className={buttonClasses({ variant: "secondary", size: "sm" })} to={printPaths.bill}>
+          <Link className={buttonClasses({ variant: "secondary", size: "sm" })} to={printPaths.bill} data-guide="fees.printBill">
             <Printer size={14} aria-hidden="true" /> Print bill
           </Link>
           <Link className={buttonClasses({ variant: "secondary", size: "sm" })} to={printPaths.statement}>
@@ -111,7 +111,7 @@ const FeesView = ({ studentId, receiptPath, printPaths }) => {
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
+        <Card data-guide="fees.receipts">
           <CardHeader icon={ReceiptText} title="Receipts" />
           {receipts.length === 0 ? (
             <p className="text-sm text-slate-500">No payments recorded for this year.</p>

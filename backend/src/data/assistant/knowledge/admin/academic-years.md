@@ -1,0 +1,53 @@
+---
+id: academic-years
+title: Creating an academic year and making it current
+roles: [ADMIN, SUPER_ADMIN]
+modules: [academics]
+routes: [/admin/academic-years]
+guides: [admin.academicYear]
+status: published
+aliases: [academic year, new year, session, current year, start new session, शैक्षिक वर्ष, शैक्षिक सत्र, नयाँ वर्ष, chalu barsa, naya sal]
+verifiedAgainst: [frontend/src/pages/admin/AcademicYears.jsx, backend/src/controllers/academicYear.controller.js]
+verifiedOn: 2026-11-15
+---
+# Creating an academic year
+
+## Purpose
+The current academic year scopes classes, enrolments, exams, teacher assignments and fees across
+the system. Only one year is current at a time.
+
+## Who can use it
+Administrators.
+
+## Where to find it
+Left menu → **Academics** → **Academic Years** (`/admin/academic-years`).
+
+## Steps
+1. Click **Add academic year**.
+2. Type the **Year Name**, for example `2083`.
+3. Pick the **Start Date** and **End Date** (B.S. date picker).
+4. Tick **Make this the current academic year** if the school is moving to it now.
+5. Save.
+
+## What you should see
+The year in the list, marked **Current** or **Past / upcoming**.
+
+## Common mistakes
+- Making a new year current before finishing the old one: teachers then see only the new year's
+  assignments, and new enrolments, exams and fees use it.
+- Forgetting that teacher assignments, class subjects, enrolments, fee structures and exams are per
+  year: set them up again for the new year (promotions move the students).
+
+## Troubleshooting
+- Teachers see "No classes yet" after a new year is made current: assign them again on
+  **Teacher Assignment** for the new year.
+
+## Order of setup for a new year
+1. **Academic Years**: add the year and make it current.
+2. **Class Subjects**: subjects, full marks and credit hours per class for the year.
+3. **Teacher Assignment**: who teaches what in each section.
+4. **Promotions**: move students from last year's classes.
+5. **Fee Structures** and **Student Accounts → Generate fees**.
+
+## Related pages
+Classes, Sections, Class Subjects, Teacher Assignment, Promotions.

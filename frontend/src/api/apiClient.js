@@ -140,4 +140,24 @@ apiClient.interceptors.response.use(
   }
 );
 
+/** Base URL of the API, for the few calls that cannot go through axios (streaming). */
+export { API_BASE_URL };
+
+/**
+ * A fresh access token for a fetch()-based call that got a 401 (the assistant's streaming
+ * chat: axios cannot stream in the browser). Shares the single-flight refresh above and ends
+ * the session the same way the interceptor does.
+ */
+export const refreshSession = async () => {
+  try {
+    return await refreshAccessToken();
+  } catch (err) {
+    if (err.isSessionExpired) {
+      clearAuthStorage();
+      emit(API_EVENTS.SESSION_EXPIRED);
+    }
+    throw err;
+  }
+};
+
 export default apiClient;

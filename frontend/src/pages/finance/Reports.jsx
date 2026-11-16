@@ -224,7 +224,7 @@ const Reports = () => {
             </div>
             <div className="flex gap-2 print:hidden">
               <Button variant="secondary" icon={Printer} onClick={() => window.print()} disabled={!result.rows.length}>Print</Button>
-              <Button variant="secondary" icon={Download} loading={downloading} onClick={download} disabled={!result.rows.length}>CSV</Button>
+              <Button variant="secondary" icon={Download} loading={downloading} onClick={download} disabled={!result.rows.length} data-guide="reports.export">CSV</Button>
             </div>
           </div>
           {result.rows.length === 0 ? (

@@ -76,7 +76,7 @@ Demo logins (after seed, password `password123`): sign in with a **username or t
 students by admission number (`stu20240001`), parents as `p.<child's admission number>`
 (`p.stu20240001`). School code `DEMO001`.
 
-**Tests:** `npm test` (Jest) runs 593 unit tests over the pure utilities in
+**Tests:** `npm test` (Jest) runs 706 unit tests over the pure utilities in
 `backend/src/utils/__tests__/` — grade calculation, grade scales, report-card
 layouts and attendance, BS date conversion, pagination, the response helpers and the fee
 maths (`finance.test.js`: money, allocation, discounts, fiscal year, attendance rate) — plus the grade-scale service
@@ -99,7 +99,12 @@ provider:
   the exam lifecycle and snapshot rule, result and report-card publication gating, fees,
   promotions;
 - push notifications (`push.test.js`, the sender replaced by a recorder): device registration,
-  and who is told about a notice or an absence.
+  and who is told about a notice or an absence;
+- the help assistant (`assistant.test.js`, the AI provider replaced by a recorder): access per
+  role, ownership, school isolation, no API key in responses, limits, fallback, SSE.
+
+The unit tests include the help assistant (`services/__tests__/assistant.*.test.js`: provider
+adapters on mocked SDKs, fallback rules, language, retrieval, drift against `App.jsx`).
 
 `scripts/with-test-db.js --provider mysql|pg` points any command at the test database and
 refuses one the app is configured to use:
@@ -112,10 +117,11 @@ the same with `npm run seed`.
 `node scripts/reconcile.js` checks every cached fee balance against the ledger.
 
 **Browser tests** live in `e2e/` (Playwright; see `e2e/README.md`):
-- 79 tests over report-card printing (real PDFs), the exam lifecycle and marks entry, the
+- 90 tests (and one skipped) over report-card printing (real PDFs), the exam lifecycle and marks entry, the
   exam pilot, the pages of every role, fees and the fee printouts, sign-in by username, password
-  reset with the forced change, class login slips, the public site, and the BS date picker and
-  school calendar (`calendar.spec.js`).
+  reset with the forced change, class login slips, the public site, the BS date picker and
+  school calendar (`calendar.spec.js`), and the help assistant (`assistant.spec.js`, run with
+  `ASSISTANT_FAKE_PROVIDER=true`: canned answers, no AI provider).
 - The app's date fields are `NepaliDatePicker`s, not native inputs: choose a date with
   `pickDate(page, label, ad)` from `helpers/fixtures.js`.
 - They start their own servers on the MySQL test database (ports 5012 / 5184).
@@ -292,6 +298,26 @@ Rules the RBAC audit (2026-11-07) established — keep them:
 ---
 
 ## 6. Feature state
+
+**AI help assistant:** docs in `docs/ai-assistant/` (start with `README.md`).
+- **Read-only:** it explains how to use the app (English or Nepali) and runs walkthroughs over
+  real controls. It never reads school records and cannot change anything; keep it that way.
+- **Backend:** `services/assistant/`, `/api/v1/assistant`, settings in `School.assistantConfig`
+  (`utils/assistantConfig.js`), tables `ai_conversations`, `ai_messages`, `ai_usage_events`
+  (migration `20261116100000_ai_assistant`).
+- **Providers:** Gemini (default), NVIDIA (OpenAI-compatible), OpenAI and Anthropic behind one
+  adapter contract (`providers/`).
+  - Keys only in the environment (`GEMINI_API_KEY`, `NVIDIA_API_KEY`, `OPENAI_API_KEY`,
+    `ANTHROPIC_API_KEY`), never in the database or a response.
+  - Fallback is once, before any text, never after a possibly processed request.
+  - The owner chose no Claude calls (no key installed).
+- **Help documents:** `backend/src/data/assistant/knowledge/**/*.md`, filtered by role. When a page
+  changes, update its document; a new page also goes in `services/assistant/routeCatalog.js`
+  (drift tests against `App.jsx` fail otherwise).
+- **Walkthroughs:** `frontend/src/components/assistant/guides/registry.js` + `data/assistant/guides.json`.
+  Steps may only point at `data-guide` attributes; keep those attributes when editing a tagged
+  control.
+- **Admin page:** `/admin/assistant`. Live check: `node scripts/assistant-smoke.js --provider gemini`.
 
 **Push notifications (mobile app):** `services/push/`, table `device_tokens` (migration
 `20261114100000_device_tokens`).

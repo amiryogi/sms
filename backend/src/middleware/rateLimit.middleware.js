@@ -119,8 +119,24 @@ const apiLimiter = rateLimit({
   handler: throttledHandler('Too many requests. Please slow down and try again shortly.'),
 });
 
+/**
+ * AI help assistant: questions per USER (not per IP: a whole school shares one public IP).
+ * Must run after `authenticate`. Each question costs a provider call, so failed and
+ * successful requests both count. The school's daily limit and monthly token budget are
+ * enforced separately (services/assistant/usage.js).
+ */
+const assistantLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  limit: require('../config').assistant.rateLimitPerFiveMinutes,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  keyGenerator: (req) => `assistant:${req.user?.schoolId}:${req.user?.id}`,
+  handler: throttledHandler('You are asking questions too quickly. Please wait a few minutes.'),
+});
+
 module.exports = {
   loginLimiter,
   refreshLimiter,
   apiLimiter,
+  assistantLimiter,
 };

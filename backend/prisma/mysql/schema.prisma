@@ -209,6 +209,10 @@ model School {
   /// Null = the defaults (BS, Saturday off).
   calendarConfig   Json?   @map("calendar_config")
 
+  /// AI help assistant settings: on/off, roles, provider and model, limits (utils/assistantConfig.js).
+  /// Null = the defaults. Never holds an API key: keys live only in the server's environment.
+  assistantConfig  Json?   @map("assistant_config")
+
   // Relations
   users         User[]
   deviceTokens  DeviceToken[]
@@ -236,6 +240,9 @@ model School {
   gradeScales    GradeScale[]
   calendarEvents  CalendarEvent[]
   calendarImports CalendarImport[]
+  aiConversations AiConversation[]
+  aiMessages      AiMessage[]
+  aiUsageEvents   AiUsageEvent[]
 
   @@index([code])
   @@index([isActive])
@@ -423,6 +430,10 @@ model User {
   feeDiscountsRequested FeeDiscount[] @relation("FeeDiscountRequestedBy")
   feeDiscountsApproved  FeeDiscount[] @relation("FeeDiscountApprovedBy")
   feeDiscountsRevoked   FeeDiscount[] @relation("FeeDiscountRevokedBy")
+
+  // AI help assistant
+  aiConversations AiConversation[]
+  aiUsageEvents   AiUsageEvent[]
 
   @@unique([email, schoolId])
   @@unique([username, schoolId])
@@ -1707,4 +1718,100 @@ model CalendarImport {
   @@index([schoolId, calendarYear])
   @@index([importedById])
   @@map("calendar_imports")
+}
+
+// =====================================================
+// AI HELP ASSISTANT
+// =====================================================
+
+/// One chat thread of one user. Only its owner reads or deletes it (userId + schoolId on every query).
+/// Old threads are purged after the school's retention period (services/assistant/retention.js).
+model AiConversation {
+  id            Int      @id @default(autoincrement())
+  schoolId      Int      @map("school_id")
+  userId        Int      @map("user_id")
+  /// The first question, shortened.
+  title         String   @db.VarChar(200)
+  /// "auto" | "en" | "ne": the language chosen when the thread started.
+  language      String   @default("auto") @db.VarChar(5)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  lastMessageAt DateTime @default(now()) @map("last_message_at")
+
+  // Relations
+  school   School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages AiMessage[]
+
+  @@index([schoolId, userId, lastMessageAt])
+  @@index([schoolId, lastMessageAt])
+  @@map("ai_conversations")
+}
+
+/// A question or an answer. Holds help text only: the assistant never reads school records.
+model AiMessage {
+  id             Int      @id @default(autoincrement())
+  schoolId       Int      @map("school_id")
+  conversationId Int      @map("conversation_id")
+  /// "user" | "assistant"
+  role           String   @db.VarChar(10)
+  content        String   @db.Text
+  /// The page the user was on ("/teacher/attendance"), already checked against their role.
+  route          String?  @db.VarChar(200)
+  module         String?  @db.VarChar(50)
+  /// "en" | "ne": the language the answer was written in.
+  language       String?  @db.VarChar(5)
+  /// Help documents the answer drew on: [{ id, title }].
+  sources        Json?
+  /// Walkthroughs offered with the answer: ["teacher.attendance"].
+  guideIds       Json?    @map("guide_ids")
+  usageEventId   Int?     @map("usage_event_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // Relations
+  school       School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  usageEvent   AiUsageEvent?  @relation(fields: [usageEventId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId, id])
+  @@index([schoolId])
+  @@index([usageEventId])
+  @@map("ai_messages")
+}
+
+/// One request to an AI provider, for monitoring and limits. No question or answer text, so it
+/// survives when the conversation is deleted.
+model AiUsageEvent {
+  id              Int      @id @default(autoincrement())
+  schoolId        Int      @map("school_id")
+  userId          Int?     @map("user_id")
+  /// The role the request was answered for ("TEACHER").
+  role            String   @db.VarChar(20)
+  provider        String?  @db.VarChar(20)
+  model           String?  @db.VarChar(100)
+  inputTokens     Int      @default(0) @map("input_tokens")
+  outputTokens    Int      @default(0) @map("output_tokens")
+  latencyMs       Int      @default(0) @map("latency_ms")
+  /// "ok" | "error" | "aborted"
+  status          String   @db.VarChar(20)
+  /// Normalized provider error code ("rate_limited", "timeout"…), null when ok.
+  errorCode       String?  @map("error_code") @db.VarChar(30)
+  /// The answer came from the fallback provider.
+  fellBack        Boolean  @default(false) @map("fell_back")
+  language        String?  @db.VarChar(5)
+  module          String?  @db.VarChar(50)
+  /// -1 thumbs down, 0 none, 1 thumbs up.
+  feedback        Int      @default(0)
+  /// Optional comment the user chose to send to the school's administrators.
+  feedbackComment String?  @map("feedback_comment") @db.VarChar(500)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  school   School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user     User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  messages AiMessage[]
+
+  @@index([schoolId, createdAt])
+  @@index([schoolId, userId, createdAt])
+  @@map("ai_usage_events")
 }

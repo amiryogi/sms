@@ -1,0 +1,46 @@
+{
+  "SUPER_ADMIN": [
+    { "doc": "super-admin-role", "en": "What can a super administrator do that an admin can't?", "ne": "सुपर एडमिनले एडमिनभन्दा के थप गर्न सक्छ?" },
+    { "doc": "academic-years", "en": "How do I create a new academic year?", "ne": "नयाँ शैक्षिक वर्ष कसरी बनाउने?" },
+    { "doc": "assistant-settings", "en": "How do I change the assistant's AI provider?", "ne": "सहायकको AI प्रदायक कसरी बदल्ने?" },
+    { "doc": "admin-attendance-and-accounts", "en": "How do I reset someone's password?", "ne": "कसैको पासवर्ड कसरी रिसेट गर्ने?" }
+  ],
+  "ADMIN": [
+    { "doc": "academic-years", "en": "How do I create a new academic year?", "ne": "नयाँ शैक्षिक वर्ष कसरी बनाउने?" },
+    { "doc": "student-admission", "en": "How do I register a student?", "ne": "विद्यार्थी भर्ना कसरी गर्ने?" },
+    { "doc": "holiday-management", "en": "How do I manage school holidays?", "ne": "विद्यालयको बिदा कसरी मिलाउने?" },
+    { "doc": "examination-lifecycle", "en": "How do I create and publish an exam?", "ne": "परीक्षा कसरी बनाउने र प्रकाशित गर्ने?" },
+    { "doc": "report-cards", "en": "How do I print report cards in bulk?", "ne": "सबै रिपोर्ट कार्ड एकैपटक कसरी प्रिन्ट गर्ने?" },
+    { "doc": "teacher-assignment", "en": "How do I assign a teacher to a class?", "ne": "शिक्षकलाई कक्षामा कसरी तोक्ने?" }
+  ],
+  "TEACHER": [
+    { "doc": "teacher-attendance", "en": "How do I take attendance?", "ne": "हाजिरी कसरी लिने?" },
+    { "doc": "teacher-assignments", "en": "How do I set an assignment?", "ne": "गृहकार्य कसरी दिने?" },
+    { "doc": "marks-entry", "en": "How do I enter exam marks?", "ne": "परीक्षाको अंक कसरी हाल्ने?" },
+    { "doc": "calendar-events", "en": "How do I add an event for my class?", "ne": "मेरो कक्षाको कार्यक्रम पात्रोमा कसरी थप्ने?" }
+  ],
+  "EXAM_OFFICER": [
+    { "doc": "marks-entry", "en": "How do I enter marks for any subject?", "ne": "जुनसुकै विषयको अंक कसरी हाल्ने?" },
+    { "doc": "exam-officer-role", "en": "Can I create exams or publish results?", "ne": "के म परीक्षा बनाउन वा नतिजा प्रकाशित गर्न सक्छु?" },
+    { "doc": "exam-officer-role", "en": "How do I check marks that were entered?", "ne": "हालिएको अंक कसरी जाँच्ने?" },
+    { "doc": "staff-student-directory", "en": "How do I find a student?", "ne": "विद्यार्थी कसरी खोज्ने?" }
+  ],
+  "ACCOUNTANT": [
+    { "doc": "collect-fees", "en": "How do I record a fee payment?", "ne": "शुल्क भुक्तानी कसरी रेकर्ड गर्ने?" },
+    { "doc": "accounts-reversals-discounts", "en": "How do I check outstanding fees?", "ne": "बाँकी शुल्क कसरी हेर्ने?" },
+    { "doc": "finance-reports", "en": "How do I generate a financial report?", "ne": "आर्थिक प्रतिवेदन कसरी निकाल्ने?" },
+    { "doc": "accounts-reversals-discounts", "en": "How do I undo a wrong payment?", "ne": "गलत भुक्तानी कसरी सच्याउने?" }
+  ],
+  "STUDENT": [
+    { "doc": "portal-results", "en": "How do I view my examination results?", "ne": "मेरो परीक्षाको नतिजा कसरी हेर्ने?" },
+    { "doc": "portal-assignments", "en": "Where can I find assignments?", "ne": "गृहकार्य कहाँ हेर्ने?" },
+    { "doc": "portal-attendance", "en": "How do I check my attendance?", "ne": "मेरो हाजिरी कसरी हेर्ने?" },
+    { "doc": "portal-fees", "en": "How do I see my fees and receipts?", "ne": "मेरो शुल्क र रसिद कसरी हेर्ने?" }
+  ],
+  "PARENT": [
+    { "doc": "portal-results", "en": "How do I view my child's academic progress?", "ne": "मेरो बच्चाको पढाइको प्रगति कसरी हेर्ने?" },
+    { "doc": "portal-attendance", "en": "How do I check attendance?", "ne": "हाजिरी कसरी हेर्ने?" },
+    { "doc": "portal-fees", "en": "Where can I see fee information?", "ne": "शुल्कको जानकारी कहाँ हेर्ने?" },
+    { "doc": "parent-child-switcher", "en": "How do I switch between my children?", "ne": "मेरा छोराछोरीबीच कसरी बदल्ने?" }
+  ]
+}

@@ -62,7 +62,7 @@ const ReportCardView = ({ studentId }) => {
             ))}
           </SelectInput>
         </div>
-        <Button icon={Printer} onClick={() => window.print()} disabled={!card}>
+        <Button icon={Printer} onClick={() => window.print()} disabled={!card} data-guide="reportCard.print">
           Print / Save as PDF
         </Button>
       </div>

@@ -27,6 +27,7 @@ import { setPersonalDatePrefs } from "../lib/calendar/datePrefs";
 import { CALENDAR_OPTIONS } from "../lib/calendar/calendarConstants";
 import { getNavSections, titleForPath, formatRoleName } from "./navigation";
 import { fullName } from "../utils/format";
+import AssistantDock from "../components/assistant/AssistantDock";
 
 const COLLAPSE_KEY = "sms.sidebarCollapsed";
 
@@ -81,6 +82,7 @@ const SidebarNav = ({ sections, collapsed, onNavigate }) => {
               <NavLink
                 to={item.path}
                 onClick={onNavigate}
+                data-guide={`nav:${item.path}`}
                 title={collapsed ? item.title : undefined}
                 className={({ isActive }) =>
                   cn(
@@ -262,6 +264,7 @@ const DashboardLayout = () => {
             type="button"
             onClick={() => setMobileOpen(true)}
             aria-label="Open navigation"
+            data-guide="nav:menu"
             className="inline-flex size-9 cursor-pointer items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 lg:hidden"
           >
             <MenuIcon size={20} aria-hidden="true" />
@@ -358,6 +361,9 @@ const DashboardLayout = () => {
           </div>
         </main>
       </div>
+
+      {/* Help assistant and its walkthroughs (nothing when the assistant is off for this user) */}
+      <AssistantDock />
     </div>
   );
 };

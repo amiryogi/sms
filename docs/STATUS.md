@@ -10,6 +10,67 @@ are done** and on `main`.
 
 ---
 
+## AI help assistant (2026-11-16): branch `feature/ai-assistant` (cut from `feature/site-calendar-and-app`), not committed yet
+
+Plan: milestones M1–M6 (audit + knowledge, backend, chat widget, walkthroughs, admin page, hardening + docs).
+Audit and role matrix: `docs/ai-assistant/`.
+
+- **Done: M1** (audit and 39 help documents in `backend/src/data/assistant/knowledge/`) and **M2**
+  (backend: `services/assistant/`, `/api/v1/assistant`, migration `20261116100000_ai_assistant`).
+- **Providers:**
+  - Gemini (default) and NVIDIA (fallback) are verified live on their free tiers.
+  - OpenAI and Claude are mock-tested only. By the owner's choice there is no Claude key and no
+    Claude calls.
+  - Keys live only in `backend/.env`.
+- **Verified 2026-11-16:**
+  - unit tests: 706;
+  - integration: 158 on MySQL and 158 on PostgreSQL;
+  - live smoke (`node scripts/assistant-smoke.js --provider gemini|nvidia`): 8/8 steps on each;
+  - evaluation set: Gemini 33/36 (two failures were transient free-tier "unavailable" errors,
+    one was a check that was too strict); NVIDIA 9/10, with weaker Nepali.
+- **Deploy (later):** `npm install` in `backend/` (new SDKs), `npm run db:migrate:deploy`, and
+  `GEMINI_API_KEY` / `NVIDIA_API_KEY` set on the server.
+- **Done: M3, the chat widget** (`frontend/src/components/assistant/`, mounted in
+  `DashboardLayout`):
+  - streaming with a non-streaming fallback (`api/assistantStream.js`);
+  - Auto / English / नेपाली, history, feedback, stop and retry;
+  - links only to the user's own pages; full screen on phones.
+  - Checked in Chrome with live Gemini as a teacher and a parent; vitest 45, lint and build pass.
+- **Done: M4, guided walkthroughs** (`components/assistant/guides/`, driver.js 1.10.2 pinned):
+  - 14 walkthroughs over 32 `data-guide` targets on real controls;
+  - Back, Pause (survives a reload), Resume and Exit; a "go to page" card when a step is on
+    another page; directions when a control is not on the page yet; on phones the menu button
+    first;
+  - registry tests against `guides.json`, `App.jsx` and each role's menu;
+  - e2e `tests/assistant.spec.js` (7 tests, fake provider); full e2e: 88 passed, 1 skipped as
+    before.
+- **Done: M5, the admin page** `/admin/assistant` (Settings → AI Assistant; `pages/admin/AssistantSettings.jsx`):
+  - **Assistant tab:** on/off, roles, default language and detection, retention, limits.
+  - **AI provider tab:** providers with an installed key only, model menu or custom id, Test
+    connection, fallback, timeout, answer length, temperature, key status (never the key).
+  - **Usage tab:** totals, questions per day, providers, roles and languages, errors, comments.
+  - The help document is published.
+  - Checked in Chrome: Test connection live on Gemini (1.2 s) and NVIDIA (1.3 s). The NVIDIA
+    fallback was switched on in the local dev school.
+- **Done: M6.**
+  - **Security review of the whole diff:** every query is scoped by school (and by user for
+    conversations); keys appear in no response or log; output is rendered safely; there are
+    walkthrough allowlists. No new dependency has a known vulnerability (`xlsx` is older).
+  - **Docs:** the 12 documents in `docs/ai-assistant/` plus a README; CLAUDE.md §2 and §6.
+- **Final verification (2026-11-16):**
+  - backend unit 706; frontend vitest 51; lint and build pass;
+  - integration on MySQL: 158/158;
+  - integration on PostgreSQL: one full run had 1 unnamed failure out of 158; every suite re-run
+    separately passed (131 + 27). It looks intermittent, and the cause is unknown;
+  - e2e: 90 passed, 1 skipped as before;
+  - live: Gemini 8/8 smoke and 34/36 evaluation (both misses free-tier "unavailable"); NVIDIA
+    8/8 smoke.
+- **Open:**
+  - check SSE streaming on the cPanel host after the first deploy
+    (`docs/ai-assistant/deployment-guide.md` §5);
+  - use a paid Gemini key before real users (the free tier may use prompts);
+  - OpenAI and Claude have never been called live.
+
 ## Public site: calendar, mobile app, app pricing (2026-11-15): branch `feature/site-calendar-and-app`
 
 - **Audit fixes:** "Nothing to install" and "there is nothing to install" contradicted the app;
