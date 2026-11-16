@@ -54,7 +54,18 @@ module.exports = defineConfig({
       command: "node scripts/with-test-db.js --provider mysql node src/server.js",
       cwd: path.join(root, "backend"),
       // The help assistant answers with canned text: e2e runs never call an AI provider.
-      env: { PORT: String(API_PORT), FRONTEND_URL: BASE_URL, ASSISTANT_FAKE_PROVIDER: "true" },
+      // The keys are placeholders, so the admin page reports every provider as installed
+      // (and "Test connection" is enabled) whatever the developer's backend/.env holds, or
+      // does not hold on CI. ASSISTANT_FAKE_PROVIDER means they are never read or sent.
+      env: {
+        PORT: String(API_PORT),
+        FRONTEND_URL: BASE_URL,
+        ASSISTANT_FAKE_PROVIDER: "true",
+        GEMINI_API_KEY: "e2e-placeholder-not-a-real-key",
+        NVIDIA_API_KEY: "e2e-placeholder-not-a-real-key",
+        OPENAI_API_KEY: "e2e-placeholder-not-a-real-key",
+        ANTHROPIC_API_KEY: "e2e-placeholder-not-a-real-key",
+      },
       url: `http://localhost:${API_PORT}/health`,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
