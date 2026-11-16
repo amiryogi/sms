@@ -52,8 +52,24 @@ Audit and role matrix: `docs/ai-assistant/`.
   - The help document is published.
   - Checked in Chrome: Test connection live on Gemini (1.2 s) and NVIDIA (1.3 s). The NVIDIA
     fallback was switched on in the local dev school.
-- **Next:** M6: security review of the diff, full regression on both databases, the
-  `docs/ai-assistant/` documents, CLAUDE.md.
+- **Done: M6.**
+  - **Security review of the whole diff:** every query is scoped by school (and by user for
+    conversations); keys appear in no response or log; output is rendered safely; there are
+    walkthrough allowlists. No new dependency has a known vulnerability (`xlsx` is older).
+  - **Docs:** the 12 documents in `docs/ai-assistant/` plus a README; CLAUDE.md §2 and §6.
+- **Final verification (2026-11-16):**
+  - backend unit 706; frontend vitest 51; lint and build pass;
+  - integration on MySQL: 158/158;
+  - integration on PostgreSQL: one full run had 1 unnamed failure out of 158; every suite re-run
+    separately passed (131 + 27). It looks intermittent, and the cause is unknown;
+  - e2e: 90 passed, 1 skipped as before;
+  - live: Gemini 8/8 smoke and 34/36 evaluation (both misses free-tier "unavailable"); NVIDIA
+    8/8 smoke.
+- **Open:**
+  - check SSE streaming on the cPanel host after the first deploy
+    (`docs/ai-assistant/deployment-guide.md` §5);
+  - use a paid Gemini key before real users (the free tier may use prompts);
+  - OpenAI and Claude have never been called live.
 
 ## Public site: calendar, mobile app, app pricing (2026-11-15): branch `feature/site-calendar-and-app`
 
