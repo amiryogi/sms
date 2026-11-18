@@ -52,8 +52,11 @@ first. No dark mode.
   1 skipped** on the local MySQL test database (`sms_test`; set up with
   `node scripts/with-test-db.js npm run db:migrate:deploy` and `… npm run seed` in `backend/`).
   Wave 3 pages also checked by hand in the browser at 1440px and 390px with a clean console.
-- **Marketing screenshots:** being regenerated on the test database (see the latest commit for
-  whether they landed).
+- **Marketing screenshots:** regenerated on the test database after wave 3 (all 22, every image
+  looked at). The capture no longer assumes the date: the calendar shows whichever of this and
+  next month has more events, the report shows the last six months by month, and the account
+  picker reads past the newest 100 payments (test runs fill those with Rs. 10 leftovers). The
+  finance dashboard and ledger images still carry some test-run figures, as before.
 
 ---
 

@@ -2,7 +2,7 @@
 // from the real app, signed in as each role on the seeded TEST database. Only demo
 // data appears. Run `npm run screenshots`, then look at every image before committing.
 const path = require("node:path");
-const { test, expect, data, stateFor } = require("../helpers/fixtures");
+const { test, expect, data, stateFor, pickDate } = require("../helpers/fixtures");
 const { call } = require("../helpers/api");
 
 const OUT = path.join(__dirname, "..", "..", "frontend", "public", "screenshots");
@@ -55,8 +55,21 @@ shot("admin-school-settings", "admin", "/admin/school-settings", async (page) =>
 
 // School calendar (BS month view, and the holidays list)
 shot("calendar-month", "admin", "/calendar", async (page) => {
-  // the demo events fall in the coming weeks: show the next month's grid
+  // Show whichever of this month and next has more on it. The demo events sit in the
+  // coming weeks, so depending on today's date that is one month or the other; always
+  // clicking "Next month" captured an empty grid early in a month. Each day cell's
+  // label ends "…, N items".
+  const itemsShown = () =>
+    page.locator('[role="grid"][aria-label="Month"] [aria-label$=" items"], [role="grid"][aria-label="Month"] [aria-label$=" item"]').evaluateAll((cells) =>
+      cells.reduce((sum, c) => sum + Number((c.getAttribute("aria-label").match(/(\d+) items?$/) || [0, 0])[1]), 0),
+    );
+  const thisMonth = await itemsShown();
   await page.getByRole("button", { name: "Next month" }).click();
+  await settle(page);
+  if ((await itemsShown()) < thisMonth) {
+    await page.getByRole("button", { name: "Previous month" }).click();
+    await settle(page);
+  }
   await page.getByRole("button", { name: "Next month" }).evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 96));
 });
 shot("calendar-holidays", "admin", "/calendar/holidays", async (page) => {
@@ -89,12 +102,21 @@ shot("finance-dashboard", "accountant", "/finance/dashboard");
 let busiestStudentId;
 test.beforeAll(async () => {
   const token = data().tokens.accountant;
-  const res = await call("GET", "/fees/transactions?type=PAYMENT&limit=100", token);
+  // Read several pages: test runs add many small payments, so the newest 100 alone can
+  // be all leftovers and leave no clean account to show (the capture then fell back to
+  // a student with nothing paid).
   const counts = {};
-  for (const t of res.body?.data || []) if (Number(t.amount) >= 100) counts[t.studentId] = (counts[t.studentId] || 0) + 1;
+  for (let page = 1; page <= 10; page += 1) {
+    const res = await call("GET", `/fees/transactions?type=PAYMENT&limit=100&page=${page}`, token);
+    const rows = res.body?.data || [];
+    for (const t of rows) if (Number(t.amount) >= 100) counts[t.studentId] = (counts[t.studentId] || 0) + 1;
+    if (rows.length < 100) break;
+  }
+  // Word boundaries: a bare /test/ also matched ordinary words such as "latest".
+  const leftover = /integration|dash-|\be2e\b|\btest\b|mw[a-z0-9]{5}/i;
   for (const [id] of Object.entries(counts).sort((a, b) => b[1] - a[1])) {
     const account = await call("GET", `/fees/accounts/${id}`, token);
-    if (!/integration|dash-|e2e|test|mw[a-z0-9]{5}/i.test(JSON.stringify(account.body?.data || ""))) {
+    if (!leftover.test(JSON.stringify(account.body?.data || ""))) {
       busiestStudentId = id;
       break;
     }
@@ -103,7 +125,13 @@ test.beforeAll(async () => {
 });
 shot("finance-account", "accountant", () => `/finance/accounts/${busiestStudentId}`);
 shot("finance-transactions", "accountant", "/finance/transactions");
-shot("finance-reports", "accountant", "/finance/reports");
+shot("finance-reports", "accountant", "/finance/reports", async (page) => {
+  // The report opens on the current Nepali month, which is empty in its first days.
+  // Show the last six months grouped by month, so the table is full whatever the date.
+  const from = new Date(Date.now() - 183 * 864e5).toISOString().slice(0, 10);
+  await pickDate(page, "From", from);
+  await page.locator("select#r-group").selectOption("month").catch(() => {});
+});
 
 // Student and parent portals
 shot("student-dashboard", "student", "/student/dashboard");
