@@ -3,7 +3,7 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Wallet, BadgePercent, ReceiptText, Undo2, CheckCircle2, XCircle, Ban, UserRound, MoreHorizontal, Printer, FileText } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { feeService } from "../../api/feeService";
-import { PageHeader, Card, CardHeader, Button, IconButton, Tabs, Badge, EmptyState, LoadingBlock, Menu, MenuItem, toast, buttonClasses } from "../../components/ui";
+import { PageHeader, PageShell, Card, CardHeader, Button, IconButton, Tabs, Badge, EmptyState, LoadingBlock, Menu, MenuItem, StatCard, StatGroup, toast, buttonClasses } from "../../components/ui";
 import FeeStatement from "../../components/finance/FeeStatement";
 import PaymentDialog from "../../components/finance/PaymentDialog";
 import DiscountDialog from "../../components/finance/DiscountDialog";
@@ -11,14 +11,6 @@ import ReasonDialog from "../../components/finance/ReasonDialog";
 import { FeeStatusBadge, ApprovalBadge } from "../../components/finance/FeeStatusBadge";
 import { REVERSAL_CATEGORIES, methodLabel, fullName } from "../../components/finance/financeLabels";
 import { formatCurrency, formatDate } from "../../utils/format";
-
-const Stat = ({ label, value, sub, tone = "text-slate-900" }) => (
-  <Card padding="sm">
-    <p className="text-sm text-slate-500">{label}</p>
-    <p className={`mt-1 text-xl font-semibold tabular-nums ${tone}`}>{value}</p>
-    {sub && <p className="mt-0.5 text-xs text-slate-500">{sub}</p>}
-  </Card>
-);
 
 /** One student's fee account: fees, payments, reversals and discounts by year. */
 const AccountDetail = () => {
@@ -76,14 +68,14 @@ const AccountDetail = () => {
   };
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <PageShell>
       <PageHeader
-        icon={UserRound}
         title={statement.student.name}
         description={
-          year
-            ? `${year.class.name} ${year.section.name}${year.rollNumber ? ` · Roll ${year.rollNumber}` : ""} · ${statement.student.admissionNumber}`
-            : statement.student.admissionNumber
+          <>
+            {year && `${year.class.name} ${year.section.name}${year.rollNumber ? `, roll ${year.rollNumber}` : ""}. `}
+            Admission no. <span className="font-mono text-slate-700">{statement.student.admissionNumber}</span>
+          </>
         }
         actions={
           year && (
@@ -113,17 +105,27 @@ const AccountDetail = () => {
         <Card><EmptyState icon={UserRound} title="Not enrolled" description="This student has no enrolment yet." /></Card>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-            <Stat label="Total fees" value={formatCurrency(year.totals.amount)} sub={`${year.fees.filter((f) => !f.cancelled).length} fee${year.fees.filter((f) => !f.cancelled).length === 1 ? "" : "s"} · ${year.academicYear.name}`} />
-            <Stat label="Discounts" value={formatCurrency(year.totals.discount)} tone="text-emerald-700" sub={`${discounts.filter((d) => d.status === "APPROVED").length} approved`} />
-            <Stat label="Paid" value={formatCurrency(year.totals.paid)} sub={`${transactions.filter((t) => t.type === "PAYMENT" && !t.reversedBy).length} payments`} />
-            <Stat
+          {/* The account's four figures, ruled like the totals line of a ledger.
+              Only the balance can carry a status colour: overdue is a state. */}
+          <StatGroup columns={4}>
+            <StatCard label="Total fees" value={formatCurrency(year.totals.amount)} sub={`${year.fees.filter((f) => !f.cancelled).length} fee${year.fees.filter((f) => !f.cancelled).length === 1 ? "" : "s"} in ${year.academicYear.name}`} />
+            <StatCard label="Discounts" value={formatCurrency(year.totals.discount)} sub={`${discounts.filter((d) => d.status === "APPROVED").length} approved`} />
+            <StatCard label="Paid" value={formatCurrency(year.totals.paid)} sub={`${transactions.filter((t) => t.type === "PAYMENT" && !t.reversedBy).length} payments`} />
+            <StatCard
               label="Balance"
               value={formatCurrency(year.totals.balance)}
-              tone={year.totals.overdue > 0 ? "text-red-600" : "text-slate-900"}
-              sub={year.totals.overdue > 0 ? `${formatCurrency(year.totals.overdue)} overdue` : year.totals.balance > 0 ? "Nothing overdue" : "Settled"}
+              tone={year.totals.overdue > 0 ? "risk" : "ink"}
+              sub={
+                year.totals.overdue > 0 ? (
+                  <span className="font-medium text-risk">{formatCurrency(year.totals.overdue)} overdue</span>
+                ) : year.totals.balance > 0 ? (
+                  "Nothing overdue"
+                ) : (
+                  "Settled"
+                )
+              }
             />
-          </div>
+          </StatGroup>
 
           <Card padding="none" className="overflow-hidden">
             <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-3">
@@ -145,23 +147,23 @@ const AccountDetail = () => {
               <p className="px-5 pb-5 text-sm text-slate-500">Nothing recorded for this year.</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[640px] text-sm">
-                  <thead className="bg-slate-50 text-left text-xs font-medium tracking-wide text-slate-500 uppercase">
+                <table className="w-full min-w-160 text-sm">
+                  <thead className="bg-slate-50 text-left text-xs font-medium text-slate-500">
                     <tr>
-                      <th className="px-5 py-2.5 font-medium">Receipt</th>
-                      <th className="px-4 py-2.5 font-medium">Date</th>
-                      <th className="px-4 py-2.5 font-medium">Method</th>
-                      <th className="px-4 py-2.5 text-right font-medium">Amount</th>
-                      <th className="px-4 py-2.5 font-medium">Recorded by</th>
-                      <th className="w-12" />
+                      <th scope="col" className="border-y border-slate-200 px-5 py-2.5 font-medium">Receipt</th>
+                      <th scope="col" className="border-y border-slate-200 px-4 py-2.5 font-medium">Date</th>
+                      <th scope="col" className="border-y border-slate-200 px-4 py-2.5 font-medium">Method</th>
+                      <th scope="col" className="border-y border-slate-200 px-4 py-2.5 text-right font-medium">Amount</th>
+                      <th scope="col" className="border-y border-slate-200 px-4 py-2.5 font-medium">Recorded by</th>
+                      <th scope="col" className="w-12 border-y border-slate-200"><span className="sr-only">Actions</span></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-slate-200">
                     {transactions.map((t) => {
                       const reversal = t.type === "REVERSAL";
                       return (
-                        <tr key={t.id} className={reversal ? "bg-red-50/40" : ""}>
-                          <td className="px-5 py-3">
+                        <tr key={t.id} className={reversal ? "bg-risk-surface/50" : "hover:bg-slate-50"}>
+                          <td className="px-5 py-2.5">
                             <Link to={`/finance/receipts/${t.id}`} className="font-mono text-xs font-medium text-slate-800 hover:text-brand-700">
                               {t.receiptNumber}
                             </Link>
@@ -170,28 +172,25 @@ const AccountDetail = () => {
                               {t.reversedBy && <Badge tone="neutral">Reversed by {t.reversedBy.receiptNumber}</Badge>}
                             </div>
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap">{formatDate(t.paidOn)}</td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-2.5 whitespace-nowrap">{formatDate(t.paidOn)}</td>
+                          <td className="px-4 py-2.5">
                             {methodLabel(t.method)}
                             {t.reference && <span className="block font-mono text-xs text-slate-500">{t.reference}</span>}
                           </td>
-                          <td className={`px-4 py-3 text-right font-semibold tabular-nums ${reversal ? "text-red-600" : "text-slate-900"}`}>
+                          <td className={`px-4 py-2.5 text-right font-semibold tabular-nums ${reversal ? "text-risk" : "text-slate-900"}`}>
                             {reversal ? "−" : ""}
                             {formatCurrency(t.amount)}
                           </td>
-                          <td className="px-4 py-3 text-slate-600">{fullName(t.recordedBy)}</td>
-                          <td className="px-2 py-3 text-right">
+                          <td className="px-4 py-2.5 text-slate-600">{fullName(t.recordedBy)}</td>
+                          <td className="px-2 py-1.5 text-right">
                             <Menu
                               trigger={({ toggle, ...aria }) => (
-                                <button
-                                  type="button"
+                                <IconButton
+                                  icon={MoreHorizontal}
+                                  label={`Actions for ${t.receiptNumber}`}
                                   onClick={toggle}
                                   {...aria}
-                                  aria-label={`Actions for ${t.receiptNumber}`}
-                                  className="inline-flex size-8 cursor-pointer items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-                                >
-                                  <MoreHorizontal size={18} aria-hidden="true" />
-                                </button>
+                                />
                               )}
                             >
                               <MenuItem icon={ReceiptText} as={Link} to={`/finance/receipts/${t.id}`}>View receipt</MenuItem>
@@ -232,7 +231,7 @@ const AccountDetail = () => {
                         <p className="text-xs text-slate-500">
                           {d.category === "SCHOLARSHIP" ? "Scholarship" : "Discount"} · requested by {fullName(d.requestedBy)} · {d.reason}
                         </p>
-                        {d.status === "APPROVED" && <p className="text-xs text-emerald-700">Applied {formatCurrency(d.appliedAmount)}</p>}
+                        {d.status === "APPROVED" && <p className="text-xs text-ok">Applied {formatCurrency(d.appliedAmount)}</p>}
                         {d.status === "REVOKED" && <p className="text-xs text-slate-500">Revoked: {d.revokeReason}</p>}
                       </div>
                       <ApprovalBadge status={d.status} />
@@ -313,7 +312,7 @@ const AccountDetail = () => {
           onSubmit={async ({ text }) => done((await feeService.revokeDiscount(dialog.target.id, { reason: text })).message)}
         />
       )}
-    </div>
+    </PageShell>
   );
 };
 

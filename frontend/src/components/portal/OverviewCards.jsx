@@ -1,8 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { CalendarCheck, Award, Wallet, NotebookPen, CalendarClock, BookOpen, ArrowRight, CheckCircle2 } from "lucide-react";
-import { Card, CardHeader, Badge } from "../ui";
-import { Progress } from "../shadcn/progress";
+import { Card, CardHeader, Badge, StatCard } from "../ui";
 import { formatCurrency, formatDate, formatRelative, dayParts } from "../../utils/format";
 
 /*
@@ -11,20 +10,8 @@ import { formatCurrency, formatDate, formatRelative, dayParts } from "../../util
  * ("/student" or "/parent") and `query` keeps a parent's chosen child.
  */
 
-const Tile = ({ icon, label, to, children }) => {
-  const Icon = icon;
-  return (
-    <Link to={to} className="group block rounded-card border border-slate-200/80 bg-white p-5 shadow-card transition-colors hover:border-brand-200 focus-visible:outline-2 focus-visible:outline-brand-600">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium text-slate-500">{label}</p>
-        <span className="flex size-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500 transition-colors group-hover:bg-brand-50 group-hover:text-brand-700">
-          <Icon size={16} aria-hidden="true" />
-        </span>
-      </div>
-      <div className="mt-2">{children}</div>
-    </Link>
-  );
-};
+/** Quiet text in place of a figure, when there is nothing to show yet. */
+const Nothing = ({ children }) => <p className="mt-3 text-sm text-slate-500">{children}</p>;
 
 export const SummaryTiles = ({ overview, base, query = "" }) => {
   const { attendance, latestResult, fees, assignments } = overview;
@@ -32,64 +19,71 @@ export const SummaryTiles = ({ overview, base, query = "" }) => {
   const pending = assignments.filter((a) => !a.submitted);
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <Tile icon={CalendarCheck} label="Attendance" to={`${base}/attendance${query}`}>
-        {attendance?.total ? (
-          <>
-            <p className="text-2xl font-semibold text-slate-900 tabular-nums">{Number(pct).toFixed(1)}%</p>
-            <Progress value={pct} className="mt-2 h-1.5" aria-label={`Attendance ${pct}%`} />
-            <p className="mt-1.5 text-xs text-slate-500">
-              {attendance.attended} of {attendance.total} days
-              {attendance.lastMarked ? ` · last ${formatRelative(attendance.lastMarked)}` : ""}
-            </p>
-          </>
-        ) : (
-          <p className="text-sm text-slate-500">No register taken yet</p>
-        )}
-      </Tile>
-      <Tile icon={Award} label="Latest result" to={`${base}/results${query}`}>
-        {latestResult ? (
-          <>
-            <p className="text-2xl font-semibold text-slate-900">
-              {latestResult.overallGrade || "—"}
-              {latestResult.percentage !== null && <span className="ml-2 text-base font-medium text-slate-500 tabular-nums">{latestResult.percentage.toFixed(1)}%</span>}
-            </p>
-            <p className="mt-1.5 truncate text-xs text-slate-500">
+      <StatCard
+        icon={CalendarCheck}
+        label="Attendance"
+        to={`${base}/attendance${query}`}
+        value={`${Number(pct).toFixed(1)}%`}
+        progress={attendance?.total ? pct : undefined}
+        progressLabel={`Attendance ${Number(pct).toFixed(1)}%`}
+        sub={
+          attendance?.total
+            ? `${attendance.attended} of ${attendance.total} days${attendance.lastMarked ? `, last marked ${formatRelative(attendance.lastMarked)}` : ""}`
+            : null
+        }
+      >
+        {attendance?.total ? undefined : <Nothing>No register taken yet</Nothing>}
+      </StatCard>
+      <StatCard
+        icon={Award}
+        label="Latest result"
+        to={`${base}/results${query}`}
+        value={latestResult ? latestResult.overallGrade || "—" : undefined}
+        sub={
+          latestResult && (
+            <span className="block truncate">
+              {latestResult.percentage !== null && <span className="tabular-nums">{latestResult.percentage.toFixed(1)}% in </span>}
               {latestResult.examName}
-              {latestResult.classRank ? ` · rank ${latestResult.classRank}` : ""}
-            </p>
-          </>
-        ) : (
-          <p className="text-sm text-slate-500">No published results yet</p>
-        )}
-      </Tile>
-      <Tile icon={Wallet} label="Fees" to={`${base}/fees${query}`}>
-        {fees && fees.amount > 0 ? (
-          fees.balance > 0 ? (
-            <>
-              <p className="text-2xl font-semibold text-slate-900 tabular-nums">{formatCurrency(fees.balance)}</p>
-              <p className={`mt-1.5 text-xs ${fees.overdue > 0 ? "font-medium text-red-600" : "text-slate-500"}`}>
-                {fees.overdue > 0
-                  ? `${formatCurrency(fees.overdue)} overdue`
-                  : fees.nextDue?.dueDate
-                    ? `Next due ${formatDate(fees.nextDue.dueDate)}`
-                    : "Balance for this year"}
-              </p>
-            </>
-          ) : (
-            <p className="flex items-center gap-1.5 text-lg font-semibold text-emerald-700">
-              <CheckCircle2 size={18} aria-hidden="true" /> All paid
-            </p>
+              {latestResult.classRank ? `, rank ${latestResult.classRank}` : ""}
+            </span>
           )
-        ) : (
-          <p className="text-sm text-slate-500">No fees set yet</p>
+        }
+      >
+        {latestResult ? undefined : <Nothing>No published results yet</Nothing>}
+      </StatCard>
+      <StatCard
+        icon={Wallet}
+        label="Fees"
+        to={`${base}/fees${query}`}
+        value={fees?.balance > 0 ? formatCurrency(fees.balance) : undefined}
+        sub={
+          fees?.amount > 0 && fees.balance > 0 ? (
+            fees.overdue > 0 ? (
+              <span className="font-medium text-risk">{formatCurrency(fees.overdue)} overdue</span>
+            ) : fees.nextDue?.dueDate ? (
+              `Next due ${formatDate(fees.nextDue.dueDate)}`
+            ) : (
+              "Balance for this year"
+            )
+          ) : null
+        }
+      >
+        {!(fees && fees.amount > 0) ? (
+          <Nothing>No fees set yet</Nothing>
+        ) : fees.balance > 0 ? undefined : (
+          // Settled is a status, so it carries the ok colour and an icon.
+          <p className="mt-3 flex items-center gap-1.5 text-lg font-semibold text-ok">
+            <CheckCircle2 size={18} aria-hidden="true" /> All paid
+          </p>
         )}
-      </Tile>
-      <Tile icon={NotebookPen} label="Assignments" to={`${base}/assignments${query}`}>
-        <p className="text-2xl font-semibold text-slate-900 tabular-nums">{pending.length}</p>
-        <p className="mt-1.5 text-xs text-slate-500">
-          {pending.length === 0 ? "Nothing due" : pending[0] ? `Next: ${pending[0].title} · ${formatDate(pending[0].dueDate)}` : ""}
-        </p>
-      </Tile>
+      </StatCard>
+      <StatCard
+        icon={NotebookPen}
+        label="Assignments due"
+        to={`${base}/assignments${query}`}
+        value={pending.length}
+        sub={pending.length === 0 ? "Nothing due" : <span className="block truncate">Next: {pending[0].title}, {formatDate(pending[0].dueDate)}</span>}
+      />
     </div>
   );
 };

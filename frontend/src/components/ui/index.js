@@ -1,8 +1,11 @@
 // Design-system kit (Tailwind). Import from "components/ui".
 export { Button, IconButton } from "./Button";
 export { buttonClasses, controlClasses } from "./styles";
-export { Field, TextInput, SelectInput, TextArea, Checkbox, Switch } from "./Field";
+export { Field, TextInput, SelectInput, TextArea, Checkbox, Radio, Switch } from "./Field";
 export { default as RangeField } from "./RangeField";
+export { default as SegmentedControl } from "./SegmentedControl";
+export { default as PageShell } from "./PageShell";
+export { StatCard, StatGroup } from "./StatCard";
 export { Card, CardHeader } from "./Card";
 export { default as Badge } from "./Badge";
 export { default as PageHeader } from "./PageHeader";

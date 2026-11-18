@@ -15,8 +15,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import StatCard from "../../components/common/StatCard";
-import { Card, CardHeader, Avatar, Badge, Skeleton } from "../../components/ui";
+import { Card, CardHeader, Avatar, Badge, Skeleton, PageShell, StatCard } from "../../components/ui";
 import { studentService } from "../../api/studentService";
 import { teacherService } from "../../api/teacherService";
 import { academicService } from "../../api/academicService";
@@ -105,10 +104,8 @@ const AdminDashboard = () => {
     }
   };
 
-  const v = (n) => (loading ? "…" : n);
-
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <PageShell>
       {/* Greeting */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -131,12 +128,12 @@ const AdminDashboard = () => {
         )}
       </div>
 
-      {/* Stats */}
+      {/* Stats: neutral counts, so ink — none of these is a status. */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Students" value={v(stats.students)} icon={GraduationCap} color="primary" hint="Enrolled this year" />
-        <StatCard title="Teachers & staff" value={v(stats.teachers)} icon={UsersRound} color="success" hint="Active accounts" />
-        <StatCard title="Classes" value={v(stats.classes)} icon={BookOpen} color="warning" hint="Grades offered" />
-        <StatCard title="Subjects" value={v(stats.subjects)} icon={Library} color="info" hint="In the master list" />
+        <StatCard label="Students" value={stats.students} loading={loading} icon={GraduationCap} sub="Enrolled this year" to="/admin/students" />
+        <StatCard label="Teachers & staff" value={stats.teachers} loading={loading} icon={UsersRound} sub="Active accounts" to="/admin/teachers" />
+        <StatCard label="Classes" value={stats.classes} loading={loading} icon={BookOpen} sub="Grades offered" to="/admin/classes" />
+        <StatCard label="Subjects" value={stats.subjects} loading={loading} icon={Library} sub="In the master list" to="/admin/subjects" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -241,7 +238,7 @@ const AdminDashboard = () => {
           )}
         </Card>
       </div>
-    </div>
+    </PageShell>
   );
 };
 

@@ -81,6 +81,34 @@ export const Checkbox = React.forwardRef(function Checkbox({ label, description,
   );
 });
 
+/**
+ * One of several mutually exclusive choices in a form, laid out as a list.
+ * Group them with a <fieldset> and a <legend>, and give every Radio the same
+ * `name` so the browser handles arrow-key navigation and the group semantics.
+ *
+ * For a compact inline switch (a filter, a view toggle, an attendance mark) use
+ * SegmentedControl instead. Both existed only as hand-rolled markup before —
+ * `admin/Teachers.jsx` and `admin/Notices.jsx` each built a raw <input
+ * type="radio"> because the kit had none.
+ */
+export const Radio = React.forwardRef(function Radio({ label, description, className, id, ...props }, ref) {
+  return (
+    <label htmlFor={id} className={cn("flex cursor-pointer items-start gap-2.5 text-sm", className)}>
+      <input
+        ref={ref}
+        id={id}
+        type="radio"
+        className="mt-0.5 size-4 shrink-0 cursor-pointer border-slate-300 accent-brand-600"
+        {...props}
+      />
+      <span>
+        <span className="font-medium text-slate-700">{label}</span>
+        {description && <span className="block text-xs text-slate-500">{description}</span>}
+      </span>
+    </label>
+  );
+});
+
 /** On/off switch. Controlled: pass `checked` and `onChange(nextBoolean)`. */
 export const Switch = ({ checked, onChange, label, description, disabled, id }) => (
   <div className="flex items-start justify-between gap-4">

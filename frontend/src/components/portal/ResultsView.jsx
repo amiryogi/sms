@@ -1,24 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { Award, Trophy, Percent, GraduationCap, CheckCircle2, XCircle } from "lucide-react";
+import { Award, CheckCircle2, XCircle } from "lucide-react";
 import { reportCardService } from "../../api/reportCardService";
-import { Card, Badge, Tabs, SelectInput, EmptyState, LoadingBlock } from "../ui";
+import { Card, Badge, Tabs, SelectInput, EmptyState, LoadingBlock, StatCard, StatGroup } from "../ui";
 import { cn } from "../../lib/cn";
-
-const Stat = ({ icon, label, value, sub }) => {
-  const Icon = icon;
-  return (
-    <div className="flex items-start gap-3">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-        <Icon size={17} aria-hidden="true" />
-      </span>
-      <div>
-        <p className="text-xs text-slate-500">{label}</p>
-        <p className="text-xl font-semibold text-slate-900 tabular-nums">{value}</p>
-        {sub && <p className="text-xs text-slate-500">{sub}</p>}
-      </div>
-    </div>
-  );
-};
 
 const marks = (v) => (v === null || v === undefined ? "—" : Number(v));
 
@@ -95,7 +79,7 @@ const ResultsView = ({ studentId }) => {
               <div>
                 <h2 className="text-lg font-semibold text-slate-900">{card.examination.name}</h2>
                 <p className="text-sm text-slate-500">
-                  {card.student.class} {card.student.section} · {card.examination.academicYear} · graded on {card.meta.gradeScale}
+                  {card.student.class} {card.student.section}, {card.examination.academicYear}. Graded on {card.meta.gradeScale}.
                 </p>
               </div>
               {s.isPassed ? (
@@ -104,12 +88,18 @@ const ResultsView = ({ studentId }) => {
                 <Badge tone="danger" icon={XCircle}>Not passed</Badge>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-5 sm:grid-cols-4">
-              <Stat icon={GraduationCap} label="GPA" value={s.gpa !== null && s.gpa !== undefined ? Number(s.gpa).toFixed(2) : "—"} sub={`Grade ${s.grade || "—"}`} />
-              <Stat icon={Percent} label="Percentage" value={s.percentage !== null && s.percentage !== undefined ? `${Number(s.percentage).toFixed(1)}%` : "—"} sub={`${marks(s.totalMarks)} / ${marks(s.totalFullMarks)}`} />
-              <Stat icon={Trophy} label="Class rank" value={s.classRank || "—"} />
-              <Stat icon={Award} label="Subjects passed" value={`${s.passedSubjects ?? "—"} / ${s.totalSubjects ?? "—"}`} sub={s.failedSubjects ? `${s.failedSubjects} not passed` : undefined} />
-            </div>
+            {/* The result's figures, ruled across the foot of the card like the
+                totals row of the printed grade sheet. */}
+            <StatGroup columns={4} surface="well" className="-mx-5 -mb-5 rounded-b-xl border-t border-slate-200">
+              <StatCard label="GPA" value={s.gpa !== null && s.gpa !== undefined ? Number(s.gpa).toFixed(2) : "—"} sub={`Grade ${s.grade || "—"}`} />
+              <StatCard label="Percentage" value={s.percentage !== null && s.percentage !== undefined ? `${Number(s.percentage).toFixed(1)}%` : "—"} sub={`${marks(s.totalMarks)} of ${marks(s.totalFullMarks)} marks`} />
+              <StatCard label="Class rank" value={s.classRank || "—"} />
+              <StatCard
+                label="Subjects passed"
+                value={`${s.passedSubjects ?? "—"}/${s.totalSubjects ?? "—"}`}
+                sub={s.failedSubjects ? <span className="font-medium text-risk">{s.failedSubjects} not passed</span> : undefined}
+              />
+            </StatGroup>
           </Card>
 
           <Card padding="none" className="overflow-hidden">

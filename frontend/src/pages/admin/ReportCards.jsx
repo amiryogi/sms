@@ -8,7 +8,6 @@ import {
   Printer,
   RefreshCw,
   Users,
-  XCircle,
   Medal,
   Search,
 } from "lucide-react";
@@ -16,29 +15,13 @@ import { Select, Button } from "../../components/common/FormElements";
 import NepalReportCard from "../../components/common/NepalReportCard";
 import BulkReportCardPrint from "../../components/common/BulkReportCardPrint";
 import WorkingDaysEditor from "../../components/admin/WorkingDaysEditor";
-import { PageHeader, Card, Badge, EmptyState, LoadingBlock, toast, confirmDialog } from "../../components/ui";
-import { cn } from "../../lib/cn";
+import { PageHeader, Card, Badge, EmptyState, LoadingBlock, StatCard, StatGroup, toast, confirmDialog } from "../../components/ui";
 import { reportCardService } from "../../api/reportCardService";
 import { examService } from "../../api/examService";
 import { academicService } from "../../api/academicService";
 import { fullName } from "../../utils/format";
 
 const MEDAL = { 1: "text-amber-500", 2: "text-slate-400", 3: "text-orange-700" };
-
-const Stat = ({ icon, label, value, tone = "text-slate-500" }) => {
-  const Icon = icon;
-  return (
-  <div className="flex items-center gap-3">
-    <span className={cn("flex size-9 items-center justify-center rounded-lg bg-slate-100", tone)}>
-      <Icon size={17} aria-hidden="true" />
-    </span>
-    <div>
-      <p className="text-lg leading-tight font-semibold text-slate-900 tabular-nums">{value}</p>
-      <p className="text-xs text-slate-500">{label}</p>
-    </div>
-  </div>
-  );
-};
 
 const ReportCards = () => {
   const [exams, setExams] = useState([]);
@@ -233,21 +216,22 @@ const ReportCards = () => {
 
       {reportData && (
         <Card padding="md">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex flex-wrap gap-x-8 gap-y-4">
-              <Stat icon={Users} label="Students" value={summary.totalStudents || 0} tone="text-brand-600" />
-              <Stat icon={FileText} label="Generated" value={summary.reportCardsGenerated || 0} tone="text-sky-600" />
-              <Stat icon={CheckCircle2} label="Published" value={summary.published || 0} tone="text-emerald-600" />
-              <Stat icon={Award} label="Passed" value={summary.passed || 0} tone="text-emerald-600" />
-              <Stat icon={XCircle} label="Failed" value={summary.failed || 0} tone="text-red-600" />
-            </div>
+          {/* Counts are ink; only failures, which need attention, carry the risk colour. */}
+          <StatGroup columns={5} surface="plain" size="sm" className="-mx-5 -mt-5 mb-5 border-b border-slate-200">
+            <StatCard label="Students" value={summary.totalStudents || 0} />
+            <StatCard label="Generated" value={summary.reportCardsGenerated || 0} />
+            <StatCard label="Published" value={summary.published || 0} />
+            <StatCard label="Passed" value={summary.passed || 0} />
+            <StatCard label="Failed" value={summary.failed || 0} tone={summary.failed > 0 ? "risk" : "ink"} />
+          </StatGroup>
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-end">
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" icon={RefreshCw} onClick={handleGenerate} loading={generating} disabled={students.length === 0} data-guide="reportCards.generate">
                 {allGenerated ? "Regenerate" : "Generate"} Report Cards
               </Button>
               {allGenerated && !allPublished && (
-                <Button variant="success" icon={Eye} onClick={() => setPublished(true)} loading={publishing} data-guide="reportCards.publish">
-                  Publish All
+                <Button variant="primary" icon={Eye} onClick={() => setPublished(true)} loading={publishing} data-guide="reportCards.publish">
+                  Publish all
                 </Button>
               )}
               {somePublished && (

@@ -26,9 +26,17 @@
     <meta name="twitter:title" content="Vidyalaya SMS — Run your whole school from one place" />
     <meta name="twitter:description" content="Attendance, exams, NEB report cards, fees and a parent app for Nepali schools, KG to Grade 10." />
     <meta name="twitter:image" content="https://vidyalaya-sms.vercel.app/og-image.jpg" />
+    <!-- IBM Plex Sans carries the UI; IBM Plex Sans Devanagari carries the Nepali
+         text and १२३ numerals the app really renders (Inter has no Devanagari, so
+         those strings used to fall back to an unmatched system font). Mono is for
+         identifiers only. Weights 400/500/600 are the whole set the app uses —
+         see frontend/DESIGN.md. -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Inter is still loaded on purpose: the printed report card and the fee
+         slips are pinned to it in app.css so their page counts and the two
+         Playwright pixel baselines do not move. It is not used by the app UI. -->
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Devanagari:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   </head>
   <body>
     <div id="root"></div>

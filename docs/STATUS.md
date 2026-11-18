@@ -1,12 +1,62 @@
 # Where this project is
 
-Updated 2026-11-15. Keep this current when you stop work — it is the handover
+Updated 2026-11-18. Keep this current when you stop work — it is the handover
 between machines and between sessions.
 
 New machine? Start with [SETUP-NEW-MACHINE.md](SETUP-NEW-MACHINE.md).
 
 **All four phases of [plans/configurable-report-card.md](plans/configurable-report-card.md)
 are done** and on `main`.
+
+---
+
+## ▶ Pick up here: visual redesign, merge then wave 4 (2026-11-18) — branch `feature/visual-redesign`
+
+Plan and full handover: **[plans/visual-identity-redesign.md](plans/visual-identity-redesign.md)**.
+The design rules themselves: **[`frontend/DESIGN.md`](../frontend/DESIGN.md)**.
+
+**The work is on `feature/visual-redesign`, not `main`.** On another machine:
+`git fetch origin && git checkout feature/visual-redesign`, then `cd frontend && npm install`.
+
+A new visual identity for the app — "the school register", grounded in the paper objects this
+software replaces. The owner asked for a real identity rather than token polish, scoped **out**
+the print sheets and the public marketing site, and asked for the data-dense staff screens
+first. No dark mode.
+
+- **Done (waves 0–2), on the branch (not yet on `main`):** the direction written down; the token layer, which
+  **redefines Tailwind's `slate`** as a warm ink ladder so all 65 pages retoned with zero page
+  edits, plus status tokens, a type scale, a monotonic radius ladder, `--shadow-card: none` and
+  a reduced-motion guard; the font moved to **IBM Plex Sans + Devanagari** (Inter has no
+  Devanagari at all, so every Nepali string was falling back to a system font — a real defect,
+  not a taste change); the kit and shell restyled, with `PageShell`, `SegmentedControl` and
+  `Radio` added and `DataTable` given the register treatment.
+- **Done (wave 3), on the branch:** one `StatCard`/`StatGroup` replaced nine hand-rolled stat
+  tiles; hero figures at `text-display`, stepping down by tile width; decorative status colour
+  stripped (admin dashboard tiles, report-card counts); Students, Marks Entry, Attendance,
+  Transactions, Accounts and Account detail restyled to the register treatment (Students rows
+  ~61→45px, Marks Entry ~48→41px, Accounts no longer scrolls sideways). Fixed a `cn()` bug
+  that silently dropped the custom `text-display`/`text-2xs` sizes. Details and what was
+  deliberately left: plan §4a.
+- **Print fix (after wave 3):** the first e2e run caught a real print regression from wave 1 —
+  the printed NEB sheet had moved up 1px because the redesign's type scale reached it. Fixed
+  by pinning Tailwind's default `--text-*` tokens inside the print selectors, which now also
+  cover the A4 statement and day book (they had been printing in the new font). Plan §3.
+- **Next:** merge `feature/visual-redesign` into `main` (pull request), then wave 4 — the
+  ~55-page tail and the copy pass.
+- **⚠ Before touching `--font-sans`, the slate ladder or any `--text-*` token, read §3 of the
+  plan.** The printed report card, slips, statement and day book resolve those tokens, so a
+  token change reaches printed output and both Playwright pixel baselines **without any print
+  file appearing in the diff**. `app.css` shadows them back inside the eight print selectors,
+  and tests guard it.
+- **Verified:** frontend lint 0 errors, build passes, 119 vitest tests. **E2E: 90 passed,
+  1 skipped** on the local MySQL test database (`sms_test`; set up with
+  `node scripts/with-test-db.js npm run db:migrate:deploy` and `… npm run seed` in `backend/`).
+  Wave 3 pages also checked by hand in the browser at 1440px and 390px with a clean console.
+- **Marketing screenshots:** regenerated on the test database after wave 3 (all 22, every image
+  looked at). The capture no longer assumes the date: the calendar shows whichever of this and
+  next month has more events, the report shows the last six months by month, and the account
+  picker reads past the newest 100 payments (test runs fill those with Rs. 10 leftovers). The
+  finance dashboard and ledger images still carry some test-run figures, as before.
 
 ---
 

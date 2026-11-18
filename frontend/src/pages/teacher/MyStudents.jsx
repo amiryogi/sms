@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { Users, BookOpen, Layers, Mail, CalendarCheck, RotateCw } from "lucide-react";
-import StatCard from "../../components/common/StatCard";
+import { Users, Mail, CalendarCheck, RotateCw } from "lucide-react";
 import DataTable from "../../components/common/DataTable";
 import { teacherService } from "../../api/teacherService";
-import { PageHeader, Card, Tabs, Avatar, Button, EmptyState, LoadingBlock } from "../../components/ui";
+import { PageHeader, PageShell, Card, Tabs, Avatar, Button, EmptyState, LoadingBlock, StatCard, StatGroup } from "../../components/ui";
 
 /** Students in the class-sections the teacher is assigned to this year. */
 const MyStudents = () => {
@@ -90,15 +89,15 @@ const MyStudents = () => {
   const { summary } = data;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <PageShell>
       <PageHeader icon={Users} title="My Students" description="Students in the classes you teach this year." />
 
       {summary && (
-        <div className="grid gap-4 sm:grid-cols-3">
-          <StatCard title="Classes" value={summary.totalClasses} icon={BookOpen} color="primary" />
-          <StatCard title="Sections" value={summary.totalSections} icon={Layers} color="info" />
-          <StatCard title="Students" value={summary.totalStudents} icon={Users} color="success" />
-        </div>
+        <StatGroup columns={3}>
+          <StatCard label="Classes" value={summary.totalClasses} />
+          <StatCard label="Sections" value={summary.totalSections} />
+          <StatCard label="Students" value={summary.totalStudents} />
+        </StatGroup>
       )}
 
       {sections.length === 0 ? (
@@ -135,7 +134,7 @@ const MyStudents = () => {
           />
         </>
       )}
-    </div>
+    </PageShell>
   );
 };
 

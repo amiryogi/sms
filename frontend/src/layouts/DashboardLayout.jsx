@@ -73,8 +73,11 @@ const SidebarNav = ({ sections, collapsed, onNavigate }) => {
   <nav ref={navRef} className="flex-1 overflow-y-auto px-3 py-4" aria-label="Main">
     {sections.map((section) => (
       <div key={section.label} className="mb-5 last:mb-0">
+        {/* Sentence case, not tracked-out caps: the labels in navigation.js
+            already read as words ("Exams & Results"), and a caps eyebrow over
+            every group is one of the generic-template tells DESIGN.md names. */}
         {!collapsed && (
-          <p className="mb-1.5 px-2.5 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">{section.label}</p>
+          <p className="mb-1.5 px-2.5 text-2xs font-medium text-slate-400">{section.label}</p>
         )}
         <ul className="space-y-0.5">
           {section.items.map((item) => (
@@ -100,7 +103,9 @@ const SidebarNav = ({ sections, collapsed, onNavigate }) => {
                     <item.icon
                       size={18}
                       aria-hidden="true"
-                      className={cn("shrink-0", isActive ? "text-brand-600" : "text-slate-400 group-hover:text-slate-600")}
+                      // Decorative: it sits beside its own label, so it takes the
+                      // non-text shade (DESIGN.md) rather than a text weight.
+                      className={cn("shrink-0", isActive ? "text-brand-600" : "text-slate-300 group-hover:text-slate-500")}
                     />
                     {!collapsed && <span className="truncate">{item.title}</span>}
                   </>

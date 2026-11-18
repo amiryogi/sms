@@ -23,7 +23,7 @@ has `school_id`) but only one school is seeded and used.
 | -------- | ---------------------------------------------------------------------- |
 | Backend  | Node.js ≥18, Express 4, Prisma 5.22, JWT (access + refresh). Database: **MySQL 8 or Supabase PostgreSQL**, one per deployment (`DATABASE_PROVIDER`; see §4.12 and `docs/database/`) |
 | Frontend | React 19 + Vite 7, React Router 7, Axios, react-hook-form, lucide-react |
-| Styling  | **Tailwind CSS 4** (`@tailwindcss/vite`), tokens in `frontend/src/styles/app.css`, kit in `src/components/ui/`. No CSS-in-JS. shadcn/ui pieces in `src/components/shadcn/` (see §9). Charts: `recharts`, colours in `components/finance/charts/chartTheme.js` |
+| Styling  | **Tailwind CSS 4** (`@tailwindcss/vite`), tokens in `frontend/src/styles/app.css`, kit in `src/components/ui/`. **The rules are [`frontend/DESIGN.md`](frontend/DESIGN.md) — read it before changing anything visual.** No CSS-in-JS. shadcn/ui pieces in `src/components/shadcn/` (see §9). Charts: `recharts`, colours in `components/finance/charts/chartTheme.js` |
 | Dates    | AD stored in DB; BS (Bikram Sambat) shown and entered through `utils/calendar/` (server) and `lib/calendar/` (web) over `@inicrea/bikram-sambat-core`. See §6 "Dates and the school calendar" |
 
 Repo layout:
@@ -601,8 +601,28 @@ migrations are tracked in git (apply with `npm run db:migrate:deploy`; never
   the report sheets still need sit in its last `@layer components` block (app font on `*`,
   `.attendance-row`, the `.rc-layout-preview` / `.rc-embedded` overrides, print rules). Don't
   add global class vocabularies (`.card`, `.btn`…) again; write utilities or a kit component.
-  `--radius-sm/md/lg` are pinned in `@theme` to 6 / 8 / 14 px (the values the design was built
-  with), so `rounded-lg` is 14 px here, not Tailwind's 8 px.
+- **The design system is [`frontend/DESIGN.md`](frontend/DESIGN.md)** — read it before
+  changing anything visual, and update it in the same commit if a rule moves. In short:
+  - `@theme` **redefines Tailwind's `slate`** as a warm ink ladder, so existing
+    `text-slate-500` / `border-slate-200` classes retone with no page edits. `slate-400`
+    is the lightest value allowed on text; `slate-300` is a control boundary (3:1);
+    decorative icons go at `slate-300`.
+  - Status is four tokens — `ok` / `warn` / `risk` / `info`, each with `-surface`,
+    `-line` and `-strong`. Status colour may only express status, never decoration.
+  - The radius ladder is monotonic: `sm` 4, `md` 6, `lg` 8, `xl` 12, `2xl` 16 px, and
+    `rounded-card` aliases `rounded-xl`. (It previously ran 6 / 8 / 14 px with
+    `rounded-xl` *smaller* than `rounded-lg`.)
+  - `--shadow-card` is `none`: a surface is a 1px rule. Only overlays get `shadow-pop`.
+  - Font is **IBM Plex Sans + IBM Plex Sans Devanagari** (the app renders real Nepali
+    text; Inter had no Devanagari) and **IBM Plex Mono** for identifiers.
+  - `PageShell` owns the one container width and vertical rhythm — use it on new pages.
+  - `PageHeader` / `CardHeader` ignore an `icon` prop on purpose; no decorative tile
+    beside a title.
+  - **Print is pinned.** `app.css` shadows `--font-sans` and the whole slate ladder back
+    to their pre-redesign values inside `.report-card-a4`, `.report-a4`, `.perf-sheet`,
+    `.rc-grade-legend`, `.bill-slip` and `.receipt-slip`, so printed output and the
+    Playwright pixel baselines do not move. `index.html` still loads Inter for this.
+    `src/styles/__tests__/palette.test.js` asserts all of the above, including contrast.
 - **Print exception.** The report-card sheets keep local, unlayered CSS for A4 output.
   There is **one sheet and one stylesheet per template**: `reportcard/ReportSheet.jsx` +
   `reportcard/nebSheetStyles.js` (NEB grade sheet) and `reportcard/PerformanceSheet.jsx`.

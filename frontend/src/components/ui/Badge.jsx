@@ -1,22 +1,27 @@
 import React from "react";
 import { cn } from "../../lib/cn";
 
+/*
+ * Status tones come from the tokens in frontend/DESIGN.md — one definition per
+ * meaning. Each text colour clears AA on its own surface, which the old
+ * emerald-50/emerald-700 style pairings did not.
+ */
 const TONES = {
   neutral: "bg-slate-100 text-slate-700 ring-slate-200",
   brand: "bg-brand-50 text-brand-700 ring-brand-200",
-  success: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  warning: "bg-amber-50 text-amber-800 ring-amber-200",
-  danger: "bg-red-50 text-red-700 ring-red-200",
-  info: "bg-sky-50 text-sky-700 ring-sky-200",
+  success: "bg-ok-surface text-ok ring-ok-line",
+  warning: "bg-warn-surface text-warn ring-warn-line",
+  danger: "bg-risk-surface text-risk ring-risk-line",
+  info: "bg-info-surface text-info ring-info-line",
 };
 
 const DOTS = {
   neutral: "bg-slate-400",
   brand: "bg-brand-500",
-  success: "bg-emerald-500",
-  warning: "bg-amber-500",
-  danger: "bg-red-500",
-  info: "bg-sky-500",
+  success: "bg-ok",
+  warning: "bg-warn",
+  danger: "bg-risk",
+  info: "bg-info",
 };
 
 /** Small status pill. `dot` adds a coloured dot before the label. */

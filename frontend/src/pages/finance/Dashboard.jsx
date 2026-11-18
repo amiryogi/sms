@@ -3,33 +3,10 @@ import { Link } from "react-router-dom";
 import { LayoutDashboard, Wallet, AlertTriangle, CalendarDays, Coins, HandCoins, FileSpreadsheet, ArrowRight, RotateCw } from "lucide-react";
 import { feeService } from "../../api/feeService";
 import { academicService } from "../../api/academicService";
-import { PageHeader, Card, CardHeader, Button, SelectInput, NepaliDatePicker, Skeleton, EmptyState, Avatar, Badge, toast } from "../../components/ui";
+import { PageHeader, PageShell, Card, CardHeader, Button, SelectInput, NepaliDatePicker, Skeleton, EmptyState, Avatar, Badge, StatCard, StatGroup, toast, buttonClasses } from "../../components/ui";
 import { DailyCollectionChart, MonthlyCollectionChart, CollectedVsOutstandingChart, FeeStateBar, OverdueTrendChart } from "../../components/finance/charts/FinanceCharts";
 import { PAYMENT_METHODS, methodLabel, fullName } from "../../components/finance/financeLabels";
-import { SERIES } from "../../components/finance/charts/chartTheme";
 import { formatCurrency, formatDate } from "../../utils/format";
-
-/** A headline number. `progress` (0-100) draws a thin bar under it. */
-const Kpi = ({ icon, label, value, sub, tone = "text-slate-900", progress }) => {
-  const Icon = icon;
-  return (
-  <Card>
-    <div className="flex items-start justify-between gap-3">
-      <p className="text-sm font-medium text-slate-500">{label}</p>
-      <span className="flex size-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-        <Icon size={16} aria-hidden="true" />
-      </span>
-    </div>
-    <p className={`mt-2 text-2xl font-semibold tracking-tight tabular-nums ${tone}`}>{value}</p>
-    {progress !== undefined && (
-      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label={`${label}: ${progress}%`}>
-        <div className="h-full rounded-full" style={{ width: `${Math.min(100, Math.max(0, progress))}%`, backgroundColor: SERIES.collected }} />
-      </div>
-    )}
-    {sub && <p className="mt-1.5 text-xs text-slate-500">{sub}</p>}
-  </Card>
-  );
-};
 
 /**
  * Finance overview for accountants and admins: what the school expects this
@@ -81,17 +58,17 @@ const FinanceDashboard = () => {
   const s = data?.series;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <PageShell>
       <PageHeader
         icon={LayoutDashboard}
         title="Finance overview"
-        description={data ? `${data.academicYear.name}${data.academicYear.isCurrent ? " (current year)" : ""} · as of ${formatDate(data.today)}` : "Fees expected, collected and owed"}
+        description={data ? `${data.academicYear.name}${data.academicYear.isCurrent ? " (current year)" : ""}, as of ${formatDate(data.today)}` : "Fees expected, collected and owed"}
         actions={
           <>
-            <Link to="/finance/reports" className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+            <Link to="/finance/reports" className={buttonClasses({ variant: "secondary" })}>
               <FileSpreadsheet size={16} aria-hidden="true" /> Reports
             </Link>
-            <Link to="/finance/collect" className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand-600 px-3 text-sm font-semibold text-brand-fg hover:bg-brand-700">
+            <Link to="/finance/collect" className={buttonClasses()}>
               <HandCoins size={16} aria-hidden="true" /> Collect fees
             </Link>
           </>
@@ -125,8 +102,8 @@ const FinanceDashboard = () => {
               <option key={m.value} value={m.value}>{methodLabel(m.value)}</option>
             ))}
           </SelectInput>
-          <NepaliDatePicker aria-label="Collections from" value={filters.from} max={filters.to || undefined} onChange={(ad) => set("from", ad)} placeholder="From (last 30 days)" className="w-full sm:w-56" />
-          <NepaliDatePicker aria-label="Collections to" value={filters.to} min={filters.from || undefined} onChange={(ad) => set("to", ad)} placeholder="To (today)" className="w-full sm:w-56" />
+          <NepaliDatePicker aria-label="Collections from" value={filters.from} max={filters.to || undefined} onChange={(ad) => set("from", ad)} placeholder="From (last 30 days)" className="w-full" />
+          <NepaliDatePicker aria-label="Collections to" value={filters.to} min={filters.from || undefined} onChange={(ad) => set("to", ad)} placeholder="To (today)" className="w-full" />
         </div>
         {(filtered || filters.from || filters.to) && (
           <p className="mt-2 text-xs text-slate-500">
@@ -146,37 +123,58 @@ const FinanceDashboard = () => {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-36 rounded-card" />)}</div>
       ) : (
         <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"} aria-busy={loading}>
-          {/* Headline numbers */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Kpi icon={Wallet} label="Collected this year" value={formatCurrency(k.collected)} progress={k.collectionRate} sub={`${k.collectionRate}% of ${formatCurrency(k.expectedNet)} expected`} />
-            <Kpi
+          {/* Headline numbers. Ink unless the figure is itself a status. The
+              collection bar is a token, not the chart series colour. */}
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              icon={Wallet}
+              label="Collected this year"
+              value={formatCurrency(k.collected)}
+              progress={k.collectionRate}
+              progressLabel={`Collected: ${k.collectionRate}% of expected`}
+              sub={`${k.collectionRate}% of ${formatCurrency(k.expectedNet)} expected`}
+            />
+            <StatCard
               icon={Coins}
               label="Still owed"
               value={formatCurrency(k.outstanding)}
-              tone={k.overdue.amount > 0 ? "text-slate-900" : "text-emerald-700"}
-              sub={k.overdue.amount > 0 ? `${formatCurrency(k.overdue.amount)} overdue · ${k.overdue.students} student${k.overdue.students === 1 ? "" : "s"}` : "Nothing overdue"}
+              sub={
+                k.overdue.amount > 0 ? (
+                  <>
+                    <span className="font-medium text-risk">{formatCurrency(k.overdue.amount)} overdue</span>
+                    {` from ${k.overdue.students} student${k.overdue.students === 1 ? "" : "s"}`}
+                  </>
+                ) : (
+                  "Nothing overdue"
+                )
+              }
             />
-            <Kpi icon={HandCoins} label="Today" value={k.today < 0 ? `−${formatCurrency(-k.today)}` : formatCurrency(k.today)} tone={k.today < 0 ? "text-red-600" : "text-slate-900"} sub={k.today < 0 ? "Reversals exceeded payments today" : "Net of reversals"} />
-            <Kpi icon={CalendarDays} label={`This month · ${k.thisMonth.label}`} value={formatCurrency(k.thisMonth.amount)} sub={`${formatDate(k.thisMonth.from)} – ${formatDate(k.thisMonth.to)}`} />
+            <StatCard
+              icon={HandCoins}
+              label="Today"
+              value={k.today < 0 ? `−${formatCurrency(-k.today)}` : formatCurrency(k.today)}
+              tone={k.today < 0 ? "risk" : "ink"}
+              sub={k.today < 0 ? "Reversals exceeded payments today" : "Net of reversals"}
+            />
+            <StatCard
+              icon={CalendarDays}
+              label="This month"
+              value={formatCurrency(k.thisMonth.amount)}
+              sub={`${k.thisMonth.label}, ${formatDate(k.thisMonth.from)} – ${formatDate(k.thisMonth.to)}`}
+            />
           </div>
 
-          {/* Secondary figures, one strip */}
-          <Card padding="none" className="mt-4">
-            <dl className="grid grid-cols-2 divide-slate-100 sm:grid-cols-4 sm:divide-x">
-              {[
-                ["Expected (gross)", formatCurrency(k.expectedGross), `${formatCurrency(k.discounts)} in discounts`],
-                ["Not yet due", formatCurrency(k.pending.amount), `${k.pending.installments} installments`],
-                ["Overdue", formatCurrency(k.overdue.amount), `${k.overdue.installments} installments`],
-                ["Transactions", `${k.transactions.payments}`, `payments · ${k.transactions.reversals} reversal${k.transactions.reversals === 1 ? "" : "s"} (${formatDate(k.range.from)} – ${formatDate(k.range.to)})`],
-              ].map(([label, value, sub]) => (
-                <div key={label} className="px-5 py-4">
-                  <dt className="text-xs font-medium text-slate-500">{label}</dt>
-                  <dd className="mt-1 text-lg font-semibold text-slate-900 tabular-nums">{value}</dd>
-                  <dd className="text-xs text-slate-500">{sub}</dd>
-                </div>
-              ))}
-            </dl>
-          </Card>
+          {/* Secondary figures, ruled into one strip */}
+          <StatGroup columns={4} size="sm" className="mt-4">
+            <StatCard label="Expected (gross)" value={formatCurrency(k.expectedGross)} sub={`${formatCurrency(k.discounts)} in discounts`} />
+            <StatCard label="Not yet due" value={formatCurrency(k.pending.amount)} sub={`${k.pending.installments} installments`} />
+            <StatCard label="Overdue" value={formatCurrency(k.overdue.amount)} tone={k.overdue.amount > 0 ? "risk" : "ink"} sub={`${k.overdue.installments} installments`} />
+            <StatCard
+              label="Payments"
+              value={k.transactions.payments}
+              sub={`${k.transactions.reversals} reversal${k.transactions.reversals === 1 ? "" : "s"}, ${formatDate(k.range.from)} – ${formatDate(k.range.to)}`}
+            />
+          </StatGroup>
 
           {/* Charts */}
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -211,7 +209,7 @@ const FinanceDashboard = () => {
                         <span className="block text-xs text-slate-500">{r.class?.name} {r.section?.name} · {r.admissionNumber}</span>
                       </Link>
                       <span className="text-right">
-                        <span className="block text-sm font-semibold text-red-600 tabular-nums">{formatCurrency(r.overdue)}</span>
+                        <span className="block text-sm font-semibold text-risk tabular-nums">{formatCurrency(r.overdue)}</span>
                         <span className="block text-xs text-slate-500 tabular-nums">of {formatCurrency(r.balance)}</span>
                       </span>
                     </li>
@@ -240,7 +238,7 @@ const FinanceDashboard = () => {
                       </Link>
                       {t.type === "REVERSAL" && <Badge tone="danger">Reversal</Badge>}
                       {t.reversedBy && <Badge tone="neutral">Reversed</Badge>}
-                      <span className={`text-sm font-semibold tabular-nums ${t.type === "REVERSAL" ? "text-red-600" : "text-slate-900"}`}>
+                      <span className={`text-sm font-semibold tabular-nums ${t.type === "REVERSAL" ? "text-risk" : "text-slate-900"}`}>
                         {t.type === "REVERSAL" ? "−" : ""}
                         {formatCurrency(t.amount)}
                       </span>
@@ -252,7 +250,7 @@ const FinanceDashboard = () => {
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 };
 
