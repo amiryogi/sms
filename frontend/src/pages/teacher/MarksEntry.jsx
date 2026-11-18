@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { BookOpen, ClipboardList, Save, Users, Undo2, CheckCircle2, Keyboard } from "lucide-react";
+import { BookOpen, ClipboardList, Save, Users, Undo2, Keyboard } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { examService } from "../../api/examService";
 import { teacherService } from "../../api/teacherService";
-import { PageHeader, Card, Badge, Button, Field, SelectInput, EmptyState, LoadingBlock, toast, confirmDialog } from "../../components/ui";
+import { PageHeader, PageShell, Card, Badge, Button, Field, SelectInput, EmptyState, LoadingBlock, toast, confirmDialog } from "../../components/ui";
 import { cn } from "../../lib/cn";
 import { fullName } from "../../utils/format";
 
@@ -111,7 +111,7 @@ const MarksEntry = () => {
       .filter((ta) => inExam.has(Number(ta.classSubjectId)))
       .map((ta) => ({
         value: `${ta.classSubjectId}-${ta.sectionId}`,
-        label: `${ta.classSubject?.class?.name} ${ta.section?.name} · ${ta.classSubject?.subject?.name}`,
+        label: `${ta.classSubject?.class?.name} ${ta.section?.name}, ${ta.classSubject?.subject?.name}`,
       }));
   }, [useTeacherFlow, selectedExam, teacherAssignments]);
 
@@ -310,13 +310,21 @@ const MarksEntry = () => {
   }
 
   const showGrid = Boolean(target);
+  /*
+   * One cell control for marks and remarks. 32px tall (was 36) so a row is
+   * ~40px instead of ~48px: about a fifth more students per screen, which is
+   * the point of this page. Still well above the 24px WCAG 2.2 AA target.
+   * The resting border is slate-300, the control-boundary shade (3:1).
+   */
   const cellBase =
-    "h-9 w-full rounded-md border bg-white px-2.5 text-sm tabular-nums outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400";
+    "h-8 w-full rounded-md border bg-white px-2.5 text-sm tabular-nums outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400";
+  const th = "border-b border-slate-200 py-2.5 text-xs font-medium text-slate-500";
+  const td = "border-b border-slate-200";
+  const done = marksData.length ? Math.round(((stats.entered + stats.absent) / marksData.length) * 100) : 0;
 
   return (
-    <div className={cn("mx-auto max-w-6xl space-y-6", stats.changed > 0 && "pb-24")}>
+    <PageShell className={cn(stats.changed > 0 && "pb-24")}>
       <PageHeader
-        icon={ClipboardList}
         title="Marks Entry"
         description={useTeacherFlow ? "Enter marks for the subjects you teach." : "Enter marks for any subject in a published exam."}
       />
@@ -400,22 +408,23 @@ const MarksEntry = () => {
               <h2 className="truncate text-base font-semibold text-slate-900">{es?.classSubject?.subject?.name}</h2>
               <p className="text-sm text-slate-500">{selectedExam?.name}</p>
             </div>
+            {/* Full marks are facts about the subject, not a status: neutral. */}
             <div className="flex flex-wrap gap-1.5">
-              {hasTheory && <Badge tone="info">Theory {theoryMax}</Badge>}
-              {hasPractical && <Badge tone="success">Practical {practicalMax}</Badge>}
+              {hasTheory && <Badge>Theory out of {theoryMax}</Badge>}
+              {hasPractical && <Badge>Practical out of {practicalMax}</Badge>}
             </div>
-            <div className="ml-auto flex flex-wrap items-center gap-3 text-sm text-slate-600">
-              <span className="inline-flex items-center gap-1.5"><Users size={15} className="text-slate-400" aria-hidden="true" />{marksData.length}</span>
-              <span className="inline-flex items-center gap-1.5"><CheckCircle2 size={15} className="text-emerald-500" aria-hidden="true" />{stats.entered} entered</span>
-              {stats.absent > 0 && <span>{stats.absent} absent</span>}
-              {stats.pending > 0 && <span className="text-amber-700">{stats.pending} left</span>}
-            </div>
+            {/* Progress through the class: the figures are ink; only the rows
+                still to do carry a status colour (warn = due). */}
+            <p className="ml-auto flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm text-slate-500">
+              <span><span className="font-semibold text-slate-900 tabular-nums">{marksData.length}</span> students</span>
+              <span><span className="font-semibold text-slate-900 tabular-nums">{stats.entered}</span> entered</span>
+              {stats.absent > 0 && <span><span className="font-semibold text-slate-900 tabular-nums">{stats.absent}</span> absent</span>}
+              {stats.pending > 0 && <span className="text-warn"><span className="font-semibold tabular-nums">{stats.pending}</span> left</span>}
+            </p>
             {marksData.length > 0 && (
+              // Decorative: the counts beside it say the same thing in text.
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
-                <div
-                  className="h-full rounded-full bg-brand-600 transition-[width]"
-                  style={{ width: `${Math.round(((stats.entered + stats.absent) / marksData.length) * 100)}%` }}
-                />
+                <div className="h-full rounded-full bg-slate-700 transition-[width]" style={{ width: `${done}%` }} />
               </div>
             )}
           </div>
@@ -427,16 +436,25 @@ const MarksEntry = () => {
           ) : (
             <>
               <div ref={gridRef} className="max-h-[calc(100vh-18rem)] min-h-64 overflow-auto" data-guide="marks.table">
-                <table className="w-full min-w-[720px] border-separate border-spacing-0 text-sm">
-                  <thead className="sticky top-0 z-10 bg-slate-50 text-left text-xs font-medium tracking-wide text-slate-500 uppercase">
+                <table className="w-full min-w-180 border-separate border-spacing-0 text-left text-sm">
+                  {/* Register header: sentence case, numeric columns right-aligned. */}
+                  <thead className="sticky top-0 z-10 bg-slate-50">
                     <tr>
-                      <th className="col-roll w-16 border-b border-slate-200 px-4 py-2.5 font-medium">Roll</th>
-                      <th className="col-name sticky left-0 z-10 border-b border-slate-200 bg-slate-50 px-4 py-2.5 font-medium">Student</th>
-                      {hasTheory && <th className="col-marks w-32 border-b border-slate-200 px-2 py-2.5 font-medium">Theory <span className="normal-case text-slate-400">/{theoryMax}</span></th>}
-                      {hasPractical && <th className="col-marks w-32 border-b border-slate-200 px-2 py-2.5 font-medium">Practical <span className="normal-case text-slate-400">/{practicalMax}</span></th>}
-                      {hasPractical && <th className="w-20 border-b border-slate-200 px-2 py-2.5 text-right font-medium">Total</th>}
-                      <th className="w-24 border-b border-slate-200 px-2 py-2.5 text-center font-medium">Absent</th>
-                      <th className="col-remarks border-b border-slate-200 px-2 py-2.5 pr-4 font-medium">Remarks</th>
+                      <th scope="col" className={cn("col-roll w-16 px-4 text-right", th)}>Roll</th>
+                      <th scope="col" className={cn("col-name sticky left-0 z-10 bg-slate-50 px-4", th)}>Student</th>
+                      {hasTheory && (
+                        <th scope="col" className={cn("col-marks w-32 px-2 text-right", th)}>
+                          Theory <span className="font-normal text-slate-400 tabular-nums">/{theoryMax}</span>
+                        </th>
+                      )}
+                      {hasPractical && (
+                        <th scope="col" className={cn("col-marks w-32 px-2 text-right", th)}>
+                          Practical <span className="font-normal text-slate-400 tabular-nums">/{practicalMax}</span>
+                        </th>
+                      )}
+                      {hasPractical && <th scope="col" className={cn("w-20 px-4 text-right", th)}>Total</th>}
+                      <th scope="col" className={cn("w-24 px-2 text-center", th)}>Absent</th>
+                      <th scope="col" className={cn("col-remarks px-2 pr-4", th)}>Remarks</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -444,15 +462,16 @@ const MarksEntry = () => {
                       const errs = rowErrors(m);
                       const dirty = rowKey(saved[m.studentId]) !== rowKey(m);
                       const total = (parseFloat(m.marksObtained) || 0) + (parseFloat(m.practicalMarks) || 0);
-                      const rowBg = errs.theory || errs.practical ? "bg-red-50/60" : m.isAbsent ? "bg-slate-50" : "bg-white";
+                      const rowBg = errs.theory || errs.practical ? "bg-risk-surface" : m.isAbsent ? "bg-slate-50" : "bg-white";
                       return (
                         <tr key={m.studentId} className={cn("group", rowBg)}>
-                          <td className={cn("col-roll border-b border-slate-100 px-4 py-1.5 text-slate-500 tabular-nums", dirty && "shadow-[inset_3px_0_0] shadow-brand-500")}>{m.rollNumber || "—"}</td>
-                          <td className={cn("col-name sticky left-0 border-b border-slate-100 px-4 py-1.5 font-medium text-slate-900", rowBg)}>
+                          {/* An unsaved row is a draft: a warn rule down its left edge. */}
+                          <td className={cn("col-roll px-4 py-2.5 text-right text-slate-500 tabular-nums", td, dirty && "shadow-[inset_3px_0_0] shadow-warn")}>{m.rollNumber || "—"}</td>
+                          <td className={cn("col-name sticky left-0 px-4 py-2.5 font-medium text-slate-900", td, rowBg)}>
                             <span className="block max-w-56 truncate">{m.studentName}</span>
                           </td>
                           {hasTheory && (
-                            <td className="col-marks border-b border-slate-100 px-2 py-1.5 align-top">
+                            <td className={cn("col-marks px-2 py-1 align-top", td)}>
                               <input
                                 type="number"
                                 inputMode="decimal"
@@ -470,13 +489,13 @@ const MarksEntry = () => {
                                 onChange={(e) => updateMarks(m.studentId, "marksObtained", e.target.value)}
                                 onKeyDown={(e) => onCellKey(e, i, "theory")}
                                 onFocus={(e) => e.target.select()}
-                                className={cn(cellBase, errs.theory ? "border-red-400 text-red-700" : "border-slate-200")}
+                                className={cn(cellBase, "text-right", errs.theory ? "border-risk text-risk" : "border-slate-300")}
                               />
-                              {errs.theory && <p className="mt-0.5 text-[11px] font-medium text-red-600">{errs.theory}</p>}
+                              {errs.theory && <p className="mt-0.5 text-right text-2xs font-medium text-risk">{errs.theory}</p>}
                             </td>
                           )}
                           {hasPractical && (
-                            <td className="col-marks border-b border-slate-100 px-2 py-1.5 align-top">
+                            <td className={cn("col-marks px-2 py-1 align-top", td)}>
                               <input
                                 type="number"
                                 inputMode="decimal"
@@ -494,17 +513,23 @@ const MarksEntry = () => {
                                 onChange={(e) => updateMarks(m.studentId, "practicalMarks", e.target.value)}
                                 onKeyDown={(e) => onCellKey(e, i, "practical")}
                                 onFocus={(e) => e.target.select()}
-                                className={cn(cellBase, errs.practical ? "border-red-400 text-red-700" : "border-slate-200")}
+                                className={cn(cellBase, "text-right", errs.practical ? "border-risk text-risk" : "border-slate-300")}
                               />
-                              {errs.practical && <p className="mt-0.5 text-[11px] font-medium text-red-600">{errs.practical}</p>}
+                              {errs.practical && <p className="mt-0.5 text-right text-2xs font-medium text-risk">{errs.practical}</p>}
                             </td>
                           )}
                           {hasPractical && (
-                            <td className="border-b border-slate-100 px-2 py-1.5 text-right font-medium text-slate-700 tabular-nums">
+                            <td className={cn("px-4 py-2.5 text-right font-semibold text-slate-900 tabular-nums", td)}>
                               {m.isAbsent || (m.marksObtained === "" && m.practicalMarks === "") ? "—" : total}
                             </td>
                           )}
-                          <td className="border-b border-slate-100 px-2 py-1.5 text-center">
+                          <td className={cn("px-2 py-1 text-center", td)}>
+                            {/*
+                              A single on/off per row, so a switch rather than the kit's
+                              SegmentedControl: that one moves its value on ↑/↓, which here
+                              would fight the spreadsheet's row navigation. Absent is a
+                              status (DESIGN.md: risk), Present is the quiet default.
+                            */}
                             <button
                               type="button"
                               role="switch"
@@ -512,14 +537,15 @@ const MarksEntry = () => {
                               aria-label={`${m.studentName} absent`}
                               onClick={() => updateMarks(m.studentId, "isAbsent", !m.isAbsent)}
                               className={cn(
-                                "cursor-pointer rounded-full px-2.5 py-1 text-xs font-medium ring-1 transition-colors ring-inset",
-                                m.isAbsent ? "bg-amber-100 text-amber-800 ring-amber-300" : "bg-white text-slate-400 ring-slate-200 hover:text-slate-600",
+                                "h-8 min-w-20 cursor-pointer rounded-md px-2.5 text-xs font-medium ring-1 transition-colors ring-inset",
+                                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600",
+                                m.isAbsent ? "bg-risk-surface text-risk ring-risk-line" : "bg-white text-slate-500 ring-slate-300 hover:bg-slate-50 hover:text-slate-800",
                               )}
                             >
                               {m.isAbsent ? "Absent" : "Present"}
                             </button>
                           </td>
-                          <td className="col-remarks border-b border-slate-100 px-2 py-1.5 pr-4">
+                          <td className={cn("col-remarks px-2 py-1 pr-4", td)}>
                             <input
                               type="text"
                               data-row={i}
@@ -529,7 +555,7 @@ const MarksEntry = () => {
                               aria-label={`Remarks for ${m.studentName}`}
                               onChange={(e) => updateMarks(m.studentId, "remarks", e.target.value)}
                               onKeyDown={(e) => onCellKey(e, i, "remarks")}
-                              className={cn(cellBase, "border-transparent bg-transparent hover:border-slate-200 focus:bg-white")}
+                              className={cn(cellBase, "border-transparent bg-transparent hover:border-slate-300 focus:bg-white")}
                             />
                           </td>
                         </tr>
@@ -554,10 +580,14 @@ const MarksEntry = () => {
       {/* Sticky save bar while there are unsaved changes */}
       {showGrid && stats.changed > 0 && (
         <div data-save-bar className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur lg:left-64 print:hidden">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
+          <div className="mx-auto flex max-w-[88rem] flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
             <span className="text-sm text-slate-700">
-              <strong className="font-semibold">{stats.changed}</strong> unsaved {stats.changed === 1 ? "row" : "rows"}
-              {stats.invalid > 0 && <span className="ml-2 text-red-600">· {stats.invalid} with errors</span>}
+              <strong className="font-semibold tabular-nums">{stats.changed}</strong> unsaved {stats.changed === 1 ? "row" : "rows"}
+              {stats.invalid > 0 && (
+                <span className="font-medium text-risk">
+                  , <span className="tabular-nums">{stats.invalid}</span> with errors
+                </span>
+              )}
             </span>
             <span className="flex-1" />
             <Button variant="ghost" icon={Undo2} onClick={discard} disabled={saving}>Discard</Button>
@@ -565,7 +595,7 @@ const MarksEntry = () => {
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 };
 

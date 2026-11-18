@@ -6,7 +6,7 @@ import ResetPasswordDialog, { NewAccountDialog } from "../../components/admin/Re
 import DataTable from "../../components/common/DataTable";
 import Modal from "../../components/common/Modal";
 import { Input, DateInput, Select, Button, FormRow } from "../../components/common/FormElements";
-import { PageHeader, Badge, Avatar, IconButton, DialogActions, toast, buttonClasses } from "../../components/ui";
+import { PageHeader, PageShell, Badge, Avatar, IconButton, DialogActions, toast, buttonClasses } from "../../components/ui";
 import { studentService } from "../../api/studentService";
 import { academicService } from "../../api/academicService";
 import AvatarUpload from "../../components/common/AvatarUpload";
@@ -253,18 +253,21 @@ const Students = ({ readOnly = false }) => {
   const columns = [
     {
       header: "Student",
-      render: (row) => (
-        <div className="flex min-w-0 items-center gap-3">
-          <Avatar src={row.avatarUrl} name={name(row)} size="sm" />
-          <div className="min-w-0">
-            <p className="truncate font-medium text-slate-900">{name(row)}</p>
-            <p className="truncate text-xs text-slate-500">
-              <span className="font-mono">{row.username || row.user?.username}</span>
-              {row.email ? ` · ${row.email}` : ""}
-            </p>
+      // One line per student, like a register (~45px rows, down from ~61px).
+      // The username is shown only when it differs from the admission number (the
+      // default), which already has its own column; the email lives in the
+      // student's details, not in the register.
+      render: (row) => {
+        const username = row.username || row.user?.username;
+        const ownUsername = username && username.toLowerCase() !== String(row.admissionNumber || "").toLowerCase();
+        return (
+          <div className="flex min-w-0 items-center gap-2.5">
+            <Avatar src={row.avatarUrl} name={name(row)} size="xs" />
+            <span className="truncate font-medium text-slate-900">{name(row)}</span>
+            {ownUsername && <span className="truncate font-mono text-xs text-slate-500">{username}</span>}
           </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       header: "Admission no.",
@@ -274,22 +277,21 @@ const Students = ({ readOnly = false }) => {
       header: "Class",
       render: (row) =>
         row.class && row.section ? (
-          <span>
-            {row.class}
-            <span className="text-slate-400"> · </span>
-            {row.section}
+          <span className="whitespace-nowrap">
+            {row.class} {row.section}
           </span>
         ) : (
           <Badge tone="warning">Not enrolled</Badge>
         ),
     },
-    { header: "Roll", render: (row) => <span className="tabular-nums">{row.rollNumber || "—"}</span> },
+    { header: "Roll", numeric: true, render: (row) => row.rollNumber || "—" },
     {
       header: "Gender",
       render: (row) => <span className="capitalize">{row.gender || "—"}</span>,
     },
     {
       header: <span className="sr-only">Actions</span>,
+      action: true,
       width: readOnly ? "56px" : "136px",
       render: (row) =>
         readOnly ? (
@@ -313,9 +315,8 @@ const Students = ({ readOnly = false }) => {
   const studentTitle = readOnly ? "Student details" : editingStudent ? "Edit student" : "Add student";
 
   return (
-    <div className="mx-auto max-w-7xl">
+    <PageShell>
       <PageHeader
-        icon={GraduationCap}
         title="Students"
         description={readOnly ? "Student directory (view only)." : "Student records, enrolment and contact details."}
         actions={
@@ -447,8 +448,8 @@ const Students = ({ readOnly = false }) => {
               <div className="min-w-0 text-sm">
                 <p className="font-medium text-slate-900">{name(selectedStudent)}</p>
                 <p className="text-slate-500">
-                  {selectedStudent.admissionNumber} ·{" "}
-                  {selectedStudent.class ? `${selectedStudent.class} ${selectedStudent.section}` : "Not enrolled"}
+                  <span className="font-mono">{selectedStudent.admissionNumber}</span>,{" "}
+                  {selectedStudent.class ? `${selectedStudent.class} ${selectedStudent.section}` : "not enrolled"}
                 </p>
               </div>
             </div>
@@ -474,7 +475,7 @@ const Students = ({ readOnly = false }) => {
       </Modal>
       <ResetPasswordDialog account={resetFor} onClose={() => setResetFor(null)} />
       <NewAccountDialog credential={newAccount} onClose={() => setNewAccount(null)} />
-    </div>
+    </PageShell>
   );
 };
 

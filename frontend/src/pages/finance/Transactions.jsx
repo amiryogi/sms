@@ -4,14 +4,14 @@ import { ReceiptText, Undo2, CheckCircle2, XCircle, Inbox, Printer, BookOpen } f
 import { useAuth } from "../../context/AuthContext";
 import DataTable from "../../components/common/DataTable";
 import { feeService } from "../../api/feeService";
-import { PageHeader, Tabs, Badge, Button, Card, EmptyState, LoadingBlock, SelectInput, TextInput, NepaliDatePicker, toast } from "../../components/ui";
+import { PageHeader, PageShell, Tabs, Badge, Button, IconButton, Card, EmptyState, LoadingBlock, SelectInput, SegmentedControl, NepaliDatePicker, toast } from "../../components/ui";
 import ReasonDialog from "../../components/finance/ReasonDialog";
 import { ApprovalBadge } from "../../components/finance/FeeStatusBadge";
 import { PAYMENT_METHODS, methodLabel, fullName } from "../../components/finance/financeLabels";
 import { formatCurrency, formatDate, formatDateTime, todayAd } from "../../utils/format";
 
 const signed = (t) => (
-  <span className={`font-semibold tabular-nums ${t.type === "REVERSAL" ? "text-red-600" : "text-slate-900"}`}>
+  <span className={`font-semibold tabular-nums ${t.type === "REVERSAL" ? "text-risk" : "text-slate-900"}`}>
     {t.type === "REVERSAL" ? "−" : ""}
     {formatCurrency(t.amount)}
   </span>
@@ -67,13 +67,20 @@ const Ledger = () => {
     {
       header: "Student",
       className: "col-name",
+      // One line, so a plain payment row stays at register height (~44px).
       render: (t) => (
-        <Link to={`/finance/accounts/${t.studentId}`} className="min-w-0 hover:text-brand-700">
-          <span className="block truncate font-medium text-slate-900">{fullName(t.student?.user)}</span>
-          <span className="block text-xs text-slate-500">
-            {t.studentClass?.class?.name} {t.studentClass?.section?.name} · {t.student?.admissionNumber}
-          </span>
+        <Link to={`/finance/accounts/${t.studentId}`} className="group flex min-w-0 items-baseline gap-2">
+          <span className="truncate font-medium text-slate-900 group-hover:text-brand-700">{fullName(t.student?.user)}</span>
+          <span className="shrink-0 font-mono text-xs text-slate-500">{t.student?.admissionNumber}</span>
         </Link>
+      ),
+    },
+    {
+      header: "Class",
+      render: (t) => (
+        <span className="whitespace-nowrap">
+          {t.studentClass?.class?.name} {t.studentClass?.section?.name}
+        </span>
       ),
     },
     {
@@ -85,19 +92,13 @@ const Ledger = () => {
         </span>
       ),
     },
-    { header: <span className="block text-right">Amount</span>, render: (t) => <p className="text-right">{signed(t)}</p> },
+    { header: "Amount", numeric: true, render: (t) => signed(t) },
     { header: "Recorded by", render: (t) => <span className="text-slate-600">{fullName(t.recordedBy)}</span> },
     {
       header: <span className="sr-only">Print</span>,
+      action: true,
       render: (t) => (
-        <Link
-          to={`/finance/receipts/${t.id}?print=1`}
-          aria-label={`Print ${t.receiptNumber}`}
-          title="Print receipt"
-          className="inline-flex size-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-brand-700"
-        >
-          <Printer size={16} aria-hidden="true" />
-        </Link>
+        <IconButton icon={Printer} label={`Print ${t.receiptNumber}`} to={`/finance/receipts/${t.id}?print=1`} />
       ),
     },
   ];
@@ -121,15 +122,20 @@ const Ledger = () => {
       actions={<Button variant="secondary" icon={BookOpen} onClick={printDaybook}>Print day book</Button>}
       toolbar={
         <>
-          <NepaliDatePicker aria-label="From date" value={filters.from} max={filters.to || undefined} onChange={(ad) => setFilter("from", ad)} placeholder="From date" className="w-full sm:w-56" />
-          <NepaliDatePicker aria-label="To date" value={filters.to} min={filters.from || undefined} onChange={(ad) => setFilter("to", ad)} placeholder="To date" className="w-full sm:w-56" />
-          <div className="w-full sm:w-36">
-            <SelectInput aria-label="Type" value={filters.type} onChange={(e) => setFilter("type", e.target.value)}>
-              <option value="">All entries</option>
-              <option value="PAYMENT">Payments</option>
-              <option value="REVERSAL">Reversals</option>
-            </SelectInput>
-          </div>
+          <NepaliDatePicker aria-label="From date" value={filters.from} max={filters.to || undefined} onChange={(ad) => setFilter("from", ad)} placeholder="From date" className="w-full sm:w-48" />
+          <NepaliDatePicker aria-label="To date" value={filters.to} min={filters.from || undefined} onChange={(ad) => setFilter("to", ad)} placeholder="To date" className="w-full sm:w-48" />
+          <SegmentedControl
+            label="Entry type"
+            size="sm"
+            className="shrink-0"
+            value={filters.type}
+            onChange={(v) => setFilter("type", v)}
+            options={[
+              { value: "", label: "All entries" },
+              { value: "PAYMENT", label: "Payments" },
+              { value: "REVERSAL", label: "Reversals" },
+            ]}
+          />
           <div className="w-full sm:w-40">
             <SelectInput aria-label="Method" value={filters.method} onChange={(e) => setFilter("method", e.target.value)}>
               <option value="">Any method</option>
@@ -182,14 +188,15 @@ const ReversalQueue = ({ onChanged }) => {
 
   return (
     <div className="space-y-4">
-      <Tabs
+      <SegmentedControl
+        label="Request status"
         size="sm"
         value={status}
         onChange={(v) => {
           setRows(null);
           setStatus(v);
         }}
-        tabs={[
+        options={[
           { value: "PENDING", label: "Waiting" },
           { value: "APPROVED", label: "Approved" },
           { value: "REJECTED", label: "Rejected" },
@@ -201,13 +208,13 @@ const ReversalQueue = ({ onChanged }) => {
       ) : rows.length === 0 ? (
         <Card><EmptyState icon={Inbox} title="No requests" description="Reversal requests made from a student's account appear here." /></Card>
       ) : (
-        <ul className="space-y-3">
+        <Card padding="none">
+        <ul className="divide-y divide-slate-200">
           {rows.map((r) => {
             const t = r.transaction;
             const own = r.requestedBy?.id === user?.id;
             return (
-              <li key={r.id}>
-                <Card className="flex flex-wrap items-start gap-4">
+              <li key={r.id} className="flex flex-wrap items-start gap-4 px-5 py-4">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <Link to={`/finance/receipts/${t.id}`} className="font-mono text-sm font-semibold text-slate-900 hover:text-brand-700">{t.receiptNumber}</Link>
@@ -216,13 +223,17 @@ const ReversalQueue = ({ onChanged }) => {
                       <Badge tone="neutral">{r.category === "REFUND" ? "Refund" : "Correction"}</Badge>
                     </div>
                     <p className="mt-1 text-sm text-slate-600">
-                      {fullName(t.student?.user)} · {t.studentClass?.class?.name} {t.studentClass?.section?.name} · paid {formatDate(t.paidOn)} by {methodLabel(t.method)}
+                      {fullName(t.student?.user)}, {t.studentClass?.class?.name} {t.studentClass?.section?.name}. Paid {formatDate(t.paidOn)} by {methodLabel(t.method)}.
                     </p>
                     <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-800">“{r.reason}”</p>
                     <p className="mt-1 text-xs text-slate-500">
-                      Requested by {fullName(r.requestedBy)} · {formatDateTime(r.createdAt)}
-                      {r.decidedBy && ` · ${r.status === "APPROVED" ? "approved" : "rejected"} by ${fullName(r.decidedBy)}${r.decisionNote ? `: ${r.decisionNote}` : ""}`}
-                      {r.reversalTxn && ` · reversal ${r.reversalTxn.receiptNumber}`}
+                      Requested by {fullName(r.requestedBy)}, {formatDateTime(r.createdAt)}.
+                      {r.decidedBy && ` ${r.status === "APPROVED" ? "Approved" : "Rejected"} by ${fullName(r.decidedBy)}${r.decisionNote ? `: ${r.decisionNote}` : ""}.`}
+                      {r.reversalTxn && (
+                        <>
+                          {" "}Reversal <span className="font-mono">{r.reversalTxn.receiptNumber}</span>.
+                        </>
+                      )}
                     </p>
                   </div>
                   {r.status === "PENDING" && isAdmin && !own && (
@@ -232,11 +243,11 @@ const ReversalQueue = ({ onChanged }) => {
                     </div>
                   )}
                   {r.status === "PENDING" && (own || !isAdmin) && <span className="text-xs text-slate-500">Waiting for {own ? "another" : "an"} administrator</span>}
-                </Card>
               </li>
             );
           })}
         </ul>
+        </Card>
       )}
 
       {dialog && (
@@ -279,8 +290,8 @@ const Transactions = () => {
   }, [countPending]);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
-      <PageHeader icon={ReceiptText} title="Transactions" description="The fee ledger: every payment and reversal. Entries are never edited or deleted." />
+    <PageShell>
+      <PageHeader title="Transactions" description="The fee ledger: every payment and reversal. Entries are never edited or deleted." />
       <Tabs
         value={tab}
         onChange={(v) => setSearchParams(v === "ledger" ? {} : { tab: v })}
@@ -290,7 +301,7 @@ const Transactions = () => {
         ]}
       />
       {tab === "ledger" ? <Ledger /> : <ReversalQueue onChanged={countPending} />}
-    </div>
+    </PageShell>
   );
 };
 

@@ -275,6 +275,52 @@ shows `focus-visible:outline-2 outline-offset-2 outline-brand-600` — no except
 `success` and `warning` button variants are **removed**: a button is an action, and its
 colour should say how important it is, not what mood it is in. Use `primary`.
 
+### Figures — `StatCard` and `StatGroup`
+
+The one stat tile. It replaced nine hand-rolled ones (the old `common/StatCard`,
+finance `Kpi`, portal `Tile`, and `Stat` in AccountDetail, Collect, ReportCards,
+ResultsView, AssistantSettings and AcademicCalendar). Do not write a tenth.
+
+```jsx
+// A dashboard figure: hero size, its own paper surface, optionally a link.
+<StatCard label="Collected this year" value={formatCurrency(k.collected)}
+          progress={k.collectionRate} sub="62% of Rs. 18,40,000 expected" />
+
+// Related figures, ruled like a ledger's totals line instead of boxed one by one.
+<StatGroup columns={4}>
+  <StatCard label="Total fees" value={…} />
+  <StatCard label="Balance" value={…} tone={overdue ? "risk" : "ink"} />
+</StatGroup>
+```
+
+| Prop | Default | Notes |
+|---|---|---|
+| `label` | — | what the number is; muted |
+| `value` | — | the figure; tabular, ink. `null` shows `—` |
+| `sub` | — | one line of context; may be a node (an overdue amount in `text-risk`) |
+| `tone` | `ink` | `ok` `warn` `risk` colour the **value only**, and only when the figure *is* a status |
+| `size` | `hero` (`md` in a group) | `hero` = `text-display`, `md` = `text-2xl`, `sm` = `text-lg` |
+| `surface` | `paper` (`plain` in a group) | `plain` when it sits inside another surface |
+| `to` | — | makes the tile a link (hover rule, focus ring) |
+| `progress` | — | 0–100; a thin bar in the tone's colour, never a chart colour |
+| `loading` | `false` | a `Skeleton` the size of the value; never `"…"` |
+| `icon` | — | decorative, `slate-300`, beside the label. Optional; most groups omit it |
+| `children` | — | replaces the value, for a tile whose content is not a number ("All paid") |
+
+`StatGroup` takes `columns` (2–5), `surface` (`paper`; `well` for a totals strip inside a
+card; `plain`) and `size`. It draws rules between cells, never boxes.
+
+**The hero steps down by the tile's own width.** A 40px money figure does not fit a
+quarter-width tile once it reaches lakhs, so the tile is a size container and the value
+picks a container-query ladder by its length (`components/ui/statValue.js`, unit-tested
+so no figure is ever set larger than its tile). A hero tile assumes it is at least
+11rem wide inside — the four-across dashboard at `xl` beside the sidebar. Anything denser
+is a `StatGroup` at `md` or `sm`.
+
+**Accessibility.** The tile is text, read in order: label, value, sub. A `progress` bar is
+a `role="progressbar"` with its value and a label. A linked tile is one tab stop with the
+standard focus ring.
+
 ### States
 
 Every interactive component defines: default, hover, focus-visible, active, disabled,

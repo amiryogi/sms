@@ -1,15 +1,15 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Users, FilePlus2, HandCoins, ChevronRight, Printer } from "lucide-react";
+import { Users, FilePlus2, HandCoins, Printer } from "lucide-react";
 import DataTable from "../../components/common/DataTable";
 import Modal from "../../components/common/Modal";
 import { feeService } from "../../api/feeService";
 import { academicService } from "../../api/academicService";
-import { PageHeader, Tabs, Avatar, Button, DialogActions, Field, SelectInput, Alert, toast, buttonClasses } from "../../components/ui";
+import { PageHeader, PageShell, SegmentedControl, Avatar, Button, DialogActions, Field, SelectInput, Alert, toast, buttonClasses } from "../../components/ui";
 import { FeeStatusBadge } from "../../components/finance/FeeStatusBadge";
 import { formatCurrency } from "../../utils/format";
 
-const STATUS_TABS = [
+const STATUS_OPTIONS = [
   { value: "", label: "All" },
   { value: "overdue", label: "Overdue" },
   { value: "pending", label: "Unpaid" },
@@ -122,64 +122,68 @@ const Accounts = () => {
     setPagination((p) => ({ ...p, page: 1 }));
   };
 
+  // A register row: one line per student. Admission number and roll have their
+  // own columns, money columns are right-aligned tabular figures, and only the
+  // overdue amount (a state) carries a status colour.
   const columns = [
     {
       header: "Student",
       className: "col-name",
       render: (r) => (
-        <Link to={`/finance/accounts/${r.studentId}`} className="group flex min-w-0 items-center gap-3">
-          <Avatar src={r.avatarUrl} name={r.name} size="sm" />
-          <span className="min-w-0">
-            <span className="block truncate font-medium text-slate-900 group-hover:text-brand-700">{r.name}</span>
-            <span className="block text-xs text-slate-500">{r.admissionNumber}</span>
-          </span>
+        <Link to={`/finance/accounts/${r.studentId}`} className="group flex min-w-0 items-center gap-2.5">
+          <Avatar src={r.avatarUrl} name={r.name} size="xs" />
+          <span className="truncate font-medium text-slate-900 group-hover:text-brand-700">{r.name}</span>
         </Link>
       ),
     },
+    { header: "Admission no.", render: (r) => <span className="font-mono text-xs text-slate-700">{r.admissionNumber}</span> },
     {
       header: "Class",
       render: (r) => (
-        <span className="text-sm whitespace-nowrap text-slate-700">
+        <span className="whitespace-nowrap">
           {r.class?.name} {r.section?.name}
-          {r.rollNumber ? <span className="text-slate-400"> · {r.rollNumber}</span> : null}
         </span>
       ),
     },
-    { header: <span className="block text-right">Fees</span>, render: (r) => <p className="text-right tabular-nums">{formatCurrency(r.amount)}</p> },
-    { header: <span className="block text-right">Discount</span>, render: (r) => <p className="text-right text-emerald-700 tabular-nums">{r.discount ? formatCurrency(r.discount) : "—"}</p> },
-    { header: <span className="block text-right">Paid</span>, render: (r) => <p className="text-right tabular-nums">{r.paid ? formatCurrency(r.paid) : "—"}</p> },
+    { header: "Roll", numeric: true, render: (r) => r.rollNumber || "—" },
+    { header: "Fees", numeric: true, render: (r) => formatCurrency(r.amount) },
+    { header: "Discount", numeric: true, render: (r) => (r.discount ? formatCurrency(r.discount) : "—") },
+    { header: "Paid", numeric: true, render: (r) => (r.paid ? formatCurrency(r.paid) : "—") },
     {
-      header: <span className="block text-right">Balance</span>,
-      render: (r) => (
-        <div className="text-right">
-          <p className="font-semibold text-slate-900 tabular-nums">{formatCurrency(r.balance)}</p>
-          {r.overdue > 0 && <p className="text-xs text-red-600 tabular-nums">{formatCurrency(r.overdue)} overdue</p>}
-        </div>
-      ),
+      header: "Balance",
+      numeric: true,
+      // When all of the balance is overdue (the usual case) the figure itself
+      // turns risk; a second line appears only when part of it is not yet due,
+      // so most rows stay one line instead of repeating the same amount twice.
+      render: (r) => {
+        const allOverdue = r.overdue > 0 && Number(r.overdue) >= Number(r.balance);
+        return (
+          <>
+            <span className={`block font-semibold ${allOverdue ? "text-risk" : "text-slate-900"}`}>{formatCurrency(r.balance)}</span>
+            {r.overdue > 0 && !allOverdue && <span className="block text-xs font-medium text-risk">{formatCurrency(r.overdue)} overdue</span>}
+          </>
+        );
+      },
     },
     { header: "Status", render: (r) => <FeeStatusBadge status={r.status} /> },
     {
+      // The name already opens the account, so the row needs only its one action.
       header: <span className="sr-only">Actions</span>,
-      width: "150px",
-      render: (r) => (
-        <div className="flex items-center justify-end gap-2">
-          {r.balance > 0 && (
-            <Link to={`/finance/collect?student=${r.studentId}`} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm font-medium text-brand-700 hover:bg-brand-50">
-              <HandCoins size={15} aria-hidden="true" /> Collect
+      action: true,
+      render: (r) =>
+        r.balance > 0 ? (
+          <div className="flex justify-end">
+            <Link to={`/finance/collect?student=${r.studentId}`} className={buttonClasses({ variant: "ghost", size: "md" })}>
+              <HandCoins size={16} aria-hidden="true" /> Collect
             </Link>
-          )}
-          <Link to={`/finance/accounts/${r.studentId}`} aria-label={`Open ${r.name}'s account`} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
-            <ChevronRight size={18} aria-hidden="true" />
-          </Link>
-        </div>
-      ),
+          </div>
+        ) : null,
     },
   ];
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <PageShell>
       <PageHeader
-        icon={Users}
         title="Student accounts"
         description="What each student owes and has paid this year."
         actions={
@@ -196,7 +200,8 @@ const Accounts = () => {
         }
       />
 
-      <Tabs value={filters.status} onChange={(v) => setFilter("status", v)} tabs={STATUS_TABS} />
+      {/* A filter that sets a value, so a segmented control rather than tabs. */}
+      <SegmentedControl label="Fee status" value={filters.status} onChange={(v) => setFilter("status", v)} options={STATUS_OPTIONS} />
 
       <DataTable
         columns={columns}
@@ -253,7 +258,7 @@ const Accounts = () => {
           }}
         />
       )}
-    </div>
+    </PageShell>
   );
 };
 

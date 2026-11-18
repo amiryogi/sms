@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Bot, Cpu, BarChart3, PlugZap, Save, ThumbsUp, ThumbsDown, AlertTriangle } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { Alert, Badge, Button, Card, CardHeader, Checkbox, EmptyState, Field, LoadingBlock, PageHeader, SelectInput, Switch, Tabs, TextInput, toast } from "../../components/ui";
+import { Alert, Badge, Button, Card, CardHeader, Checkbox, EmptyState, Field, LoadingBlock, PageHeader, SelectInput, StatCard, StatGroup, Switch, Tabs, TextInput, toast } from "../../components/ui";
 import { assistantService } from "../../api/assistantService";
 import { formatRoleName } from "../../layouts/navigation";
 import { formatDateTime, formatNumber, formatShortDay, todayAd } from "../../utils/format";
@@ -357,12 +357,12 @@ function UsageTab() {
         </Field>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Questions" value={formatNumber(totals.requests)} sub={`${formatNumber(totals.errors)} failed, ${formatNumber(totals.aborted)} stopped`} />
-        <Stat label="Tokens" value={formatNumber(totals.inputTokens + totals.outputTokens)} sub={`${formatNumber(totals.inputTokens)} in, ${formatNumber(totals.outputTokens)} out`} />
-        <Stat label="Estimated cost" value={`$${totals.estimatedCostUsd.toFixed(2)}`} sub={totals.costKnown ? "From list prices" : "Free tiers and unknown prices are not counted"} />
-        <Stat label="Feedback" value={`${totals.thumbsUp} / ${totals.thumbsDown}`} sub={`helpful / not helpful · ${totals.fallbacks} answered by the fallback`} />
-      </div>
+      <StatGroup columns={4}>
+        <StatCard label="Questions" value={formatNumber(totals.requests)} sub={`${formatNumber(totals.errors)} failed, ${formatNumber(totals.aborted)} stopped`} />
+        <StatCard label="Tokens" value={formatNumber(totals.inputTokens + totals.outputTokens)} sub={`${formatNumber(totals.inputTokens)} in, ${formatNumber(totals.outputTokens)} out`} />
+        <StatCard label="Estimated cost" value={`$${totals.estimatedCostUsd.toFixed(2)}`} sub={totals.costKnown ? "From list prices" : "Free tiers and unknown prices are not counted"} />
+        <StatCard label="Feedback" value={`${totals.thumbsUp}/${totals.thumbsDown}`} sub={`Helpful/not helpful. ${totals.fallbacks} answered by the fallback`} />
+      </StatGroup>
 
       {totals.requests === 0 ? (
         <EmptyState icon={BarChart3} title="No questions in this period" description="Figures appear once people use the help assistant." />
@@ -472,15 +472,5 @@ function UsageTab() {
         )}
       </Card>
     </div>
-  );
-}
-
-function Stat({ label, value, sub }) {
-  return (
-    <Card>
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold text-slate-900 tabular-nums">{value}</p>
-      {sub && <p className="mt-1 text-xs text-slate-500">{sub}</p>}
-    </Card>
   );
 }

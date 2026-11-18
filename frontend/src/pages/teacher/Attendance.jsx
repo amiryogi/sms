@@ -1,24 +1,48 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { CalendarCheck, Check, X, Clock, ShieldCheck, Save, Users, CheckCheck } from "lucide-react";
+import { Save, Users, CheckCheck } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { attendanceService } from "../../api/attendanceService";
 import { calendarService } from "../../api/calendarService";
 import { teacherService } from "../../api/teacherService";
 import { studentService } from "../../api/studentService";
-import { PageHeader, Card, Badge, Button, Field, SelectInput, TextInput, NepaliDatePicker, Alert, Avatar, EmptyState, LoadingBlock, toast } from "../../components/ui";
-import { cn } from "../../lib/cn";
+import { PageHeader, PageShell, Card, Badge, Button, Field, SelectInput, TextInput, NepaliDatePicker, Alert, Avatar, EmptyState, LoadingBlock, SegmentedControl, StatCard, StatGroup, toast } from "../../components/ui";
 import { fullName, formatDate, todayAd } from "../../utils/format";
 import { weekdayNameOf } from "../../lib/calendar/dateFormatter";
 import { weekdayOf } from "../../lib/calendar/bsDateAdapter";
 import { useDatePrefs } from "../../hooks/useDatePrefs";
 
+/*
+ * The marks of the register. `value` is what the API stores: do not change it.
+ * `tone` is the status token a selected mark carries. Like a paper register,
+ * only the exceptions are coloured: late warn, absent risk. Present is the
+ * expected state of almost every row, so it is selected but quiet; colouring it
+ * green would fill the column and hide the absences a teacher scans for.
+ * Excused is not a status colour either. The save bar's summary still shows
+ * the present count in ok.
+ */
 const STATUSES = [
-  { value: "present", short: "P", label: "Present", icon: Check, on: "bg-emerald-600 text-white ring-emerald-600", soft: "bg-emerald-50 text-emerald-700" },
-  { value: "absent", short: "A", label: "Absent", icon: X, on: "bg-red-600 text-white ring-red-600", soft: "bg-red-50 text-red-700" },
-  { value: "late", short: "L", label: "Late", icon: Clock, on: "bg-amber-500 text-white ring-amber-500", soft: "bg-amber-50 text-amber-800" },
-  { value: "excused", short: "E", label: "Excused", icon: ShieldCheck, on: "bg-sky-600 text-white ring-sky-600", soft: "bg-sky-50 text-sky-700" },
+  { value: "present", short: "P", label: "Present", tone: "default" },
+  { value: "absent", short: "A", label: "Absent", tone: "risk" },
+  { value: "late", short: "L", label: "Late", tone: "warn" },
+  { value: "excused", short: "E", label: "Excused", tone: "default" },
 ];
+
+// One segmented-control option per mark: the letter is what is seen, the word
+// is what a screen reader announces as the option's name.
+const MARK_OPTIONS = STATUSES.map((s) => ({
+  value: s.value,
+  tone: s.tone,
+  label: (
+    <>
+      <span aria-hidden="true" className="inline-block w-4 text-center">{s.short}</span>
+      <span className="sr-only">{s.label}</span>
+    </>
+  ),
+}));
+
+// Counts that need attention carry their status colour; the rest are ink.
+const countTone = (status, n) => (n > 0 && status === "absent" ? "risk" : n > 0 && status === "late" ? "warn" : "ink");
 
 // The register is for a day in Nepal, whatever the device's own time zone.
 const localToday = todayAd;
@@ -154,8 +178,8 @@ const Attendance = () => {
   const selectedLabel = classSectionOptions.find((o) => o.value === selected)?.label;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <PageHeader icon={CalendarCheck} title="Attendance" description="Take the daily register for the classes you teach." />
+    <PageShell>
+      <PageHeader title="Attendance" description="Take the daily register for the classes you teach." />
 
       <Card>
         <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_220px]">
@@ -189,7 +213,7 @@ const Attendance = () => {
       </Card>
 
       {dayInfo && !dayInfo.isWorkingDay && (
-        <Alert tone={dayBlocked ? "warning" : "info"} title={dayInfo.reason} className="mb-4">
+        <Alert tone={dayBlocked ? "warning" : "info"} title={dayInfo.reason}>
           {dayBlocked
             ? "Attendance is not taken on this day. Choose a working day."
             : "This is not a working day on the school calendar. You can still save the register."}
@@ -219,25 +243,24 @@ const Attendance = () => {
             <Button size="sm" variant="secondary" icon={CheckCheck} onClick={() => markAll("present")} data-guide="attendance.allPresent">All present</Button>
           </div>
 
-          <div className="grid grid-cols-2 gap-px border-b border-slate-200 bg-slate-200 sm:grid-cols-4">
+          {/* The day's tally, ruled into the head of the register. */}
+          <StatGroup columns={4} surface="well" size="sm" className="border-b border-slate-200">
             {STATUSES.map((s) => (
-              <div key={s.value} className="flex items-center gap-3 bg-white px-5 py-3">
-                <span className={cn("inline-flex size-8 items-center justify-center rounded-lg", s.soft)}>
-                  <s.icon size={16} aria-hidden="true" />
-                </span>
-                <div>
-                  <p className="text-lg leading-tight font-semibold text-slate-900 tabular-nums">{counts[s.value]}</p>
-                  <p className="text-xs text-slate-500">{s.label}</p>
-                </div>
-              </div>
+              <StatCard key={s.value} label={s.label} value={counts[s.value]} tone={countTone(s.value, counts[s.value])} />
             ))}
-          </div>
+          </StatGroup>
 
-          <ul className="divide-y divide-slate-100">
+          {/* The register: one ruled line per student, in roll order. */}
+          <div className="flex items-center gap-x-3 border-b border-slate-200 bg-slate-50 px-5 py-2 text-xs font-medium text-slate-500" aria-hidden="true">
+            <span className="w-8 text-right">Roll</span>
+            <span className="flex-1 pl-9">Student</span>
+            <span>Mark</span>
+          </div>
+          <ul className="divide-y divide-slate-200">
             {records.map((r) => (
-              <li key={r.studentId} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-2.5">
-                <span className="w-8 text-sm text-slate-400 tabular-nums">{r.rollNumber || "—"}</span>
-                <Avatar src={r.avatarUrl} name={r.name} size="sm" />
+              <li key={r.studentId} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-1 hover:bg-slate-50">
+                <span className="w-8 text-right text-sm text-slate-500 tabular-nums">{r.rollNumber || "—"}</span>
+                <Avatar src={r.avatarUrl} name={r.name} size="xs" />
                 <span className="min-w-32 flex-1 truncate text-sm font-medium text-slate-900">{r.name}</span>
                 {r.status !== "present" && (
                   <TextInput
@@ -245,45 +268,34 @@ const Attendance = () => {
                     onChange={(e) => update(r.studentId, { remarks: e.target.value })}
                     placeholder="Reason (optional)"
                     aria-label={`Reason for ${r.name}`}
-                    className="h-8 w-44 text-xs"
+                    className="h-9 w-44 text-xs"
                   />
                 )}
-                <div role="radiogroup" aria-label={`Attendance for ${r.name}`} className="ml-auto flex gap-1">
-                  {STATUSES.map((s) => {
-                    const on = r.status === s.value;
-                    return (
-                      <button
-                        key={s.value}
-                        type="button"
-                        role="radio"
-                        aria-checked={on}
-                        title={s.label}
-                        aria-label={s.label}
-                        onClick={() => update(r.studentId, { status: s.value })}
-                        className={cn(
-                          "inline-flex size-9 cursor-pointer items-center justify-center rounded-lg text-sm font-semibold ring-1 transition-colors ring-inset",
-                          on ? s.on : "bg-white text-slate-500 ring-slate-200 hover:bg-slate-50",
-                        )}
-                      >
-                        {s.short}
-                      </button>
-                    );
-                  })}
-                </div>
+                <SegmentedControl
+                  label={`Attendance for ${r.name}`}
+                  options={MARK_OPTIONS}
+                  value={r.status}
+                  onChange={(status) => update(r.studentId, { status })}
+                  className="ml-auto"
+                />
               </li>
             ))}
           </ul>
 
           <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
-            <p className="text-sm text-slate-600">
-              {records.length} students · <span className="text-emerald-700">{counts.present} present</span>
-              {counts.absent > 0 && <span className="text-red-700"> · {counts.absent} absent</span>}
+            <p className="text-sm text-slate-600 tabular-nums">
+              {records.length} students: <span className="font-medium text-ok">{counts.present} present</span>
+              {counts.absent > 0 && (
+                <>
+                  , <span className="font-medium text-risk">{counts.absent} absent</span>
+                </>
+              )}
             </p>
             <Button icon={Save} loading={saving} disabled={dayBlocked} onClick={handleSave} data-guide="attendance.save">Save Attendance</Button>
           </div>
         </Card>
       )}
-    </div>
+    </PageShell>
   );
 };
 

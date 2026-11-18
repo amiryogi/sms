@@ -2,9 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ArrowUpRight, Repeat, GraduationCap, RotateCcw, Users, CheckCircle2, ArrowRight, X } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
-import StatCard from '../../components/common/StatCard';
 import { Select, Button } from '../../components/common/FormElements';
-import { PageHeader, Card, CardHeader, Badge, Tabs, IconButton, EmptyState, LoadingBlock, DialogActions, Alert, toast, confirmDialog } from '../../components/ui';
+import { PageHeader, Card, CardHeader, Badge, Tabs, IconButton, EmptyState, LoadingBlock, DialogActions, Alert, StatCard, StatGroup, toast, confirmDialog } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { promotionService } from '../../api/promotionService';
 import { academicService } from '../../api/academicService';
@@ -275,12 +274,12 @@ const Promotions = () => {
       />
 
       {stats && (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard title="Promoted" value={stats.summary?.promoted || 0} icon={ArrowUpRight} color="success" />
-          <StatCard title="Detained" value={stats.summary?.detained || 0} icon={Repeat} color="warning" />
-          <StatCard title="Graduated" value={stats.summary?.graduated || 0} icon={GraduationCap} color="info" />
-          <StatCard title="Processed" value={stats.summary?.total || 0} icon={Users} color="primary" />
-        </div>
+        <StatGroup columns={4}>
+          <StatCard label="Promoted" value={stats.summary?.promoted || 0} />
+          <StatCard label="Detained" value={stats.summary?.detained || 0} />
+          <StatCard label="Graduated" value={stats.summary?.graduated || 0} />
+          <StatCard label="Processed" value={stats.summary?.total || 0} />
+        </StatGroup>
       )}
 
       <Tabs

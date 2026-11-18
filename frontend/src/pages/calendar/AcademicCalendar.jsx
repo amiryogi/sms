@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { CalendarRange, Printer } from "lucide-react";
-import { Alert, Card, CardHeader, PageHeader, SelectInput, buttonClasses } from "../../components/ui";
+import { Alert, Card, CardHeader, PageHeader, SelectInput, StatCard, StatGroup, buttonClasses } from "../../components/ui";
 import { useAuth } from "../../context/AuthContext";
 import { useDatePrefs } from "../../hooks/useDatePrefs";
 import { todayAd } from "../../utils/format";
@@ -58,19 +58,16 @@ const AcademicCalendar = () => {
       />
       {error && <Alert tone="danger" className="mb-4">{error}</Alert>}
 
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <StatGroup columns={4} className="mb-4">
         {[
           ["Holidays", holidays.length],
           ["Days closed", holidayDays],
           ["Exams", exams.length],
           ["Events", events.length],
         ].map(([label, value]) => (
-          <Card key={label} padding="sm">
-            <p className="text-xs font-medium text-slate-500">{label}</p>
-            <p className="text-2xl font-semibold text-slate-900 tabular-nums">{loading ? "…" : digits(value, prefs.numerals)}</p>
-          </Card>
+          <StatCard key={label} label={label} value={digits(value, prefs.numerals)} loading={loading} />
         ))}
-      </div>
+      </StatGroup>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_20rem]">
         <div className={cn("grid gap-3 sm:grid-cols-2 lg:grid-cols-3", loading && "opacity-60")} aria-busy={loading}>

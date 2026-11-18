@@ -2,11 +2,10 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { BookOpen, ClipboardList, CalendarCheck, NotebookPen, Users, ChevronRight, Star, Library, ArrowRight } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import StatCard from "../../components/common/StatCard";
 import NoticesFeed from "../../components/common/NoticesFeed";
 import { teacherService } from "../../api/teacherService";
 import { examService } from "../../api/examService";
-import { Badge, Card, CardHeader, EmptyState, Skeleton } from "../../components/ui";
+import { Badge, Card, CardHeader, EmptyState, Skeleton, PageShell, StatCard } from "../../components/ui";
 import { formatDate } from "../../utils/format";
 
 const QUICK_ACTIONS = [
@@ -58,10 +57,8 @@ const TeacherDashboard = () => {
 
   const subjectCount = new Set(assignments.map((a) => a.classSubject?.subject?.name).filter(Boolean)).size;
   const classTeacherOf = classes.filter((c) => c.isClassTeacher).map((c) => c.name);
-  const v = (n) => (loading ? "…" : n);
-
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <PageShell>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-sm text-slate-500">{formatDate(new Date())}</p>
@@ -78,15 +75,16 @@ const TeacherDashboard = () => {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Class sections" value={v(classes.length)} icon={BookOpen} color="primary" hint="Where you teach a subject" />
-        <StatCard title="Subjects" value={v(subjectCount)} icon={Library} color="success" hint="Across all classes" />
-        <StatCard title="Teaching slots" value={v(assignments.length)} icon={Users} color="info" hint="Subject × section" />
+        <StatCard label="Class sections" value={classes.length} loading={loading} icon={BookOpen} sub="Where you teach a subject" />
+        <StatCard label="Subjects" value={subjectCount} loading={loading} icon={Library} sub="Across all classes" />
+        <StatCard label="Teaching slots" value={assignments.length} loading={loading} icon={Users} sub="Subject × section" />
         <StatCard
-          title="Exams open for marks"
-          value={v(openExams?.length ?? "—")}
+          label="Exams open for marks"
+          value={openExams?.length ?? "—"}
+          loading={loading}
           icon={ClipboardList}
-          color="warning"
-          hint={openExams?.length ? openExams.map((e) => e.name).slice(0, 2).join(", ") : "None published right now"}
+          to="/teacher/marks"
+          sub={openExams?.length ? openExams.map((e) => e.name).slice(0, 2).join(", ") : "None published right now"}
         />
       </div>
 
@@ -168,7 +166,7 @@ const TeacherDashboard = () => {
         />
         <NoticesFeed limit={4} showViewAll={false} compact />
       </Card>
-    </div>
+    </PageShell>
   );
 };
 

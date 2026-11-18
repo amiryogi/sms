@@ -5,6 +5,7 @@ export { Field, TextInput, SelectInput, TextArea, Checkbox, Radio, Switch } from
 export { default as RangeField } from "./RangeField";
 export { default as SegmentedControl } from "./SegmentedControl";
 export { default as PageShell } from "./PageShell";
+export { StatCard, StatGroup } from "./StatCard";
 export { Card, CardHeader } from "./Card";
 export { default as Badge } from "./Badge";
 export { default as PageHeader } from "./PageHeader";

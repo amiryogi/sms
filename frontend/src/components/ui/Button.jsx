@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { cn } from "../../lib/cn";
 import Spinner from "./Spinner";
 import { VARIANTS, buttonClasses } from "./styles";
@@ -32,16 +33,22 @@ export const Button = React.forwardRef(function Button(
 
 const ICON_BUTTON_SIZES = { sm: "size-8 rounded-lg", md: "size-9 rounded-lg", lg: "size-10 rounded-xl" };
 
-/** Square icon-only button. `label` is required: it becomes aria-label and the tooltip. */
+/**
+ * Square icon-only button. `label` is required: it becomes aria-label and the tooltip.
+ * Pass `to` and it renders a router Link that looks the same — for row actions that
+ * navigate (open an account, print a receipt) rather than act. Keep `md` (36px) in
+ * table rows; `sm` is for dense toolbars.
+ */
 export const IconButton = React.forwardRef(function IconButton(
-  { icon, label, variant = "ghost", size = "md", className, type = "button", ...props },
+  { icon, label, variant = "ghost", size = "md", className, type = "button", to, ...props },
   ref,
 ) {
   const Icon = icon;
+  const Tag = to ? Link : "button";
   return (
-    <button
+    <Tag
       ref={ref}
-      type={type}
+      {...(to ? { to } : { type })}
       aria-label={label}
       title={label}
       className={cn(
@@ -55,7 +62,7 @@ export const IconButton = React.forwardRef(function IconButton(
       {...props}
     >
       <Icon size={size === "sm" ? 15 : 17} aria-hidden="true" />
-    </button>
+    </Tag>
   );
 });
 
