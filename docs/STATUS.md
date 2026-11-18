@@ -10,7 +10,7 @@ are done** and on `main`.
 
 ---
 
-## ▶ Pick up here: visual redesign, run e2e then wave 4 (2026-11-18) — branch `feature/visual-redesign`
+## ▶ Pick up here: visual redesign, merge then wave 4 (2026-11-18) — branch `feature/visual-redesign`
 
 Plan and full handover: **[plans/visual-identity-redesign.md](plans/visual-identity-redesign.md)**.
 The design rules themselves: **[`frontend/DESIGN.md`](../frontend/DESIGN.md)**.
@@ -37,21 +37,23 @@ first. No dark mode.
   ~61→45px, Marks Entry ~48→41px, Accounts no longer scrolls sideways). Fixed a `cn()` bug
   that silently dropped the custom `text-display`/`text-2xs` sizes. Details and what was
   deliberately left: plan §4a.
-- **Next:** run the e2e suite (below), regenerate the marketing screenshots, then wave 4 — the
+- **Print fix (after wave 3):** the first e2e run caught a real print regression from wave 1 —
+  the printed NEB sheet had moved up 1px because the redesign's type scale reached it. Fixed
+  by pinning Tailwind's default `--text-*` tokens inside the print selectors, which now also
+  cover the A4 statement and day book (they had been printing in the new font). Plan §3.
+- **Next:** merge `feature/visual-redesign` into `main` (pull request), then wave 4 — the
   ~55-page tail and the copy pass.
-- **⚠ Before touching `--font-sans` or the slate ladder, read §3 of the plan.** The printed
-  report card and the fee slips resolve those tokens, so a token change reaches printed output
-  and both Playwright pixel baselines **without any print file appearing in the diff**.
-  `app.css` now shadows them back inside the six print selectors, and a test guards it.
-- **Verified:** frontend lint 0 errors, build passes, 117 vitest tests (palette contrast floor,
-  stat sizing, the `cn` fix). Wave 3 pages checked in the browser on the dev database at 1440px
-  and 390px with a clean console.
-- **Not verified:** the 90 Playwright tests, for waves 0–3. The machine this was built on has
-  no test database. **Run `cd e2e && PW_CHANNEL=chrome npm test` before shipping**, watching the
-  two report-card screenshot comparisons.
-- **Now due:** regenerate the marketing screenshots
-  (`cd e2e && PW_CHANNEL=chrome npm run screenshots`) — the public site shows images of the app
-  and they are already stale.
+- **⚠ Before touching `--font-sans`, the slate ladder or any `--text-*` token, read §3 of the
+  plan.** The printed report card, slips, statement and day book resolve those tokens, so a
+  token change reaches printed output and both Playwright pixel baselines **without any print
+  file appearing in the diff**. `app.css` shadows them back inside the eight print selectors,
+  and tests guard it.
+- **Verified:** frontend lint 0 errors, build passes, 119 vitest tests. **E2E: 90 passed,
+  1 skipped** on the local MySQL test database (`sms_test`; set up with
+  `node scripts/with-test-db.js npm run db:migrate:deploy` and `… npm run seed` in `backend/`).
+  Wave 3 pages also checked by hand in the browser at 1440px and 390px with a clean console.
+- **Marketing screenshots:** being regenerated on the test database (see the latest commit for
+  whether they landed).
 
 ---
 

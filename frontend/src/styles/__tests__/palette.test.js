@@ -178,8 +178,42 @@ describe("print surfaces stay pinned", () => {
       ".rc-grade-legend",
       ".bill-slip",
       ".receipt-slip",
+      // The A4 statement and day book (finance/print/StatementSheet, pages/finance/Daybook).
+      ".statement-sheet",
+      ".daybook-sheet",
     ]) {
       expect(selector, `${sel} must stay pinned`).toContain(sel);
+    }
+  });
+
+  it("keeps Tailwind's default type scale inside print surfaces", () => {
+    // The app's scale uses fixed line heights; print was laid out against
+    // Tailwind's ratio line heights, and a 0.73px change in the sheet's title
+    // block moved the whole NEB sheet (caught by the pixel baselines).
+    const block = pinBlock().replace(/\s+/g, " ");
+    const DEFAULTS = {
+      xs: ["0.75rem", "calc(1 / 0.75)"],
+      sm: ["0.875rem", "calc(1.25 / 0.875)"],
+      base: ["1rem", "calc(1.5 / 1)"],
+      lg: ["1.125rem", "calc(1.75 / 1.125)"],
+      xl: ["1.25rem", "calc(1.75 / 1.25)"],
+      "2xl": ["1.5rem", "calc(2 / 1.5)"],
+      "3xl": ["1.875rem", "calc(2.25 / 1.875)"],
+    };
+    for (const [size, [fontSize, lineHeight]] of Object.entries(DEFAULTS)) {
+      expect(block, `--text-${size} in print`).toContain(`--text-${size}: ${fontSize};`);
+      expect(block, `--text-${size}--line-height in print`).toContain(`--text-${size}--line-height: ${lineHeight};`);
+    }
+  });
+
+  it("pins every type token the app scale redefines", () => {
+    // If someone adds or changes a --text-* size in @theme, print must be pinned for it too.
+    const theme = css.slice(css.indexOf("@theme"), css.indexOf("}", css.indexOf("@theme")));
+    const appSizes = [...theme.matchAll(/--text-([a-z0-9]+):/g)].map((m) => m[1]);
+    const pinned = new Set([...pinBlock().matchAll(/--text-([a-z0-9]+):/g)].map((m) => m[1]));
+    // 2xs and display are new sizes the print code cannot be using.
+    for (const s of appSizes.filter((s) => !["2xs", "display"].includes(s))) {
+      expect(pinned.has(s), `--text-${s} is redefined by the app but not pinned for print`).toBe(true);
     }
   });
 

@@ -14,8 +14,8 @@ is left to do.
 > git checkout -- package-lock.json   # on Windows, npm install churns it; see "Machine notes"
 > ```
 >
-> That confirms the baseline (0 lint errors, 117 tests, a clean build). Then run the e2e
-> suite (§4a, "Not verified") and pick up at **wave 4**.
+> That confirms the baseline (0 lint errors, 119 tests, a clean build; e2e 90 passed,
+> 1 skipped). Then pick up at **wave 4**.
 
 ---
 
@@ -105,6 +105,27 @@ block in `src/styles/__tests__/palette.test.js`.
 **If you add a new print surface, add its class to that pin rule and to the test.** If a
 report-card test starts failing on page count or pixels, suspect this first.
 
+**The first pin was incomplete, and the e2e run after wave 3 proved it.** It covered the
+font and the greys but not the type scale. Tailwind's default line heights are ratios
+(`calc(1.75 / 1.25)`); the redesign's are fixed rems. The NEB sheet's `h2`/`h3` take their
+line height from the base `h2 { @apply text-xl }` rule, so the title block lost 0.73px and
+the whole sheet below it moved up a pixel. Found by rendering the same card on the
+pre-redesign commit and on HEAD against the same database and diffing every element box
+(all 158 now match). The pin now also restores Tailwind's default `--text-*` sizes and line
+heights, and covers `.statement-sheet` and `.daybook-sheet`, which had been missing (the A4
+statement and day book were printing in the new font and greys). Tests guard all three.
+
+Two more things that run taught:
+
+- **The baselines are stale on data.** They were captured on a database where STU20240001
+  was "Rajan Rai"; it is "Vishal Gurung" now. The 1% tolerance absorbs that, which is why
+  they pass — but it also means they have less margin than they appear to. Re-take them
+  (`--update-snapshots=all`, after looking at the result) the next time the test database
+  is rebuilt on purpose.
+- **Compare like with like.** The test opens the *first* card of the class, so run order
+  and data decide what it shows. To isolate a code change, render both commits against
+  the same database, as above.
+
 ---
 
 ## 4. Wave 3 — Data-dense screens (do this next)
@@ -188,12 +209,13 @@ on the dev database at 1440px: admin, finance and teacher dashboards, Accounts, 
 Students, Attendance and Marks Entry render with a clean console; row heights measured as
 above; no table or page overflows; teacher pages have no horizontal page scroll at 390px.
 
+**E2E, after wave 3 (2026-11-18), on the local MySQL `sms_test`:** the first run gave 88
+passed and the two pixel baselines failed. The cause was a real print regression from wave 1
+(the type-scale gap in §3), now fixed. The full suite then passed: **90 passed, 1 skipped**,
+the documented baseline.
+
 **Not verified:**
 
-- **The e2e suite (90 tests) has still not been run** — no test database on this machine. Run
-  it before merging. Visible strings the tests use were kept (each page's author grepped
-  `e2e/tests` first), but only a run proves it.
-- The marketing screenshots were **not** regenerated (that also needs the test database).
 - The student/parent portals, AccountDetail and Collect were checked by lint and build only,
   not in the browser.
 
