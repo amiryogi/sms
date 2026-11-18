@@ -11,6 +11,14 @@ import { Skeleton, EmptyState } from "../ui/Feedback";
  *   searchValue, onSearchChange, emptyMessage, actions
  * New, optional: searchPlaceholder, emptyIcon, emptyDescription, toolbar
  * (extra filters next to search), bare (no card chrome).
+ *
+ * A column may set `numeric: true` to be right-aligned with tabular figures, so
+ * amounts and marks line up down the column. See frontend/DESIGN.md, "Setting
+ * numbers" — this is a records system, and the numbers are the content.
+ *
+ * The table is styled as a register: rules between rows, no shadow, and a plain
+ * sentence-case header. The header used to be tracked-out uppercase, which is
+ * one of the generic-template tells DESIGN.md calls out.
  */
 const DataTable = ({
   columns,
@@ -35,13 +43,13 @@ const DataTable = ({
   const to = pagination ? Math.min(pagination.page * pagination.limit, pagination.total) : 0;
 
   return (
-    <div className={cn(!bare && "overflow-hidden rounded-card border border-slate-200/80 bg-white shadow-card", className)}>
+    <div className={cn(!bare && "overflow-hidden rounded-xl border border-slate-200 bg-white", className)}>
       {hasToolbar && (
         <div className="flex flex-col gap-3 border-b border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
             {onSearchChange && (
               <div className="relative w-full sm:max-w-xs">
-                <Search size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+                <Search size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-300" aria-hidden="true" />
                 <input
                   type="search"
                   aria-label="Search"
@@ -67,14 +75,18 @@ const DataTable = ({
                   key={i}
                   scope="col"
                   style={col.width ? { width: col.width } : undefined}
-                  className={cn("border-b border-slate-200 px-4 py-2.5 text-xs font-semibold tracking-wide text-slate-500 uppercase", col.headerClassName)}
+                  className={cn(
+                    "border-b border-slate-200 px-4 py-2.5 text-xs font-medium text-slate-500",
+                    col.numeric && "text-right",
+                    col.headerClassName,
+                  )}
                 >
                   {col.header}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-200">
             {loading ? (
               Array.from({ length: 5 }, (_, r) => (
                 <tr key={`sk-${r}`}>
@@ -93,9 +105,16 @@ const DataTable = ({
               </tr>
             ) : (
               data.map((row, rowIndex) => (
-                <tr key={rowKey(row, rowIndex)} className="transition-colors hover:bg-slate-50/70">
+                <tr key={rowKey(row, rowIndex)} className="transition-colors hover:bg-slate-50">
                   {columns.map((col, colIndex) => (
-                    <td key={colIndex} className={cn("px-4 py-3 align-middle text-slate-700", col.className)}>
+                    <td
+                      key={colIndex}
+                      className={cn(
+                        "px-4 py-2.5 align-middle text-slate-700",
+                        col.numeric && "text-right tabular-nums",
+                        col.className,
+                      )}
+                    >
                       {col.render ? col.render(row) : row[col.accessor]}
                     </td>
                   ))}

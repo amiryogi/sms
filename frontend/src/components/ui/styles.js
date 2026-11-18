@@ -2,6 +2,14 @@ import { cn } from "../../lib/cn";
 
 // Class builders shared by ui components (kept out of .jsx for fast refresh).
 
+/*
+ * Button variants. A button's colour says how important the action is, not what
+ * mood it is in — see frontend/DESIGN.md. Status colours are for status.
+ *
+ * `success` and `warning` survive only for the marketing site's WhatsApp CTA
+ * (pages/public/Contact.jsx), which is outside this design system. Do not reach
+ * for them in the app: the main action of a view is `primary`.
+ */
 export const VARIANTS = {
   primary:
     "bg-brand-600 text-brand-fg shadow-sm hover:bg-brand-700 focus-visible:outline-brand-600",
@@ -10,18 +18,23 @@ export const VARIANTS = {
   outline:
     "bg-white text-brand-700 ring-1 ring-inset ring-brand-300 hover:bg-brand-50",
   ghost: "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-  danger: "bg-red-600 text-white shadow-sm hover:bg-red-700 focus-visible:outline-red-600",
-  "danger-soft": "bg-red-50 text-red-700 ring-1 ring-inset ring-red-200 hover:bg-red-100",
-  success:
-    "bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 focus-visible:outline-emerald-600",
-  warning: "bg-amber-500 text-white shadow-sm hover:bg-amber-600 focus-visible:outline-amber-500",
+  danger: "bg-risk text-white shadow-sm hover:bg-risk-strong focus-visible:outline-risk",
+  "danger-soft":
+    "bg-risk-surface text-risk ring-1 ring-inset ring-risk-line hover:bg-risk-surface/70",
+  success: "bg-ok text-white shadow-sm hover:bg-ok-strong focus-visible:outline-ok",
+  warning: "bg-warn text-white shadow-sm hover:bg-warn-strong focus-visible:outline-warn",
 };
 
+/*
+ * Radius follows the ladder in DESIGN.md: small controls at 6px, the default
+ * control at 8px. The previous ladder ran 6 -> 14 -> 14 -> 12px, so a 36px-tall
+ * `md` button carried a 14px radius and read as a lozenge.
+ */
 const SIZES = {
   xs: "h-7 gap-1 rounded-md px-2 text-xs",
-  sm: "h-8 gap-1.5 rounded-lg px-3 text-xs",
+  sm: "h-8 gap-1.5 rounded-md px-3 text-xs",
   md: "h-9 gap-2 rounded-lg px-3.5 text-sm",
-  lg: "h-11 gap-2 rounded-xl px-5 text-sm",
+  lg: "h-11 gap-2 rounded-lg px-5 text-sm",
 };
 
 

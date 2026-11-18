@@ -246,8 +246,8 @@ const ReportCards = () => {
                 {allGenerated ? "Regenerate" : "Generate"} Report Cards
               </Button>
               {allGenerated && !allPublished && (
-                <Button variant="success" icon={Eye} onClick={() => setPublished(true)} loading={publishing} data-guide="reportCards.publish">
-                  Publish All
+                <Button variant="primary" icon={Eye} onClick={() => setPublished(true)} loading={publishing} data-guide="reportCards.publish">
+                  Publish all
                 </Button>
               )}
               {somePublished && (

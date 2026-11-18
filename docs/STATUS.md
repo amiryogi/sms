@@ -1,12 +1,50 @@
 # Where this project is
 
-Updated 2026-11-15. Keep this current when you stop work — it is the handover
+Updated 2026-11-18. Keep this current when you stop work — it is the handover
 between machines and between sessions.
 
 New machine? Start with [SETUP-NEW-MACHINE.md](SETUP-NEW-MACHINE.md).
 
 **All four phases of [plans/configurable-report-card.md](plans/configurable-report-card.md)
 are done** and on `main`.
+
+---
+
+## ▶ Pick up here: visual redesign, waves 3 and 4 (2026-11-18) — branch `feature/visual-redesign`
+
+Plan and full handover: **[plans/visual-identity-redesign.md](plans/visual-identity-redesign.md)**.
+The design rules themselves: **[`frontend/DESIGN.md`](../frontend/DESIGN.md)**.
+
+**The work is on `feature/visual-redesign`, not `main`.** On another machine:
+`git fetch origin && git checkout feature/visual-redesign`, then `cd frontend && npm install`.
+
+A new visual identity for the app — "the school register", grounded in the paper objects this
+software replaces. The owner asked for a real identity rather than token polish, scoped **out**
+the print sheets and the public marketing site, and asked for the data-dense staff screens
+first. No dark mode.
+
+- **Done (waves 0–2), on `main`:** the direction written down; the token layer, which
+  **redefines Tailwind's `slate`** as a warm ink ladder so all 65 pages retoned with zero page
+  edits, plus status tokens, a type scale, a monotonic radius ladder, `--shadow-card: none` and
+  a reduced-motion guard; the font moved to **IBM Plex Sans + Devanagari** (Inter has no
+  Devanagari at all, so every Nepali string was falling back to a system font — a real defect,
+  not a taste change); the kit and shell restyled, with `PageShell`, `SegmentedControl` and
+  `Radio` added and `DataTable` given the register treatment.
+- **Next:** wave 3, the data-dense screens — consolidate the 7 rival stat cards, adopt
+  `PageShell`, strip decorative status colour, give the hero numbers the display treatment.
+  Then wave 4, the ~55-page tail and the copy pass.
+- **⚠ Before touching `--font-sans` or the slate ladder, read §3 of the plan.** The printed
+  report card and the fee slips resolve those tokens, so a token change reaches printed output
+  and both Playwright pixel baselines **without any print file appearing in the diff**.
+  `app.css` now shadows them back inside the six print selectors, and a test guards it.
+- **Verified:** frontend lint 0 errors, build passes, 106 vitest tests (55 new, asserting the
+  palette's contrast floor against `app.css` itself).
+- **Not verified:** the 90 Playwright tests. The machine this was built on has no test database.
+  **Run `cd e2e && PW_CHANNEL=chrome npm test` before shipping**, watching the two report-card
+  screenshot comparisons.
+- **After wave 3:** regenerate the marketing screenshots
+  (`cd e2e && PW_CHANNEL=chrome npm run screenshots`) — the public site shows images of the app
+  and they are already stale.
 
 ---
 
