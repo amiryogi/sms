@@ -11,12 +11,12 @@ export const Field = ({ label, htmlFor, hint, error, required, className, childr
     {label && (
       <label htmlFor={htmlFor} className="text-sm font-medium text-slate-700">
         {label}
-        {required && <span className="ml-0.5 text-red-500" aria-hidden="true">*</span>}
+        {required && <span className="ml-0.5 text-risk" aria-hidden="true">*</span>}
       </label>
     )}
     {children}
     {error ? (
-      <p className="text-xs font-medium text-red-600" role="alert">{error}</p>
+      <p className="text-xs font-medium text-risk" role="alert">{error}</p>
     ) : hint ? (
       <p className="text-xs text-slate-500">{hint}</p>
     ) : null}

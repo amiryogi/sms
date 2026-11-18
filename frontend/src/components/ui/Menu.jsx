@@ -81,7 +81,7 @@ export const Menu = ({ trigger, align = "end", children, className }) => {
 export const MenuItem = ({ icon: Icon, children, onClick, href, danger, as: Tag, ...props }) => {
   const classes = cn(
     "flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors",
-    danger ? "text-red-600 hover:bg-red-50" : "text-slate-700 hover:bg-slate-100 hover:text-slate-900",
+    danger ? "text-risk hover:bg-risk-surface" : "text-slate-700 hover:bg-slate-100 hover:text-slate-900",
   );
   const content = (
     <>

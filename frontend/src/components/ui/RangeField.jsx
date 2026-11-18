@@ -39,7 +39,7 @@ const RangeField = ({ id, label, value, min, max, step = 1, unit = "", onChange,
         step={step}
         onChange={(e) => commit(e.target.value)}
       />
-      {error && <p className="text-xs font-medium text-red-600" role="alert">{error}</p>}
+      {error && <p className="text-xs font-medium text-risk" role="alert">{error}</p>}
     </div>
   );
 };

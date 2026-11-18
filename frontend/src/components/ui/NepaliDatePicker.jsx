@@ -201,7 +201,7 @@ const NepaliDatePicker = React.forwardRef(function NepaliDatePicker(
               "flex min-h-[38px] w-full cursor-pointer items-center gap-2 rounded-lg border bg-white px-3 py-2 text-left text-sm shadow-xs transition-colors",
               "focus:outline-none focus-visible:ring-3",
               invalid
-                ? "border-red-400 focus-visible:border-red-500 focus-visible:ring-red-500/15"
+                ? "border-risk focus-visible:border-risk focus-visible:ring-risk/15"
                 : "border-slate-300 hover:border-slate-400 focus-visible:border-brand-500 focus-visible:ring-brand-500/15",
               "disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500",
               clearable && selected && !disabled && "pr-9",
@@ -311,7 +311,7 @@ const NepaliDatePicker = React.forwardRef(function NepaliDatePicker(
                   key={w}
                   role="columnheader"
                   aria-label={weekdayName(w, language)}
-                  className={cn("py-1 text-center text-[11px] font-medium", prefs.weeklyHolidayDays.includes(w) ? "text-red-500" : "text-slate-400")}
+                  className={cn("py-1 text-center text-[11px] font-medium", prefs.weeklyHolidayDays.includes(w) ? "text-risk" : "text-slate-400")}
                 >
                   {weekdayName(w, language, true).slice(0, language === "ne" ? 4 : 2)}
                 </div>
@@ -344,7 +344,7 @@ const NepaliDatePicker = React.forwardRef(function NepaliDatePicker(
                             ? "bg-brand-600 font-semibold text-brand-fg"
                             : cn(
                                 "hover:bg-brand-50",
-                                !cell.inMonth ? "text-slate-300" : weekly ? "text-red-600" : "text-slate-800",
+                                !cell.inMonth ? "text-slate-300" : weekly ? "text-risk" : "text-slate-800",
                                 isToday && "font-semibold ring-1 ring-inset ring-brand-400",
                               ),
                           off && "cursor-not-allowed text-slate-300 line-through decoration-slate-300 hover:bg-transparent",
@@ -384,7 +384,7 @@ const NepaliDatePicker = React.forwardRef(function NepaliDatePicker(
                 aria-invalid={typedError ? true : undefined}
                 className={cn(
                   "h-8 min-w-0 flex-1 rounded-lg border bg-white px-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none",
-                  typedError ? "border-red-400" : "border-slate-200 focus:border-brand-500",
+                  typedError ? "border-risk" : "border-slate-200 focus:border-brand-500",
                 )}
               />
               <button
@@ -396,7 +396,7 @@ const NepaliDatePicker = React.forwardRef(function NepaliDatePicker(
                 Set
               </button>
             </div>
-            {typedError && <p className="mt-1 text-xs font-medium text-red-600" role="alert">{typedError}</p>}
+            {typedError && <p className="mt-1 text-xs font-medium text-risk" role="alert">{typedError}</p>}
             <div className="mt-2 flex items-center justify-between">
               <button
                 type="button"

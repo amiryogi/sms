@@ -17,10 +17,10 @@ import { subscribe, getToasts, getPendingConfirm, dismissToast, closeConfirm } f
 
 // ---- UI -------------------------------------------------------------------
 const TONES = {
-  success: ["text-emerald-600", CheckCircle2],
-  error: ["text-red-600", AlertCircle],
-  warning: ["text-amber-500", TriangleAlert],
-  info: ["text-sky-600", Info],
+  success: ["text-ok", CheckCircle2],
+  error: ["text-risk", AlertCircle],
+  warning: ["text-warn", TriangleAlert],
+  info: ["text-info", Info],
 };
 
 const ToastItem = ({ t }) => {
