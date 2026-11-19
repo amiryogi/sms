@@ -1,16 +1,14 @@
 # Visual redesign: from "generic card kit" to "the school register"
 
-Brief pasted 2026-11-18. **All four waves are done.** Waves 0–3 were merged to `main` on
-2026-11-18 by pull request #8; wave 4 is on `feature/visual-redesign-wave4` and waits in
-**pull request #9, based on `main`**. The rules this plan produced are
+Brief pasted 2026-11-18. **All four waves are done and on `main`** — waves 0–3 by pull
+request #8 (2026-11-18), wave 4 by pull request #9 (2026-11-19). The rules this plan produced are
 [`frontend/DESIGN.md`](../../frontend/DESIGN.md) — read that first, then §5a here for what was
 deliberately left for a later pass. §3 is the trap to know about before touching any token.
 
 > **Resuming on another machine?** Everything you need is in this repo:
 >
 > ```bash
-> git fetch origin
-> git checkout feature/visual-redesign-wave4   # or main, once PR #9 is merged
+> git fetch origin && git checkout main
 > cd frontend && npm install          # node_modules may be incomplete; see "Machine notes"
 > npm run lint && npm test && npm run build
 > git checkout -- package-lock.json   # on Windows, npm install churns it; see "Machine notes"
@@ -416,7 +414,7 @@ improvement, not as a compliance fix.
 |---|---|
 | **Default brand colour** | `DEFAULT_BRAND = "#4f46e5"` (cool indigo) in `lib/brand.js` was chosen against the old cool slate and now sits slightly oddly against the warm neutrals. It only affects schools that have **not** set their own colour. Left alone deliberately. |
 | **Chart palette** | `components/finance/charts/chartTheme.js` hard-codes blue/orange and documents why: a colour-blind-validated adjacent pair, deliberately *not* the brand colour, because an arbitrary brand hue could collide with status red. The counter-argument is real — a maroon-branded school gets blue charts. This is a decision, **not a defect**; left alone. |
-| **UXKIN benchmarking** | The `plugin:website-design:uxkin` connector is not authorised, so this direction is derived from the product's own subject matter, its existing tokens and the real screenshots — **not** from a comparison against real school/admin design systems. Authorise it if you want the colour and type choices benchmarked before Wave 4. |
+| **UXKIN benchmarking** | The `plugin:website-design:uxkin` connector is not authorised, so this direction is derived from the product's own subject matter, its existing tokens and the real screenshots — **not** from a comparison against real school/admin design systems. Authorise it if you want the colour and type choices benchmarked against real ones. |
 
 ## 9. Machine notes
 

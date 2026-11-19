@@ -10,16 +10,15 @@ are done** and on `main`.
 
 ---
 
-## ▶ Pick up here: visual redesign — all four waves done, wave 4 waiting in pull request #9 (2026-11-19)
+## Visual redesign (2026-11-19) — all four waves done and on `main`
 
 Plan and full handover: **[plans/visual-identity-redesign.md](plans/visual-identity-redesign.md)**.
 The design rules themselves: **[`frontend/DESIGN.md`](../frontend/DESIGN.md)**.
 
-**Waves 0–3 are on `main`** (pull request #8, merged 2026-11-18). **Wave 4 is on
-`feature/visual-redesign-wave4`, waiting in pull request #9, based on `main`** — merge that and
-the redesign is complete. On another machine: `git fetch origin && git checkout
-feature/visual-redesign-wave4` (or just `main` once #9 is merged). No wave changed a
-dependency, so an existing `node_modules` is already correct.
+**Nothing is outstanding.** Waves 0–3 merged by pull request #8 (2026-11-18), wave 4 by
+pull request #9 (2026-11-19). No wave changed a dependency, so an existing `node_modules`
+is already correct. The tail that was deliberately left is plan §5a — the first item,
+re-taking the marketing screenshots, is the only one a visitor can see.
 
 A new visual identity for the app — "the school register", grounded in the paper objects this
 software replaces. The owner asked for a real identity rather than token polish, scoped **out**
@@ -44,14 +43,19 @@ first. No dark mode.
   the printed NEB sheet had moved up 1px because the redesign's type scale reached it. Fixed
   by pinning Tailwind's default `--text-*` tokens inside the print selectors, which now also
   cover the A4 statement and day book (they had been printing in the new font). Plan §3.
-- **Done (wave 4), in pull request #9:** every app page on `PageShell`; raw colours on the
+- **Done (wave 4), on `main`:** every app page on `PageShell`; raw colours on the
   tokens and decoration made neutral; compact empty states; hand-built switches became
   `SegmentedControl`s; register tables throughout; `DashboardGreeting`; a kit reference in
   `frontend/src/components/ui/README.md`; the copy pass, including a coordinated sentence-case
   rename of 38 page, sidebar and button names across the pages, help documents, walkthroughs
   and tests. The calendar printout joined the print pin. Plan §5a.
-- **Next:** review and merge pull request #9. Plan §5a lists what is left after that (kit
-  accessibility gaps, a calmer row delete button, re-taking the marketing screenshots).
+- **Left for a later pass** (plan §5a, none of it blocking): re-take the marketing
+  screenshots — the public site still shows wave-3 images of pages wave 4 restyled and
+  renamed (`cd e2e && PW_CHANNEL=chrome npm run screenshots`, needs the test database);
+  `FeeStructures` totals per class with `parseFloat` instead of `utils/money`; five
+  pre-existing kit accessibility gaps listed in `frontend/src/components/ui/README.md`;
+  a calmer row delete button; `SegmentedControl`'s ↑/↓ behaviour; the calendar's B.S./A.D.
+  switch (blocked by how `calendar.spec.js` finds it).
 - **⚠ Before touching `--font-sans`, the slate ladder or any `--text-*` token, read §3 of the
   plan.** The printed report card, slips, statement and day book resolve those tokens, so a
   token change reaches printed output and both Playwright pixel baselines **without any print
