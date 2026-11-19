@@ -18,6 +18,8 @@ import Modal from "../../components/common/Modal";
 import { Input, Select, Button, FormRow, Textarea } from "../../components/common/FormElements";
 import {
   PageHeader,
+  PageShell,
+  IconButton,
   Badge,
   Avatar,
   Checkbox,
@@ -112,7 +114,7 @@ const Parents = () => {
         Array.isArray(list)
           ? list.map((s) => ({
               value: s.id,
-              label: `${fullName(s) || s.email || `Student ${s.id}`}${s.class ? ` · ${s.class} ${s.section || ""}` : ""}`,
+              label: `${fullName(s) || s.email || `Student ${s.id}`}${s.class ? `, ${s.class} ${s.section || ""}` : ""}`,
             }))
           : [],
       );
@@ -260,19 +262,20 @@ const Parents = () => {
     {
       header: "Parent",
       render: (row) => (
-        <div className="flex min-w-0 items-center gap-3">
-          <Avatar name={name(row)} size="sm" />
-          <div className="min-w-0">
-            <p className="truncate font-medium text-slate-900">{name(row)}</p>
-            <p className="truncate text-xs text-slate-500">
-              <span className="font-mono">{row.username}</span>
-              {row.email ? ` · ${row.email}` : ""}
-            </p>
-          </div>
+        // One line per parent, like the other register pages: the username sits
+        // beside the name, the email has its own column.
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Avatar name={name(row)} size="xs" />
+          <span className="truncate font-medium text-slate-900">{name(row)}</span>
+          {row.username && <span className="truncate font-mono text-xs text-slate-500">{row.username}</span>}
         </div>
       ),
     },
-    { header: "Phone", render: (row) => row.phone || <span className="text-slate-400">—</span> },
+    {
+      header: "Email",
+      render: (row) => (row.email ? <span className="block max-w-56 truncate text-slate-600">{row.email}</span> : <span className="text-slate-400">—</span>),
+    },
+    { header: "Phone", render: (row) => (row.phone ? <span className="whitespace-nowrap">{row.phone}</span> : <span className="text-slate-400">—</span>) },
     {
       header: "Children",
       render: (row) =>
@@ -285,14 +288,16 @@ const Parents = () => {
                 key={`${row.id}-${ls.studentId}`}
                 className="inline-flex items-center gap-1 rounded-full bg-slate-100 py-0.5 pr-1 pl-2.5 text-xs text-slate-700"
               >
-                {ls.isPrimary && <Star size={11} className="text-amber-500" aria-label="Primary guardian" />}
+                {/* Primary guardian is a property, not a status: an ink icon, not amber. */}
+                {ls.isPrimary && <Star size={11} className="text-slate-500" aria-label="Primary guardian" />}
                 {ls.studentName}
-                <span className="text-slate-400 capitalize">· {ls.relationship}</span>
+                <span className="text-slate-500 capitalize">({ls.relationship})</span>
+                {/* 24px target (WCAG 2.2 AA) inside a compact chip. */}
                 <button
                   type="button"
                   onClick={() => handleUnlink(row, ls)}
                   aria-label={`Unlink ${ls.studentName}`}
-                  className="inline-flex size-4 cursor-pointer items-center justify-center rounded-full text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+                  className="-my-1 inline-flex size-6 cursor-pointer items-center justify-center rounded-full text-slate-500 hover:bg-slate-200 hover:text-slate-800 focus-visible:outline-2 focus-visible:outline-brand-600"
                 >
                   <X size={11} aria-hidden="true" />
                 </button>
@@ -308,20 +313,13 @@ const Parents = () => {
     },
     {
       header: <span className="sr-only">Actions</span>,
+      action: true,
       width: "56px",
       render: (row) => (
         <div className="flex justify-end">
           <Menu
             trigger={({ toggle, ...aria }) => (
-              <button
-                type="button"
-                onClick={toggle}
-                {...aria}
-                aria-label={`Actions for ${name(row)}`}
-                className="inline-flex size-9 cursor-pointer items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-              >
-                <MoreHorizontal size={18} aria-hidden="true" />
-              </button>
+              <IconButton icon={MoreHorizontal} label={`Actions for ${name(row)}`} onClick={toggle} {...aria} />
             )}
           >
             <MenuItem icon={Link2} onClick={() => openLinkModal(row)}>Link a student</MenuItem>
@@ -339,9 +337,8 @@ const Parents = () => {
   ];
 
   return (
-    <div className="mx-auto max-w-7xl">
+    <PageShell>
       <PageHeader
-        icon={Contact}
         title="Parents"
         description="Parent accounts and the children each one can follow."
         actions={
@@ -423,7 +420,7 @@ const Parents = () => {
 
       <ResetPasswordDialog account={resetFor} onClose={() => setResetFor(null)} />
       <NewAccountDialog credential={newAccount} onClose={() => setNewAccount(null)} />
-    </div>
+    </PageShell>
   );
 };
 

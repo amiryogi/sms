@@ -24,12 +24,12 @@ Super administrators.
 - **Protect administrator accounts:** only a super administrator can edit, deactivate, demote,
   delete or reset the password of another super administrator. Ordinary administrators cannot
   change a super administrator.
-- **Choose the AI assistant's provider and model** on **AI Assistant** (administrators can too).
+- **Choose the AI assistant's provider and model** on **AI assistant** (administrators can too).
 
 ## What the system does not have
 - **No school registration and no multi-school screen.** The system runs one school; a super
   administrator works only in that school.
-- **No web page for creating administrators.** **Teachers & Staff** creates teachers, exam
+- **No web page for creating administrators.** **Teachers & staff** creates teachers, exam
   officers and accountants only. Giving someone the administrator role is done by the system's
   technical maintainer.
 - No monitoring or audit-log screen apart from the AI assistant's usage page.
@@ -38,8 +38,8 @@ Super administrators.
 - Looking for a "Schools" page or a platform settings page: they do not exist.
 
 ## Troubleshooting
-- To change school details, logo, colour, grading or report card: **School Settings**.
-- To reset a staff password: **Teachers & Staff** → the key button on the person's row.
+- To change school details, logo, colour, grading or report card: **School settings**.
+- To reset a staff password: **Teachers & staff** → the key button on the person's row.
 
 ## Related pages
-Teachers & Staff (`/admin/teachers`), School Settings (`/admin/school-settings`).
+Teachers & staff (`/admin/teachers`), School settings (`/admin/school-settings`).

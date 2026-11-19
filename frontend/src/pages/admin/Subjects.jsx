@@ -4,7 +4,7 @@ import { Plus, Pencil, Trash2, Library, Upload, FlaskConical } from 'lucide-reac
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import { Input, Button, FormRow } from '../../components/common/FormElements';
-import { PageHeader, Badge, IconButton, Checkbox, DialogActions, toast, confirmDialog } from '../../components/ui';
+import { PageHeader, PageShell, Badge, IconButton, Checkbox, DialogActions, toast, confirmDialog } from '../../components/ui';
 import { academicService } from '../../api/academicService';
 import SubjectImportModal from '../../components/admin/SubjectImportModal';
 
@@ -84,7 +84,7 @@ const Subjects = () => {
   const handleDelete = async (subject) => {
     const ok = await confirmDialog({
       title: `Delete ${subject.name}?`,
-      message: 'Subjects already taught in a class cannot be deleted. Remove them from Class Subjects first.',
+      message: 'Subjects already taught in a class cannot be deleted. Remove them from Class subjects first.',
       tone: 'danger',
     });
     if (!ok) return;
@@ -100,30 +100,28 @@ const Subjects = () => {
   const columns = [
     {
       header: 'Subject',
-      render: (row) => (
-        <div className="flex items-center gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
-            <Library size={16} aria-hidden="true" />
-          </span>
-          <div className="min-w-0">
-            <p className="truncate font-medium text-slate-900">{row.name}</p>
-            {row.description && <p className="max-w-xs truncate text-xs text-slate-500">{row.description}</p>}
-          </div>
-        </div>
-      ),
+      // One line per subject, like the other register pages; the description
+      // has its own muted column instead of a second line.
+      render: (row) => <span className="font-medium text-slate-900">{row.name}</span>,
     },
     {
       header: 'Code',
-      render: (row) => <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-700">{row.code}</code>,
+      render: (row) => <span className="font-mono text-xs text-slate-700">{row.code}</span>,
     },
-    { header: 'Credit hours', render: (row) => <span className="tabular-nums">{row.creditHours}</span> },
+    { header: 'Credit hours', numeric: true, render: (row) => row.creditHours },
     {
+      // A property of the subject, not a status, so the badge is neutral.
       header: 'Practical',
       render: (row) =>
-        row.hasPractical ? <Badge tone="info" icon={FlaskConical}>Theory + practical</Badge> : <Badge>Theory only</Badge>,
+        row.hasPractical ? <Badge icon={FlaskConical}>Theory + practical</Badge> : <Badge>Theory only</Badge>,
+    },
+    {
+      header: 'Description',
+      render: (row) => <span className="block max-w-xs truncate text-slate-500">{row.description || '—'}</span>,
     },
     {
       header: <span className="sr-only">Actions</span>,
+      action: true,
       width: '96px',
       render: (row) => (
         <div className="flex justify-end gap-1">
@@ -135,11 +133,10 @@ const Subjects = () => {
   ];
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <PageShell>
       <PageHeader
-        icon={Library}
         title="Subjects"
-        description="The master list of subjects. Attach them to classes on the Class Subjects page."
+        description="The master list of subjects. Attach them to classes on the Class subjects page."
         actions={
           <>
             <Button variant="secondary" icon={Upload} onClick={() => setImportModalOpen(true)}>Import from Excel</Button>
@@ -208,7 +205,7 @@ const Subjects = () => {
       </Modal>
 
       <SubjectImportModal isOpen={importModalOpen} onClose={() => setImportModalOpen(false)} onSuccess={fetchSubjects} />
-    </div>
+    </PageShell>
   );
 };
 

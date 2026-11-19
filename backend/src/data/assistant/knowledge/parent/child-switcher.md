@@ -22,8 +22,8 @@ Parents.
 At the top of every parent page: **Choose a child**.
 
 ## Steps
-1. Open any page under **My children** (Dashboard, Attendance, Assignments, Results, Report Card,
-   Fees, Child's Profile).
+1. Open any page under **My children** (Dashboard, Attendance, Assignments, Results, Report card,
+   Fees, Child's profile).
 2. Use **Choose a child** at the top to pick the child.
 3. The choice stays while you move between pages in this browser session.
 

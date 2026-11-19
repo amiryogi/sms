@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { BookOpen } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { feeService } from "../../api/feeService";
-import { Card, EmptyState, LoadingBlock } from "../../components/ui";
+import { Card, EmptyState, LoadingBlock, PageShell } from "../../components/ui";
 import PrintToolbar from "../../components/finance/print/PrintToolbar";
 import { SchoolHeading, SignatureLine } from "../../components/finance/print/SlipParts";
 import { methodLabel, fullName } from "../../components/finance/financeLabels";
@@ -39,14 +39,14 @@ const Daybook = () => {
   }, [key]);
 
   const { data, error } = state;
-  if (error) return <Card><EmptyState icon={BookOpen} title="Day book not available" description={error} /></Card>;
+  if (error) return <Card><EmptyState compact icon={BookOpen} title="Day book not available" description={error} /></Card>;
 
   const range = data && (data.from === data.to ? formatDate(data.from) : `${formatDate(data.from)} to ${formatDate(data.to)}`);
   const rangeBs = data && (data.from === data.to ? data.fromBs : `${data.fromBs} to ${data.toBs}`);
   const filters = [params.type && (params.type === "REVERSAL" ? "reversals only" : "payments only"), params.method && methodLabel(params.method), params.search && `"${params.search}"`].filter(Boolean);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
+    <PageShell>
       <PrintToolbar ready={Boolean(data)} autoPrint={params.print === "1"} printLabel="Print day book" />
       {!data ? (
         <LoadingBlock text="Loading day book…" />
@@ -155,7 +155,7 @@ const Daybook = () => {
           </div>
         </article>
       )}
-    </div>
+    </PageShell>
   );
 };
 

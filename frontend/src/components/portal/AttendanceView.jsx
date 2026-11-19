@@ -1,17 +1,22 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { CalendarCheck, Check, X, Clock, ShieldCheck } from "lucide-react";
+import { CalendarCheck } from "lucide-react";
 import { attendanceService } from "../../api/attendanceService";
-import { Card, CardHeader, Tabs, EmptyState, LoadingBlock } from "../ui";
-import { Progress } from "../shadcn/progress";
+import { Card, CardHeader, Tabs, EmptyState, LoadingBlock, StatCard, StatGroup } from "../ui";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../shadcn/tooltip";
 import { cn } from "../../lib/cn";
 import { formatDate } from "../../utils/format";
 
+/*
+ * Like a paper register, only the exceptions are coloured: late warn, absent
+ * risk. Present is the expected state of almost every day, so it stays quiet;
+ * excused is not a status colour. Every day also shows its letter, so colour is
+ * never the only carrier of the mark.
+ */
 const STATUS = {
-  present: { short: "P", label: "Present", icon: Check, cell: "bg-emerald-100 text-emerald-800 ring-emerald-200" },
-  late: { short: "L", label: "Late", icon: Clock, cell: "bg-amber-100 text-amber-800 ring-amber-200" },
-  absent: { short: "A", label: "Absent", icon: X, cell: "bg-red-100 text-red-800 ring-red-200" },
-  excused: { short: "E", label: "Excused", icon: ShieldCheck, cell: "bg-sky-100 text-sky-800 ring-sky-200" },
+  present: { short: "P", label: "Present", cell: "bg-white text-slate-700 ring-slate-200" },
+  late: { short: "L", label: "Late", tone: "warn", cell: "bg-warn-surface text-warn ring-warn-line" },
+  absent: { short: "A", label: "Absent", tone: "risk", cell: "bg-risk-surface text-risk ring-risk-line" },
+  excused: { short: "E", label: "Excused", cell: "bg-slate-100 text-slate-700 ring-slate-200" },
 };
 
 /**
@@ -61,33 +66,30 @@ const AttendanceView = ({ studentId }) => {
   const pct = Number(summary.percentage) || 0;
 
   if (!summary.total) {
-    return <Card><EmptyState icon={CalendarCheck} title="No attendance yet" description="Days appear here once teachers take the register." /></Card>;
+    return <Card><EmptyState icon={CalendarCheck} title="No attendance yet" description="This is the school register for the year. Days appear here once teachers start taking it." /></Card>;
   }
 
   return (
     <div className="space-y-6">
-      <Card>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-sm text-slate-500">Attendance this year</p>
-            <p className="mt-1 text-4xl font-semibold tracking-tight text-slate-900 tabular-nums">{pct.toFixed(1)}%</p>
-            <p className="mt-1 text-sm text-slate-500">
-              {summary.attended} of {summary.total} school days
-              {summary.countLateAsPresent ? " (late counts as present)" : ""}
-            </p>
-          </div>
-          <dl className="grid grid-cols-4 gap-3 text-center">
-            {Object.entries(STATUS).map(([key, s]) => (
-              <div key={key} className="min-w-16 rounded-xl bg-slate-50 px-3 py-2">
-                <dt className="flex items-center justify-center gap-1 text-xs text-slate-500">
-                  <s.icon size={12} aria-hidden="true" /> {s.label}
-                </dt>
-                <dd className="text-lg font-semibold text-slate-900 tabular-nums">{summary[key] || 0}</dd>
-              </div>
-            ))}
-          </dl>
+      {/* The year's rate is the headline; the day counts sit ruled beneath it. The
+          bar is ink: the server sends no attendance threshold, and the frontend
+          does not invent one. Late and absent counts take their status colour. */}
+      <Card padding="none" className="overflow-hidden">
+        <div className="p-5">
+          <StatCard
+            surface="plain"
+            label="Attendance this year"
+            value={`${pct.toFixed(1)}%`}
+            progress={pct}
+            progressLabel={`Attendance ${pct.toFixed(1)}%`}
+            sub={`${summary.attended} of ${summary.total} school days${summary.countLateAsPresent ? " (late counts as present)" : ""}`}
+          />
         </div>
-        <Progress value={pct} className="mt-4" aria-label={`Attendance ${pct.toFixed(1)}%`} indicatorClassName={pct < 75 ? "bg-red-500" : pct < 90 ? "bg-amber-500" : "bg-emerald-600"} />
+        <StatGroup columns={4} surface="well" size="sm" className="border-t border-slate-200">
+          {Object.entries(STATUS).map(([key, s]) => (
+            <StatCard key={key} label={s.label} value={summary[key] || 0} tone={s.tone && summary[key] > 0 ? s.tone : "ink"} />
+          ))}
+        </StatGroup>
       </Card>
 
       <Card>
@@ -101,7 +103,7 @@ const AttendanceView = ({ studentId }) => {
         />
         {selectedMeta && (
           <p className="mb-3 text-sm text-slate-600">
-            {selectedMeta.attended} of {selectedMeta.total} days · <span className="font-semibold text-slate-900">{selectedMeta.percentage}%</span>
+            {selectedMeta.attended} of {selectedMeta.total} days, <span className="font-semibold text-slate-900 tabular-nums">{selectedMeta.percentage}%</span>
           </p>
         )}
         <ul className="flex flex-wrap gap-1.5" aria-label={`Register for ${selectedMeta?.label || ""}`}>
@@ -117,11 +119,11 @@ const AttendanceView = ({ studentId }) => {
                       aria-label={`${formatDate(d.attendanceDate)}: ${s.label}${d.remarks ? `, ${d.remarks}` : ""}`}
                     >
                       <span className="font-semibold tabular-nums">{Number(d.bsDate.slice(8))}</span>
-                      <span className="text-[10px] font-medium opacity-80">{s.short}</span>
+                      <span className="text-2xs font-medium">{s.short}</span>
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    {s.label} · {formatDate(d.attendanceDate)} ({d.bsDate} BS){d.remarks ? ` · ${d.remarks}` : ""}
+                    {s.label}, {formatDate(d.attendanceDate)} ({d.bsDate} BS){d.remarks ? `. ${d.remarks}` : ""}
                   </TooltipContent>
                 </Tooltip>
               </li>
@@ -131,7 +133,7 @@ const AttendanceView = ({ studentId }) => {
         <p className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
           {Object.values(STATUS).map((s) => (
             <span key={s.short} className="inline-flex items-center gap-1.5">
-              <span className={cn("inline-flex size-4 items-center justify-center rounded text-[10px] font-semibold ring-1 ring-inset", s.cell)}>{s.short}</span>
+              <span className={cn("inline-flex size-4 items-center justify-center rounded-sm text-2xs font-semibold ring-1 ring-inset", s.cell)}>{s.short}</span>
               {s.label}
             </span>
           ))}

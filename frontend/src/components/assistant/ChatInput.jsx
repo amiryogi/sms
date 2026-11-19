@@ -65,7 +65,7 @@ const ChatInput = forwardRef(function ChatInput({ t, busy, maxLength = 1000, onS
             aria-label={t.send}
             title={t.send}
             className={cn(
-              "inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-brand-600 text-white hover:bg-brand-700",
+              "inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-brand-600 text-brand-fg hover:bg-brand-700",
               "disabled:cursor-default disabled:bg-slate-200 disabled:text-slate-400"
             )}
           >

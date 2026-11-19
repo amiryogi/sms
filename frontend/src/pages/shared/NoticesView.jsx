@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Bell, Search, ChevronDown, ChevronLeft, ChevronRight, Megaphone } from "lucide-react";
+import { Bell, Search, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { noticeService } from "../../api/noticeService";
-import { PageHeader, Card, Badge, Button, TextInput, SelectInput, EmptyState, Skeleton, toast } from "../../components/ui";
+import { PageHeader, PageShell, Card, Badge, Button, TextInput, SelectInput, EmptyState, Skeleton, toast } from "../../components/ui";
 import { cn } from "../../lib/cn";
 import { formatDate, formatDateTime, formatRelative, fullName } from "../../utils/format";
 
@@ -10,11 +10,15 @@ import { formatDate, formatDateTime, formatRelative, fullName } from "../../util
  * published notices this user may see (role and class targeting).
  */
 
+/*
+ * Only urgent and high priority are states worth colour: they get a status edge
+ * and a badge. Normal and low are the ordinary case and stay ink.
+ */
 const PRIORITY = {
-  urgent: { tone: "danger", label: "Urgent", stripe: "border-l-red-500" },
-  high: { tone: "warning", label: "High", stripe: "border-l-amber-500" },
-  normal: { tone: "info", label: "Normal", stripe: "border-l-sky-500" },
-  low: { tone: "neutral", label: "Low", stripe: "border-l-slate-300" },
+  urgent: { tone: "danger", label: "Urgent", stripe: "border-l-risk" },
+  high: { tone: "warning", label: "High", stripe: "border-l-warn" },
+  normal: { tone: "neutral", label: "Normal", stripe: "border-l-transparent" },
+  low: { tone: "neutral", label: "Low", stripe: "border-l-transparent" },
 };
 
 const NoticesView = () => {
@@ -59,8 +63,8 @@ const NoticesView = () => {
   const filtered = Boolean(filters.search || filters.priority);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
-      <PageHeader icon={Megaphone} title="Notices" description="Announcements and updates from the school." />
+    <PageShell width="prose">
+      <PageHeader title="Notices" description="Announcements and updates from the school." />
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <TextInput
@@ -83,29 +87,29 @@ const NoticesView = () => {
 
       {loading ? (
         <div className="space-y-3" aria-busy="true">
-          {[0, 1, 2].map((i) => <Skeleton key={i} className="h-20 rounded-card" />)}
+          {[0, 1, 2].map((i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
         </div>
       ) : notices.length === 0 ? (
         <Card>
           <EmptyState
             icon={Bell}
             title={filtered ? "No notices match" : "No notices yet"}
-            description={filtered ? "Try a different search or priority." : "Announcements from the school will appear here."}
+            description={filtered ? "Nothing matches that search or priority. Clear the filters to see every notice." : "Announcements from the school appear here when they are published."}
           />
         </Card>
       ) : (
-        <ul className="space-y-3">
+        <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
           {notices.map((notice) => {
             const p = PRIORITY[notice.priority] || PRIORITY.normal;
             const open = expandedId === notice.id;
             const when = notice.publishedAt || notice.createdAt;
             return (
-              <li key={notice.id} className={cn("overflow-hidden rounded-card border border-l-4 border-slate-200/80 bg-white shadow-card", p.stripe)}>
+              <li key={notice.id} className={cn("border-l-4", p.stripe)}>
                 <button
                   type="button"
                   onClick={() => setExpandedId(open ? null : notice.id)}
                   aria-expanded={open}
-                  className="flex w-full cursor-pointer items-start gap-4 px-5 py-4 text-left hover:bg-slate-50/60"
+                  className="flex w-full cursor-pointer items-start gap-4 px-5 py-4 text-left hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-600"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -114,7 +118,7 @@ const NoticesView = () => {
                     </div>
                     <p className="mt-1 text-sm text-slate-500">
                       <span className="inline-block first-letter:uppercase" title={formatDateTime(when)}>{formatRelative(when)}</span>
-                      {" · "}
+                      {", by "}
                       {fullName(notice.createdBy)}
                     </p>
                     {!open && <p className="mt-2 line-clamp-2 text-sm text-slate-600">{notice.content}</p>}
@@ -122,8 +126,8 @@ const NoticesView = () => {
                   <ChevronDown size={18} className={cn("mt-1 shrink-0 text-slate-400 transition-transform", open && "rotate-180")} aria-hidden="true" />
                 </button>
                 {open && (
-                  <div className="border-t border-slate-100 px-5 py-4">
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-700">{notice.content}</p>
+                  <div className="border-t border-slate-200 bg-slate-50 px-5 py-4">
+                    <p className="max-w-[68ch] text-sm leading-relaxed whitespace-pre-wrap text-slate-700">{notice.content}</p>
                     <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-500">
                       {notice.publishedAt && (
                         <div><dt className="inline">Published </dt><dd className="inline font-medium text-slate-700">{formatDateTime(notice.publishedAt)}</dd></div>
@@ -148,7 +152,7 @@ const NoticesView = () => {
       {!loading && pagination.totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-slate-500">
-            Page {pagination.page} of {pagination.totalPages} · {pagination.total} notices
+            Page {pagination.page} of {pagination.totalPages}, {pagination.total} notices
           </p>
           <div className="flex gap-2">
             <Button size="sm" variant="secondary" icon={ChevronLeft} disabled={pagination.page <= 1} onClick={() => goToPage(pagination.page - 1)}>
@@ -160,7 +164,7 @@ const NoticesView = () => {
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 };
 

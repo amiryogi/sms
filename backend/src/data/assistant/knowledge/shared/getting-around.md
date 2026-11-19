@@ -21,7 +21,7 @@ Everyone who signs in. The menu lists only the pages your role may open.
 
 ## Where to find it
 - **Left menu (sidebar):** grouped into sections such as Overview, Academics, People,
-  Exams & Results, Finance, Communication, Settings and Calendar (administrators), Teaching
+  Exams & results, Finance, Communication, Settings and Calendar (administrators), Teaching
   (teachers), My school (students) or My children (parents).
 - **On a phone:** the menu is hidden. Tap the menu button (three lines) at the top left to open it.
 - **Your name, top right:** opens a menu with **Show dates in** (B.S., A.D. or both),
@@ -30,7 +30,7 @@ Everyone who signs in. The menu lists only the pages your role may open.
 ## Steps
 1. Open the left menu (tap the three-line button on a phone).
 2. Choose the page. Its title also appears in the top bar.
-3. To go back to your start page choose **Dashboard**. Exam officers start on **Marks Entry**.
+3. To go back to your start page choose **Dashboard**. Exam officers start on **Marks entry**.
 
 ## What you should see
 The page opens and its menu item is highlighted.
@@ -51,9 +51,9 @@ Dashboard, Change password (`/account/password`), Calendar (`/calendar`).
 ## Menu by role
 | Role | Menu items |
 |---|---|
-| Administrator and super administrator | Dashboard, Academic Years, Classes, Sections, Subjects, Class Subjects, Teacher Assignment, Students, Teachers & Staff, Parents, Promotions, Exams, Exam Admin (pilot), Marks Entry, Report Cards, Finance Overview, Collect Fees, Student Accounts, Transactions, Discounts, Reports, Fee Structures, Fee Types, Notices, School Settings, AI Assistant, and the Calendar pages |
-| Teacher | Dashboard, My Students, Attendance, Assignments, Marks Entry, Notices, Calendar, My Class Events, Exam Schedule, Academic Calendar |
-| Exam officer | Marks Entry, Students (view only), Notices, Calendar, Exam Schedule, Academic Calendar |
-| Accountant | Dashboard, Collect Fees, Student Accounts, Transactions, Discounts, Reports, Fee Structures, Fee Types, Students (view only), Notices, Calendar pages |
-| Student | Dashboard, Attendance, Assignments, Results, Report Card, Fees, Notices, My Profile, Calendar pages |
-| Parent | Dashboard, Attendance, Assignments, Results, Report Card, Fees, Notices, Child's Profile, Calendar pages |
+| Administrator and super administrator | Dashboard, Academic years, Classes, Sections, Subjects, Class subjects, Teacher assignment, Students, Teachers & staff, Parents, Promotions, Exams, Exam admin (pilot), Marks entry, Report cards, Finance overview, Collect fees, Student accounts, Transactions, Discounts, Reports, Fee structures, Fee types, Notices, School settings, AI assistant, and the Calendar pages |
+| Teacher | Dashboard, My students, Attendance, Assignments, Marks entry, Notices, Calendar, My class events, Exam schedule, Academic calendar |
+| Exam officer | Marks entry, Students (view only), Notices, Calendar, Exam schedule, Academic calendar |
+| Accountant | Dashboard, Collect fees, Student accounts, Transactions, Discounts, Reports, Fee structures, Fee types, Students (view only), Notices, Calendar pages |
+| Student | Dashboard, Attendance, Assignments, Results, Report card, Fees, Notices, My profile, Calendar pages |
+| Parent | Dashboard, Attendance, Assignments, Results, Report card, Fees, Notices, Child's profile, Calendar pages |

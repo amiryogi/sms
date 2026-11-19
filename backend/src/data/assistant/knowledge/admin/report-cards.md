@@ -20,7 +20,7 @@ print them.
 Administrators.
 
 ## Where to find it
-Left menu → **Exams & Results** → **Report Cards** (`/admin/report-cards`).
+Left menu → **Exams & results** → **Report cards** (`/admin/report-cards`).
 
 ## Before you start
 - Marks are entered, and the exam is **Locked** (recommended) or at least **Published**. Only
@@ -30,27 +30,27 @@ Left menu → **Exams & Results** → **Report Cards** (`/admin/report-cards`).
 ## Steps
 1. Choose the **Exam**, **Class** and **Section**.
 2. Optionally set the working days for the exam (the "70" in "Attendance 61/70").
-3. Click **Generate Report Cards** and confirm. Grades come from the school's grade scale.
+3. Click **Generate report cards** and confirm. Grades come from the school's grade scale.
 4. Check them: the summary shows **Students**, **Generated**, **Published**, **Passed**,
    **Failed**. Use **View** on a student to preview and print one card.
 5. Click **Publish All** and confirm. Students and parents can now see them.
-6. To print the whole section, click **Print All** (one A4 sheet per student), then use the
+6. To print the whole section, click **Print all** (one A4 sheet per student), then use the
    browser's print dialog.
 
 ## What you should see
-Each student's row shows **Published**. Students and parents see the card on **Report Card** and
+Each student's row shows **Published**. Students and parents see the card on **Report card** and
 **Results**, and app users get a notification.
 
 ## Common mistakes
-- Generating before all marks are in: generate again (**Regenerate Report Cards**) after fixing.
+- Generating before all marks are in: generate again (**Regenerate report cards**) after fixing.
 - Expecting students to see unpublished cards: they see nothing until you publish.
 
 ## Troubleshooting
-- **Unpublish All** hides them again ("Students and parents will no longer see them.").
+- **Unpublish all** hides them again ("Students and parents will no longer see them.").
 - **"No students in this section":** enrol students on **Students** first.
 - The exam is missing from the list: it is still a draft; publish it on **Exams**.
 - The look of the card (marks or grades, columns, attendance, rank, remarks, fonts, logo) is set
-  in **School Settings → Report card**. The grade scale is in **School Settings → Grading**.
+  in **School settings → Report card**. The grade scale is in **School settings → Grading**.
 
 ## Related pages
-Exams, Marks Entry, School Settings.
+Exams, Marks entry, School settings.

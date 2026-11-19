@@ -19,13 +19,13 @@ Find a student, take a payment and print the receipt.
 Accountants and administrators.
 
 ## Where to find it
-Left menu → **Collect Fees** (`/finance/collect`).
+Left menu → **Collect fees** (`/finance/collect`).
 
 ## Before you start
-The student's fees for the year must exist (**Student Accounts → Generate fees**).
+The student's fees for the year must exist (**Student accounts → Generate fees**).
 
 ## Steps
-1. Open **Collect Fees** and type in **Find a student** (name or admission number); choose the
+1. Open **Collect fees** and type in **Find a student** (name or admission number); choose the
    student.
 2. Check **Total fees**, **Discounts**, **Paid** and **Balance**.
 3. Click **Record payment**.
@@ -52,4 +52,4 @@ The student's fees for the year must exist (**Student Accounts → Generate fees
   receipts and reversals).
 
 ## Related pages
-Student Accounts, Transactions, Reports.
+Student accounts, Transactions, Reports.

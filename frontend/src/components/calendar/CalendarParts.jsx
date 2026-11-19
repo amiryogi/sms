@@ -23,16 +23,28 @@ export const CategoryChip = ({ category, className }) => {
   );
 };
 
-/** One item as a row: dot, title, time or date, and where it comes from. */
+/**
+ * One item as a row: dot, title, then one line of when and what. Where it
+ * comes from (an exam, a fee, a notice) or who it is for is a small label at
+ * the end of that line, not another `·`-joined fragment.
+ */
 export const ItemRow = ({ item, prefs, hasRole, showDate = false, onOpen, className }) => {
   const link = hasRole ? itemLink(item, hasRole) : null;
   const canOpen = item.source === "event" && onOpen;
   const title = (
     <span className={cn("font-medium text-slate-900", item.status === "DRAFT" && "italic text-slate-500")}>
       {item.title}
-      {item.status === "DRAFT" && <span className="ml-1.5 text-xs font-normal not-italic text-amber-700">Draft</span>}
+      {item.status === "DRAFT" && <span className="ml-1.5 text-xs font-normal not-italic text-warn">Draft</span>}
     </span>
   );
+  const when = [
+    showDate ? `${weekdayNameOf(item.startDate, prefs.language, true)} ${itemDateText(item, prefs)}` : null,
+    itemTimeText(item, prefs.numerals),
+    item.detail || null,
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const tag = item.source !== "event" ? SOURCE_LABELS[item.source] || "" : item.audience && item.audience !== "Everyone" ? `For ${item.audience}` : "";
   return (
     <li className={cn("flex items-start gap-2.5 py-2", className)}>
       <CategoryDot category={item.category} className="mt-1.5" />
@@ -47,14 +59,8 @@ export const ItemRow = ({ item, prefs, hasRole, showDate = false, onOpen, classN
           title
         )}
         <p className="text-xs text-slate-500">
-          {showDate && (
-            <>
-              {weekdayNameOf(item.startDate, prefs.language, true)}, {itemDateText(item, prefs)} ·{" "}
-            </>
-          )}
-          {itemTimeText(item, prefs.numerals)}
-          {item.detail ? ` · ${item.detail}` : ""}
-          {item.source !== "event" ? ` · ${SOURCE_LABELS[item.source] || ""}` : item.audience && item.audience !== "Everyone" ? ` · ${item.audience}` : ""}
+          {when}
+          {tag && <span className="ml-1.5 rounded-sm bg-slate-100 px-1 py-px text-2xs font-medium whitespace-nowrap text-slate-600">{tag}</span>}
         </p>
         {item.applicability && <p className="text-xs text-slate-500">Applies to: {item.applicability}</p>}
       </div>

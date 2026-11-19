@@ -1,5 +1,5 @@
 import React from "react";
-import { UserRound, School, Phone, Info } from "lucide-react";
+import { UserRound, Info } from "lucide-react";
 import { Card, CardHeader, Avatar, EmptyState, LoadingBlock } from "../ui";
 import { formatDate } from "../../utils/format";
 
@@ -25,18 +25,18 @@ const ProfileView = ({ overview, error }) => {
       <Card className="flex flex-wrap items-center gap-5">
         <Avatar src={s.avatarUrl} name={s.name} size="xl" />
         <div className="min-w-0">
-          <h2 className="text-xl font-semibold text-slate-900">{s.name}</h2>
+          <h2 className="text-lg font-semibold text-slate-900">{s.name}</h2>
           <p className="text-sm text-slate-500">
-            {s.admissionNumber}
-            {e ? ` · ${e.class.name} ${e.section.name}${e.rollNumber ? ` · Roll ${e.rollNumber}` : ""}` : ""}
+            <span className="font-mono text-slate-700">{s.admissionNumber}</span>
+            {e ? `, ${e.class.name} ${e.section.name}${e.rollNumber ? `, roll ${e.rollNumber}` : ""}` : ""}
           </p>
         </div>
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader icon={UserRound} title="Personal details" />
-          <dl className="divide-y divide-slate-100">
+          <CardHeader title="Personal details" />
+          <dl className="divide-y divide-slate-200">
             <Row label="Date of birth" value={s.dateOfBirth ? `${formatDate(s.dateOfBirth)}${s.dateOfBirthBs ? ` (${s.dateOfBirthBs} BS)` : ""}` : null} />
             <Row label="Gender" value={s.gender ? s.gender.charAt(0).toUpperCase() + s.gender.slice(1) : null} />
             <Row label="Blood group" value={s.bloodGroup} />
@@ -44,23 +44,23 @@ const ProfileView = ({ overview, error }) => {
           </dl>
         </Card>
         <Card>
-          <CardHeader icon={School} title="School record" />
-          <dl className="divide-y divide-slate-100">
-            <Row label="Admission number" value={s.admissionNumber} />
+          <CardHeader title="School record" />
+          <dl className="divide-y divide-slate-200">
+            <Row label="Admission number" value={s.admissionNumber && <span className="font-mono">{s.admissionNumber}</span>} />
             <Row label="Admitted on" value={s.admissionDate ? formatDate(s.admissionDate) : null} />
-            <Row label="Class this year" value={e ? `${e.class.name} ${e.section.name} · ${e.academicYear.name}` : "Not enrolled this year"} />
+            <Row label="Class this year" value={e ? `${e.class.name} ${e.section.name}, ${e.academicYear.name}` : "Not enrolled this year"} />
             <Row label="Class teacher" value={e?.classTeacher} />
           </dl>
         </Card>
         <Card>
-          <CardHeader icon={Phone} title="Contact" />
-          <dl className="divide-y divide-slate-100">
+          <CardHeader title="Contact" />
+          <dl className="divide-y divide-slate-200">
             <Row label="Email" value={s.email} />
             <Row label="Phone" value={s.phone} />
             <Row label="Emergency contact" value={s.emergencyContact} />
           </dl>
         </Card>
-        <Card className="flex items-start gap-3 bg-slate-50/60">
+        <Card className="flex items-start gap-3 bg-slate-50">
           <Info size={18} className="mt-0.5 shrink-0 text-slate-400" aria-hidden="true" />
           <p className="text-sm text-slate-600">
             Something wrong or out of date? Ask the school office to correct it. Only the school can change these details.

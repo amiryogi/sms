@@ -53,4 +53,4 @@ skipped unless you ask.
 - Parents get their own account on **Parents**.
 
 ## Related pages
-Parents, Promotions, Student Accounts (fees).
+Parents, Promotions, Student accounts (fees).

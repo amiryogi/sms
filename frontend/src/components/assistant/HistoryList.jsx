@@ -34,7 +34,7 @@ export default function HistoryList({ t, currentId, onOpen, onDeleted }) {
     onDeleted(null);
   };
 
-  if (error) return <p className="p-4 text-sm text-red-700">{t.errors.network}</p>;
+  if (error) return <p className="p-4 text-sm text-risk" role="alert">{t.errors.network}</p>;
   if (!items) return <p className="p-4 text-sm text-slate-500">{t.historyLoading}</p>;
   if (!items.length) return <p className="p-4 text-sm text-slate-500">{t.historyEmpty}</p>;
 

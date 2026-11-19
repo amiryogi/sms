@@ -14,17 +14,17 @@ verifiedOn: 2026-11-15
 
 ## Purpose
 Say who teaches which subject to which section this year. Teachers see only the classes they
-are assigned here (attendance, assignments, marks entry, My Students).
+are assigned here (attendance, assignments, marks entry, My students).
 
 ## Who can use it
 Administrators.
 
 ## Where to find it
-Left menu → **Academics** → **Teacher Assignment** (`/admin/teacher-assignment`).
+Left menu → **Academics** → **Teacher assignment** (`/admin/teacher-assignment`).
 
 ## Before you start
-The teacher's account exists (**Teachers & Staff**) and the class has its subjects for the year
-(**Class Subjects**).
+The teacher's account exists (**Teachers & staff**) and the class has its subjects for the year
+(**Class subjects**).
 
 ## Steps
 1. Click **Assign teacher**.
@@ -44,4 +44,4 @@ The teacher's account exists (**Teachers & Staff**) and the class has its subjec
 - **Edit assignment** / **Remove assignment** are on each row.
 
 ## Related pages
-Teachers & Staff, Class Subjects, Academic Years.
+Teachers & staff, Class subjects, Academic years.

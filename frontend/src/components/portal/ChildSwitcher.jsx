@@ -12,7 +12,7 @@ const classOf = (c) => (c.currentEnrollment ? `${c.currentEnrollment.class.name}
  * Renders the empty and error states too, so pages can return early on `!child`.
  */
 const ChildSwitcher = ({ kids, child, select, loading, error }) => {
-  if (loading) return <Skeleton className="h-16 rounded-card" />;
+  if (loading) return <Skeleton className="h-16 rounded-xl" />;
   if (error) return <Card><EmptyState icon={Users} title="Couldn't load your children" description={error} /></Card>;
   if (!kids?.length) {
     return <Card><EmptyState icon={Users} title="No children linked" description="Ask the school office to link your child to your account." /></Card>;
@@ -26,7 +26,11 @@ const ChildSwitcher = ({ kids, child, select, loading, error }) => {
           <p className="font-semibold text-slate-900">{fullName(child)}</p>
           <p className="text-sm text-slate-500">
             {classOf(child)}
-            {child.admissionNumber ? ` · ${child.admissionNumber}` : ""}
+            {child.admissionNumber && (
+              <>
+                , <span className="font-mono text-slate-700">{child.admissionNumber}</span>
+              </>
+            )}
           </p>
         </div>
       </div>

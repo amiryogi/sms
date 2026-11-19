@@ -12,7 +12,7 @@ import { itemDateText, itemSecondaryDateText, itemTimeText } from "./calendarIte
 
 const Row = ({ label, children }) => (
   <div className="grid gap-x-4 gap-y-0.5 py-2 sm:grid-cols-[8.5rem_1fr]">
-    <dt className="text-xs font-medium tracking-wide text-slate-500 uppercase">{label}</dt>
+    <dt className="text-xs font-medium text-slate-500">{label}</dt>
     <dd className="text-sm text-slate-800">{children}</dd>
   </div>
 );
@@ -80,11 +80,11 @@ const EventDetailDialog = ({ eventId, occurrence, onClose, onEdit, onDeleted }) 
       }
     >
       {error ? (
-        <p className="text-sm text-red-600" role="alert">{error}</p>
+        <p className="text-sm text-risk" role="alert">{error}</p>
       ) : !event ? (
         <LoadingBlock text="Loading…" />
       ) : (
-        <dl className="divide-y divide-slate-100">
+        <dl className="divide-y divide-slate-200">
           <Row label="Type">
             <span className="flex flex-wrap items-center gap-2">
               <CategoryChip category={event.category} />

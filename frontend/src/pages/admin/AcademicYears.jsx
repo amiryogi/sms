@@ -4,7 +4,7 @@ import { Plus, Pencil, Trash2, CalendarRange } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import { Input, DateInput, Button, FormRow } from '../../components/common/FormElements';
-import { PageHeader, Badge, IconButton, Checkbox, DialogActions, toast, confirmDialog } from '../../components/ui';
+import { PageHeader, PageShell, Badge, IconButton, Checkbox, DialogActions, toast, confirmDialog } from '../../components/ui';
 import { academicService } from '../../api/academicService';
 import { formatDate, toDateInput } from '../../utils/format';
 
@@ -102,6 +102,7 @@ const AcademicYears = () => {
     },
     {
       header: <span className="sr-only">Actions</span>,
+      action: true,
       width: '96px',
       render: (row) => (
         <div className="flex justify-end gap-1">
@@ -113,10 +114,9 @@ const AcademicYears = () => {
   ];
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <PageShell>
       <PageHeader
-        icon={CalendarRange}
-        title="Academic Years"
+        title="Academic years"
         description="The current year scopes classes, enrolments, exams and fees across the system."
         actions={
           <Button icon={Plus} onClick={() => openModal()} data-guide="academicYears.add">
@@ -137,12 +137,12 @@ const AcademicYears = () => {
       <Modal
         isOpen={modalOpen}
         onClose={closeModal}
-        title={editingYear ? 'Edit Academic Year' : 'Add Academic Year'}
+        title={editingYear ? 'Edit academic year' : 'Add academic year'}
         size="md"
       >
         <form onSubmit={handleSubmit(onSubmit)}>
           <Input
-            label="Year Name"
+            label="Year name"
             name="name"
             placeholder="e.g., 2024-2025"
             register={register}
@@ -150,8 +150,8 @@ const AcademicYears = () => {
             required
           />
           <FormRow>
-            <DateInput label="Start Date" name="startDate" control={control} error={errors.startDate?.message} required />
-            <DateInput label="End Date" name="endDate" control={control} error={errors.endDate?.message} required />
+            <DateInput label="Start date" name="startDate" control={control} error={errors.startDate?.message} required />
+            <DateInput label="End date" name="endDate" control={control} error={errors.endDate?.message} required />
           </FormRow>
           <Checkbox
             id="isCurrent"
@@ -169,7 +169,7 @@ const AcademicYears = () => {
           </DialogActions>
         </form>
       </Modal>
-    </div>
+    </PageShell>
   );
 };
 

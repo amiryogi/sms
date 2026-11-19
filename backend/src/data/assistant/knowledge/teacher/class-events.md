@@ -21,7 +21,7 @@ on the calendar for the people it concerns.
 - **Teachers:** events for the class sections they teach; they can change only what they added.
 
 ## Where to find it
-Left menu → **Calendar** → **Events** (administrators) or **My Class Events** (teachers)
+Left menu → **Calendar** → **Events** (administrators) or **My class events** (teachers)
 (`/calendar/events`). **Add event** is also on the calendar itself.
 
 ## Steps

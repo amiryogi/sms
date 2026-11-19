@@ -75,7 +75,7 @@ const InstallmentPlanDialog = ({ structure, onClose, onSaved }) => {
       isOpen
       onClose={saving ? () => {} : onClose}
       title="Installment plan"
-      description={`${structure.feeType?.name} · ${structure.class?.name} · ${structure.academicYear?.name} · ${formatCurrency(structure.amount)}`}
+      description={`${structure.feeType?.name}, ${structure.class?.name}, ${structure.academicYear?.name}: ${formatCurrency(structure.amount)}`}
       size="lg"
     >
       {rows === null && !error ? (
@@ -134,13 +134,13 @@ const InstallmentPlanDialog = ({ structure, onClose, onSaved }) => {
                         />
                       </td>
                       <td className="px-2 py-2">
-                        <IconButton icon={Trash2} size="sm" label={`Remove installment ${idx + 1}`} onClick={() => setRows((rs) => rs.filter((_, i) => i !== idx))} />
+                        <IconButton icon={Trash2} label={`Remove installment ${idx + 1}`} onClick={() => setRows((rs) => rs.filter((_, i) => i !== idx))} />
                       </td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr className={cn("font-semibold", sumPaisa === totalPaisa ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800")}>
+                  <tr className={cn("font-semibold", sumPaisa === totalPaisa ? "bg-ok-surface text-ok" : "bg-warn-surface text-warn")}>
                     <td className="px-3 py-2" colSpan={3}>
                       {sumPaisa === totalPaisa ? "Adds up to the fee" : `Difference ${formatCurrency((totalPaisa - sumPaisa) / 100)}`}
                     </td>

@@ -181,6 +181,8 @@ describe("print surfaces stay pinned", () => {
       // The A4 statement and day book (finance/print/StatementSheet, pages/finance/Daybook).
       ".statement-sheet",
       ".daybook-sheet",
+      // The printed school calendar (pages/calendar/Print.jsx).
+      ".calendar-sheet",
     ]) {
       expect(selector, `${sel} must stay pinned`).toContain(sel);
     }

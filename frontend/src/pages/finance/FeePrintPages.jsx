@@ -1,6 +1,5 @@
 import React from "react";
 import { useParams } from "react-router-dom";
-import { FileText, ReceiptText } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import ParentPage from "../../components/portal/ParentPage";
 import { StatementPrint, StudentBillPrint } from "../../components/finance/print/FeePrintViews";
@@ -18,8 +17,8 @@ export const StudentStatement = () => <StatementPrint studentId={useAuth().user?
 export const StudentBill = () => <StudentBillPrint studentId={useAuth().user?.student?.id} />;
 
 export const ParentStatement = () => (
-  <ParentPage icon={FileText} title="Fee statement" maxWidth="max-w-4xl" render={(child) => <StatementPrint studentId={child.id} />} />
+  <ParentPage title="Fee statement" maxWidth="max-w-4xl" render={(child) => <StatementPrint studentId={child.id} />} />
 );
 export const ParentBill = () => (
-  <ParentPage icon={ReceiptText} title="Fee bill" maxWidth="max-w-4xl" render={(child) => <StudentBillPrint studentId={child.id} />} />
+  <ParentPage title="Fee bill" maxWidth="max-w-4xl" render={(child) => <StudentBillPrint studentId={child.id} />} />
 );

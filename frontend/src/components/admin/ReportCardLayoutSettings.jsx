@@ -6,7 +6,7 @@ import ReportCardDesignFields from "./ReportCardDesignFields";
 import { Alert, Button, Card, CardHeader, Field, IconButton, LoadingBlock, SelectInput, TextArea, TextInput, toast, confirmDialog } from "../ui";
 
 /**
- * School Settings -> Report Card Layout.
+ * School settings -> Report card Layout.
  *
  * The backend owns the layout: it supplies the presets, which settings each
  * template uses (`templateFields`), a sample report card graded on the
@@ -56,7 +56,7 @@ const SELECTS = {
 };
 
 const CHECKBOXES = [
-  ["showAttendance", "Attendance", "Days present / working days. Set working days per exam on the Report Cards page."],
+  ["showAttendance", "Attendance", "Days present / working days. Set working days per exam on the Report cards page."],
   ["countLateAsPresent", "Late counts as present"],
   ["showPercentage", "Percentage"],
   ["showRank", "Class rank"],
@@ -191,7 +191,7 @@ const ReportCardLayoutSettings = () => {
   };
 
   const err = (key) => errors[key];
-  const errorText = (key) => (errors[key] ? <p className="field-error mt-1 text-xs font-medium text-red-600">{errors[key]}</p> : null);
+  const errorText = (key) => (errors[key] ? <p role="alert" className="field-error mt-1 text-xs font-medium text-risk">{errors[key]}</p> : null);
   const currentPreset = state.presets.find((p) => p.config.template === draft.template);
 
   return (

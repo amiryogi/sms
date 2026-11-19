@@ -20,11 +20,11 @@ cards are generated.
 Administrators. (Exam officers and teachers only enter marks.)
 
 ## Where to find it
-Left menu → **Exams & Results** → **Exams** (`/admin/exams`). **Exam Admin (pilot)**
+Left menu → **Exams & results** → **Exams** (`/admin/exams`). **Exam admin (pilot)**
 (`/admin/exam-admin`) is a read-only trial view of the same exams with the lifecycle buttons.
 
 ## Before you start
-Each class sitting the exam needs its subjects and full marks on **Class Subjects** for the year.
+Each class sitting the exam needs its subjects and full marks on **Class subjects** for the year.
 
 ## The three statuses
 | Status | Meaning |
@@ -42,28 +42,28 @@ Each class sitting the exam needs its subjects and full marks on **Class Subject
    with their theory and practical marks ("Exam created with the selected classes' subjects").
 4. Check the subjects with **View subjects**. While it is a draft you can **Add a class** or
    **Remove** a subject.
-5. Click **Publish** and confirm. Teachers can now enter marks on **Marks Entry**.
+5. Click **Publish** and confirm. Teachers can now enter marks on **Marks entry**.
 6. When marks entry is complete, click **Lock** and confirm. Marks are frozen for every subject.
-7. Generate report cards on **Report Cards**.
+7. Generate report cards on **Report cards**.
 8. If marks need fixing after locking, click **Unlock** (back to Published), fix them, lock again
    and regenerate the report cards.
 
 ## What you should see
-The exam's status badge changes, and the exam appears on **Calendar → Exam Schedule** on its dates.
+The exam's status badge changes, and the exam appears on **Calendar → Exam schedule** on its dates.
 
 ## Common mistakes
 - Trying to edit an exam or its subjects after publishing: "Cannot edit exam after publishing.
   Exam must be in DRAFT status."
 - Publishing an exam with no subjects: "Cannot publish exam without any subjects."
-- Expecting a change on **Class Subjects** to change an existing exam: the exam keeps the full
+- Expecting a change on **Class subjects** to change an existing exam: the exam keeps the full
   marks it copied when it was created.
 
 ## Troubleshooting
 - **Delete** is allowed only for draft exams without marks: "Cannot delete exam - marks have
   already been entered. Lock the exam instead."
-- A subject shows **Not configured**: set its marks on **Class Subjects** before creating the exam.
+- A subject shows **Not configured**: set its marks on **Class subjects** before creating the exam.
 - Unlocking does not change generated report cards until you regenerate them.
 
 ## Related pages
-Marks Entry (`/teacher/marks`), Report Cards (`/admin/report-cards`), Exam Schedule
+Marks entry (`/teacher/marks`), Report cards (`/admin/report-cards`), Exam schedule
 (`/calendar/exams`).

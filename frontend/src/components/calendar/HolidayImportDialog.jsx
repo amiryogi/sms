@@ -185,29 +185,30 @@ const HolidayImportDialog = ({ open, onClose, onImported }) => {
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <span className="font-medium text-slate-900">{preview.source}</span>
-            <span className="text-slate-500">· {preview.bsYear} B.S.</span>
+            <span className="text-slate-500">{preview.bsYear} B.S.</span>
             <span className="flex-1" />
-            <Badge tone="success">{preview.summary.new} new</Badge>
+            {/* Counts are neutral; only rows that cannot be read are a problem. */}
+            <Badge tone="neutral">{preview.summary.new} new</Badge>
             {preview.summary.duplicates > 0 && <Badge tone="neutral">{preview.summary.duplicates} already on the calendar</Badge>}
             {preview.summary.invalid > 0 && <Badge tone="danger">{preview.summary.invalid} cannot be read</Badge>}
           </div>
-          <div className="flex gap-2 text-xs">
-            <button type="button" className="cursor-pointer font-medium text-brand-700 hover:underline" onClick={() => setChosen(new Set(selectable.map((r) => r.key)))}>Tick all</button>
-            <button type="button" className="cursor-pointer font-medium text-brand-700 hover:underline" onClick={() => setChosen(new Set(selectable.filter((r) => r.recommended).map((r) => r.key)))}>Nationwide only</button>
-            <button type="button" className="cursor-pointer font-medium text-slate-600 hover:underline" onClick={() => setChosen(new Set())}>Tick none</button>
+          <div className="flex flex-wrap gap-1">
+            <Button variant="ghost" size="sm" onClick={() => setChosen(new Set(selectable.map((r) => r.key)))}>Tick all</Button>
+            <Button variant="ghost" size="sm" onClick={() => setChosen(new Set(selectable.filter((r) => r.recommended).map((r) => r.key)))}>Nationwide only</Button>
+            <Button variant="ghost" size="sm" onClick={() => setChosen(new Set())}>Tick none</Button>
           </div>
           <div className="overflow-x-auto rounded-xl border border-slate-200">
-            <table className="w-full min-w-[40rem] text-sm">
+            <table className="w-full min-w-160 text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-600">
-                  <th className="w-10 px-3 py-2"><span className="sr-only">Import</span></th>
-                  <th className="px-3 py-2">Holiday</th>
-                  <th className="px-3 py-2">Published (B.S.)</th>
-                  <th className="px-3 py-2">A.D. date</th>
-                  <th className="px-3 py-2">Applies to</th>
+                <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium text-slate-500">
+                  <th scope="col" className="w-10 px-3 py-2"><span className="sr-only">Import</span></th>
+                  <th scope="col" className="px-3 py-2 font-medium">Holiday</th>
+                  <th scope="col" className="px-3 py-2 font-medium">Published (B.S.)</th>
+                  <th scope="col" className="px-3 py-2 font-medium">A.D. date</th>
+                  <th scope="col" className="px-3 py-2 font-medium">Applies to</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-200">
                 {preview.rows.map((row) => {
                   const blocked = Boolean(row.error || row.duplicate);
                   return (
@@ -226,8 +227,9 @@ const HolidayImportDialog = ({ open, onClose, onImported }) => {
                         <span className="font-medium text-slate-900">{row.title || "(no name)"}</span>
                         {row.titleNe && <span className="block text-xs text-slate-500">{row.titleNe}</span>}
                         <span className="mt-0.5 block text-xs text-slate-500">{categoryMeta(row.category).label}</span>
-                        {row.error && <span className="mt-0.5 block text-xs font-medium text-red-600">{row.error}</span>}
-                        {row.duplicate && <span className="mt-0.5 block text-xs font-medium text-amber-700">{row.duplicate.reason}</span>}
+                        {row.error && <span className="mt-0.5 block text-xs font-medium text-risk">{row.error}</span>}
+                        {/* Already on the calendar is not a problem, just the reason the box is off. */}
+                        {row.duplicate && <span className="mt-0.5 block text-xs font-medium text-slate-600">{row.duplicate.reason}</span>}
                       </td>
                       <td className="px-3 py-2 align-top whitespace-nowrap tabular-nums">
                         {row.bsStart || "—"}

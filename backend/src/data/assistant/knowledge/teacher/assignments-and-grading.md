@@ -25,11 +25,11 @@ Left menu → **Teaching** → **Assignments** (`/teacher/assignments`).
 You need a teaching assignment from the administrator for the current academic year.
 
 ## Steps
-1. Open **Assignments** and click **Create Assignment**.
+1. Open **Assignments** and click **Create assignment**.
 2. Choose the **Class and subject**.
 3. Fill in **Title**, **Instructions**, **Due date** and **Total marks**.
 4. Optionally add attachments: PDF, Word, PowerPoint or images, up to 5 files.
-5. Click **Create Assignment**. It is published straight away: students of that section see it
+5. Click **Create assignment**. It is published straight away: students of that section see it
    ("Assignment set. Students can see it now.").
 6. To grade, open the assignment's **Submissions**, choose a student's work, enter the marks and
    optional feedback, and click **Save grade**.
@@ -44,9 +44,9 @@ Students with the mobile app are notified when it is set and when their work is 
 
 ## Troubleshooting
 - **"You need a class assignment from the admin before you can set work":** ask the
-  administrator to assign you on **Teacher Assignment**.
+  administrator to assign you on **Teacher assignment**.
 - **Edit or delete:** use **Edit assignment** or **Delete** on the assignment. Deleting removes its
   attachments too and cannot be undone.
 
 ## Related pages
-My Students (`/teacher/students`), Calendar (deadlines appear there).
+My students (`/teacher/students`), Calendar (deadlines appear there).

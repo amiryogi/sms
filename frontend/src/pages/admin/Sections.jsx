@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Plus, Pencil, Trash2, Layers, Users } from 'lucide-react';
+import { Plus, Pencil, Trash2, Layers } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import { Input, Button, FormRow } from '../../components/common/FormElements';
-import { PageHeader, IconButton, DialogActions, toast, confirmDialog } from '../../components/ui';
+import { PageHeader, PageShell, IconButton, DialogActions, toast, confirmDialog } from '../../components/ui';
 import { academicService } from '../../api/academicService';
 
 const Sections = () => {
@@ -82,26 +82,12 @@ const Sections = () => {
   const columns = [
     {
       header: 'Section',
-      render: (row) => (
-        <div className="flex items-center gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm font-semibold text-slate-700">
-            {String(row.name || '').slice(0, 2)}
-          </span>
-          <span className="font-medium text-slate-900">{row.name}</span>
-        </div>
-      ),
+      render: (row) => <span className="font-medium text-slate-900">{row.name}</span>,
     },
-    {
-      header: 'Capacity',
-      render: (row) => (
-        <span className="inline-flex items-center gap-1.5 text-slate-600">
-          <Users size={14} className="text-slate-400" aria-hidden="true" />
-          {row.capacity || 40} students
-        </span>
-      ),
-    },
+    { header: 'Capacity (students)', numeric: true, render: (row) => row.capacity || 40 },
     {
       header: <span className="sr-only">Actions</span>,
+      action: true,
       width: '96px',
       render: (row) => (
         <div className="flex justify-end gap-1">
@@ -113,9 +99,8 @@ const Sections = () => {
   ];
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <PageShell>
       <PageHeader
-        icon={Layers}
         title="Sections"
         description="Reusable section labels (A, B, Rose, Lotus…) that you attach to classes when enrolling students."
         actions={<Button icon={Plus} onClick={() => openModal()}>Add section</Button>}
@@ -158,7 +143,7 @@ const Sections = () => {
           </DialogActions>
         </form>
       </Modal>
-    </div>
+    </PageShell>
   );
 };
 

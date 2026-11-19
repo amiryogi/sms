@@ -55,7 +55,7 @@ export const controlClasses = (invalid, className) =>
     "placeholder:text-slate-400",
     "focus:outline-none focus:ring-3",
     invalid
-      ? "border-red-400 focus:border-red-500 focus:ring-red-500/15"
+      ? "border-risk focus:border-risk focus:ring-risk/15"
       : "border-slate-300 hover:border-slate-400 focus:border-brand-500 focus:ring-brand-500/15",
     "disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500",
     className,

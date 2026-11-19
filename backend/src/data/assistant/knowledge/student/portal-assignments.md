@@ -24,7 +24,7 @@ See work set by teachers and hand it in (students), or follow it (parents).
 Left menu → **Assignments** (`/student/assignments` or `/parent/assignments`).
 
 ## Steps (students)
-1. Open **Assignments**. Tabs: **To do**, **Past due**, **Submitted**, **Graded**.
+1. Open **Assignments**. Tabs: **To do**, **Handed in**, **All**. Each assignment shows a badge: **To do**, **Past due**, **Submitted** or **Graded**.
 2. Open an assignment to read the instructions and attachments.
 3. Write an **Answer (optional)** and/or attach **Files (optional)** (PDF, Word, images).
 4. Click **Submit**. You can hand in only once.

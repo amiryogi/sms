@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Users, Mail, CalendarCheck, RotateCw } from "lucide-react";
 import DataTable from "../../components/common/DataTable";
 import { teacherService } from "../../api/teacherService";
-import { PageHeader, PageShell, Card, Tabs, Avatar, Button, EmptyState, LoadingBlock, StatCard, StatGroup } from "../../components/ui";
+import { PageHeader, PageShell, Card, SegmentedControl, Avatar, Button, EmptyState, LoadingBlock, StatCard, StatGroup } from "../../components/ui";
 
 /** Students in the class-sections the teacher is assigned to this year. */
 const MyStudents = () => {
@@ -54,21 +54,25 @@ const MyStudents = () => {
   }, [students, section, search]);
 
   const columns = [
-    { header: "Roll", className: "col-roll w-16 tabular-nums text-slate-500", render: (s) => s.rollNumber || "—" },
+    { header: "Roll", numeric: true, className: "col-roll w-16 text-slate-500", render: (s) => s.rollNumber || "—" },
     {
       header: "Student",
       className: "col-name",
+      // One line per student, like a register; the email is an icon link, not a second line.
       render: (s) => (
-        <div className="flex min-w-0 items-center gap-3">
-          <Avatar src={s.avatarUrl} name={s.fullName} size="sm" />
-          <div className="min-w-0">
-            <p className="truncate font-medium text-slate-900">{s.fullName}</p>
-            {s.email && (
-              <a href={`mailto:${s.email}`} className="inline-flex max-w-full items-center gap-1 truncate text-xs text-slate-500 hover:text-brand-700">
-                <Mail size={11} aria-hidden="true" /> {s.email}
-              </a>
-            )}
-          </div>
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Avatar src={s.avatarUrl} name={s.fullName} size="xs" />
+          <span className="truncate font-medium text-slate-900">{s.fullName}</span>
+          {s.email && (
+            <a
+              href={`mailto:${s.email}`}
+              aria-label={`Email ${s.fullName}`}
+              title={s.email}
+              className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+            >
+              <Mail size={14} aria-hidden="true" />
+            </a>
+          )}
         </div>
       ),
     },
@@ -76,13 +80,25 @@ const MyStudents = () => {
     ...(section === "all" ? [{ header: "Class", render: (s) => <span className="text-sm whitespace-nowrap text-slate-700">{s.classLabel}</span> }] : []),
   ];
 
-  if (loading) return <LoadingBlock text="Loading your students…" />;
+  const header = <PageHeader title="My students" description="Students in the classes you teach this year." />;
+
+  if (loading) {
+    return (
+      <PageShell>
+        {header}
+        <LoadingBlock text="Loading your students…" />
+      </PageShell>
+    );
+  }
 
   if (error) {
     return (
-      <Card className="mx-auto max-w-xl">
-        <EmptyState icon={Users} title="Couldn't load your students" description={error} action={<Button icon={RotateCw} variant="secondary" onClick={load}>Try again</Button>} />
-      </Card>
+      <PageShell>
+        {header}
+        <Card>
+          <EmptyState icon={Users} title="Couldn't load your students" description={`${error}. Check your connection and try again.`} action={<Button icon={RotateCw} variant="secondary" onClick={load}>Try again</Button>} />
+        </Card>
+      </PageShell>
     );
   }
 
@@ -90,7 +106,7 @@ const MyStudents = () => {
 
   return (
     <PageShell>
-      <PageHeader icon={Users} title="My Students" description="Students in the classes you teach this year." />
+      {header}
 
       {summary && (
         <StatGroup columns={3}>
@@ -107,10 +123,15 @@ const MyStudents = () => {
       ) : (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <Tabs
+            {/* A filter on one list, so a value switch, not tabs (tabs switch panels). */}
+            <SegmentedControl
+              label="Class"
               value={section}
               onChange={setSection}
-              tabs={[{ value: "all", label: "All classes", count: students.length }, ...sections.map((s) => ({ value: s.key, label: s.label, count: s.count }))]}
+              options={[
+                { value: "all", label: `All classes (${students.length})` },
+                ...sections.map((s) => ({ value: s.key, label: `${s.label} (${s.count})` })),
+              ]}
             />
             {section !== "all" && (
               <Link

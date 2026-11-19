@@ -4,7 +4,7 @@ import { Plus, Eye, Trash2, Pencil, Lock, Unlock, Send, ClipboardList, Check, Fl
 import DataTable from "../../components/common/DataTable";
 import Modal from "../../components/common/Modal";
 import { Input, DateInput, Select, Button, FormRow } from "../../components/common/FormElements";
-import { PageHeader, Badge, IconButton, Tabs, Alert, DialogActions, toast, confirmDialog } from "../../components/ui";
+import { PageHeader, PageShell, Badge, IconButton, SegmentedControl, Alert, EmptyState, DialogActions, toast, confirmDialog } from "../../components/ui";
 import { cn } from "../../lib/cn";
 import { examService } from "../../api/examService";
 import { academicService } from "../../api/academicService";
@@ -307,7 +307,7 @@ const Exams = () => {
             {row.name}
           </button>
           <p className="text-xs text-slate-500">
-            {typeLabel(row.examType)} · {row.academicYear?.name || "—"}
+            {typeLabel(row.examType)}, {row.academicYear?.name || "—"}
           </p>
         </div>
       ),
@@ -346,6 +346,7 @@ const Exams = () => {
     {
       header: <span className="sr-only">Actions</span>,
       width: "260px",
+      action: true,
       render: (row) => (
         <div className="flex items-center justify-end gap-1">
           {row.status === "DRAFT" && (
@@ -393,23 +394,23 @@ const Exams = () => {
   }, [viewingExam, classSubjects]);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-4">
+    <PageShell>
       <PageHeader
-        icon={ClipboardList}
         title="Exams"
         description="Create an exam, publish it for marks entry, then lock it before generating report cards."
         actions={<Button icon={Plus} onClick={() => openModal()} data-guide="exams.create">Create exam</Button>}
-        className="mb-2"
       />
 
-      <Tabs
+      {/* A filter on one list sets a value, so it is a segmented control, not tabs. */}
+      <SegmentedControl
+        label="Exam status"
         value={statusFilter}
         onChange={setStatusFilter}
-        tabs={[
-          { value: "", label: "All", count: exams.length },
-          { value: "DRAFT", label: "Draft", count: counts.DRAFT || 0 },
-          { value: "PUBLISHED", label: "Published", count: counts.PUBLISHED || 0 },
-          { value: "LOCKED", label: "Locked", count: counts.LOCKED || 0 },
+        options={[
+          { value: "", label: `All (${exams.length})` },
+          { value: "DRAFT", label: `Draft (${counts.DRAFT || 0})` },
+          { value: "PUBLISHED", label: `Published (${counts.PUBLISHED || 0})` },
+          { value: "LOCKED", label: `Locked (${counts.LOCKED || 0})` },
         ]}
       />
 
@@ -418,7 +419,7 @@ const Exams = () => {
         data={visible}
         loading={loading}
         emptyMessage={statusFilter ? "No exams with this status" : "No exams yet"}
-        emptyDescription={statusFilter ? undefined : "Create the first exam of the year and pick the classes sitting it."}
+        emptyDescription={statusFilter ? "Choose All to see every exam." : "Create the first exam of the year and pick the classes sitting it."}
         emptyIcon={ClipboardList}
       />
 
@@ -447,7 +448,7 @@ const Exams = () => {
         isOpen={!!viewingExam}
         onClose={closeViewModal}
         title={viewingExam?.name || "Exam"}
-        description={viewingExam ? `${typeLabel(viewingExam.examType)} · ${formatDate(viewingExam.startDate)} – ${formatDate(viewingExam.endDate)}` : undefined}
+        description={viewingExam ? `${typeLabel(viewingExam.examType)}, ${formatDate(viewingExam.startDate)} – ${formatDate(viewingExam.endDate)}` : undefined}
         size="xl"
       >
         {viewingExam && (
@@ -475,7 +476,8 @@ const Exams = () => {
                         title={complete ? "All subjects already added" : `Add ${c.total - c.linked} subject(s)`}
                         className={cn(
                           "inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium ring-1 transition-colors ring-inset disabled:cursor-not-allowed",
-                          complete ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-white text-slate-700 ring-slate-300 hover:bg-brand-50 hover:text-brand-700 hover:ring-brand-300",
+                          // Every subject added is a done state (ok); the rest are plain choices.
+                          complete ? "bg-ok-surface text-ok ring-ok-line" : "bg-white text-slate-700 ring-slate-300 hover:bg-slate-50 hover:text-slate-900",
                         )}
                       >
                         {complete ? <Check size={14} aria-hidden="true" /> : <Plus size={14} aria-hidden="true" />}
@@ -484,7 +486,7 @@ const Exams = () => {
                       </button>
                     );
                   })}
-                  {!classProgress.length && <p className="text-sm text-slate-500">No class subjects are set up for this year.</p>}
+                  {!classProgress.length && <p className="text-sm text-slate-500">No class subjects are set up for this year. Add them on the Class subjects page first.</p>}
                 </div>
               </div>
             ) : (
@@ -496,25 +498,25 @@ const Exams = () => {
               {viewingExam.examSubjects?.length ? (
                 <div className="max-h-96 overflow-auto rounded-xl border border-slate-200">
                   <table className="w-full text-left text-sm">
-                    <thead className="sticky top-0 bg-slate-50 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                    <thead className="sticky top-0 bg-slate-50 text-xs font-medium text-slate-500">
                       <tr>
-                        <th className="px-4 py-2.5">Class</th>
-                        <th className="px-4 py-2.5">Subject</th>
-                        <th className="px-4 py-2.5">Evaluation</th>
-                        <th className="px-4 py-2.5 text-right">Full</th>
-                        <th className="px-4 py-2.5 text-right">Pass</th>
-                        {viewingExam.status === "DRAFT" && <th className="px-4 py-2.5"><span className="sr-only">Remove</span></th>}
+                        <th scope="col" className="border-b border-slate-200 px-4 py-2.5 font-medium">Class</th>
+                        <th scope="col" className="border-b border-slate-200 px-4 py-2.5 font-medium">Subject</th>
+                        <th scope="col" className="border-b border-slate-200 px-4 py-2.5 font-medium">Evaluation</th>
+                        <th scope="col" className="border-b border-slate-200 px-4 py-2.5 text-right font-medium">Full</th>
+                        <th scope="col" className="border-b border-slate-200 px-4 py-2.5 text-right font-medium">Pass</th>
+                        {viewingExam.status === "DRAFT" && <th scope="col" className="border-b border-slate-200 px-4 py-2.5"><span className="sr-only">Remove</span></th>}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-200">
                       {viewingExam.examSubjects.map((es) => (
                         <tr key={es.id} className="hover:bg-slate-50/70">
                           <td className="px-4 py-2.5 whitespace-nowrap">{es.classSubject?.class?.name || "—"}</td>
                           <td className="px-4 py-2.5 font-medium text-slate-900">{es.classSubject?.subject?.name || "—"}</td>
                           <td className="px-4 py-2.5">
                             <div className="flex flex-wrap gap-1">
-                              {es.hasTheory !== false && <Badge tone="info">Theory {es.theoryFullMarks || 0}</Badge>}
-                              {es.hasPractical === true && <Badge tone="success" icon={FlaskConical}>Practical {es.practicalFullMarks || 0}</Badge>}
+                              {es.hasTheory !== false && <Badge>Theory {es.theoryFullMarks || 0}</Badge>}
+                              {es.hasPractical === true && <Badge icon={FlaskConical}>Practical {es.practicalFullMarks || 0}</Badge>}
                               {es.hasTheory === false && es.hasPractical !== true && <Badge tone="warning">Not configured</Badge>}
                             </div>
                           </td>
@@ -524,7 +526,6 @@ const Exams = () => {
                             <td className="px-2 py-1.5 text-right">
                               <IconButton
                                 icon={Trash2}
-                                size="sm"
                                 variant="danger-soft"
                                 label={`Remove ${es.classSubject?.subject?.name}`}
                                 onClick={() => handleRemoveExamSubject(es)}
@@ -538,7 +539,7 @@ const Exams = () => {
                   </table>
                 </div>
               ) : (
-                <p className="rounded-xl border border-dashed border-slate-300 py-8 text-center text-sm text-slate-500">No subjects linked yet.</p>
+                <EmptyState compact title="No subjects linked yet" description={viewingExam.status === "DRAFT" ? "Add a class above to link all of its subjects." : "Subjects can only be added while an exam is a draft."} className="rounded-xl border border-dashed border-slate-300" />
               )}
             </div>
           </div>
@@ -547,7 +548,7 @@ const Exams = () => {
           <Button variant="secondary" onClick={closeViewModal}>Close</Button>
         </DialogActions>
       </Modal>
-    </div>
+    </PageShell>
   );
 };
 

@@ -48,4 +48,4 @@ The field shows the date in your chosen style.
 - Your date choice is remembered on that browser only.
 
 ## Related pages
-School calendar (`/calendar`), Calendar Settings for administrators (`/calendar/settings`).
+School calendar (`/calendar`), Calendar settings for administrators (`/calendar/settings`).

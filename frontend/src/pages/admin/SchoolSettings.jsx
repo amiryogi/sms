@@ -26,7 +26,7 @@ import GradeScaleSettings from "../../components/admin/GradeScaleSettings";
 import BrandColorSettings from "../../components/admin/BrandColorSettings";
 import ReportCardLayoutSettings from "../../components/admin/ReportCardLayoutSettings";
 import { Input, Textarea } from "../../components/common/FormElements";
-import { PageHeader, Card, CardHeader, Button, Tabs, Alert, LoadingBlock, toast } from "../../components/ui";
+import { PageHeader, PageShell, Card, CardHeader, Button, Tabs, Alert, LoadingBlock, toast } from "../../components/ui";
 
 const EMPTY = {
   name: "",
@@ -188,12 +188,11 @@ const SchoolSettings = () => {
   );
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5">
+    <PageShell>
       <PageHeader
-        icon={Settings}
         title="School settings"
         description="Your school's profile, branding, grading and report card."
-        className="mb-2"
+        className="mb-0"
       />
 
       <Tabs tabs={TABS} value={tab} onChange={changeTab} />
@@ -208,7 +207,7 @@ const SchoolSettings = () => {
                 <form onSubmit={handleSubmit} noValidate>
                   {problem && <Alert tone="danger" className="mb-5">{problem}</Alert>}
 
-                  <CardHeader icon={Building2} title="About the school" />
+                  <CardHeader title="About the school" />
                   <div className="grid gap-4 sm:grid-cols-2">
                     {field("name", "School name", { required: true, placeholder: "Enter school name", className: "mb-0 sm:col-span-2" })}
                     {field("tagline", "Tagline / motto", { placeholder: "e.g. Education for Excellence", className: "mb-0 sm:col-span-2" })}
@@ -216,8 +215,8 @@ const SchoolSettings = () => {
                     {field("establishedYear", "Established", { icon: Calendar, type: "number", min: "1800", max: new Date().getFullYear(), placeholder: "e.g. 1990" })}
                   </div>
 
-                  <div className="my-6 border-t border-slate-100" />
-                  <CardHeader icon={MapPin} title="Contact" description="Printed on report cards and shown on the sign-in page." />
+                  <div className="my-6 border-t border-slate-200" />
+                  <CardHeader title="Contact" description="Printed on report cards and shown on the sign-in page." />
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Textarea
                       label="Address"
@@ -235,17 +234,17 @@ const SchoolSettings = () => {
                     {field("website", "Website", { icon: Globe, type: "url", placeholder: "https://www.school.edu.np" })}
                   </div>
 
-                  <div className="my-6 border-t border-slate-100" />
-                  <CardHeader icon={Globe} title="Social media" description="Linked from everyone's user menu." />
+                  <div className="my-6 border-t border-slate-200" />
+                  <CardHeader title="Social media" description="Linked from everyone's user menu." />
                   <div className="grid gap-4 sm:grid-cols-3">
                     {field("facebookUrl", "Facebook", { icon: Facebook, type: "url", placeholder: "https://facebook.com/…" })}
                     {field("instagramUrl", "Instagram", { icon: Instagram, type: "url", placeholder: "https://instagram.com/…" })}
                     {field("youtubeUrl", "YouTube", { icon: Youtube, type: "url", placeholder: "https://youtube.com/@…" })}
                   </div>
 
-                  <div className="mt-6 flex justify-end border-t border-slate-100 pt-4">
+                  <div className="mt-6 flex justify-end border-t border-slate-200 pt-4">
                     <Button type="submit" icon={Save} loading={saving}>
-                      {saving ? "Saving…" : "Save Changes"}
+                      {saving ? "Saving…" : "Save changes"}
                     </Button>
                   </div>
                 </form>
@@ -271,7 +270,7 @@ const SchoolSettings = () => {
                       <div className="flex gap-2"><MapPin size={15} className="mt-0.5 shrink-0 text-slate-400" aria-hidden="true" /><dd>{formData.address}</dd></div>
                     )}
                     {(formData.phone || formData.landlineNumber) && (
-                      <div className="flex gap-2"><Phone size={15} className="mt-0.5 shrink-0 text-slate-400" aria-hidden="true" /><dd>{[formData.phone, formData.landlineNumber].filter(Boolean).join(" · ")}</dd></div>
+                      <div className="flex gap-2"><Phone size={15} className="mt-0.5 shrink-0 text-slate-400" aria-hidden="true" /><dd>{[formData.phone, formData.landlineNumber].filter(Boolean).join(", ")}</dd></div>
                     )}
                     {formData.email && (
                       <div className="flex gap-2"><Mail size={15} className="mt-0.5 shrink-0 text-slate-400" aria-hidden="true" /><dd className="truncate">{formData.email}</dd></div>
@@ -308,7 +307,7 @@ const SchoolSettings = () => {
           {tab === "branding" && (
             <div className="space-y-5">
               <Card>
-                <CardHeader icon={ImageIcon} title="Logo and banner" description="Shown in the sidebar, on the sign-in page and on report cards." />
+                <CardHeader title="Logo and banner" description="Shown in the sidebar, on the sign-in page and on report cards." />
                 <div className="grid gap-6 md:grid-cols-[auto_minmax(0,1fr)]">
                   <ImageSlot kind="logo" title="Logo" hint="Square, PNG or JPG, up to 2 MB" url={schoolInfo?.logoUrl} busy={uploading === "logo"} onPick={handleImage} />
                   <ImageSlot kind="banner" title="Banner" hint="Wide (about 4:1), up to 5 MB" url={schoolInfo?.bannerUrl} busy={uploading === "banner"} onPick={handleImage} wide />
@@ -323,7 +322,7 @@ const SchoolSettings = () => {
           {tab === "report-card" && <ReportCardLayoutSettings />}
         </>
       )}
-    </div>
+    </PageShell>
   );
 };
 

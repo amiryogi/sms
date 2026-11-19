@@ -4,7 +4,7 @@ import { Plus, Pencil, Trash2, ReceiptText, CalendarRange } from "lucide-react";
 import DataTable from "../../components/common/DataTable";
 import Modal from "../../components/common/Modal";
 import { Input, Select, Button, FormRow } from "../../components/common/FormElements";
-import { PageHeader, IconButton, SelectInput, DialogActions, Badge, toast, confirmDialog } from "../../components/ui";
+import { PageHeader, PageShell, IconButton, SelectInput, DialogActions, Badge, StatCard, StatGroup, toast, confirmDialog } from "../../components/ui";
 import InstallmentPlanDialog from "../../components/finance/InstallmentPlanDialog";
 import { feeService } from "../../api/feeService";
 import { academicService } from "../../api/academicService";
@@ -163,18 +163,20 @@ const FeeStructures = () => {
       header: "Paid in",
       render: (row) =>
         row._count?.installmentPlan ? (
-          <Badge tone="brand">{row._count.installmentPlan} installments</Badge>
+          <Badge>{row._count.installmentPlan} installments</Badge>
         ) : (
           <span className="text-sm text-slate-500">One payment</span>
         ),
     },
     {
-      header: <span className="block text-right">Amount</span>,
-      render: (row) => <p className="text-right font-semibold text-slate-900 tabular-nums">{formatCurrency(row.amount)}</p>,
+      header: "Amount",
+      numeric: true,
+      render: (row) => <span className="font-semibold text-slate-900">{formatCurrency(row.amount)}</span>,
     },
     {
       header: <span className="sr-only">Actions</span>,
       width: "132px",
+      action: true,
       render: (row) => (
         <div className="flex justify-end gap-1">
           <IconButton icon={CalendarRange} label="Installment plan" onClick={() => setPlanFor(row)} />
@@ -192,28 +194,25 @@ const FeeStructures = () => {
   const classOptions = classes.map((c) => ({ value: c.id, label: c.name }));
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <PageShell>
       <PageHeader
-        icon={ReceiptText}
-        title="Fee Structures"
+        title="Fee structures"
         description="How much each class pays for each fee type in a year."
         actions={<Button icon={Plus} onClick={() => openModal()}>Add fee structure</Button>}
       />
 
       {totalsByClass.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        // Yearly total per class, ruled into one strip (the kit's figures, not hand-made tiles).
+        <StatGroup columns={4}>
           {totalsByClass.map((item) => (
-            <div key={item.key} className="rounded-card border border-slate-200/80 bg-white p-4 shadow-card">
-              <p className="text-sm font-medium text-slate-500">
-                {item.className} <span className="text-slate-400">· {item.year}</span>
-              </p>
-              <p className="mt-1 text-xl font-semibold text-slate-900 tabular-nums">{formatCurrency(item.total)}</p>
-              <p className="mt-0.5 text-xs text-slate-500">
-                {item.items} fee{item.items === 1 ? "" : "s"} per student
-              </p>
-            </div>
+            <StatCard
+              key={item.key}
+              label={`${item.className}, ${item.year}`}
+              value={formatCurrency(item.total)}
+              sub={`${item.items} fee${item.items === 1 ? "" : "s"} per student`}
+            />
           ))}
-        </div>
+        </StatGroup>
       )}
 
       <DataTable
@@ -249,7 +248,7 @@ const FeeStructures = () => {
         isOpen={modalOpen}
         onClose={closeModal}
         title={editingStructure ? "Edit amount" : "Add fee structure"}
-        description={editingStructure ? `${editingStructure.feeType?.name} · ${editingStructure.class?.name} · ${editingStructure.academicYear?.name}` : undefined}
+        description={editingStructure ? `${editingStructure.feeType?.name}, ${editingStructure.class?.name}, ${editingStructure.academicYear?.name}` : undefined}
         size="md"
       >
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -314,7 +313,7 @@ const FeeStructures = () => {
           }}
         />
       )}
-    </div>
+    </PageShell>
   );
 };
 

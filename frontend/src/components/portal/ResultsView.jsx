@@ -47,7 +47,7 @@ const ResultsView = ({ studentId }) => {
 
   if (exams === null) return <Card><LoadingBlock text="Loading results…" /></Card>;
   if (exams.length === 0) {
-    return <Card><EmptyState icon={Award} title="No results yet" description="Results appear here once the school publishes the report cards." /></Card>;
+    return <Card><EmptyState icon={Award} title="No results yet" description="Exam results appear here, subject by subject, once the school publishes the report cards." /></Card>;
   }
 
   const options = exams.map((e) => ({ value: String(e.examId || e.id), label: e.examName || e.name }));
@@ -104,48 +104,48 @@ const ResultsView = ({ studentId }) => {
 
           <Card padding="none" className="overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[600px] text-sm">
-                <thead className="bg-slate-50 text-left text-xs font-medium tracking-wide text-slate-500 uppercase">
+              <table className="w-full min-w-150 text-sm">
+                <thead className="bg-slate-50 text-left text-xs font-medium text-slate-500">
                   <tr>
-                    <th className="px-5 py-2.5 font-medium">Subject</th>
-                    <th className="px-4 py-2.5 text-right font-medium">Theory</th>
-                    <th className="px-4 py-2.5 text-right font-medium">Practical</th>
-                    <th className="px-4 py-2.5 text-right font-medium">Total</th>
-                    <th className="px-4 py-2.5 text-center font-medium">Grade</th>
-                    <th className="px-4 py-2.5 text-right font-medium">GP</th>
-                    <th className="px-5 py-2.5 font-medium">Remark</th>
+                    <th scope="col" className="border-y border-slate-200 px-5 py-2.5 font-medium">Subject</th>
+                    <th scope="col" className="border-y border-slate-200 px-4 py-2.5 text-right font-medium">Theory</th>
+                    <th scope="col" className="border-y border-slate-200 px-4 py-2.5 text-right font-medium">Practical</th>
+                    <th scope="col" className="border-y border-slate-200 px-4 py-2.5 text-right font-medium">Total</th>
+                    <th scope="col" className="border-y border-slate-200 px-4 py-2.5 text-center font-medium">Grade</th>
+                    <th scope="col" className="border-y border-slate-200 px-4 py-2.5 text-right font-medium">GP</th>
+                    <th scope="col" className="border-y border-slate-200 px-5 py-2.5 font-medium">Remark</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-200">
                   {card.subjects.map((sub) => (
-                    <tr key={sub.subjectId} className={cn(!sub.isPassed && "bg-red-50/40")}>
-                      <td className="px-5 py-3">
+                    <tr key={sub.subjectId} className={cn(!sub.isPassed && "bg-risk-surface/50")}>
+                      <td className="px-5 py-2.5">
                         <p className="font-medium text-slate-900">{sub.subjectName}</p>
-                        {sub.subjectCode && <p className="text-xs text-slate-500">{sub.subjectCode}</p>}
+                        {sub.subjectCode && <p className="font-mono text-xs text-slate-500">{sub.subjectCode}</p>}
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums">
+                      <td className="px-4 py-2.5 text-right tabular-nums">
                         {sub.isAbsent ? "AB" : `${marks(sub.theoryMarks)} / ${marks(sub.theoryFullMarks)}`}
                         {sub.theoryGrade && <span className="block text-xs text-slate-500">{sub.theoryGrade}</span>}
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums">
+                      <td className="px-4 py-2.5 text-right tabular-nums">
                         {sub.hasPractical ? `${marks(sub.practicalMarks)} / ${marks(sub.practicalFullMarks)}` : "—"}
                         {sub.hasPractical && sub.practicalGrade && <span className="block text-xs text-slate-500">{sub.practicalGrade}</span>}
                       </td>
-                      <td className="px-4 py-3 text-right font-medium tabular-nums">{sub.isAbsent ? "—" : `${marks(sub.totalMarks)} / ${marks(sub.totalFullMarks)}`}</td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={cn("inline-flex min-w-9 justify-center rounded-md px-2 py-0.5 text-xs font-semibold ring-1 ring-inset", sub.isPassed ? "bg-slate-50 text-slate-800 ring-slate-200" : "bg-red-50 text-red-700 ring-red-200")}>
+                      <td className="px-4 py-2.5 text-right font-medium tabular-nums">{sub.isAbsent ? "—" : `${marks(sub.totalMarks)} / ${marks(sub.totalFullMarks)}`}</td>
+                      <td className="px-4 py-2.5 text-center">
+                        <span className={cn("inline-flex min-w-9 justify-center rounded-md px-2 py-0.5 text-xs font-semibold ring-1 ring-inset", sub.isPassed ? "bg-slate-50 text-slate-800 ring-slate-200" : "bg-risk-surface text-risk ring-risk-line")}>
                           {sub.finalGrade || "—"}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums">{sub.finalGpa !== null && sub.finalGpa !== undefined ? Number(sub.finalGpa).toFixed(1) : "—"}</td>
-                      <td className="px-5 py-3 text-slate-600">{sub.remark || ""}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums">{sub.finalGpa !== null && sub.finalGpa !== undefined ? Number(sub.finalGpa).toFixed(1) : "—"}</td>
+                      <td className="px-5 py-2.5 text-slate-600">{sub.remark || ""}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
             {(card.remarks?.teacher || card.remarks?.principal) && (
-              <div className="grid gap-4 border-t border-slate-100 px-5 py-4 text-sm sm:grid-cols-2">
+              <div className="grid gap-4 border-t border-slate-200 px-5 py-4 text-sm sm:grid-cols-2">
                 {card.remarks.teacher && (
                   <div>
                     <p className="text-xs font-medium text-slate-500">Class teacher</p>

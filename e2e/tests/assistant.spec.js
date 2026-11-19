@@ -131,15 +131,15 @@ test.describe("help assistant as a student", () => {
   });
 });
 
-test.describe("AI Assistant settings page", () => {
+test.describe("AI assistant settings page", () => {
   test.describe("as an admin", () => {
     test.use({ storageState: stateFor("admin") });
 
     test("shows key status only, tests the connection and saves a change", async ({ page }) => {
       await page.goto("/admin/dashboard");
-      await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "AI Assistant" }).click();
+      await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "AI assistant" }).click();
       await expect(page).toHaveURL(/\/admin\/assistant$/);
-      await expect(page.getByRole("heading", { name: "AI Assistant" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "AI assistant" })).toBeVisible();
 
       await page.getByRole("tab", { name: "AI provider" }).click();
       await expect(page.getByText("API keys on this server")).toBeVisible();

@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
-import { Plus, Trash2, UserCheck, Pencil, UserCog, Star, UserPlus } from "lucide-react";
+import { Plus, Trash2, UserCheck, Pencil, UserCog, Star } from "lucide-react";
 import DataTable from "../../components/common/DataTable";
 import Modal from "../../components/common/Modal";
 import { Select, Button, FormRow } from "../../components/common/FormElements";
 import {
   PageHeader,
+  PageShell,
   Card,
   CardHeader,
   Badge,
@@ -213,19 +214,17 @@ const TeacherAssignment = () => {
     {
       header: "Teacher",
       render: (row) => (
-        <div className="flex items-center gap-3">
-          <Avatar src={row.user?.avatarUrl} name={fullName(row.user)} size="sm" />
-          <span className="font-medium text-slate-900">{fullName(row.user) || "—"}</span>
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Avatar src={row.user?.avatarUrl} name={fullName(row.user)} size="xs" />
+          <span className="truncate font-medium text-slate-900">{fullName(row.user) || "—"}</span>
         </div>
       ),
     },
     {
       header: "Class",
       render: (row) => (
-        <span>
-          {row.classSubject?.class?.name || "—"}
-          <span className="text-slate-400"> · </span>
-          {row.section?.name || "—"}
+        <span className="whitespace-nowrap">
+          {row.classSubject?.class?.name || "—"} {row.section?.name || ""}
         </span>
       ),
     },
@@ -234,13 +233,14 @@ const TeacherAssignment = () => {
       header: "Role",
       render: (row) =>
         row.isClassTeacher ? (
-          <Badge tone="brand" icon={Star}>Class teacher</Badge>
+          <Badge icon={Star}>Class teacher</Badge>
         ) : (
           <span className="text-sm text-slate-500">Subject teacher</span>
         ),
     },
     {
       header: <span className="sr-only">Actions</span>,
+      action: true,
       width: "96px",
       render: (row) => (
         <div className="flex justify-end gap-1">
@@ -263,17 +263,16 @@ const TeacherAssignment = () => {
     .map((cs) => ({ value: cs.id.toString(), label: cs.subject?.name || "Subject" }));
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <PageShell>
       <PageHeader
-        icon={UserCog}
-        title="Teacher Assignment"
+        title="Teacher assignment"
         description="Who teaches which subject to which section. Teachers only see the classes they are assigned here."
         actions={<Button icon={Plus} onClick={() => openModal(null)}>Assign teacher</Button>}
       />
 
       {!loading && unassigned.length > 0 && (
-        <Card className="unassigned-teachers mb-6">
-          <CardHeader icon={UserPlus} title={`Not assigned yet (${unassigned.length})`} />
+        <Card className="unassigned-teachers">
+          <CardHeader title={`Not assigned yet (${unassigned.length})`} />
           <p className="-mt-2 mb-3 text-sm text-slate-500">
             These teachers have no class or subject in {yearOptions.find((o) => o.value === filters.academicYearId)?.label || "this year"}, so they see nothing yet.
           </p>
@@ -348,7 +347,7 @@ const TeacherAssignment = () => {
           </DialogActions>
         </form>
       </Modal>
-    </div>
+    </PageShell>
   );
 };
 

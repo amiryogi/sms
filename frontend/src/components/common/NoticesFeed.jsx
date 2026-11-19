@@ -13,10 +13,11 @@ import { formatDate, formatRelative, fullName } from "../../utils/format";
  * Props: limit (5), showViewAll (true), viewAllPath, compact (false).
  */
 
+// Only high and urgent are states worth colour; normal and low stay quiet.
 const PRIORITY = {
-  urgent: { dot: "bg-red-500", tone: "danger", label: "Urgent" },
-  high: { dot: "bg-amber-500", tone: "warning", label: "High" },
-  normal: { dot: "bg-sky-500", tone: "info", label: "Normal" },
+  urgent: { dot: "bg-risk", tone: "danger", label: "Urgent" },
+  high: { dot: "bg-warn", tone: "warning", label: "High" },
+  normal: { dot: "bg-slate-300", tone: "neutral", label: "Normal" },
   low: { dot: "bg-slate-300", tone: "neutral", label: "Low" },
 };
 
@@ -56,38 +57,37 @@ const NoticesFeed = ({ limit = 5, showViewAll = true, viewAllPath = null, compac
   if (error) {
     return (
       <EmptyState
+        compact
         icon={Bell}
         title="Couldn't load notices"
+        description="Check your connection and try again."
         action={<Button size="sm" variant="secondary" icon={RotateCw} onClick={load}>Try again</Button>}
       />
     );
   }
 
   if (notices.length === 0) {
-    return <EmptyState icon={Bell} title="No notices right now" description="Announcements from the school will appear here." />;
+    return <EmptyState compact icon={Bell} title="No notices right now" description="Announcements from the school appear here as soon as they are published." />;
   }
 
   return (
     <div>
-      <ul className="space-y-2">
+      <ul className="divide-y divide-slate-200">
         {notices.map((notice) => {
           const p = PRIORITY[notice.priority] || PRIORITY.normal;
           const open = expandedId === notice.id;
           const when = notice.publishedAt || notice.createdAt;
           return (
-            <li
-              key={notice.id}
-              className={cn(
-                "rounded-xl border transition-colors",
-                open ? "border-slate-200 bg-white shadow-card" : "border-slate-100 bg-slate-50/70 hover:border-slate-200 hover:bg-slate-50",
-                notice.priority === "urgent" && "border-l-4 border-l-red-500",
-              )}
-            >
+            <li key={notice.id}>
               <button
                 type="button"
                 onClick={() => setExpandedId(open ? null : notice.id)}
                 aria-expanded={open}
-                className={cn("flex w-full cursor-pointer items-center gap-3 text-left", compact ? "px-3 py-2.5" : "px-4 py-3")}
+                className={cn(
+                  "flex w-full cursor-pointer items-center gap-3 rounded-lg text-left transition-colors hover:bg-slate-50",
+                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600",
+                  compact ? "px-2 py-2.5" : "px-3 py-3",
+                )}
               >
                 <span className={cn("size-2 shrink-0 rounded-full", p.dot)} aria-hidden="true" />
                 <span className="min-w-0 flex-1">
@@ -98,10 +98,10 @@ const NoticesFeed = ({ limit = 5, showViewAll = true, viewAllPath = null, compac
                 <ChevronDown size={16} className={cn("shrink-0 text-slate-400 transition-transform", open && "rotate-180")} aria-hidden="true" />
               </button>
               {open && (
-                <div className={cn("border-t border-slate-100", compact ? "px-3 py-3" : "px-4 py-4")}>
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-700">{notice.content}</p>
+                <div className={cn("pb-3", compact ? "pr-2 pl-7" : "pr-3 pl-8")}>
+                  <p className="max-w-[68ch] text-sm leading-relaxed whitespace-pre-wrap text-slate-700">{notice.content}</p>
                   <p className="mt-3 text-xs text-slate-500">
-                    Posted by {fullName(notice.createdBy)} · {formatDate(when)}
+                    Posted by {fullName(notice.createdBy)} on {formatDate(when)}
                   </p>
                 </div>
               )}

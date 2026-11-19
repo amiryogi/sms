@@ -20,12 +20,12 @@ the system. Only one year is current at a time.
 Administrators.
 
 ## Where to find it
-Left menu → **Academics** → **Academic Years** (`/admin/academic-years`).
+Left menu → **Academics** → **Academic years** (`/admin/academic-years`).
 
 ## Steps
 1. Click **Add academic year**.
-2. Type the **Year Name**, for example `2083`.
-3. Pick the **Start Date** and **End Date** (B.S. date picker).
+2. Type the **Year name**, for example `2083`.
+3. Pick the **Start date** and **End date** (B.S. date picker).
 4. Tick **Make this the current academic year** if the school is moving to it now.
 5. Save.
 
@@ -40,14 +40,14 @@ The year in the list, marked **Current** or **Past / upcoming**.
 
 ## Troubleshooting
 - Teachers see "No classes yet" after a new year is made current: assign them again on
-  **Teacher Assignment** for the new year.
+  **Teacher assignment** for the new year.
 
 ## Order of setup for a new year
-1. **Academic Years**: add the year and make it current.
-2. **Class Subjects**: subjects, full marks and credit hours per class for the year.
-3. **Teacher Assignment**: who teaches what in each section.
+1. **Academic years**: add the year and make it current.
+2. **Class subjects**: subjects, full marks and credit hours per class for the year.
+3. **Teacher assignment**: who teaches what in each section.
 4. **Promotions**: move students from last year's classes.
-5. **Fee Structures** and **Student Accounts → Generate fees**.
+5. **Fee structures** and **Student accounts → Generate fees**.
 
 ## Related pages
-Classes, Sections, Class Subjects, Teacher Assignment, Promotions.
+Classes, Sections, Class subjects, Teacher assignment, Promotions.

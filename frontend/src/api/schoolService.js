@@ -2,7 +2,7 @@ import apiClient from "./apiClient";
 import axios from "axios";
 
 /**
- * School Settings Service
+ * School settings Service
  * Handles school branding, logo, banner, and settings management
  */
 export const schoolService = {

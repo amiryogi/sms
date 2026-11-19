@@ -22,7 +22,7 @@ Administrators.
 Left menu → **People** → **Promotions** (`/admin/promotions`).
 
 ## Before you start
-Create the new academic year on **Academic Years**.
+Create the new academic year on **Academic years**.
 
 ## Steps
 1. **1. Students to promote:** choose the **Class**, **Section** (or **All sections**) and
@@ -43,4 +43,4 @@ year. The history shows **Promoted**, **Detained**, **Graduated**.
 - A mistake can be undone with **Undo promotion** in the history.
 
 ## Related pages
-Academic Years, Students.
+Academic years, Students.

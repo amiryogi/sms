@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { BadgePercent } from "lucide-react";
 import Modal from "../common/Modal";
-import { Button, DialogActions, Field, SelectInput, TextInput, TextArea, Alert, toast } from "../ui";
-import { cn } from "../../lib/cn";
+import { Button, DialogActions, Field, SelectInput, TextInput, TextArea, Alert, SegmentedControl, toast } from "../ui";
 import { feeService } from "../../api/feeService";
 import { academicService } from "../../api/academicService";
 import StudentPicker from "./StudentPicker";
@@ -105,24 +104,17 @@ const DiscountDialog = ({ student: fixedStudent = null, academicYearId: fixedYea
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Kind" htmlFor="discount-kind">
-            <div id="discount-kind" role="radiogroup" className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1">
-              {[
+          {/* The kit's radio group: one tab stop, arrows move between the two. */}
+          <Field label="Kind">
+            <SegmentedControl
+              label="Kind"
+              value={form.kind}
+              onChange={(v) => set("kind", v)}
+              options={[
                 { value: "PERCENT", label: "Percentage" },
                 { value: "FIXED", label: "Fixed amount" },
-              ].map((o) => (
-                <button
-                  key={o.value}
-                  type="button"
-                  role="radio"
-                  aria-checked={form.kind === o.value}
-                  onClick={() => set("kind", o.value)}
-                  className={cn("cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium", form.kind === o.value ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800")}
-                >
-                  {o.label}
-                </button>
-              ))}
-            </div>
+              ]}
+            />
           </Field>
           <Field
             label={form.kind === "PERCENT" ? "Percentage (%)" : "Amount (Rs.)"}

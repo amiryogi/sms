@@ -75,7 +75,7 @@ function languageInstruction(language, { romanized = false } = {}) {
       "Write the answer in natural, simple Nepali (Devanagari script), the way a helpful school office assistant would speak.",
       "The user may mix Nepali and English words; that is normal.",
       romanized ? "The user wrote Nepali in Latin letters; still answer in Devanagari." : "",
-      "Keep every menu name, page title, button and field label exactly as written in English in the documents, in bold (for example **Save Attendance**). Do not translate them. You may add a short Nepali explanation in brackets after a label.",
+      "Keep every menu name, page title, button and field label exactly as written in English in the documents, in bold (for example **Save attendance**). Do not translate them. You may add a short Nepali explanation in brackets after a label.",
       "Keep numbers, paths like /teacher/attendance and codes as they are.",
     ]
       .filter(Boolean)

@@ -20,7 +20,7 @@ const PRESETS = [
 ];
 
 /**
- * School Settings -> Brand colour. The colour themes the whole app (buttons,
+ * School settings -> Brand colour. The colour themes the whole app (buttons,
  * active navigation, links, the login page) for everyone in the school.
  * Printed report cards stay black and white.
  */
@@ -110,11 +110,11 @@ const BrandColorSettings = () => {
               maxLength={7}
               aria-label="Hex colour"
               aria-invalid={!valid}
-              className={cn("w-28 font-mono uppercase", !valid && "border-red-400")}
+              className={cn("w-28 font-mono uppercase", !valid && "border-risk")}
             />
-            {!valid && <span className="text-xs font-medium text-red-600">Use a hex colour like #4F46E5</span>}
+            {!valid && <span role="alert" className="text-xs font-medium text-risk">Use a hex colour like #4F46E5</span>}
             {valid && onWhite < 3 && (
-              <span className="text-xs text-amber-700">
+              <span className="text-xs text-warn">
                 Very light colour: text will use a darker shade so it stays readable.
               </span>
             )}
@@ -139,7 +139,7 @@ const BrandColorSettings = () => {
 
         {/* Preview */}
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4" aria-label="Preview">
-          <p className="mb-3 text-xs font-medium tracking-wide text-slate-500 uppercase">Preview</p>
+          <p className="mb-3 text-xs font-medium text-slate-500">Preview</p>
           <div className="space-y-3 rounded-lg bg-white p-4 shadow-card">
             <div className="flex items-center gap-2 rounded-lg bg-brand-50 px-2.5 py-2 text-sm font-medium text-brand-700">
               <span className="size-2 rounded-full bg-brand-500" /> Active menu item

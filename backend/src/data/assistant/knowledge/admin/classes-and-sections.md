@@ -43,4 +43,4 @@ The class or section in the list, ready for enrolments, class subjects and teach
 - A class cannot be deleted while students are enrolled in it.
 
 ## Related pages
-Class Subjects, Students (enrolment), Teacher Assignment.
+Class subjects, Students (enrolment), Teacher assignment.

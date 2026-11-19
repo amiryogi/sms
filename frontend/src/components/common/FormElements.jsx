@@ -120,11 +120,11 @@ export const FileUpload = ({ label, error, onChange, accept, multiple = false, f
         }}
         className={cn(
           "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-center transition-colors",
-          dragging ? "border-brand-400 bg-brand-50" : "border-slate-300 bg-slate-50/60 hover:border-brand-300 hover:bg-brand-50/40",
-          error && "border-red-300",
+          dragging ? "border-brand-400 bg-brand-50" : "border-slate-300 bg-slate-50 hover:border-slate-400 hover:bg-slate-100/60",
+          error && "border-risk",
         )}
       >
-        <span className="flex size-10 items-center justify-center rounded-full bg-white text-brand-600 shadow-sm ring-1 ring-slate-200">
+        <span className="flex size-10 items-center justify-center rounded-full bg-white text-slate-500 shadow-sm ring-1 ring-slate-200">
           <UploadCloud size={18} aria-hidden="true" />
         </span>
         <span className="text-sm text-slate-600">

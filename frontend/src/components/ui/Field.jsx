@@ -11,12 +11,12 @@ export const Field = ({ label, htmlFor, hint, error, required, className, childr
     {label && (
       <label htmlFor={htmlFor} className="text-sm font-medium text-slate-700">
         {label}
-        {required && <span className="ml-0.5 text-red-500" aria-hidden="true">*</span>}
+        {required && <span className="ml-0.5 text-risk" aria-hidden="true">*</span>}
       </label>
     )}
     {children}
     {error ? (
-      <p className="text-xs font-medium text-red-600" role="alert">{error}</p>
+      <p className="text-xs font-medium text-risk" role="alert">{error}</p>
     ) : hint ? (
       <p className="text-xs text-slate-500">{hint}</p>
     ) : null}
@@ -110,8 +110,12 @@ export const Radio = React.forwardRef(function Radio({ label, description, class
 });
 
 /** On/off switch. Controlled: pass `checked` and `onChange(nextBoolean)`. */
-export const Switch = ({ checked, onChange, label, description, disabled, id }) => (
-  <div className="flex items-start justify-between gap-4">
+/**
+ * On/off switch. `label` shows a visible label; with no visible label (a switch
+ * in a table row) pass `aria-label` so a screen reader still names it.
+ */
+export const Switch = ({ checked, onChange, label, description, disabled, id, "aria-label": ariaLabel, className }) => (
+  <div className={cn("flex items-start justify-between gap-4", className)}>
     {(label || description) && (
       <div className="text-sm">
         {label && <label htmlFor={id} className="font-medium text-slate-700">{label}</label>}
@@ -123,6 +127,7 @@ export const Switch = ({ checked, onChange, label, description, disabled, id }) 
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-label={label ? undefined : ariaLabel}
       disabled={disabled}
       onClick={() => onChange?.(!checked)}
       className={cn(

@@ -20,12 +20,12 @@ discounts or scholarships.
 Accountants and administrators. Some steps need an administrator's approval.
 
 ## Where to find it
-- **Student Accounts** (`/finance/accounts`): what each student owes and has paid this year.
+- **Student accounts** (`/finance/accounts`): what each student owes and has paid this year.
 - **Transactions** (`/finance/transactions`): the **Ledger** and **Reversal requests**.
 - **Discounts** (`/finance/discounts`).
 
 ## Outstanding balances
-1. Open **Student Accounts**, choose **Academic year**, **Class**, **Section**.
+1. Open **Student accounts**, choose **Academic year**, **Class**, **Section**.
 2. Filter by status: **Overdue**, **Unpaid**, **Partly paid**, **Paid**, **No fees**.
 3. Open a student to see their fees, payments, reversals and discounts.
 4. **Print bills** prints fee bills / due notices for the class (four to an A4 page). On one
@@ -55,4 +55,4 @@ Accountants and administrators. Some steps need an administrator's approval.
 - Expecting a discount to apply before approval.
 
 ## Related pages
-Collect Fees, Reports, Finance dashboard.
+Collect fees, Reports, Finance dashboard.

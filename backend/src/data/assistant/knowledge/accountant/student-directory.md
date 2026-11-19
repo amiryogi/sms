@@ -33,4 +33,4 @@ Left menu → **Students** (`/staff/students`).
 - Trying to add or edit a student: only administrators can.
 
 ## Related pages
-Collect Fees (accountants), Marks Entry (exam officers).
+Collect fees (accountants), Marks entry (exam officers).

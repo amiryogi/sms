@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Settings2 } from "lucide-react";
-import { Alert, Button, Card, CardHeader, Field, LoadingBlock, PageHeader, SelectInput, Switch, confirmDialog, toast } from "../../components/ui";
+import { Alert, Button, Card, CardHeader, Field, LoadingBlock, PageHeader, PageShell, SelectInput, Switch, confirmDialog, toast } from "../../components/ui";
 import { calendarService } from "../../api/calendarService";
 import { useAuth } from "../../context/AuthContext";
 import { CALENDAR_OPTIONS, LANGUAGE_OPTIONS, NUMERAL_OPTIONS, WEEKDAYS_EN, WEEKDAYS_NE } from "../../lib/calendar/calendarConstants";
@@ -10,7 +9,7 @@ import { todayAd } from "../../utils/format";
 import { cn } from "../../lib/cn";
 
 /**
- * Calendar -> Calendar Settings (admin): how dates are shown by default, which
+ * Calendar -> Calendar settings (admin): how dates are shown by default, which
  * weekdays the school is closed, and whether attendance is refused on a
  * non-working day. Each person can still choose BS or AD for themselves from
  * the menu under their name.
@@ -85,110 +84,111 @@ const CalendarSettings = () => {
   const sample = formatByPrefs(todayAd(), { calendar: config.defaultCalendar, language: config.defaultLanguage, numerals: config.defaultNumerals });
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <PageHeader title="Calendar Settings" description="Applies to everyone in the school." icon={Settings2} />
+    <PageShell width="prose">
+      <PageHeader title="Calendar settings" description="Applies to everyone in the school." />
 
-      <div className="space-y-5">
-        <Card>
-          <CardHeader title="Weekly holidays" description="The days of the week the school is closed. They are shown in red and no attendance is taken." />
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7" role="group" aria-label="Weekly holidays">
-            {WEEKDAYS_EN.map((name, day) => {
-              const on = config.weeklyHolidayDays.includes(day);
-              return (
-                <button
-                  key={name}
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() => toggleDay(day)}
-                  className={cn(
-                    "cursor-pointer rounded-xl border px-2 py-2.5 text-center text-sm transition-colors focus-visible:outline-2 focus-visible:outline-brand-600",
-                    on ? "border-red-300 bg-red-50 font-semibold text-red-700" : "border-slate-200 bg-white text-slate-700 hover:border-slate-300",
-                  )}
-                >
-                  {name}
-                  <span className="block text-xs font-normal opacity-80">{WEEKDAYS_NE[day]}</span>
-                  <span className="mt-1 block text-[11px] font-medium">{on ? "Holiday" : "Working day"}</span>
-                </button>
-              );
-            })}
-          </div>
-          {errors.weeklyHolidayDays && <p className="mt-2 text-xs font-medium text-red-600" role="alert">{errors.weeklyHolidayDays}</p>}
-          <div className="mt-4 border-t border-slate-100 pt-4">
-            <Switch
-              id="cal-block"
-              checked={config.blockAttendanceOnNonWorkingDays}
-              onChange={(v) => set({ blockAttendanceOnNonWorkingDays: v })}
-              label="No attendance on holidays"
-              description="Refuse the register on weekly holidays and on holidays that apply to the class. Switch off if the school sometimes holds classes on a holiday. Attendance already saved is never changed."
-            />
-          </div>
-        </Card>
-
-        <Card>
-          <CardHeader title="How dates are shown" description="The school's default. Each person can choose differently from the menu under their name." />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Calendar" htmlFor="cal-default" error={errors.defaultCalendar}>
-              <SelectInput id="cal-default" value={config.defaultCalendar} onChange={(e) => set({ defaultCalendar: e.target.value })}>
-                {CALENDAR_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </SelectInput>
-            </Field>
-            <Field label="Week starts on" htmlFor="cal-week" error={errors.weekStartsOn}>
-              <SelectInput id="cal-week" value={config.weekStartsOn} onChange={(e) => set({ weekStartsOn: Number(e.target.value) })}>
-                {WEEKDAYS_EN.map((name, day) => (
-                  <option key={name} value={day}>{name}</option>
-                ))}
-              </SelectInput>
-            </Field>
-            <Field label="Month and weekday names" htmlFor="cal-lang" error={errors.defaultLanguage}>
-              <SelectInput id="cal-lang" value={config.defaultLanguage} onChange={(e) => set({ defaultLanguage: e.target.value })}>
-                {LANGUAGE_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </SelectInput>
-            </Field>
-            <Field label="Numerals" htmlFor="cal-num" error={errors.defaultNumerals}>
-              <SelectInput id="cal-num" value={config.defaultNumerals} onChange={(e) => set({ defaultNumerals: e.target.value })}>
-                {NUMERAL_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </SelectInput>
-            </Field>
-          </div>
-          <p className="mt-4 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
-            Today will read: <span className="font-semibold text-slate-900" data-testid="date-sample">{sample}</span>
-          </p>
-          <p className="mt-2 text-xs text-slate-500">Dates are always stored in A.D.; this only changes how they are shown. Time zone: {config.timezone}.</p>
-        </Card>
-
-        {hasPersonal && (
-          <Alert
-            tone="info"
-            title="You have your own date setting on this browser"
-            action={
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => {
-                  clearPersonalDatePrefs();
-                  setHasPersonal(false);
-                }}
+      <Card>
+        <CardHeader title="Weekly holidays" description="The days of the week the school is closed. They are shown in red and no attendance is taken." />
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7" role="group" aria-label="Weekly holidays">
+          {WEEKDAYS_EN.map((name, day) => {
+            const on = config.weeklyHolidayDays.includes(day);
+            return (
+              <button
+                key={name}
+                type="button"
+                aria-pressed={on}
+                onClick={() => toggleDay(day)}
+                className={cn(
+                  // A weekly holiday is shown in red across the calendar, so the
+                  // chosen days carry the risk tokens here too; working days are neutral.
+                  "cursor-pointer rounded-lg border px-2 py-2.5 text-center text-sm transition-colors",
+                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600",
+                  on ? "border-risk-line bg-risk-surface font-semibold text-risk" : "border-slate-300 bg-white text-slate-700 hover:border-slate-400",
+                )}
               >
-                Use the school's
-              </Button>
-            }
-          >
-            So this page may look different to you than to others until you clear it.
-          </Alert>
-        )}
-
-        <div className="flex flex-wrap justify-end gap-2">
-          {isCustom && <Button variant="ghost" onClick={reset}>Reset to defaults</Button>}
-          <Button onClick={save} loading={saving}>Save settings</Button>
+                {name}
+                <span className={cn("block text-xs font-normal", on ? "text-risk" : "text-slate-500")}>{WEEKDAYS_NE[day]}</span>
+                <span className="mt-1 block text-2xs font-medium">{on ? "Holiday" : "Working day"}</span>
+              </button>
+            );
+          })}
         </div>
+        {errors.weeklyHolidayDays && <p className="mt-2 text-xs font-medium text-risk" role="alert">{errors.weeklyHolidayDays}</p>}
+        <div className="mt-4 border-t border-slate-200 pt-4">
+          <Switch
+            id="cal-block"
+            checked={config.blockAttendanceOnNonWorkingDays}
+            onChange={(v) => set({ blockAttendanceOnNonWorkingDays: v })}
+            label="No attendance on holidays"
+            description="Refuse the register on weekly holidays and on holidays that apply to the class. Switch off if the school sometimes holds classes on a holiday. Attendance already saved is never changed."
+          />
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader title="How dates are shown" description="The school's default. Each person can choose differently from the menu under their name." />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Calendar" htmlFor="cal-default" error={errors.defaultCalendar}>
+            <SelectInput id="cal-default" value={config.defaultCalendar} onChange={(e) => set({ defaultCalendar: e.target.value })}>
+              {CALENDAR_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </SelectInput>
+          </Field>
+          <Field label="Week starts on" htmlFor="cal-week" error={errors.weekStartsOn}>
+            <SelectInput id="cal-week" value={config.weekStartsOn} onChange={(e) => set({ weekStartsOn: Number(e.target.value) })}>
+              {WEEKDAYS_EN.map((name, day) => (
+                <option key={name} value={day}>{name}</option>
+              ))}
+            </SelectInput>
+          </Field>
+          <Field label="Month and weekday names" htmlFor="cal-lang" error={errors.defaultLanguage}>
+            <SelectInput id="cal-lang" value={config.defaultLanguage} onChange={(e) => set({ defaultLanguage: e.target.value })}>
+              {LANGUAGE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </SelectInput>
+          </Field>
+          <Field label="Numerals" htmlFor="cal-num" error={errors.defaultNumerals}>
+            <SelectInput id="cal-num" value={config.defaultNumerals} onChange={(e) => set({ defaultNumerals: e.target.value })}>
+              {NUMERAL_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </SelectInput>
+          </Field>
+        </div>
+        <p className="mt-4 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
+          Today will read: <span className="font-semibold text-slate-900" data-testid="date-sample">{sample}</span>
+        </p>
+        <p className="mt-2 text-xs text-slate-500">Dates are always stored in A.D.; this only changes how they are shown. Time zone: {config.timezone}.</p>
+      </Card>
+
+      {hasPersonal && (
+        <Alert
+          tone="info"
+          title="You have your own date setting on this browser"
+          action={
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                clearPersonalDatePrefs();
+                setHasPersonal(false);
+              }}
+            >
+              Use the school's
+            </Button>
+          }
+        >
+          So this page may look different to you than to others until you clear it.
+        </Alert>
+      )}
+
+      <div className="flex flex-wrap justify-end gap-2">
+        {isCustom && <Button variant="ghost" onClick={reset}>Reset to defaults</Button>}
+        <Button onClick={save} loading={saving}>Save settings</Button>
       </div>
-    </div>
+    </PageShell>
   );
 };
 

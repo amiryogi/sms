@@ -4,7 +4,7 @@ import { Plus, Pencil, Trash2, BookOpen } from 'lucide-react';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import { Input, Button, FormRow } from '../../components/common/FormElements';
-import { PageHeader, Badge, IconButton, DialogActions, toast, confirmDialog } from '../../components/ui';
+import { PageHeader, PageShell, IconButton, DialogActions, toast, confirmDialog } from '../../components/ui';
 import { academicService } from '../../api/academicService';
 
 const Classes = () => {
@@ -82,22 +82,18 @@ const Classes = () => {
   const columns = [
     {
       header: 'Class',
-      render: (row) => (
-        <div className="flex items-center gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-sm font-semibold text-brand-700">
-            {row.gradeLevel ?? '–'}
-          </span>
-          <span className="font-medium text-slate-900">{row.name}</span>
-        </div>
-      ),
+      // One line per class, like the other register pages (Students, Sections,
+      // Subjects): the grade number has its own right-aligned column.
+      render: (row) => <span className="font-medium text-slate-900">{row.name}</span>,
     },
-    { header: 'Grade level', render: (row) => <Badge>Grade {row.gradeLevel}</Badge> },
+    { header: 'Grade level', numeric: true, render: (row) => row.gradeLevel ?? '—' },
     {
       header: 'Description',
       render: (row) => <span className="text-slate-500">{row.description || '—'}</span>,
     },
     {
       header: <span className="sr-only">Actions</span>,
+      action: true,
       width: '96px',
       render: (row) => (
         <div className="flex justify-end gap-1">
@@ -109,9 +105,8 @@ const Classes = () => {
   ];
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <PageShell>
       <PageHeader
-        icon={BookOpen}
         title="Classes"
         description="Grades taught at your school. Sections and subjects are attached to these."
         actions={<Button icon={Plus} onClick={() => openModal()}>Add class</Button>}
@@ -156,7 +151,7 @@ const Classes = () => {
           </DialogActions>
         </form>
       </Modal>
-    </div>
+    </PageShell>
   );
 };
 

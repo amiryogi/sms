@@ -1,6 +1,6 @@
 ---
 id: assistant-settings
-title: AI Assistant settings and usage
+title: AI assistant settings and usage
 roles: [ADMIN, SUPER_ADMIN]
 modules: [assistant]
 routes: [/admin/assistant]
@@ -10,7 +10,7 @@ aliases: [AI assistant, assistant settings, chatbot, help assistant, provider, m
 verifiedAgainst: [frontend/src/pages/admin/AssistantSettings.jsx, backend/src/controllers/assistant.controller.js, backend/src/utils/assistantConfig.js]
 verifiedOn: 2026-11-16
 ---
-# AI Assistant settings
+# AI assistant settings
 
 ## Purpose
 Control the help assistant: whether it is on, who may use it, which AI provider and model
@@ -20,7 +20,7 @@ answer, the default language, limits, and how much it is used.
 Administrators and super administrators.
 
 ## Where to find it
-Left menu → **Settings** → **AI Assistant** (`/admin/assistant`). Tabs: **Assistant**,
+Left menu → **Settings** → **AI assistant** (`/admin/assistant`). Tabs: **Assistant**,
 **AI provider**, **Usage**.
 
 ## Steps
@@ -62,4 +62,4 @@ Left menu → **Settings** → **AI Assistant** (`/admin/assistant`). Tabs: **As
 - **"Provider busy (rate limit)" errors in Usage**: switch on the fallback provider.
 
 ## Related pages
-School Settings.
+School settings.

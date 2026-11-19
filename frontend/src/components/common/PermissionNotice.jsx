@@ -10,7 +10,7 @@ import { toast } from "../ui/toastStore";
 const PermissionNotice = () => {
   useEffect(() => {
     const onForbidden = () =>
-      toast.error("You don't have permission to do that.", { id: "forbidden" });
+      toast.error("You don't have permission to do that. Ask the school admin if you need access.", { id: "forbidden" });
     window.addEventListener(API_EVENTS.FORBIDDEN, onForbidden);
     return () => window.removeEventListener(API_EVENTS.FORBIDDEN, onForbidden);
   }, []);

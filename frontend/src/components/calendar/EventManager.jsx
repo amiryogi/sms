@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { CalendarPlus, Download, PartyPopper, Pencil, Plus, Printer, Search, Trash2 } from "lucide-react";
-import { Badge, Button, Card, EmptyState, IconButton, LoadingBlock, PageHeader, SelectInput, TextInput, buttonClasses, confirmDialog, toast } from "../ui";
+import { Badge, Button, Card, EmptyState, IconButton, LoadingBlock, PageHeader, PageShell, SelectInput, TextInput, buttonClasses, confirmDialog, toast } from "../ui";
 import { calendarService } from "../../api/calendarService";
 import { useAuth } from "../../context/AuthContext";
 import { useDatePrefs } from "../../hooks/useDatePrefs";
@@ -83,17 +83,16 @@ const EventManager = ({ kind }) => {
   const printKind = isHolidays ? "holidays" : "events";
 
   return (
-    <div>
+    <PageShell>
       <PageHeader
-        title={isHolidays ? "Holidays" : isAdmin ? "Events" : "My Class Events"}
+        title={isHolidays ? "Holidays" : isAdmin ? "Events" : "My class events"}
         description={
           isHolidays
-            ? "Days the school is closed. Weekly holidays are set in Calendar Settings."
+            ? "Days the school is closed. Weekly holidays are set in Calendar settings."
             : isAdmin
               ? "School events, meetings, activities and deadlines."
               : "Activities and deadlines you added for your classes."
         }
-        icon={isHolidays ? PartyPopper : CalendarPlus}
         actions={
           <>
             <Link to={`/calendar/print/${printKind}?year=${bsYear}`} className={buttonClasses({ variant: "secondary" })}>
@@ -139,34 +138,43 @@ const EventManager = ({ kind }) => {
           <LoadingBlock text="Loading…" />
         ) : rows.length === 0 ? (
           <EmptyState
+            compact
             icon={isHolidays ? PartyPopper : CalendarPlus}
             title={isHolidays ? `No holidays in ${bsYear} yet` : `No events in ${bsYear} yet`}
-            description={isHolidays && isAdmin ? "Import the government list, or add your school's own holidays." : "Add the first one with the button above."}
+            description={
+              isHolidays
+                ? isAdmin
+                  ? "Holidays close the school and stop the register. Import the government's list for the year, or add your school's own."
+                  : "Holidays the school adds for this year appear here."
+                : search || status
+                  ? "Nothing matches the search or status filter. Clear it to see the whole year."
+                  : "Events, meetings and deadlines you add appear here and on the calendar of everyone they are for. Use Add event to make the first one."
+            }
             action={isHolidays && isAdmin ? <Button icon={Download} onClick={() => setImporting(true)}>Import holidays</Button> : undefined}
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[46rem] text-sm">
+            <table className="w-full min-w-184 text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-600">
-                  <th className="px-4 py-2.5">Date</th>
-                  <th className="px-4 py-2.5">{isHolidays ? "Holiday" : "Event"}</th>
-                  <th className="px-4 py-2.5">For</th>
-                  {isHolidays && <th className="px-4 py-2.5">Source</th>}
-                  <th className="w-24 px-4 py-2.5 text-right">Actions</th>
+                <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium text-slate-500">
+                  <th scope="col" className="px-4 py-2.5 font-medium">Date</th>
+                  <th scope="col" className="px-4 py-2.5 font-medium">{isHolidays ? "Holiday" : "Event"}</th>
+                  <th scope="col" className="px-4 py-2.5 font-medium">For</th>
+                  {isHolidays && <th scope="col" className="px-4 py-2.5 font-medium">Source</th>}
+                  <th scope="col" className="w-24 px-4 py-2.5"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-200">
                 {rows.map((event) => (
-                  <tr key={event.id} data-testid="calendar-row">
-                    <td className="px-4 py-3 align-top whitespace-nowrap">
+                  <tr key={event.id} data-testid="calendar-row" className="hover:bg-slate-50">
+                    <td className="px-4 py-2.5 align-top whitespace-nowrap">
                       <span className="font-medium text-slate-900">{itemDateText(event, prefs)}</span>
                       <span className="block text-xs text-slate-500">
-                        {weekdayNameOf(event.startDate, prefs.language, true)} · {itemSecondaryDateText(event, prefs)}
+                        {weekdayNameOf(event.startDate, prefs.language, true)}, {itemSecondaryDateText(event, prefs)}
                       </span>
                       {!event.isAllDay && <span className="block text-xs text-slate-500">{itemTimeText(event, prefs.numerals)}</span>}
                     </td>
-                    <td className="px-4 py-3 align-top">
+                    <td className="px-4 py-2.5 align-top">
                       <span className="font-medium text-slate-900">{event.title}</span>
                       <span className="mt-1 flex flex-wrap items-center gap-1.5">
                         <CategoryChip category={event.category} />
@@ -176,17 +184,17 @@ const EventManager = ({ kind }) => {
                       </span>
                       {event.description && <span className="mt-1 block max-w-md truncate text-xs text-slate-500">{event.description}</span>}
                     </td>
-                    <td className="px-4 py-3 align-top text-slate-700">
+                    <td className="px-4 py-2.5 align-top text-slate-700">
                       {audienceText(event)}
                       {event.applicability && <span className="block max-w-56 text-xs text-slate-500">{event.applicability}</span>}
                     </td>
                     {isHolidays && (
-                      <td className="px-4 py-3 align-top text-xs text-slate-600">
+                      <td className="px-4 py-2.5 align-top text-xs text-slate-600">
                         {event.source || "Added by the school"}
                         {event.sourcePublishedDate && <span className="block text-slate-500">Published: {event.sourcePublishedDate} B.S.</span>}
                       </td>
                     )}
-                    <td className="px-4 py-3 text-right align-top whitespace-nowrap">
+                    <td className="px-2 py-1 text-right align-top whitespace-nowrap">
                       <IconButton icon={Pencil} label={`Edit ${event.title}`} variant="ghost" onClick={() => setDialog({ event })} />
                       <IconButton icon={Trash2} label={`Delete ${event.title}`} variant="ghost" onClick={() => remove(event)} />
                     </td>
@@ -197,13 +205,13 @@ const EventManager = ({ kind }) => {
           </div>
         )}
         {rows && total > rows.length && (
-          <p className="border-t border-slate-100 px-4 py-2.5 text-xs text-slate-500">Showing the first {rows.length}. Search to narrow the list.</p>
+          <p className="border-t border-slate-200 px-4 py-2.5 text-xs text-slate-500">Showing the first {rows.length}. Search to narrow the list.</p>
         )}
       </Card>
 
       <EventDialog open={Boolean(dialog)} kind={kind} event={dialog?.event || null} onClose={() => setDialog(null)} onSaved={load} />
       {isHolidays && <HolidayImportDialog open={importing} onClose={() => setImporting(false)} onImported={load} />}
-    </div>
+    </PageShell>
   );
 };
 

@@ -59,30 +59,3 @@ export function formatGpa(gpa) {
   const n = Number(gpa);
   return Number.isFinite(n) ? n.toFixed(2) : "—";
 }
-
-/**
- * Badge colours for a GPA. Derived from the band the GPA sits in rather than
- * hardcoded cutoffs, so a custom scale still colours sensibly.
- */
-export function gpaColor(gpa, bands = DEFAULT_GRADE_BANDS) {
-  const n = Number(gpa);
-  const grey = { bg: "#f1f5f9", text: "#475569" };
-  if (!Number.isFinite(n)) return grey;
-
-  const sorted = [...bands].sort((a, b) => b.gpa - a.gpa);
-  const max = sorted[0]?.gpa || 4.0;
-  const ratio = max > 0 ? n / max : 0;
-
-  if (ratio >= 0.9) return { bg: "#dcfce7", text: "#166534" }; // green
-  if (ratio >= 0.7) return { bg: "#dbeafe", text: "#1e40af" }; // blue
-  if (ratio >= 0.5) return { bg: "#fef3c7", text: "#92400e" }; // amber
-  if (ratio > 0) return { bg: "#fed7aa", text: "#9a3412" }; // orange
-  return { bg: "#fee2e2", text: "#991b1b" }; // red
-}
-
-/** Same palette, keyed by letter -- for grade pills. */
-export function gradeColor(grade, bands = DEFAULT_GRADE_BANDS) {
-  if (grade === "AB" || grade === "—") return { bg: "#f1f5f9", text: "#475569" };
-  const band = bands.find((b) => b.grade === grade);
-  return band ? gpaColor(band.gpa, bands) : { bg: "#f1f5f9", text: "#475569" };
-}

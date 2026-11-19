@@ -74,7 +74,7 @@ const SidebarNav = ({ sections, collapsed, onNavigate }) => {
     {sections.map((section) => (
       <div key={section.label} className="mb-5 last:mb-0">
         {/* Sentence case, not tracked-out caps: the labels in navigation.js
-            already read as words ("Exams & Results"), and a caps eyebrow over
+            already read as words ("Exams & results"), and a caps eyebrow over
             every group is one of the generic-template tells DESIGN.md names. */}
         {!collapsed && (
           <p className="mb-1.5 px-2.5 text-2xs font-medium text-slate-400">{section.label}</p>

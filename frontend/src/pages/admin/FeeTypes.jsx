@@ -4,7 +4,7 @@ import { Plus, Pencil, Trash2, Tags } from "lucide-react";
 import DataTable from "../../components/common/DataTable";
 import Modal from "../../components/common/Modal";
 import { Input, Button } from "../../components/common/FormElements";
-import { PageHeader, IconButton, Checkbox, Switch, DialogActions, toast, confirmDialog } from "../../components/ui";
+import { PageHeader, PageShell, IconButton, Checkbox, Switch, DialogActions, toast, confirmDialog } from "../../components/ui";
 import { feeService } from "../../api/feeService";
 import RoleGuard from "../../components/auth/RoleGuard";
 
@@ -105,32 +105,29 @@ const FeeTypes = () => {
     {
       header: "Fee type",
       render: (row) => (
-        <div className="flex items-center gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
-            <Tags size={16} aria-hidden="true" />
-          </span>
-          <div className="min-w-0">
-            <p className="truncate font-medium text-slate-900">{row.name}</p>
-            {row.description && <p className="max-w-md truncate text-xs text-slate-500">{row.description}</p>}
-          </div>
+        <div className="min-w-0">
+          <p className="truncate font-medium text-slate-900">{row.name}</p>
+          {row.description && <p className="max-w-md truncate text-xs text-slate-500">{row.description}</p>}
         </div>
       ),
     },
     {
       header: "Active",
       width: "120px",
+      // The column header alone does not name a switch for a screen reader.
       render: (row) => (
         <Switch
           checked={row.isActive}
           disabled={togglingId === row.id}
           onChange={() => toggleStatus(row)}
-          id={`fee-type-active-${row.id}`}
+          aria-label={`${row.name} active`}
         />
       ),
     },
     {
       header: <span className="sr-only">Actions</span>,
       width: "96px",
+      action: true,
       render: (row) => (
         <div className="flex justify-end gap-1">
           <IconButton icon={Pencil} label={`Edit ${row.name}`} onClick={() => openModal(row)} />
@@ -144,10 +141,9 @@ const FeeTypes = () => {
   ];
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <PageShell>
       <PageHeader
-        icon={Tags}
-        title="Fee Types"
+        title="Fee types"
         description="Fee categories such as tuition, lab, sports or transport. Inactive types can't be added to new fee structures."
         actions={<Button icon={Plus} onClick={() => openModal()}>Add fee type</Button>}
       />
@@ -184,7 +180,7 @@ const FeeTypes = () => {
           </DialogActions>
         </form>
       </Modal>
-    </div>
+    </PageShell>
   );
 };
 

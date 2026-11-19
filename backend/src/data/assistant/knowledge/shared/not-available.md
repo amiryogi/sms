@@ -19,9 +19,9 @@ plainly that the system does not have it, and suggest what does exist where that
 ## Not built
 | Asked about | Answer |
 |---|---|
-| Timetable / class routine | Not available. Exam dates are on **Calendar → Exam Schedule**. |
-| CAS (continuous assessment) or formative assessment | Not available. Exams take theory and practical marks on **Marks Entry**. |
-| A teacher view of each student's progress | Not available. Teachers see their class list on **My Students** and enter marks on **Marks Entry**; results reach students and parents through published report cards. |
+| Timetable / class routine | Not available. Exam dates are on **Calendar → Exam schedule**. |
+| CAS (continuous assessment) or formative assessment | Not available. Exams take theory and practical marks on **Marks entry**. |
+| A teacher view of each student's progress | Not available. Teachers see their class list on **My students** and enter marks on **Marks entry**; results reach students and parents through published report cards. |
 | An attendance report page for administrators | Not available in the web app. Teachers take the register; students and parents see it on **Attendance**; report cards show days present. |
 | Registering a new school or managing several schools | Not available. The system runs one school. |
 | Library, transport, hostel, payroll | Not available. |

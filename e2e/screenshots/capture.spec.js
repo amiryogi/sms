@@ -47,7 +47,7 @@ shot("admin-report-cards", "admin", "/admin/report-cards", async (page) => {
   await selects.nth(1).selectOption(String(scope.classId)).catch(() => {});
   await page.waitForLoadState("networkidle");
   await selects.nth(2).selectOption(String(scope.sectionId)).catch(() => {});
-  await page.getByRole("button", { name: "View Report Cards" }).click();
+  await page.getByRole("button", { name: "View report cards" }).click();
 });
 shot("admin-school-settings", "admin", "/admin/school-settings", async (page) => {
   await page.getByRole("tab", { name: "Report card" }).click();

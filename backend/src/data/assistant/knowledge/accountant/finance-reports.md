@@ -19,7 +19,7 @@ See collections and dues at a glance, and produce reports to print or download.
 Accountants and administrators.
 
 ## Where to find it
-- **Finance Overview** / **Dashboard** (`/finance/dashboard`): collection figures and charts.
+- **Finance overview** / **Dashboard** (`/finance/dashboard`): collection figures and charts.
 - **Reports** (`/finance/reports`).
 
 ## Steps
@@ -27,7 +27,7 @@ Accountants and administrators.
 2. Choose the report: **Collections**, **Outstanding**, **Discounts** or **Reversals**.
 3. Set the filters: **Academic year**, **Class**, **Fee type**, **From** / **To**, **Method**,
    **Status**, **Group by**, **Overdue only** (depending on the report).
-4. Click **Print**, or **CSV** to download a spreadsheet.
+4. Click **Print**, or **Download CSV** to download a spreadsheet.
 
 ## What you should see
 The report table. Every figure comes from the fee ledger.
@@ -40,4 +40,4 @@ The report table. Every figure comes from the fee ledger.
 - "Could not download the CSV": try again; check you are still signed in.
 
 ## Related pages
-Student Accounts, Transactions (day book).
+Student accounts, Transactions (day book).

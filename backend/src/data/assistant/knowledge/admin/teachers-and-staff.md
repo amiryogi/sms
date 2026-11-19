@@ -19,13 +19,13 @@ Create sign-ins for teachers, exam officers and accountants.
 Administrators.
 
 ## Where to find it
-Left menu → **People** → **Teachers & Staff** (`/admin/teachers`).
+Left menu → **People** → **Teachers & staff** (`/admin/teachers`).
 
 ## Steps
 1. Click **Add staff member**.
 2. Choose the **Role**:
    - **Teacher:** enters marks and attendance only for the subjects and sections assigned to them.
-   - **Exam Officer:** enters marks for any subject without an assignment. No access to fees.
+   - **Exam officer:** enters marks for any subject without an assignment. No access to fees.
    - **Accountant:** manages fee types, structures and payments; read-only student directory.
 3. Type **First name**, optional **Middle name**, **Last name**, **Phone**, optional **Email**.
 4. **Username** and **Password** are optional: left empty, a number like `svi-0001` is generated.
@@ -36,11 +36,11 @@ The person in the list with their role badge. They must choose their own passwor
 sign-in.
 
 ## Common mistakes
-- Expecting a new teacher to see classes: assign them on **Teacher Assignment** too.
+- Expecting a new teacher to see classes: assign them on **Teacher assignment** too.
 - Looking for an "Administrator" role here: administrators are not created on this page.
 
 ## Troubleshooting
 - **Reset password:** the key button on the person's row.
 
 ## Related pages
-Teacher Assignment.
+Teacher assignment.

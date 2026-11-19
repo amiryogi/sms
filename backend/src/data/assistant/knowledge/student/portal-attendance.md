@@ -38,4 +38,4 @@ The days taken so far and the attendance rate.
 - Parents with the mobile app get a notification when their child is marked absent today.
 
 ## Related pages
-Dashboard, Report Card (shows days present).
+Dashboard, Report card (shows days present).

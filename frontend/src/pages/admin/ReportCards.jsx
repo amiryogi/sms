@@ -1,10 +1,8 @@
 ﻿import React, { useState, useEffect } from "react";
 import {
-  Award,
   CheckCircle2,
   Eye,
   EyeOff,
-  FileText,
   Printer,
   RefreshCw,
   Users,
@@ -15,7 +13,7 @@ import { Select, Button } from "../../components/common/FormElements";
 import NepalReportCard from "../../components/common/NepalReportCard";
 import BulkReportCardPrint from "../../components/common/BulkReportCardPrint";
 import WorkingDaysEditor from "../../components/admin/WorkingDaysEditor";
-import { PageHeader, Card, Badge, EmptyState, LoadingBlock, StatCard, StatGroup, toast, confirmDialog } from "../../components/ui";
+import { PageHeader, PageShell, Card, Badge, EmptyState, LoadingBlock, StatCard, StatGroup, toast, confirmDialog } from "../../components/ui";
 import { reportCardService } from "../../api/reportCardService";
 import { examService } from "../../api/examService";
 import { academicService } from "../../api/academicService";
@@ -176,7 +174,7 @@ const ReportCards = () => {
     setBulkPrintData(null);
   };
 
-  const examOptions = exams.map((e) => ({ value: e.id.toString(), label: `${e.name} · ${e.status.toLowerCase()}` }));
+  const examOptions = exams.map((e) => ({ value: e.id.toString(), label: `${e.name} (${e.status.toLowerCase()})` }));
   const classOptions = classes.map((c) => ({ value: c.id.toString(), label: c.name }));
   const sectionOptions = sections.map((s) => ({ value: s.id.toString(), label: s.name }));
 
@@ -187,10 +185,9 @@ const ReportCards = () => {
   const somePublished = students.some((s) => s.reportCard?.isPublished);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <PageShell>
       <PageHeader
-        icon={Award}
-        title="Report Cards"
+        title="Report cards"
         description="Generate grade sheets from entered marks, check them, then publish to students and parents."
       />
 
@@ -209,7 +206,7 @@ const ReportCards = () => {
             disabled={!selectedClass}
           />
           <Button onClick={fetchReportCards} loading={loading} icon={Search} className="mb-4">
-            View Report Cards
+            View report cards
           </Button>
         </div>
       </Card>
@@ -227,7 +224,7 @@ const ReportCards = () => {
           <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-end">
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" icon={RefreshCw} onClick={handleGenerate} loading={generating} disabled={students.length === 0} data-guide="reportCards.generate">
-                {allGenerated ? "Regenerate" : "Generate"} Report Cards
+                {allGenerated ? "Regenerate" : "Generate"} report cards
               </Button>
               {allGenerated && !allPublished && (
                 <Button variant="primary" icon={Eye} onClick={() => setPublished(true)} loading={publishing} data-guide="reportCards.publish">
@@ -236,23 +233,20 @@ const ReportCards = () => {
               )}
               {somePublished && (
                 <Button variant="secondary" icon={EyeOff} onClick={() => setPublished(false)} loading={publishing}>
-                  Unpublish All
+                  Unpublish all
                 </Button>
               )}
               {allGenerated && (
                 <Button icon={Printer} onClick={handleBulkPrint} loading={bulkPrintLoading} data-guide="reportCards.printAll">
-                  Print All
+                  Print all
                 </Button>
               )}
             </div>
           </div>
 
-          <div className="mt-5 border-t border-slate-100 pt-4">
+          <div className="mt-5 border-t border-slate-200 pt-4">
             <p className="mb-3 text-sm text-slate-600">
-              <span className="font-medium text-slate-900">{summary.examName}</span>
-              <span className="text-slate-400"> · </span>
-              {summary.class?.name} {summary.section?.name}
-              <span className="text-slate-400"> · </span>
+              <span className="font-medium text-slate-900">{summary.examName}</span>, {summary.class?.name} {summary.section?.name},{" "}
               {summary.academicYear}
             </p>
             <WorkingDaysEditor attendance={summary.attendance} onSaved={fetchReportCards} />
@@ -261,56 +255,57 @@ const ReportCards = () => {
       )}
 
       {reportData && (
-        <div className="overflow-hidden rounded-card border border-slate-200/80 bg-white shadow-card">
-          <div className="border-b border-slate-100 px-5 py-3.5">
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <div className="border-b border-slate-200 px-5 py-3.5">
             <h2 className="text-base font-semibold text-slate-900">Students</h2>
           </div>
           {students.length === 0 ? (
-            <EmptyState icon={Users} title="No students in this section" description="Enrol students on the Students page first." />
+            <EmptyState compact icon={Users} title="No students in this section" description="Enrol students on the Students page first." />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-max text-sm">
-                <thead className="bg-slate-50 text-xs font-semibold tracking-wide text-slate-500 uppercase">
-                  <tr>
-                    <th className="col-roll px-4 py-2.5 text-left">Roll</th>
-                    <th className="col-name px-4 py-2.5 text-left">Student</th>
-                    <th className="px-4 py-2.5 text-center">Subjects</th>
-                    <th className="col-marks px-4 py-2.5 text-right">Total</th>
-                    <th className="px-4 py-2.5 text-right">%</th>
-                    <th className="px-4 py-2.5 text-center">GPA</th>
-                    <th className="px-4 py-2.5 text-center">Grade</th>
-                    <th className="px-4 py-2.5 text-center">Rank</th>
-                    <th className="px-4 py-2.5 text-center">Result</th>
-                    <th className="px-4 py-2.5 text-center">Card</th>
-                    <th className="px-4 py-2.5"><span className="sr-only">Actions</span></th>
+                <thead className="bg-slate-50 text-xs font-medium text-slate-500">
+                  <tr className="[&>th]:border-b [&>th]:border-slate-200 [&>th]:px-4 [&>th]:py-2.5 [&>th]:font-medium">
+                    <th scope="col" className="col-roll text-right">Roll</th>
+                    <th scope="col" className="col-name text-left">Student</th>
+                    <th scope="col" className="text-center">Subjects</th>
+                    <th scope="col" className="col-marks text-right">Total</th>
+                    <th scope="col" className="text-right">%</th>
+                    <th scope="col" className="text-right">GPA</th>
+                    <th scope="col" className="text-center">Grade</th>
+                    <th scope="col" className="text-right">Rank</th>
+                    <th scope="col" className="text-center">Result</th>
+                    <th scope="col" className="text-center">Card</th>
+                    <th scope="col"><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-200 [&_td]:px-4 [&_td]:py-2.5">
                   {students.map((s) => {
                     const total = (s.passedSubjects || 0) + (s.failedSubjects || 0);
                     const rank = s.reportCard?.classRank;
                     return (
-                      <tr key={s.studentId} className="hover:bg-slate-50/70">
-                        <td className="col-roll px-4 py-3 text-slate-500 tabular-nums">{s.rollNumber}</td>
-                        <td className="col-name px-4 py-3 font-medium text-slate-900">
+                      <tr key={s.studentId} className="hover:bg-slate-50">
+                        <td className="col-roll text-right text-slate-500 tabular-nums">{s.rollNumber}</td>
+                        <td className="col-name font-medium text-slate-900">
                           {fullName(s)}
                         </td>
-                        <td className="px-4 py-3 text-center tabular-nums">
-                          <span className={s.failedSubjects > 0 ? "text-red-600" : "text-emerald-700"}>{s.passedSubjects || 0}</span>
+                        <td className="text-center tabular-nums">
+                          {/* A failed subject is a status; a clean pass is just the count. */}
+                          <span className={s.failedSubjects > 0 ? "font-medium text-risk" : "text-slate-900"}>{s.passedSubjects || 0}</span>
                           <span className="text-slate-400">/{total}</span>
                         </td>
-                        <td className="col-marks px-4 py-3 text-right tabular-nums">
+                        <td className="col-marks text-right tabular-nums">
                           <span className="font-medium text-slate-900">{s.totalObtained?.toFixed(1) || 0}</span>
                           <span className="text-slate-400">/{s.totalFull || 0}</span>
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums">{s.percentage?.toFixed(1)}%</td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="text-right tabular-nums">{s.percentage?.toFixed(1)}%</td>
+                        <td className="text-right">
                           <span className="font-semibold text-slate-900 tabular-nums">{s.gpa?.toFixed(2)}</span>
                         </td>
-                        <td className="px-4 py-3 text-center">
-                          <Badge tone={s.isPassed ? "brand" : "danger"}>{s.overallGrade || "—"}</Badge>
+                        <td className="text-center">
+                          <Badge tone={s.isPassed ? "neutral" : "danger"}>{s.overallGrade || "—"}</Badge>
                         </td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="text-right">
                           {rank ? (
                             <span className="inline-flex items-center gap-1 tabular-nums">
                               {rank <= 3 && <Medal size={15} className={MEDAL[rank]} aria-hidden="true" />}#{rank}
@@ -319,10 +314,10 @@ const ReportCards = () => {
                             <span className="text-slate-300">—</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="text-center">
                           {s.isPassed ? <Badge tone="success">Passed</Badge> : <Badge tone="danger">Failed</Badge>}
                         </td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="text-center">
                           {s.reportCard ? (
                             s.reportCard.isPublished ? (
                               <Badge tone="success" icon={CheckCircle2}>Published</Badge>
@@ -333,8 +328,8 @@ const ReportCards = () => {
                             <Badge>Not generated</Badge>
                           )}
                         </td>
-                        <td className="px-4 py-2 text-right">
-                          <Button size="sm" variant="ghost" icon={Printer} onClick={() => handlePreview(s.studentId)}>
+                        <td className="text-right py-1!">
+                          <Button variant="ghost" icon={Printer} onClick={() => handlePreview(s.studentId)}>
                             View
                           </Button>
                         </td>
@@ -351,7 +346,6 @@ const ReportCards = () => {
       {!reportData && !loading && (
         <Card>
           <EmptyState
-            icon={FileText}
             title="Choose a section to start"
             description="Pick an exam, class and section above. Only published or locked exams are listed."
           />
@@ -373,7 +367,7 @@ const ReportCards = () => {
         ) : null)}
 
       {bulkPrintOpen && <BulkReportCardPrint data={bulkPrintData} onClose={closeBulkPrint} loading={bulkPrintLoading} />}
-    </div>
+    </PageShell>
   );
 };
 
