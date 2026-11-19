@@ -13,7 +13,7 @@ verifiedOn: 2026-11-15
 # Subjects and class subjects
 
 ## Purpose
-**Subjects** is the master list. **Class Subjects** says which subjects each class studies this
+**Subjects** is the master list. **Class subjects** says which subjects each class studies this
 year, with theory and practical full marks and credit hours. Exams copy these settings when they
 are created.
 
@@ -21,7 +21,7 @@ are created.
 Administrators.
 
 ## Where to find it
-Left menu → **Academics** → **Subjects** (`/admin/subjects`) and **Class Subjects**
+Left menu → **Academics** → **Subjects** (`/admin/subjects`) and **Class subjects**
 (`/admin/class-subjects`).
 
 ## Steps
@@ -32,7 +32,7 @@ Left menu → **Academics** → **Subjects** (`/admin/subjects`) and **Class Sub
 4. Save.
 
 **Attach it to a class**
-1. **Class Subjects** → choose the **Academic year** and **Class**.
+1. **Class subjects** → choose the **Academic year** and **Class**.
 2. Click **Add subject to class** and choose the **Subject**.
 3. Set **Theory full marks**, **Practical full marks** (internal / practical), and credit hours
    (**Theory credit hours (TH)**, **Practical credit hours (IN)**) shown on the grade sheet.
@@ -51,4 +51,4 @@ The subject listed for the class. A subject marked **Not configured** still need
   number and save again.
 
 ## Related pages
-Exams, Teacher Assignment.
+Exams, Teacher assignment.

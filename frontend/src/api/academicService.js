@@ -1,7 +1,7 @@
 import apiClient from './apiClient';
 
 export const academicService = {
-  // Academic Years
+  // Academic years
   getAcademicYears: async () => {
     const response = await apiClient.get('/academic-years');
     return response.data;
@@ -78,7 +78,7 @@ export const academicService = {
     return response.data;
   },
 
-  // Class Subjects (subjects assigned to a class for an academic year)
+  // Class subjects (subjects assigned to a class for an academic year)
   getClassSubjects: async (params = {}) => {
     const response = await apiClient.get('/class-subjects', { params });
     return response.data;

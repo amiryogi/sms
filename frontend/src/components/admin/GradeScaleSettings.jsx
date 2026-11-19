@@ -5,7 +5,7 @@ import { cn } from "../../lib/cn";
 import { Alert, Badge, Button, Card, CardHeader, Field, IconButton, LoadingBlock, TextInput, toast, confirmDialog } from "../ui";
 
 /**
- * School Settings -> Grade Scales.
+ * School settings -> Grade Scales.
  *
  * The backend validates everything (contiguous bands, no gaps or overlaps,
  * 0-100 coverage) and returns per-field errors keyed like `bands[2].max`;
@@ -173,7 +173,7 @@ const GradeScaleSettings = () => {
     }
   };
 
-  const errorText = (key) => (errors[key] ? <p className="field-error mt-1 text-xs font-medium text-red-600">{errors[key]}</p> : null);
+  const errorText = (key) => (errors[key] ? <p role="alert" className="field-error mt-1 text-xs font-medium text-risk">{errors[key]}</p> : null);
 
   return (
     <Card className="grade-scales">
@@ -241,13 +241,12 @@ const GradeScaleSettings = () => {
                     title={b.description || undefined}
                     className={cn(
                       "inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs ring-1 ring-inset",
-                      b.isPassing ? "bg-slate-50 text-slate-700 ring-slate-200" : "bg-red-50 text-red-700 ring-red-200",
+                      b.isPassing ? "bg-slate-50 text-slate-700 ring-slate-200" : "bg-risk-surface text-risk ring-risk-line",
                     )}
                   >
                     <strong className="font-semibold">{b.grade}</strong>
                     <span className="tabular-nums">{b.min}–{b.max}%</span>
-                    <span className="text-slate-400">·</span>
-                    <span className="tabular-nums">{b.gpa.toFixed(1)}</span>
+                    <span className="text-slate-500 tabular-nums">GPA {b.gpa.toFixed(1)}</span>
                   </span>
                 ))}
               </div>

@@ -86,7 +86,7 @@ const ResetPasswordDialog = ({ account, onClose }) => {
   };
 
   return (
-    <Modal isOpen onClose={onClose} title={result ? "Password reset" : `Reset password · ${account.name}`} size="md">
+    <Modal isOpen onClose={onClose} title={result ? "Password reset" : `Reset password for ${account.name}`} size="md">
       {result ? (
         <CredentialsResult credential={result} onDone={onClose} />
       ) : (

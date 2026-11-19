@@ -4,7 +4,7 @@ import { FileSpreadsheet, Printer, Download, TrendingUp, AlertTriangle, BadgePer
 import { useAuth } from "../../context/AuthContext";
 import { feeService } from "../../api/feeService";
 import { academicService } from "../../api/academicService";
-import { PageHeader, Tabs, Card, Button, Field, SelectInput, NepaliDatePicker, Switch, EmptyState, LoadingBlock, toast } from "../../components/ui";
+import { PageHeader, PageShell, Tabs, Card, Button, Field, SelectInput, NepaliDatePicker, Switch, EmptyState, LoadingBlock, Spinner, toast } from "../../components/ui";
 import { PAYMENT_METHODS, methodLabel } from "../../components/finance/financeLabels";
 import { cn } from "../../lib/cn";
 import { formatCurrency, formatDate, formatDateTime, todayAd } from "../../utils/format";
@@ -141,8 +141,8 @@ const Reports = () => {
   );
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
-      <PageHeader icon={FileSpreadsheet} title="Financial reports" description="Print them or download a spreadsheet. Every figure comes from the fee ledger." className="print:hidden" />
+    <PageShell>
+      <PageHeader title="Financial reports" description="Print them or download a spreadsheet. Every figure comes from the fee ledger." className="print:hidden" />
 
       <Tabs className="print:hidden" value={name} onChange={(v) => setSearchParams(v === "collections" ? {} : { report: v })} tabs={REPORTS} />
 
@@ -214,36 +214,43 @@ const Reports = () => {
       ) : !result || result.report !== name ? (
         <Card><LoadingBlock text="Building report…" /></Card>
       ) : (
-        <Card padding="none" className={cn("overflow-hidden transition-opacity print:border-0 print:shadow-none", loading && "opacity-60")} aria-busy={loading}>
+        <Card padding="none" className="overflow-hidden print:border-0 print:shadow-none" aria-busy={loading}>
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-5 py-4">
             <div className="min-w-0">
               <p className="hidden text-sm font-semibold text-slate-900 print:block">{user?.school?.name}</p>
-              <h2 className="text-lg font-semibold text-slate-900">{result.title}</h2>
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
+                {result.title}
+                {loading && (
+                  <span role="status" className="inline-flex items-center gap-1.5 text-xs font-normal text-slate-500 print:hidden">
+                    <Spinner size={14} /> Updating
+                  </span>
+                )}
+              </h2>
               <p className="text-sm text-slate-500">{result.subtitle}</p>
               <p className="hidden text-xs text-slate-500 print:block">Printed {formatDateTime(new Date())}</p>
             </div>
             <div className="flex gap-2 print:hidden">
               <Button variant="secondary" icon={Printer} onClick={() => window.print()} disabled={!result.rows.length}>Print</Button>
-              <Button variant="secondary" icon={Download} loading={downloading} onClick={download} disabled={!result.rows.length} data-guide="reports.export">CSV</Button>
+              <Button variant="secondary" icon={Download} loading={downloading} onClick={download} disabled={!result.rows.length} data-guide="reports.export">Download CSV</Button>
             </div>
           </div>
           {result.rows.length === 0 ? (
-            <EmptyState icon={FileSpreadsheet} title="Nothing to report" description="No records match these filters." />
+            <EmptyState compact icon={FileSpreadsheet} title="Nothing to report" description="No records match these filters." />
           ) : (
             <div className="overflow-x-auto print:overflow-visible">
-              <table className="w-full min-w-[640px] text-sm print:min-w-0 print:text-xs">
-                <thead className="bg-slate-50 text-left text-xs font-medium tracking-wide text-slate-500 uppercase print:bg-white">
+              <table className="w-full min-w-160 text-sm print:min-w-0 print:text-xs">
+                <thead className="bg-slate-50 text-left text-xs font-medium text-slate-500 print:bg-white">
                   <tr>
                     {result.columns.map((c) => (
-                      <th key={c.key} className={cn("px-4 py-2.5 font-medium whitespace-nowrap", numeric(c) && "text-right")}>{c.label}</th>
+                      <th key={c.key} scope="col" className={cn("border-b border-slate-200 px-4 py-2.5 font-medium whitespace-nowrap", numeric(c) && "text-right")}>{c.label}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-200">
                   {result.rows.map((row, idx) => (
                     <tr key={row.key ?? row.studentId ?? row.receiptNumber ?? idx} className="break-inside-avoid">
                       {result.columns.map((c) => (
-                        <td key={c.key} className={cn("px-4 py-2", numeric(c) && "text-right tabular-nums whitespace-nowrap", c.key === "reason" && "max-w-xs")}>
+                        <td key={c.key} className={cn("px-4 py-2.5", numeric(c) && "text-right tabular-nums whitespace-nowrap", c.key === "reason" && "max-w-xs")}>
                           {cellValue(c, row[c.key])}
                         </td>
                       ))}
@@ -252,7 +259,7 @@ const Reports = () => {
                 </tbody>
                 {result.totals && (
                   <tfoot>
-                    <tr className="border-t-2 border-slate-200 bg-slate-50/70 font-semibold text-slate-900 print:bg-white">
+                    <tr className="border-t border-slate-300 bg-slate-50 font-semibold text-slate-900 print:bg-white">
                       {result.columns.map((c) => (
                         <td key={c.key} className={cn("px-4 py-2.5", numeric(c) && "text-right tabular-nums whitespace-nowrap")}>
                           {result.totals[c.key] === undefined ? "" : typeof result.totals[c.key] === "string" ? result.totals[c.key] : cellValue(c, result.totals[c.key])}
@@ -266,7 +273,7 @@ const Reports = () => {
           )}
         </Card>
       )}
-    </div>
+    </PageShell>
   );
 };
 

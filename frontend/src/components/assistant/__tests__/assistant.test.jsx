@@ -104,10 +104,10 @@ describe("answer rendering", () => {
     );
 
   test("renders steps, bold labels and Nepali text", () => {
-    const html = render("हाजिरी लिन:\n\n1. **Attendance** खोल्नुहोस्\n2. **Save Attendance** थिच्नुहोस्");
+    const html = render("हाजिरी लिन:\n\n1. **Attendance** खोल्नुहोस्\n2. **Save attendance** थिच्नुहोस्");
     expect(html).toContain("<ol");
     expect(html).toContain("<strong");
-    expect(html).toContain("Save Attendance");
+    expect(html).toContain("Save attendance");
     expect(html).toContain("हाजिरी लिन");
   });
 

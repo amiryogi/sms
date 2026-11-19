@@ -23,8 +23,8 @@ their class (parents: their children's classes; teachers: classes they teach).
 Left menu → **Calendar** section:
 - **Calendar** (`/calendar`): today in both calendars, upcoming holidays, exams and events, and a
   month, week or list view.
-- **Exam Schedule** (`/calendar/exams`): exam dates for the year.
-- **Academic Calendar** (`/calendar/academic`): the whole B.S. year on one page, holidays in red.
+- **Exam schedule** (`/calendar/exams`): exam dates for the year.
+- **Academic calendar** (`/calendar/academic`): the whole B.S. year on one page, holidays in red.
 
 ## Steps
 1. Open **Calendar**.
@@ -47,5 +47,5 @@ Holidays and weekly holidays in red; exams, events and deadlines on their days.
 - A holiday is missing: an administrator adds or imports holidays.
 
 ## Related pages
-Events (`/calendar/events`, administrators and teachers), Holidays and Calendar Settings
+Events (`/calendar/events`, administrators and teachers), Holidays and Calendar settings
 (administrators).

@@ -10,13 +10,14 @@ are done** and on `main`.
 
 ---
 
-## ▶ Pick up here: visual redesign, merge then wave 4 (2026-11-18) — branch `feature/visual-redesign`
+## ▶ Pick up here: visual redesign, review and merge (2026-11-19) — branches `feature/visual-redesign` and `feature/visual-redesign-wave4`
 
 Plan and full handover: **[plans/visual-identity-redesign.md](plans/visual-identity-redesign.md)**.
 The design rules themselves: **[`frontend/DESIGN.md`](../frontend/DESIGN.md)**.
 
-**The work is on `feature/visual-redesign`, not `main`.** On another machine:
-`git fetch origin && git checkout feature/visual-redesign`, then `cd frontend && npm install`.
+**The work is not on `main` yet.** Waves 0–3 are on `feature/visual-redesign` (pull request #8);
+wave 4 is on `feature/visual-redesign-wave4`, branched from it. On another machine:
+`git fetch origin && git checkout feature/visual-redesign-wave4`, then `cd frontend && npm install`.
 
 A new visual identity for the app — "the school register", grounded in the paper objects this
 software replaces. The owner asked for a real identity rather than token polish, scoped **out**
@@ -41,17 +42,24 @@ first. No dark mode.
   the printed NEB sheet had moved up 1px because the redesign's type scale reached it. Fixed
   by pinning Tailwind's default `--text-*` tokens inside the print selectors, which now also
   cover the A4 statement and day book (they had been printing in the new font). Plan §3.
-- **Next:** merge `feature/visual-redesign` into `main` (pull request), then wave 4 — the
-  ~55-page tail and the copy pass.
+- **Done (wave 4), on the wave 4 branch:** every app page on `PageShell`; raw colours on the
+  tokens and decoration made neutral; compact empty states; hand-built switches became
+  `SegmentedControl`s; register tables throughout; `DashboardGreeting`; a kit reference in
+  `frontend/src/components/ui/README.md`; the copy pass, including a coordinated sentence-case
+  rename of 38 page, sidebar and button names across the pages, help documents, walkthroughs
+  and tests. The calendar printout joined the print pin. Plan §5a.
+- **Next:** review and merge pull request #8 (waves 0–3), then the wave 4 branch. Plan §5a
+  lists what is left (kit accessibility gaps, a calmer row delete button, re-taking the
+  marketing screenshots).
 - **⚠ Before touching `--font-sans`, the slate ladder or any `--text-*` token, read §3 of the
   plan.** The printed report card, slips, statement and day book resolve those tokens, so a
   token change reaches printed output and both Playwright pixel baselines **without any print
-  file appearing in the diff**. `app.css` shadows them back inside the eight print selectors,
+  file appearing in the diff**. `app.css` shadows them back inside the nine print selectors,
   and tests guard it.
-- **Verified:** frontend lint 0 errors, build passes, 119 vitest tests. **E2E: 90 passed,
-  1 skipped** on the local MySQL test database (`sms_test`; set up with
+- **Verified (after wave 4):** frontend lint 0 errors, build passes, 119 vitest tests; backend
+  706 unit tests. **E2E: 90 passed, 1 skipped** on the local MySQL test database (`sms_test`; set up with
   `node scripts/with-test-db.js npm run db:migrate:deploy` and `… npm run seed` in `backend/`).
-  Wave 3 pages also checked by hand in the browser at 1440px and 390px with a clean console.
+  Wave 3 and a sample of wave 4 pages also checked by eye in the browser with a clean console.
 - **Marketing screenshots:** regenerated on the test database after wave 3 (all 22, every image
   looked at). The capture no longer assumes the date: the calendar shows whichever of this and
   next month has more events, the report shows the last six months by month, and the account

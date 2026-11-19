@@ -6,7 +6,7 @@ import NoticesFeed from "../../components/common/NoticesFeed";
 import { teacherService } from "../../api/teacherService";
 import { examService } from "../../api/examService";
 import { Badge, Card, CardHeader, EmptyState, Skeleton, PageShell, StatCard } from "../../components/ui";
-import { formatDate } from "../../utils/format";
+import DashboardGreeting from "../../components/common/DashboardGreeting";
 
 const QUICK_ACTIONS = [
   { to: "/teacher/attendance", label: "Take attendance", hint: "Today's register", icon: CalendarCheck },
@@ -14,11 +14,6 @@ const QUICK_ACTIONS = [
   { to: "/teacher/assignments", label: "Assignments", hint: "Set and grade work", icon: NotebookPen },
   { to: "/teacher/students", label: "My students", hint: "Class lists", icon: Users },
 ];
-
-const greeting = () => {
-  const h = new Date().getHours();
-  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
-};
 
 const TeacherDashboard = () => {
   const { user } = useAuth();
@@ -59,20 +54,16 @@ const TeacherDashboard = () => {
   const classTeacherOf = classes.filter((c) => c.isClassTeacher).map((c) => c.name);
   return (
     <PageShell>
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-sm text-slate-500">{formatDate(new Date())}</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
-            {greeting()}, {user?.firstName}
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">Your classes, marks and notices in one place.</p>
-        </div>
-        {classTeacherOf.length > 0 && (
-          <Badge tone="brand" icon={Star} className="px-3 py-1 text-sm">
-            Class teacher · {classTeacherOf.join(", ")}
-          </Badge>
-        )}
-      </div>
+      <DashboardGreeting
+        subtitle="Your classes, marks and notices in one place."
+        aside={
+          classTeacherOf.length > 0 && (
+            <Badge icon={Star} className="px-3 py-1 text-sm">
+              Class teacher of {classTeacherOf.join(", ")}
+            </Badge>
+          )
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Class sections" value={classes.length} loading={loading} icon={BookOpen} sub="Where you teach a subject" />
@@ -104,14 +95,14 @@ const TeacherDashboard = () => {
               {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
             </div>
           ) : classes.length === 0 ? (
-            <EmptyState icon={BookOpen} title="No classes yet" description="Ask the school admin to assign you to a class and subject for this year." />
+            <EmptyState compact icon={BookOpen} title="No classes yet" description="Ask the school admin to assign you to a class and subject for this year." />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {classes.map((c) => (
-                <div key={c.key} className="flex flex-col rounded-xl border border-slate-200 p-4 transition-colors hover:border-brand-200">
+                <div key={c.key} className="flex flex-col rounded-xl border border-slate-200 p-4">
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-semibold text-slate-900">{c.name}</h3>
-                    {c.isClassTeacher && <Badge tone="brand">Class teacher</Badge>}
+                    {c.isClassTeacher && <Badge>Class teacher</Badge>}
                   </div>
                   <div className="mt-2 flex flex-1 flex-wrap content-start gap-1.5">
                     {c.subjects.map((s) => (
@@ -139,16 +130,16 @@ const TeacherDashboard = () => {
               <Link
                 key={a.to}
                 to={a.to}
-                className="group flex items-center gap-3 rounded-xl border border-slate-200 p-3 transition-all hover:border-brand-200 hover:bg-brand-50/40 focus-visible:outline-2 focus-visible:outline-brand-600"
+                className="group flex items-center gap-3 rounded-xl border border-slate-200 p-3 transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
               >
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors group-hover:bg-brand-100 group-hover:text-brand-700">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
                   <a.icon size={17} aria-hidden="true" />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium text-slate-900">{a.label}</span>
                   <span className="block truncate text-xs text-slate-500">{a.hint}</span>
                 </span>
-                <ChevronRight size={16} className="text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-500" aria-hidden="true" />
+                <ChevronRight size={16} className="text-slate-300 group-hover:text-slate-500" aria-hidden="true" />
               </Link>
             ))}
           </div>

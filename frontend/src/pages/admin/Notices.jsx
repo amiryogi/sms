@@ -4,7 +4,7 @@ import { Plus, Pencil, Trash2, Send, Archive, Eye, Megaphone, Users, BookOpen, G
 import DataTable from "../../components/common/DataTable";
 import Modal from "../../components/common/Modal";
 import { Input, DateInput, Select, Textarea, Button, FormRow } from "../../components/common/FormElements";
-import { PageHeader, Badge, IconButton, Tabs, SelectInput, DialogActions, toast, confirmDialog } from "../../components/ui";
+import { PageHeader, PageShell, Badge, IconButton, SegmentedControl, SelectInput, DialogActions, toast, confirmDialog } from "../../components/ui";
 import { cn } from "../../lib/cn";
 import { noticeService } from "../../api/noticeService";
 import { academicService } from "../../api/academicService";
@@ -18,7 +18,8 @@ const TARGET_TYPES = [
 
 const PRIORITIES = [
   { value: "low", label: "Low", tone: "neutral" },
-  { value: "normal", label: "Normal", tone: "info" },
+  // Normal is the ordinary case, not a state worth colour; only high and urgent stand out.
+  { value: "normal", label: "Normal", tone: "neutral" },
   { value: "high", label: "High", tone: "warning" },
   { value: "urgent", label: "Urgent", tone: "danger" },
 ];
@@ -75,7 +76,7 @@ const RoleSelector = ({ roles = [], rolesError = false, value = [], onChange }) 
   <div className="mb-4">
     <p className="mb-2 text-sm font-medium text-slate-700">Who should see it</p>
     {rolesError ? (
-      <p className="text-sm text-red-600">Could not load roles. Close this form and try again.</p>
+      <p className="text-sm text-risk" role="alert">Could not load roles. Close this form and open it again.</p>
     ) : roles.length === 0 ? (
       <p className="text-sm text-slate-500">Loading roles…</p>
     ) : (
@@ -343,7 +344,7 @@ const Notices = () => {
             {row.title}
           </button>
           <p className="truncate text-xs text-slate-500">
-            {fullName(row.createdBy)} · {formatDate(row.createdAt)}
+            {fullName(row.createdBy)}, {formatDate(row.createdAt)}
           </p>
         </div>
       ),
@@ -377,6 +378,7 @@ const Notices = () => {
     {
       header: <span className="sr-only">Actions</span>,
       width: "170px",
+      action: true,
       render: (row) => (
         <div className="flex justify-end gap-1">
           <IconButton icon={Eye} label="View notice" onClick={() => openViewModal(row.id)} />
@@ -396,19 +398,19 @@ const Notices = () => {
   const v = viewingNotice;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-4">
+    <PageShell>
       <PageHeader
-        icon={Megaphone}
         title="Notices"
         description="Announcements for the whole school, particular roles or particular classes."
-        actions={<Button icon={Plus} onClick={openCreateModal} data-guide="notices.new">New Notice</Button>}
-        className="mb-2"
+        actions={<Button icon={Plus} onClick={openCreateModal} data-guide="notices.new">New notice</Button>}
       />
 
-      <Tabs
+      {/* A filter on one list sets a value: a segmented control, not tabs. */}
+      <SegmentedControl
+        label="Notice status"
         value={filters.status}
         onChange={(value) => handleFilterChange("status", value)}
-        tabs={[
+        options={[
           { value: "", label: "All" },
           { value: "DRAFT", label: "Drafts" },
           { value: "PUBLISHED", label: "Published" },
@@ -436,7 +438,7 @@ const Notices = () => {
         pagination={pagination.totalPages > 1 ? pagination : null}
         onPageChange={(page) => setPagination((prev) => ({ ...prev, page }))}
         emptyMessage={filters.search || filters.status || filters.priority ? "No notices match" : "No notices yet"}
-        emptyDescription={filters.search || filters.status || filters.priority ? undefined : "Write the first announcement for your school."}
+        emptyDescription={filters.search || filters.status || filters.priority ? "Clear the search or choose All to see every notice." : "Write the first announcement for your school. It is saved as a draft until you publish it."}
         emptyIcon={Megaphone}
       />
 
@@ -541,9 +543,9 @@ const Notices = () => {
               <Badge tone={priorityOf(v.priority).tone}>{priorityOf(v.priority).label} priority</Badge>
               <Audience {...v} />
             </div>
-            <h2 className="text-xl font-semibold text-slate-900">{v.title}</h2>
+            <h2 className="text-lg font-semibold text-slate-900">{v.title}</h2>
             <p className="mt-1 text-sm text-slate-500">
-              {fullName(v.createdBy)} · {formatDateTime(v.createdAt)}
+              {fullName(v.createdBy)}, {formatDateTime(v.createdAt)}
             </p>
             <div className="mt-5 rounded-xl bg-slate-50 p-4 text-sm leading-relaxed whitespace-pre-line text-slate-800">{v.content}</div>
             <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
@@ -573,7 +575,7 @@ const Notices = () => {
           <Button variant="secondary" onClick={() => setViewingNotice(null)}>Close</Button>
         </DialogActions>
       </Modal>
-    </div>
+    </PageShell>
   );
 };
 

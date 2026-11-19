@@ -20,11 +20,11 @@ school's own holidays. Holidays show in red and block attendance on those days.
 Administrators.
 
 ## Where to find it
-Left menu → **Calendar** → **Holidays** (`/calendar/holidays`) and **Calendar Settings**
+Left menu → **Calendar** → **Holidays** (`/calendar/holidays`) and **Calendar settings**
 (`/calendar/settings`).
 
 ## Steps
-**1. Weekly holidays** (Calendar Settings)
+**1. Weekly holidays** (Calendar settings)
 1. Under **Weekly holidays**, click the days the school is closed (Saturday by default).
 2. Leave **No attendance on holidays** on unless classes are sometimes held on holidays.
 3. Under **How dates are shown**, choose the school's default **Calendar**, **Month and weekday
@@ -55,7 +55,7 @@ Holidays in red on every calendar page. Teachers cannot save attendance on them.
 ## Troubleshooting
 - A class is held on a holiday: switch off **No attendance on holidays**, or edit the holiday and
   switch off **The school observes this holiday**.
-- **Reset to defaults** in Calendar Settings returns to B.S., Saturday off.
+- **Reset to defaults** in Calendar settings returns to B.S., Saturday off.
 
 ## Related pages
 Calendar, Events, Attendance.

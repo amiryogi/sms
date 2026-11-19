@@ -146,14 +146,14 @@ test.describe("lifecycle and marks rules", () => {
       await input.fill(String(ctx.theoryFull + 50));
       await input.blur();
       await expect(input).toHaveAttribute("aria-invalid", "true");
-      await page.getByRole("button", { name: "Save Marks" }).first().click();
+      await page.getByRole("button", { name: "Save marks" }).first().click();
       await expect(page.getByText(/highlighted row/i)).toBeVisible();
 
       // then a valid value
       await input.fill(String(marks));
       await input.blur();
       await expect(input).not.toHaveAttribute("aria-invalid", "true");
-      await page.getByRole("button", { name: "Save Marks" }).first().click();
+      await page.getByRole("button", { name: "Save marks" }).first().click();
       await expect(page.getByText(/Marks saved for/i)).toBeVisible();
 
       const saved = (await call("GET", `/exam-results/exam-subjects/${ctx.examSubject.id}?sectionId=${ctx.scope.sectionId}`, ctx.tokens.admin)).body.data;

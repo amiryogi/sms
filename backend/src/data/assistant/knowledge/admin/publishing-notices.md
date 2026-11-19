@@ -22,7 +22,7 @@ Administrators. Everyone else only reads notices.
 Left menu → **Communication** → **Notices** (`/admin/notices`).
 
 ## Steps
-1. Click **New Notice**.
+1. Click **New notice**.
 2. Type the **Title** and **Message**; choose the **Priority** (**Normal**, **High**, **Urgent**).
 3. Choose the **Audience**:
    - **Everyone:** all staff, students and parents;

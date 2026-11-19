@@ -101,7 +101,7 @@ const SubjectImportModal = ({ isOpen, onClose, onSuccess }) => {
               file ? 'border-brand-300 bg-brand-50/50' : 'border-slate-300 hover:border-brand-300 hover:bg-brand-50/30',
             )}
           >
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-white text-emerald-600 shadow-sm ring-1 ring-slate-200">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-white text-slate-500 ring-1 ring-slate-200">
               <FileSpreadsheet size={20} aria-hidden="true" />
             </span>
             <span className="min-w-0 flex-1">
@@ -119,32 +119,32 @@ const SubjectImportModal = ({ isOpen, onClose, onSuccess }) => {
           <div>
             <div className="mb-2 flex items-center gap-3 text-sm">
               <span className="font-medium text-slate-800">Preview</span>
-              <span className="text-emerald-700">{preview.valid} ready</span>
-              {preview.invalid > 0 && <span className="text-red-600">{preview.invalid} with problems</span>}
+              <span className="text-ok">{preview.valid} ready</span>
+              {preview.invalid > 0 && <span className="text-risk">{preview.invalid} with problems</span>}
             </div>
             <div className="max-h-72 overflow-auto rounded-xl border border-slate-200">
               <table className="w-full text-left text-sm">
-                <thead className="sticky top-0 bg-slate-50 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                <thead className="sticky top-0 bg-slate-50 text-xs font-medium text-slate-500">
                   <tr>
                     {['Row', 'Grade', 'Subject', 'Code', 'Status'].map((h) => (
-                      <th key={h} className="px-3 py-2">{h}</th>
+                      <th key={h} scope="col" className="border-b border-slate-200 px-3 py-2 font-medium">{h}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-200">
                   {preview.preview.map((row) => (
-                    <tr key={row.row} className={row.valid ? '' : 'bg-red-50/60'}>
+                    <tr key={row.row} className={row.valid ? '' : 'bg-risk-surface/60'}>
                       <td className="px-3 py-2 text-slate-500 tabular-nums">{row.row}</td>
                       <td className="px-3 py-2">{row.grade}</td>
                       <td className="px-3 py-2 font-medium text-slate-800">{row.subjectName}</td>
                       <td className="px-3 py-2 font-mono text-xs">{row.subjectCode}</td>
                       <td className="px-3 py-2">
                         {row.valid ? (
-                          <span className="inline-flex items-center gap-1 text-emerald-700">
+                          <span className="inline-flex items-center gap-1 text-ok">
                             <CheckCircle2 size={14} aria-hidden="true" /> Ready
                           </span>
                         ) : (
-                          <span className="inline-flex items-start gap-1 text-red-600">
+                          <span className="inline-flex items-start gap-1 text-risk">
                             <XCircle size={14} className="mt-0.5 shrink-0" aria-hidden="true" /> {row.errors.join(', ')}
                           </span>
                         )}

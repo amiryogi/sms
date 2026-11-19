@@ -1,13 +1,12 @@
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarRange, Printer } from "lucide-react";
-import { Alert, Card, CardHeader, PageHeader, SelectInput, StatCard, StatGroup, buttonClasses } from "../../components/ui";
+import { Printer } from "lucide-react";
+import { Alert, Card, CardHeader, PageHeader, PageShell, SelectInput, StatCard, StatGroup, buttonClasses } from "../../components/ui";
 import { useAuth } from "../../context/AuthContext";
 import { useDatePrefs } from "../../hooks/useDatePrefs";
 import { todayAd } from "../../utils/format";
 import { digits } from "../../lib/calendar/dateFormatter";
 import { itemsByDay } from "../../lib/calendar/calendarUtils";
-import { cn } from "../../lib/cn";
 import { useCalendarFeed } from "../../components/calendar/useCalendarFeed";
 import { useBsYear } from "../../components/calendar/useBsYear";
 import MiniMonth from "../../components/calendar/MiniMonth";
@@ -17,7 +16,7 @@ import { ItemRow } from "../../components/calendar/CalendarParts";
 const SOURCES = ["event", "exam", "academicYear"];
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 
-/** Calendar -> Academic Calendar: the B.S. year at a glance, with its holidays, exams and events. */
+/** Calendar -> Academic calendar: the B.S. year at a glance, with its holidays, exams and events. */
 const AcademicCalendar = () => {
   const { hasRole } = useAuth();
   const prefs = useDatePrefs();
@@ -35,11 +34,10 @@ const AcademicCalendar = () => {
   const pickedItems = picked ? byDay.get(picked) || [] : [];
 
   return (
-    <div>
+    <PageShell>
       <PageHeader
-        title="Academic Calendar"
+        title="Academic calendar"
         description="The whole year: holidays in red, a dot where something else is on."
-        icon={CalendarRange}
         actions={
           <>
             <div className="w-36">
@@ -56,9 +54,9 @@ const AcademicCalendar = () => {
           </>
         }
       />
-      {error && <Alert tone="danger" className="mb-4">{error}</Alert>}
+      {error && <Alert tone="danger">{error}</Alert>}
 
-      <StatGroup columns={4} className="mb-4">
+      <StatGroup columns={4}>
         {[
           ["Holidays", holidays.length],
           ["Days closed", holidayDays],
@@ -70,7 +68,8 @@ const AcademicCalendar = () => {
       </StatGroup>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_20rem]">
-        <div className={cn("grid gap-3 sm:grid-cols-2 lg:grid-cols-3", loading && "opacity-60")} aria-busy={loading}>
+        {/* While a year loads the months show without dots; the figures above show skeletons. */}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-busy={loading}>
           {MONTHS.map((month) => (
             <MiniMonth key={month} view={{ mode: "bs", year, month }} byDay={byDay} prefs={prefs} today={today} onSelect={setPicked} />
           ))}
@@ -83,7 +82,7 @@ const AcademicCalendar = () => {
               {pickedItems.length === 0 ? (
                 <p className="text-sm text-slate-500">Nothing on this day.</p>
               ) : (
-                <ul className="divide-y divide-slate-100">
+                <ul className="divide-y divide-slate-200">
                   {pickedItems.map((item) => (
                     <ItemRow key={item.key} item={item} prefs={prefs} hasRole={hasRole} showDate />
                   ))}
@@ -104,7 +103,7 @@ const AcademicCalendar = () => {
                 )}
               </p>
             ) : (
-              <ul className="max-h-[32rem] divide-y divide-slate-100 overflow-y-auto">
+              <ul className="max-h-128 divide-y divide-slate-200 overflow-y-auto">
                 {holidays.map((item) => (
                   <ItemRow key={item.key} item={item} prefs={prefs} showDate />
                 ))}
@@ -113,7 +112,7 @@ const AcademicCalendar = () => {
           </Card>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 };
 

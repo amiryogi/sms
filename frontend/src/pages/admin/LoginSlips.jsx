@@ -4,7 +4,7 @@ import { KeyRound } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { accountService } from "../../api/accountService";
 import { academicService } from "../../api/academicService";
-import { Alert, Button, Card, EmptyState, Field, SelectInput, confirmDialog, toast } from "../../components/ui";
+import { Alert, Button, Card, Checkbox, EmptyState, Field, PageHeader, SelectInput, confirmDialog, toast } from "../../components/ui";
 import PrintToolbar from "../../components/finance/print/PrintToolbar";
 import SlipSheet from "../../components/finance/print/SlipSheet";
 import LoginSlip from "../../components/admin/LoginSlip";
@@ -101,12 +101,15 @@ const LoginSlips = () => {
     <div className="mx-auto max-w-5xl space-y-4">
       <PrintToolbar ready={Boolean(credentials?.length)} printLabel={credentials?.length ? `Print ${credentials.length} slip${credentials.length === 1 ? "" : "s"}` : "Print"} />
 
+      {/* The outer container stays as it is: the slips print inside it. */}
+      <PageHeader
+        className="print:hidden"
+        title="Class logins"
+        description="Temporary passwords for a class, printed four to an A4 page. Everyone chooses their own password the first time they sign in."
+      />
+
       <Card className="print:hidden">
-        <h1 className="text-lg font-semibold text-slate-900">Class logins</h1>
-        <p className="text-sm text-slate-500">
-          Temporary passwords for a class, printed four to an A4 page. Everyone chooses their own password the first time they sign in.
-        </p>
-        <div className="mt-4 grid gap-x-4 sm:grid-cols-3">
+        <div className="grid gap-x-4 sm:grid-cols-3">
           <Field label="Academic year" htmlFor="ls-year">
             <SelectInput id="ls-year" value={form.academicYearId} onChange={(e) => set("academicYearId", e.target.value)}>
               <option value="">Current year</option>
@@ -132,15 +135,20 @@ const LoginSlips = () => {
             </SelectInput>
           </Field>
         </div>
-        <div className="mt-1 flex flex-col gap-2 text-sm text-slate-700">
-          <label className="flex items-center gap-2">
-            <input type="checkbox" className="size-4" checked={form.includeParents} onChange={(e) => set("includeParents", e.target.checked)} />
-            Parents too
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" className="size-4" checked={form.onlyNeverSignedIn} onChange={(e) => set("onlyNeverSignedIn", e.target.checked)} />
-            Only accounts that have never signed in (recommended: others keep their password)
-          </label>
+        <div className="mt-1 flex flex-col gap-2.5">
+          <Checkbox
+            id="ls-parents"
+            label="Parents too"
+            checked={form.includeParents}
+            onChange={(e) => set("includeParents", e.target.checked)}
+          />
+          <Checkbox
+            id="ls-never-signed-in"
+            label="Only accounts that have never signed in"
+            description="Recommended: anyone who has already signed in keeps their own password."
+            checked={form.onlyNeverSignedIn}
+            onChange={(e) => set("onlyNeverSignedIn", e.target.checked)}
+          />
         </div>
         <div className="mt-4 flex justify-end">
           <Button icon={KeyRound} onClick={generate} loading={busy} disabled={!form.classId}>
@@ -162,7 +170,7 @@ const LoginSlips = () => {
         </>
       ) : (
         <Card className="print:hidden">
-          <EmptyState icon={KeyRound} title="No slips yet" description="Choose a class and create passwords to print login slips." />
+          <EmptyState compact icon={KeyRound} title="No slips yet" description="Choose a class above and create passwords. The slips appear here, ready to print." />
         </Card>
       )}
     </div>

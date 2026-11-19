@@ -1,7 +1,7 @@
 # Visual redesign: from "generic card kit" to "the school register"
 
-Brief pasted 2026-11-18. **Waves 0–3 are done, on branch `feature/visual-redesign` (not yet
-merged to `main`); wave 4 is not started.** The rules this plan produced are
+Brief pasted 2026-11-18. **Waves 0–3 are done on `feature/visual-redesign` (pull request #8); wave 4 is done on
+`feature/visual-redesign-wave4`. Neither is merged to `main` yet.** The rules this plan produced are
 [`frontend/DESIGN.md`](../../frontend/DESIGN.md) — read that first, then this file for what
 is left to do.
 
@@ -27,7 +27,7 @@ is left to do.
 | 1 | Tokens, one file, no page edits | **Done** — `app.css` `@theme`, `index.html` fonts, `src/styles/__tests__/palette.test.js` |
 | 2 | Kit + shell | **Done** — kit restyled, `PageShell` / `SegmentedControl` / `Radio` added, `DataTable` register treatment, nav labels de-capsed |
 | 3 | Data-dense screens (**the owner's priority**) | **Done** (2026-11-18) — one `StatCard`/`StatGroup`, six screens restyled; see §4a |
-| 4 | The long tail | **Not started** |
+| 4 | The long tail | **Done** (2026-11-19) — every page, the kit reference, the copy pass; see §5a |
 
 **Verified for waves 0–2:** `npm run lint` 0 errors (5 pre-existing
 `react-hooks/exhaustive-deps` warnings, in files this work did not touch), `npm run build`
@@ -265,6 +265,91 @@ the documented baseline.
     seventh stat card. Coverage beats depth.
 
 ---
+
+## 5a. Wave 4 — what was done (2026-11-19)
+
+Branch `feature/visual-redesign-wave4`, off `feature/visual-redesign`. Done in parallel by
+five agents, one per group of pages, each owning its own files, plus one writing the kit
+reference. Labels that tests or help documents quote were left alone by the agents and
+renamed afterwards in one pass.
+
+### Kit and shared pieces
+
+- `components/common/DashboardGreeting.jsx` replaces four drifted greeting blocks.
+- Kit error and status colours (invalid inputs, error text, the danger menu item, toast icons,
+  the date picker's holidays) are on the `risk/ok/warn/info` tokens.
+- `SegmentedControl`: with nothing selected the first option takes the tab stop (an
+  undecided promotion row was unreachable by keyboard); ← with nothing selected picks the last.
+- `Switch` takes `aria-label` and `className`.
+- `utils/grades.js`: `gpaColor` / `gradeColor` deleted (no callers).
+- `components/ui/README.md`: a reference for every kit component, `DataTable` and
+  `DashboardGreeting`.
+- **Print pin:** `.calendar-sheet` added. The printed school calendar had been printing in
+  the new font, greys and type scale since wave 1.
+
+### Pages
+
+- `PageShell` on every app page except Change password (rendered outside the app shell),
+  Login, and LoginSlips (its slips print inside the container, kept on purpose).
+- Raw colour utilities replaced by tokens; colour that was not a status made neutral (info
+  badges for "submitted", brand chips and hovers, the green fee-type tile, the sky "normal"
+  notice priority, and others).
+- Empty states compact inside cards, written as what, why and how to start. The `opacity-60`
+  refetch dimming is gone from Reports, the school calendar and the academic calendar.
+- Hand-built filters and switches became `SegmentedControl`s (Exams, Notices, Discounts,
+  My students, the payment and discount dialogs).
+- Register tables: sentence-case headers, `slate-200` rules, numeric columns right-aligned,
+  36px row actions, one-line rows (Classes, Sections, Subjects now match Students).
+- Copy: `·`-joined strings rewritten, `→` removed from link text, the `text-lg` page titles
+  (Change password, Login slips, Bills) fixed.
+- **Attendance bar:** it no longer turns red or amber below 75% / 90%. Those thresholds were
+  invented in the frontend with no backend flag (CLAUDE.md §4.9).
+- **Assistant contrast bug:** the send button, launcher and user bubble used `text-white` on
+  the brand colour; they now use `text-brand-fg`, readable on any school colour.
+- Admin dashboard's "Fee payments" quick action pointed at the old redirect; it now opens
+  Student accounts.
+
+### The coordinated rename
+
+Case-only, so the help documents keep pointing at the right things. 38 phrases across 76
+files: page titles and sidebar items ("Teacher Assignment" → "Teacher assignment",
+"Report Cards" → "Report cards", …) and buttons ("Save Attendance" → "Save attendance",
+"Print All" → "Print all", …), applied together to `navigation.js`, the pages, the help
+documents, `guides.json`, `evals.json`, the walkthrough registry and the e2e and capture specs.
+Two wording changes: "CSV" → "Download CSV", "Print / Save as PDF" → "Print or save as PDF".
+The exam schedule page title matches its sidebar item again ("Exam schedule"). The student
+help document listed the assignment tabs wrongly; corrected.
+
+Not renamed (quoted, and already fine or a separate decision): "New request", "Split",
+"Submit" (a student's hand-in button), "Choose a class". The mobile app has its own labels
+and was not touched.
+
+### Verified
+
+- Frontend lint 0 errors (the same 5 warnings), 119 vitest tests, build passes.
+- Backend 706 unit tests (the assistant's knowledge and route checks among them).
+- **E2E: 90 passed, 1 skipped**, including both report-card pixel baselines.
+- By eye, at 1440px on the test database: Classes, Exams, Notices, Promotions, Teachers,
+  Discounts, Reports, teacher Assignments, the student dashboard and attendance, parent fees
+  and the school calendar. No console errors and no horizontal overflow on any of them.
+
+### Left, for a later pass
+
+- **Kit gaps found while writing the reference** (`components/ui/README.md` lists them):
+  - `Tabs` lacks arrow keys and `tabpanel` wiring;
+  - `Menu` doesn't move focus into the menu or return it;
+  - `DataTable`'s sticky header never sticks, and its pager buttons lack a focus ring and a
+    3:1 boundary;
+  - Checkbox/Radio/Switch have no error state;
+  - `Dialog` and `IconButton lg` are off the radius ladder.
+- Row delete buttons are a red-tinted square in every row (Classes, Exams). A quiet icon
+  that turns risk on hover would read calmer; it is a kit-wide choice.
+- `SegmentedControl` still changes value on ↑/↓, which is why Marks entry and Promotions
+  keep their own controls. A horizontal-only option would let them adopt it.
+- The calendar's B.S./A.D. switch is styled like a segmented control but stays two buttons,
+  because `calendar.spec.js` finds them by role `button`.
+- `FeeStructures` adds per-class totals with `parseFloat` (display only). Use `utils/money`.
+- Marketing screenshots were not re-taken after wave 4.
 
 ## 6. Constraints
 

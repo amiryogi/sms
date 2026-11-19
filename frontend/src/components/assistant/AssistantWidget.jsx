@@ -116,7 +116,7 @@ function AssistantRoot({ boot, onStartGuide, guideActive }) {
           aria-label={t.open}
           title={t.open}
           data-guide="assistant.button"
-          className="fixed right-4 bottom-4 z-40 inline-flex size-14 cursor-pointer items-center justify-center rounded-full bg-brand-600 text-white shadow-lg ring-4 ring-white/60 transition hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 sm:right-6 sm:bottom-6 print:hidden"
+          className="fixed right-4 bottom-4 z-40 inline-flex size-14 cursor-pointer items-center justify-center rounded-full bg-brand-600 text-brand-fg shadow-pop ring-4 ring-white/60 transition hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 sm:right-6 sm:bottom-6 print:hidden"
         >
           <MessageCircleQuestion size={26} aria-hidden="true" />
         </button>
@@ -140,7 +140,7 @@ function AssistantRoot({ boot, onStartGuide, guideActive }) {
             {view === "history" ? (
               <IconButton size="sm" icon={ArrowLeft} label={t.back} onClick={() => setView("chat")} />
             ) : (
-              <span className="inline-flex size-8 items-center justify-center rounded-lg bg-brand-50 text-brand-700" aria-hidden="true">
+              <span className="inline-flex size-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600" aria-hidden="true">
                 <Sparkles size={16} />
               </span>
             )}
@@ -212,14 +212,14 @@ function AssistantRoot({ boot, onStartGuide, guideActive }) {
                     </div>
                     {suggestions.length > 0 && (
                       <div>
-                        <p className="mb-2 px-1 text-xs font-medium tracking-wide text-slate-500 uppercase">{t.tryAsking}</p>
+                        <p className="mb-2 px-1 text-xs font-medium text-slate-500">{t.tryAsking}</p>
                         <ul className="flex flex-col gap-1.5">
                           {suggestions.map((s) => (
                             <li key={s}>
                               <button
                                 type="button"
                                 onClick={() => ask(s)}
-                                className="w-full cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm text-slate-700 hover:border-brand-300 hover:bg-brand-50"
+                                className="w-full cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm text-slate-700 hover:border-slate-300 hover:bg-slate-50"
                               >
                                 {s}
                               </button>
@@ -230,7 +230,7 @@ function AssistantRoot({ boot, onStartGuide, guideActive }) {
                     )}
                     {onStartGuide && boot.guides?.length > 0 && (
                       <div>
-                        <p className="mb-2 px-1 text-xs font-medium tracking-wide text-slate-500 uppercase">{t.guide.walkthroughs}</p>
+                        <p className="mb-2 px-1 text-xs font-medium text-slate-500">{t.guide.walkthroughs}</p>
                         <ul className="flex flex-wrap gap-1.5">
                           {boot.guides.map((g) => (
                             <li key={g.id}>
@@ -238,7 +238,7 @@ function AssistantRoot({ boot, onStartGuide, guideActive }) {
                                 type="button"
                                 onClick={() => startGuide(g.id)}
                                 data-testid="guide-start"
-                                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-800 hover:bg-brand-100"
+                                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900"
                               >
                                 <Play size={12} aria-hidden="true" />
                                 {g.title?.[lang] || g.title?.en}

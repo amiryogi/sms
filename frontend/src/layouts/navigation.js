@@ -47,8 +47,8 @@ import {
 // The school calendar. Everyone reads it; the management pages are per role.
 const CALENDAR_VIEW = [
   { title: "Calendar", icon: CalendarDays, path: "/calendar" },
-  { title: "Exam Schedule", icon: CalendarClock, path: "/calendar/exams" },
-  { title: "Academic Calendar", icon: CalendarFold, path: "/calendar/academic" },
+  { title: "Exam schedule", icon: CalendarClock, path: "/calendar/exams" },
+  { title: "Academic calendar", icon: CalendarFold, path: "/calendar/academic" },
 ];
 const CALENDAR_ADMIN = {
   label: "Calendar",
@@ -58,12 +58,12 @@ const CALENDAR_ADMIN = {
     { title: "Holidays", icon: PartyPopper, path: "/calendar/holidays" },
     CALENDAR_VIEW[1],
     CALENDAR_VIEW[2],
-    { title: "Calendar Settings", icon: Settings2, path: "/calendar/settings" },
+    { title: "Calendar settings", icon: Settings2, path: "/calendar/settings" },
   ],
 };
 const CALENDAR_TEACHER = {
   label: "Calendar",
-  items: [CALENDAR_VIEW[0], { title: "My Class Events", icon: CalendarPlus, path: "/calendar/events" }, CALENDAR_VIEW[1], CALENDAR_VIEW[2]],
+  items: [CALENDAR_VIEW[0], { title: "My class events", icon: CalendarPlus, path: "/calendar/events" }, CALENDAR_VIEW[1], CALENDAR_VIEW[2]],
 };
 const CALENDAR_READER = { label: "Calendar", items: CALENDAR_VIEW };
 
@@ -72,51 +72,51 @@ const ADMIN = [
   {
     label: "Academics",
     items: [
-      { title: "Academic Years", icon: CalendarRange, path: "/admin/academic-years" },
+      { title: "Academic years", icon: CalendarRange, path: "/admin/academic-years" },
       { title: "Classes", icon: BookOpen, path: "/admin/classes" },
       { title: "Sections", icon: Layers, path: "/admin/sections" },
       { title: "Subjects", icon: Library, path: "/admin/subjects" },
-      { title: "Class Subjects", icon: BookOpenCheck, path: "/admin/class-subjects" },
-      { title: "Teacher Assignment", icon: UserCog, path: "/admin/teacher-assignment" },
+      { title: "Class subjects", icon: BookOpenCheck, path: "/admin/class-subjects" },
+      { title: "Teacher assignment", icon: UserCog, path: "/admin/teacher-assignment" },
     ],
   },
   {
     label: "People",
     items: [
       { title: "Students", icon: GraduationCap, path: "/admin/students" },
-      { title: "Teachers & Staff", icon: UsersRound, path: "/admin/teachers" },
+      { title: "Teachers & staff", icon: UsersRound, path: "/admin/teachers" },
       { title: "Parents", icon: Contact, path: "/admin/parents" },
       { title: "Promotions", icon: ArrowUpRight, path: "/admin/promotions" },
     ],
   },
   {
-    label: "Exams & Results",
+    label: "Exams & results",
     items: [
       { title: "Exams", icon: ClipboardList, path: "/admin/exams" },
-      { title: "Exam Admin (pilot)", icon: Table2, path: "/admin/exam-admin" },
-      { title: "Marks Entry", icon: PenLine, path: "/teacher/marks" },
-      { title: "Report Cards", icon: Award, path: "/admin/report-cards" },
+      { title: "Exam admin (pilot)", icon: Table2, path: "/admin/exam-admin" },
+      { title: "Marks entry", icon: PenLine, path: "/teacher/marks" },
+      { title: "Report cards", icon: Award, path: "/admin/report-cards" },
     ],
   },
   {
     label: "Finance",
     items: [
-      { title: "Finance Overview", icon: ChartColumn, path: "/finance/dashboard" },
-      { title: "Collect Fees", icon: HandCoins, path: "/finance/collect" },
-      { title: "Student Accounts", icon: Wallet, path: "/finance/accounts" },
+      { title: "Finance overview", icon: ChartColumn, path: "/finance/dashboard" },
+      { title: "Collect fees", icon: HandCoins, path: "/finance/collect" },
+      { title: "Student accounts", icon: Wallet, path: "/finance/accounts" },
       { title: "Transactions", icon: ScrollText, path: "/finance/transactions" },
       { title: "Discounts", icon: BadgePercent, path: "/finance/discounts" },
       { title: "Reports", icon: FileSpreadsheet, path: "/finance/reports" },
-      { title: "Fee Structures", icon: ReceiptText, path: "/admin/fee-structures" },
-      { title: "Fee Types", icon: Tags, path: "/admin/fee-types" },
+      { title: "Fee structures", icon: ReceiptText, path: "/admin/fee-structures" },
+      { title: "Fee types", icon: Tags, path: "/admin/fee-types" },
     ],
   },
   { label: "Communication", items: [{ title: "Notices", icon: Megaphone, path: "/admin/notices" }] },
   {
     label: "Settings",
     items: [
-      { title: "School Settings", icon: Building2, path: "/admin/school-settings" },
-      { title: "AI Assistant", icon: Bot, path: "/admin/assistant" },
+      { title: "School settings", icon: Building2, path: "/admin/school-settings" },
+      { title: "AI assistant", icon: Bot, path: "/admin/assistant" },
     ],
   },
 ];
@@ -126,10 +126,10 @@ const TEACHER = [
     label: "Teaching",
     items: [
       { title: "Dashboard", icon: LayoutDashboard, path: "/teacher/dashboard" },
-      { title: "My Students", icon: GraduationCap, path: "/teacher/students" },
+      { title: "My students", icon: GraduationCap, path: "/teacher/students" },
       { title: "Attendance", icon: CalendarCheck, path: "/teacher/attendance" },
       { title: "Assignments", icon: NotebookPen, path: "/teacher/assignments" },
-      { title: "Marks Entry", icon: PenLine, path: "/teacher/marks" },
+      { title: "Marks entry", icon: PenLine, path: "/teacher/marks" },
       { title: "Notices", icon: Megaphone, path: "/teacher/notices" },
     ],
   },
@@ -139,7 +139,7 @@ const EXAM_OFFICER = [
   {
     label: "Exams",
     items: [
-      { title: "Marks Entry", icon: PenLine, path: "/teacher/marks" },
+      { title: "Marks entry", icon: PenLine, path: "/teacher/marks" },
       { title: "Students", icon: GraduationCap, path: "/staff/students" },
       { title: "Notices", icon: Megaphone, path: "/teacher/notices" },
     ],
@@ -151,13 +151,13 @@ const ACCOUNTANT = [
     label: "Finance",
     items: [
       { title: "Dashboard", icon: LayoutDashboard, path: "/finance/dashboard" },
-      { title: "Collect Fees", icon: HandCoins, path: "/finance/collect" },
-      { title: "Student Accounts", icon: Wallet, path: "/finance/accounts" },
+      { title: "Collect fees", icon: HandCoins, path: "/finance/collect" },
+      { title: "Student accounts", icon: Wallet, path: "/finance/accounts" },
       { title: "Transactions", icon: ScrollText, path: "/finance/transactions" },
       { title: "Discounts", icon: BadgePercent, path: "/finance/discounts" },
       { title: "Reports", icon: FileSpreadsheet, path: "/finance/reports" },
-      { title: "Fee Structures", icon: ReceiptText, path: "/accountant/fee-structures" },
-      { title: "Fee Types", icon: Tags, path: "/accountant/fee-types" },
+      { title: "Fee structures", icon: ReceiptText, path: "/accountant/fee-structures" },
+      { title: "Fee types", icon: Tags, path: "/accountant/fee-types" },
       { title: "Students", icon: GraduationCap, path: "/staff/students" },
       { title: "Notices", icon: Megaphone, path: "/accountant/notices" },
     ],
@@ -172,10 +172,10 @@ const STUDENT = [
       { title: "Attendance", icon: CalendarCheck, path: "/student/attendance" },
       { title: "Assignments", icon: NotebookPen, path: "/student/assignments" },
       { title: "Results", icon: FileBarChart, path: "/student/results" },
-      { title: "Report Card", icon: Award, path: "/student/report-card" },
+      { title: "Report card", icon: Award, path: "/student/report-card" },
       { title: "Fees", icon: Wallet, path: "/student/fees" },
       { title: "Notices", icon: Megaphone, path: "/student/notices" },
-      { title: "My Profile", icon: UserRound, path: "/student/profile" },
+      { title: "My profile", icon: UserRound, path: "/student/profile" },
     ],
   },
 ];
@@ -188,10 +188,10 @@ const PARENT = [
       { title: "Attendance", icon: CalendarCheck, path: "/parent/attendance" },
       { title: "Assignments", icon: NotebookPen, path: "/parent/assignments" },
       { title: "Results", icon: FileBarChart, path: "/parent/results" },
-      { title: "Report Card", icon: Award, path: "/parent/report-card" },
+      { title: "Report card", icon: Award, path: "/parent/report-card" },
       { title: "Fees", icon: Wallet, path: "/parent/fees" },
       { title: "Notices", icon: Megaphone, path: "/parent/notices" },
-      { title: "Child's Profile", icon: UserRound, path: "/parent/profile" },
+      { title: "Child's profile", icon: UserRound, path: "/parent/profile" },
     ],
   },
 ];
@@ -243,7 +243,7 @@ export const titleForPath = (pathname) => {
   };
 };
 
-// "EXAM_OFFICER" -> "Exam Officer"
+// "EXAM_OFFICER" -> "Exam officer"
 export const formatRoleName = (role) =>
   String(role || "")
     .toLowerCase()

@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { ArrowLeft, Printer, ReceiptText } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { feeService } from "../../api/feeService";
-import { Button, Card, EmptyState, LoadingBlock } from "../../components/ui";
+import { Button, Card, EmptyState, LoadingBlock, PageShell } from "../../components/ui";
 import ReceiptSheet from "../../components/finance/ReceiptSheet";
 import ReceiptSlip from "../../components/finance/print/ReceiptSlip";
 import SlipSheet from "../../components/finance/print/SlipSheet";
@@ -44,9 +44,11 @@ const Receipt = () => {
 
   if (error) {
     return (
-      <Card className="mx-auto max-w-xl">
-        <EmptyState icon={ReceiptText} title="Receipt not available" description={error} />
-      </Card>
+      <PageShell width="prose">
+        <Card>
+          <EmptyState compact icon={ReceiptText} title="Receipt not available" description={error} />
+        </Card>
+      </PageShell>
     );
   }
   if (!receipt) return <LoadingBlock text="Loading receipt…" />;
@@ -54,7 +56,7 @@ const Receipt = () => {
   const isStaff = hasRole("ADMIN") || hasRole("ACCOUNTANT");
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <PageShell width="prose">
       <div className="flex flex-wrap items-center gap-2 print:hidden">
         <Button variant="ghost" icon={ArrowLeft} onClick={() => navigate(-1)}>Back</Button>
         {isStaff && (
@@ -75,7 +77,7 @@ const Receipt = () => {
           <ReceiptSlip key={receipt.id} receipt={receipt} school={user?.school} />
         </SlipSheet>
       </div>
-    </div>
+    </PageShell>
   );
 };
 

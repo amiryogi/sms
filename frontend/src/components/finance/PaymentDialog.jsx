@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Wallet, ListChecks, Sparkles } from "lucide-react";
 import Modal from "../common/Modal";
-import { Button, DialogActions, Field, SelectInput, TextInput, TextArea, NepaliDatePicker, Alert, toast } from "../ui";
+import { Button, DialogActions, Field, SelectInput, TextInput, TextArea, NepaliDatePicker, Alert, SegmentedControl, toast } from "../ui";
 import { cn } from "../../lib/cn";
 import { feeService } from "../../api/feeService";
 import { formatCurrency, formatDate, todayAd } from "../../utils/format";
@@ -69,8 +69,8 @@ const PaymentDialog = ({ studentId, studentName, year, onClose, onPaid }) => {
     if (mode === "manual") {
       for (const i of payable) {
         const v = picked[i.id];
-        if (v && !isMoneyInput(v)) return `Check the amount for ${i.feeName} · ${i.label}.`;
-        if (v && toPaisa(v) > Math.round(i.balance * 100)) return `${i.feeName} · ${i.label}: only ${formatCurrency(i.balance)} is owed.`;
+        if (v && !isMoneyInput(v)) return `Check the amount for ${i.feeName}, ${i.label}.`;
+        if (v && toPaisa(v) > Math.round(i.balance * 100)) return `${i.feeName}, ${i.label}: only ${formatCurrency(i.balance)} is owed. Lower the amount.`;
       }
     }
     if (paidOn > localToday()) return "The payment date cannot be in the future.";
@@ -111,36 +111,24 @@ const PaymentDialog = ({ studentId, studentName, year, onClose, onPaid }) => {
   const needsReference = method !== "cash";
 
   return (
-    <Modal isOpen onClose={saving ? () => {} : onClose} title="Record payment" description={`${studentName} · ${year?.academicYear?.name}`} size="lg">
+    <Modal isOpen onClose={saving ? () => {} : onClose} title="Record payment" description={`${studentName}, ${year?.academicYear?.name}`} size="lg">
       <form onSubmit={submit} noValidate>
         {payable.length === 0 ? (
           <Alert tone="success">Nothing is owed for this year.</Alert>
         ) : (
           <>
-            <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1" role="radiogroup" aria-label="How to apply the payment">
-              {[
-                { value: "auto", label: "Automatic", hint: "Oldest dues first", icon: Sparkles },
-                { value: "manual", label: "Choose installments", hint: "Split it yourself", icon: ListChecks },
-              ].map((o) => (
-                <button
-                  key={o.value}
-                  type="button"
-                  role="radio"
-                  aria-checked={mode === o.value}
-                  onClick={() => setMode(o.value)}
-                  className={cn(
-                    "flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors",
-                    mode === o.value ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800",
-                  )}
-                >
-                  <o.icon size={16} aria-hidden="true" />
-                  <span>
-                    <span className="block font-medium">{o.label}</span>
-                    <span className="block text-xs text-slate-500">{o.hint}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
+            <SegmentedControl
+              label="How to apply the payment"
+              value={mode}
+              onChange={setMode}
+              options={[
+                { value: "auto", label: "Automatic", icon: Sparkles },
+                { value: "manual", label: "Choose installments", icon: ListChecks },
+              ]}
+            />
+            <p className="mt-1.5 mb-4 text-xs text-slate-500">
+              {mode === "auto" ? "Pays the oldest dues first." : "Split the amount across installments yourself."}
+            </p>
 
             {mode === "auto" ? (
               <div className="mb-4">
@@ -170,7 +158,7 @@ const PaymentDialog = ({ studentId, studentName, year, onClose, onPaid }) => {
                     {preview.map((p) => (
                       <li key={p.id} className="flex justify-between gap-3">
                         <span>
-                          {p.feeName} · {p.label}
+                          {p.feeName}, {p.label}
                           {p.dueDate ? ` (due ${formatDate(p.dueDate)})` : ""}
                         </span>
                         <span className="font-medium tabular-nums text-slate-900">{formatCurrency(p.take / 100)}</span>
@@ -189,14 +177,14 @@ const PaymentDialog = ({ studentId, studentName, year, onClose, onPaid }) => {
                       <th className="w-36 px-3 py-2 text-right font-medium">Paying now</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-slate-200">
                     {payable.map((i) => (
                       <tr key={i.id}>
                         <td className="px-3 py-2">
                           <p className="font-medium text-slate-900">{i.feeName}</p>
-                          <p className={cn("text-xs text-slate-500", i.overdue && "text-red-600")}>
+                          <p className={cn("text-xs text-slate-500", i.overdue && "font-medium text-risk")}>
                             {i.label}
-                            {i.dueDate ? ` · due ${formatDate(i.dueDate)}` : ""}
+                            {i.dueDate ? `, due ${formatDate(i.dueDate)}` : ""}
                           </p>
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(i.balance)}</td>
@@ -210,13 +198,14 @@ const PaymentDialog = ({ studentId, studentName, year, onClose, onPaid }) => {
                               placeholder="0.00"
                               className="h-9 w-24 text-right tabular-nums"
                             />
-                            <button
-                              type="button"
+                            <Button
+                              size="xs"
+                              variant="ghost"
+                              aria-label={`Pay all of ${i.feeName} ${i.label}`}
                               onClick={() => setPicked((p) => ({ ...p, [i.id]: fromPaisa(Math.round(i.balance * 100)) }))}
-                              className="cursor-pointer rounded px-1.5 text-xs font-medium text-brand-700 hover:bg-brand-50"
                             >
                               Full
-                            </button>
+                            </Button>
                           </div>
                         </td>
                       </tr>

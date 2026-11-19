@@ -21,14 +21,14 @@ Students (their own) and parents (their linked children).
 ## Where to find it
 - **Results** (`/student/results` or `/parent/results`): marks and grades from published report
   cards.
-- **Report Card** (`/student/report-card` or `/parent/report-card`): the printable card.
+- **Report card** (`/student/report-card` or `/parent/report-card`): the printable card.
 
 ## Steps
 1. Open **Results**. Parents: choose the child first.
 2. Choose the **Exam**. You see **GPA**, **Percentage**, **Class rank**, **Subjects passed**, and
    each subject's marks and grade, with **Passed** or **Not passed**.
-3. For the printable card open **Report Card**, choose the **Exam**, and click
-   **Print / Save as PDF**.
+3. For the printable card open **Report card**, choose the **Exam**, and click
+   **Print or save as PDF**.
 
 ## What you should see
 Results of every exam whose report card the school has published. Progress across the year is

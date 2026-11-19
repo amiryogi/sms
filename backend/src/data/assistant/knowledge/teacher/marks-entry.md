@@ -20,21 +20,21 @@ Enter each student's theory and practical marks for a subject in an exam.
 - **Exam officers and administrators:** any subject in a published exam.
 
 ## Where to find it
-Left menu → **Marks Entry** (`/teacher/marks`).
+Left menu → **Marks entry** (`/teacher/marks`).
 
 ## Before you start
 The exam must be **Published** by the administrator. Draft exams are not shown, and locked exams
 can no longer be changed.
 
 ## Steps
-1. Open **Marks Entry**.
+1. Open **Marks entry**.
 2. Choose the **Exam** (only published exams are listed).
 3. Teachers choose **Class, section and subject**. Exam officers and administrators choose
    **Class**, **Section** and **Subject**.
 4. Type each student's **Theory** marks, and **Practical** marks if the subject has a practical
    part. Press Enter or the arrow keys to move between rows.
 5. Mark a student **Absent** if they missed the exam. Add optional remarks.
-6. Click **Save Marks**. **Discard** throws away unsaved changes.
+6. Click **Save marks**. **Discard** throws away unsaved changes.
 
 ## What you should see
 The marks are saved. Grades are worked out by the system from the school's grade scale when
@@ -43,7 +43,7 @@ report cards are generated.
 ## Common mistakes
 - Typing more than the full marks, or a negative number: the field shows "Not a number" or
   "Below 0", and the server refuses marks above the full marks.
-- Leaving the page without **Save Marks**.
+- Leaving the page without **Save marks**.
 
 ## Troubleshooting
 - **"No published exams":** the administrator has not published an exam yet.
@@ -53,4 +53,4 @@ report cards are generated.
 - **"You do not have permission to enter marks":** your role cannot enter marks.
 
 ## Related pages
-Exams (administrators, `/admin/exams`), Report Cards (administrators, `/admin/report-cards`).
+Exams (administrators, `/admin/exams`), Report cards (administrators, `/admin/report-cards`).

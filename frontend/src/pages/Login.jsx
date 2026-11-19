@@ -96,7 +96,7 @@ const Login = () => {
   const banner = school?.bannerUrl ? resolveAssetUrl(school.bannerUrl) : null;
   const contacts = [
     school?.address && { icon: MapPin, text: school.address },
-    (school?.landlineNumber || school?.phone) && { icon: Phone, text: [school.landlineNumber, school.phone].filter(Boolean).join(" · ") },
+    (school?.landlineNumber || school?.phone) && { icon: Phone, text: [school.landlineNumber, school.phone].filter(Boolean).join(", ") },
     school?.email && { icon: Mail, text: school.email },
   ].filter(Boolean);
   const socials = [

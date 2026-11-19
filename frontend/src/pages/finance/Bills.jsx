@@ -4,7 +4,7 @@ import { ReceiptText } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { feeService } from "../../api/feeService";
 import { academicService } from "../../api/academicService";
-import { Card, EmptyState, Field, LoadingBlock, SelectInput, NepaliDatePicker } from "../../components/ui";
+import { Card, EmptyState, Field, LoadingBlock, PageHeader, PageShell, SelectInput, NepaliDatePicker } from "../../components/ui";
 import PrintToolbar from "../../components/finance/print/PrintToolbar";
 import SlipSheet from "../../components/finance/print/SlipSheet";
 import BillSlip from "../../components/finance/print/BillSlip";
@@ -74,13 +74,16 @@ const Bills = () => {
   const ready = Boolean(data && data.bills.length);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
+    <PageShell>
+      <PageHeader
+        title="Fee bills"
+        description="One bill per student who owes fees, four to an A4 page. Cut along the dashed lines."
+        className="print:hidden"
+      />
       <PrintToolbar ready={ready} autoPrint={params.print === "1"} printLabel={ready ? `Print ${data.bills.length} bill${data.bills.length === 1 ? "" : "s"}` : "Print"} />
 
       <Card className="print:hidden">
-        <h1 className="text-lg font-semibold text-slate-900">Fee bills</h1>
-        <p className="text-sm text-slate-500">One bill per student who owes fees, four to an A4 page. Cut along the dashed lines.</p>
-        <div className="mt-4 grid gap-x-4 sm:grid-cols-4">
+        <div className="grid gap-x-4 sm:grid-cols-4">
           <Field label="Academic year" htmlFor="bill-year">
             <SelectInput id="bill-year" value={params.academicYearId || ""} onChange={(e) => set("academicYearId", e.target.value)}>
               <option value="">Current year</option>
@@ -112,13 +115,13 @@ const Bills = () => {
       </Card>
 
       {!params.classId ? (
-        <Card className="print:hidden"><EmptyState icon={ReceiptText} title="Choose a class" description="Bills are printed for one class (or one section) at a time." /></Card>
+        <Card className="print:hidden"><EmptyState compact icon={ReceiptText} title="Choose a class" description="Bills are printed for one class, or one section, at a time. Pick it above." /></Card>
       ) : state.error ? (
-        <Card><EmptyState icon={ReceiptText} title="Bills not available" description={state.error} /></Card>
+        <Card><EmptyState compact icon={ReceiptText} title="Bills not available" description={state.error} /></Card>
       ) : !data || state.loading ? (
         <LoadingBlock text="Loading bills…" />
       ) : data.bills.length === 0 ? (
-        <Card><EmptyState icon={ReceiptText} title="Nobody owes fees" description="No student in this class has anything due for these filters." /></Card>
+        <Card><EmptyState compact icon={ReceiptText} title="Nobody owes fees" description="No student in this class has anything due for these filters. Try another section or a later due date." /></Card>
       ) : (
         <SlipSheet>
           {data.bills.map((b) => (
@@ -126,7 +129,7 @@ const Bills = () => {
           ))}
         </SlipSheet>
       )}
-    </div>
+    </PageShell>
   );
 };
 

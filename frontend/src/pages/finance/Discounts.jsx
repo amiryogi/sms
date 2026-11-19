@@ -4,7 +4,7 @@ import { BadgePercent, Plus, CheckCircle2, XCircle, Ban } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import DataTable from "../../components/common/DataTable";
 import { feeService } from "../../api/feeService";
-import { PageHeader, Tabs, Button, IconButton, Badge, toast } from "../../components/ui";
+import { PageHeader, PageShell, SegmentedControl, Button, IconButton, Badge, toast } from "../../components/ui";
 import DiscountDialog from "../../components/finance/DiscountDialog";
 import ReasonDialog from "../../components/finance/ReasonDialog";
 import { ApprovalBadge } from "../../components/finance/FeeStatusBadge";
@@ -66,7 +66,7 @@ const Discounts = () => {
       render: (d) => (
         <Link to={`/finance/accounts/${d.studentId}?year=${d.academicYearId}`} className="min-w-0 hover:text-brand-700">
           <span className="block truncate font-medium text-slate-900">{fullName(d.student?.user)}</span>
-          <span className="block text-xs text-slate-500">{d.student?.admissionNumber} · {d.academicYear?.name}</span>
+          <span className="block text-xs text-slate-500"><span className="font-mono">{d.student?.admissionNumber}</span>, {d.academicYear?.name}</span>
         </Link>
       ),
     },
@@ -91,8 +91,9 @@ const Discounts = () => {
       ),
     },
     {
-      header: <span className="block text-right">Applied</span>,
-      render: (d) => <p className="text-right text-emerald-700 tabular-nums">{d.status === "APPROVED" ? formatCurrency(d.appliedAmount) : "—"}</p>,
+      header: "Applied",
+      numeric: true,
+      render: (d) => (d.status === "APPROVED" ? formatCurrency(d.appliedAmount) : "—"),
     },
     {
       header: "Requested",
@@ -114,7 +115,8 @@ const Discounts = () => {
     },
     {
       header: <span className="sr-only">Actions</span>,
-      width: "190px",
+      action: true,
+      width: "200px",
       render: (d) => {
         const own = d.requestedBy?.id === user?.id;
         if (!isAdmin) return null;
@@ -122,14 +124,14 @@ const Discounts = () => {
         if (d.status === "PENDING")
           return (
             <div className="flex justify-end gap-1.5">
-              <Button size="sm" icon={CheckCircle2} onClick={() => approve(d)}>Approve</Button>
+              <Button variant="secondary" icon={CheckCircle2} onClick={() => approve(d)}>Approve</Button>
               <IconButton icon={XCircle} label={`Reject ${d.name}`} onClick={() => setDialog({ kind: "reject", d })} />
             </div>
           );
         if (d.status === "APPROVED")
           return (
             <div className="flex justify-end">
-              <Button size="sm" variant="ghost" icon={Ban} onClick={() => setDialog({ kind: "revoke", d })}>Revoke</Button>
+              <Button variant="ghost" icon={Ban} onClick={() => setDialog({ kind: "revoke", d })}>Revoke</Button>
             </div>
           );
         return null;
@@ -138,17 +140,17 @@ const Discounts = () => {
   ];
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <PageShell>
       <PageHeader
-        icon={BadgePercent}
         title="Discounts & scholarships"
         description="Requests wait for an administrator; only approved ones reduce a student's fees."
         actions={<Button icon={Plus} onClick={() => setDialog({ kind: "new" })}>New request</Button>}
       />
-      <Tabs
+      <SegmentedControl
+        label="Discount status"
         value={status}
         onChange={setStatus}
-        tabs={[
+        options={[
           { value: "PENDING", label: "Waiting" },
           { value: "APPROVED", label: "Approved" },
           { value: "REJECTED", label: "Rejected" },
@@ -163,7 +165,8 @@ const Discounts = () => {
         searchValue={search}
         onSearchChange={setSearch}
         searchPlaceholder="Student or discount name…"
-        emptyMessage={status === "PENDING" ? "Nothing waiting for approval" : "No discounts"}
+        emptyMessage={q ? "No discounts match your search" : status === "PENDING" ? "Nothing waiting for approval" : "No discounts here"}
+        emptyDescription={q ? "Try a student's name, admission number or the discount's name." : status === "PENDING" ? "New requests appear here until an administrator decides." : "Requests move here once an administrator decides. Use New request to ask for one."}
         emptyIcon={BadgePercent}
       />
 
@@ -188,7 +191,7 @@ const Discounts = () => {
           onSubmit={async ({ text }) => done((await feeService.revokeDiscount(dialog.d.id, { reason: text })).message)}
         />
       )}
-    </div>
+    </PageShell>
   );
 };
 

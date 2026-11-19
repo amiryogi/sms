@@ -24,7 +24,7 @@ Left menu → **Teaching** → **Attendance** (`/teacher/attendance`). The teach
 also has a quick link.
 
 ## Before you start
-The administrator must have assigned you to the class section on **Teacher Assignment**, and
+The administrator must have assigned you to the class section on **Teacher assignment**, and
 students must be enrolled in it.
 
 ## Steps
@@ -34,7 +34,7 @@ students must be enrolled in it.
 4. Mark each student: **Present (P)**, **Absent (A)**, **Late (L)** or **Excused (E)**. Use
    **All present** to mark everyone present, then change the few who are not.
 5. Optionally type a **Reason** for a student.
-6. Click **Save Attendance**.
+6. Click **Save attendance**.
 
 ## What you should see
 A confirmation, and the day shows as **Taken**. Parents with the mobile app get a notification
@@ -42,9 +42,9 @@ when their child is newly marked absent for today.
 
 ## Common mistakes
 - Choosing a weekly holiday or a school holiday: the register cannot be saved on those days
-  (unless the administrator switched that rule off in **Calendar Settings**). The page says which
+  (unless the administrator switched that rule off in **Calendar settings**). The page says which
   holiday it is.
-- Forgetting to click **Save Attendance** before leaving the page.
+- Forgetting to click **Save attendance** before leaving the page.
 
 ## Troubleshooting
 - **"Choose a class" with nothing to choose:** you have no assignment for the current academic
@@ -54,4 +54,4 @@ when their child is newly marked absent for today.
   again updates the register.
 
 ## Related pages
-My Students (`/teacher/students`), Calendar (`/calendar`).
+My students (`/teacher/students`), Calendar (`/calendar`).

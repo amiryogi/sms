@@ -110,8 +110,12 @@ export const Radio = React.forwardRef(function Radio({ label, description, class
 });
 
 /** On/off switch. Controlled: pass `checked` and `onChange(nextBoolean)`. */
-export const Switch = ({ checked, onChange, label, description, disabled, id }) => (
-  <div className="flex items-start justify-between gap-4">
+/**
+ * On/off switch. `label` shows a visible label; with no visible label (a switch
+ * in a table row) pass `aria-label` so a screen reader still names it.
+ */
+export const Switch = ({ checked, onChange, label, description, disabled, id, "aria-label": ariaLabel, className }) => (
+  <div className={cn("flex items-start justify-between gap-4", className)}>
     {(label || description) && (
       <div className="text-sm">
         {label && <label htmlFor={id} className="font-medium text-slate-700">{label}</label>}
@@ -123,6 +127,7 @@ export const Switch = ({ checked, onChange, label, description, disabled, id }) 
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-label={label ? undefined : ariaLabel}
       disabled={disabled}
       onClick={() => onChange?.(!checked)}
       className={cn(

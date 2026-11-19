@@ -45,7 +45,7 @@ const ChangePassword = () => {
         navigate("/login", { replace: true });
       }
     } catch (err) {
-      setError(err.response?.data?.errors?.[0]?.message || err.response?.data?.message || "Could not change the password");
+      setError(err.response?.data?.errors?.[0]?.message || err.response?.data?.message || "Could not change the password. Check the current password and try again.");
     } finally {
       setSaving(false);
     }
@@ -54,13 +54,11 @@ const ChangePassword = () => {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-slate-50 px-4 py-10">
       <Card className="w-full max-w-md">
-        <div className="mb-5 flex items-center gap-3">
-          <span className="flex size-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
-            <KeyRound size={20} aria-hidden="true" />
-          </span>
+        {/* The page's title: the same size as every other page title, no icon tile. */}
+        <div className="mb-5">
           <div>
-            <h1 className="text-lg font-semibold text-slate-900">{forced ? "Choose your password" : "Change password"}</h1>
-            <p className="text-sm text-slate-500">
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{forced ? "Choose your password" : "Change password"}</h1>
+            <p className="mt-1 text-sm text-slate-500">
               {user?.username ? (
                 <>
                   Signed in as <span className="font-mono">{user.username}</span>
@@ -85,7 +83,7 @@ const ChangePassword = () => {
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
           <Field label={forced ? "Temporary password" : "Current password"} htmlFor="cp-current" error={errors.currentPassword?.message}>
-            <TextInput id="cp-current" type="password" autoComplete="current-password" invalid={Boolean(errors.currentPassword)} {...register("currentPassword", { required: "Required" })} />
+            <TextInput id="cp-current" type="password" autoComplete="current-password" invalid={Boolean(errors.currentPassword)} {...register("currentPassword", { required: forced ? "Enter the temporary password from the school" : "Enter your current password" })} />
           </Field>
           <Field
             label="New password"
@@ -99,8 +97,8 @@ const ChangePassword = () => {
               autoComplete="new-password"
               invalid={Boolean(errors.newPassword)}
               {...register("newPassword", {
-                required: "Required",
-                validate: (v) => POLICY.test(v) || "At least 8 characters with upper case, lower case and a number",
+                required: "Enter a new password",
+                validate: (v) => POLICY.test(v) || "Use at least 8 characters, with an upper-case letter, a lower-case letter and a number",
               })}
             />
           </Field>
@@ -110,7 +108,7 @@ const ChangePassword = () => {
               type="password"
               autoComplete="new-password"
               invalid={Boolean(errors.confirm)}
-              {...register("confirm", { validate: (v) => v === watch("newPassword") || "The passwords do not match" })}
+              {...register("confirm", { validate: (v) => v === watch("newPassword") || "The two passwords do not match. Type the new password again" })}
             />
           </Field>
           <div className="flex items-center gap-2 pt-1">

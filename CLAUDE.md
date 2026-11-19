@@ -618,11 +618,16 @@ migrations are tracked in git (apply with `npm run db:migrate:deploy`; never
   - `PageShell` owns the one container width and vertical rhythm — use it on new pages.
   - `PageHeader` / `CardHeader` ignore an `icon` prop on purpose; no decorative tile
     beside a title.
-  - **Print is pinned.** `app.css` shadows `--font-sans` and the whole slate ladder back
-    to their pre-redesign values inside `.report-card-a4`, `.report-a4`, `.perf-sheet`,
-    `.rc-grade-legend`, `.bill-slip` and `.receipt-slip`, so printed output and the
-    Playwright pixel baselines do not move. `index.html` still loads Inter for this.
-    `src/styles/__tests__/palette.test.js` asserts all of the above, including contrast.
+  - **Print is pinned.** `app.css` shadows `--font-sans`, the whole slate ladder and
+    Tailwind's default `--text-*` sizes and line heights back to their pre-redesign values
+    inside `.report-card-a4`, `.report-a4`, `.perf-sheet`, `.rc-grade-legend`,
+    `.bill-slip`, `.receipt-slip`, `.statement-sheet`, `.daybook-sheet` and
+    `.calendar-sheet`, so printed output and the Playwright pixel baselines do not move.
+    A new print surface goes in that list and in the test. `index.html` still loads Inter
+    for this. `src/styles/__tests__/palette.test.js` asserts all of the above, including
+    contrast.
+  - **The kit's reference** is `src/components/ui/README.md`: which component for which
+    job, props, states, accessibility. Extend the kit rather than hand-rolling a component.
 - **Print exception.** The report-card sheets keep local, unlayered CSS for A4 output.
   There is **one sheet and one stylesheet per template**: `reportcard/ReportSheet.jsx` +
   `reportcard/nebSheetStyles.js` (NEB grade sheet) and `reportcard/PerformanceSheet.jsx`.

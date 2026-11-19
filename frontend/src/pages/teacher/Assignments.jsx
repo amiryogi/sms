@@ -5,13 +5,13 @@ import { useAuth } from "../../context/AuthContext";
 import DataTable from "../../components/common/DataTable";
 import Modal from "../../components/common/Modal";
 import { Input, DateInput, Select, Textarea, Button, FormRow, FileUpload } from "../../components/common/FormElements";
-import { PageHeader, Badge, IconButton, Avatar, EmptyState, LoadingBlock, DialogActions, TextInput, TextArea, toast, confirmDialog } from "../../components/ui";
+import { PageHeader, PageShell, Badge, IconButton, Avatar, EmptyState, LoadingBlock, DialogActions, TextInput, TextArea, toast, confirmDialog } from "../../components/ui";
 import { assignmentService } from "../../api/assignmentService";
 import { teacherService } from "../../api/teacherService";
 import { resolveAssetUrl } from "../../utils/assets";
 import { formatDate, formatDateTime, toDateInput, fullName, daysFromToday } from "../../utils/format";
 
-const SUBMISSION_TONE = { submitted: "info", late: "warning", graded: "success", returned: "neutral" };
+const SUBMISSION_TONE = { submitted: "neutral", late: "warning", graded: "success", returned: "neutral" };
 
 /** "Due in 3 days" / "Due today" / "Overdue" from the due date. */
 const dueBadge = (dueDate) => {
@@ -20,7 +20,8 @@ const dueBadge = (dueDate) => {
   if (days < 0) return <Badge tone="neutral">Closed</Badge>;
   if (days === 0) return <Badge tone="warning" dot>Due today</Badge>;
   if (days <= 3) return <Badge tone="warning">Due in {days} day{days === 1 ? "" : "s"}</Badge>;
-  return <Badge tone="info">Due in {days} days</Badge>;
+  // Comfortably ahead is not a state worth colour: only "today" and "soon" are.
+  return <Badge>Due in {days} days</Badge>;
 };
 
 const FileLink = ({ file }) => (
@@ -87,7 +88,7 @@ const Assignments = () => {
     () =>
       teacherAssignments.map((ta) => ({
         value: String(ta.id),
-        label: `${ta.classSubject?.class?.name} ${ta.section?.name} · ${ta.classSubject?.subject?.name}`,
+        label: `${ta.classSubject?.class?.name} ${ta.section?.name}, ${ta.classSubject?.subject?.name}`,
       })),
     [teacherAssignments],
   );
@@ -206,7 +207,7 @@ const Assignments = () => {
         <div className="min-w-0 max-w-sm">
           <p className="truncate font-medium text-slate-900">{row.title}</p>
           <p className="truncate text-xs text-slate-500">
-            {row.teacherSubject?.classSubject?.class?.name} {row.teacherSubject?.section?.name} · {row.teacherSubject?.classSubject?.subject?.name}
+            {row.teacherSubject?.classSubject?.class?.name} {row.teacherSubject?.section?.name}, {row.teacherSubject?.classSubject?.subject?.name}
           </p>
         </div>
       ),
@@ -214,13 +215,13 @@ const Assignments = () => {
     {
       header: "Due",
       render: (row) => (
-        <div className="flex flex-col items-start gap-1">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm whitespace-nowrap text-slate-700">{formatDate(row.dueDate)}</span>
           {dueBadge(row.dueDate)}
         </div>
       ),
     },
-    { header: "Marks", render: (row) => <span className="tabular-nums">{row.totalMarks ?? "—"}</span> },
+    { header: "Marks", numeric: true, render: (row) => row.totalMarks ?? "—" },
     {
       header: "Files",
       render: (row) =>
@@ -232,8 +233,9 @@ const Assignments = () => {
     },
     {
       header: "Submissions",
+      action: true,
       render: (row) => (
-        <Button size="sm" variant="secondary" icon={Inbox} onClick={() => openSubmissions(row)}>
+        <Button variant="secondary" icon={Inbox} onClick={() => openSubmissions(row)}>
           {row._count?.submissions ?? 0} received
         </Button>
       ),
@@ -241,6 +243,7 @@ const Assignments = () => {
     {
       header: <span className="sr-only">Actions</span>,
       width: "100px",
+      action: true,
       render: (row) => (
         <div className="flex justify-end gap-1">
           <IconButton icon={Pencil} label={`Edit ${row.title}`} onClick={() => openModal(row)} />
@@ -253,14 +256,13 @@ const Assignments = () => {
   const sa = selectedAssignment;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <PageShell>
       <PageHeader
-        icon={NotebookPen}
         title="Assignments"
         description="Set work for your classes, collect submissions and grade them."
         actions={
           <Button icon={Plus} onClick={() => openModal()} disabled={!loading && teachingOptions.length === 0} data-guide="assignments.create">
-            Create Assignment
+            Create assignment
           </Button>
         }
       />
@@ -274,7 +276,7 @@ const Assignments = () => {
         searchPlaceholder="Search assignments…"
         emptyMessage={search ? "No assignments match" : "No assignments yet"}
         emptyDescription={
-          search ? undefined : teachingOptions.length ? "Create one and your students will see it straight away." : "You need a class assignment from the admin before you can set work."
+          search ? "Try a title, class or subject." : teachingOptions.length ? "Create one and your students will see it straight away." : "You need a class assignment from the admin before you can set work."
         }
         emptyIcon={NotebookPen}
       />
@@ -287,7 +289,7 @@ const Assignments = () => {
             <div className="mb-4">
               <p className="mb-1.5 text-sm font-medium text-slate-700">Class and subject</p>
               <p className="text-sm text-slate-900">
-                {editingAssignment.teacherSubject?.classSubject?.class?.name} {editingAssignment.teacherSubject?.section?.name} ·{" "}
+                {editingAssignment.teacherSubject?.classSubject?.class?.name} {editingAssignment.teacherSubject?.section?.name},{" "}
                 {editingAssignment.teacherSubject?.classSubject?.subject?.name}
               </p>
             </div>
@@ -326,25 +328,25 @@ const Assignments = () => {
           )}
           <DialogActions>
             <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>
-            <Button type="submit" loading={submitting}>{editingAssignment ? "Save changes" : "Create Assignment"}</Button>
+            <Button type="submit" loading={submitting}>{editingAssignment ? "Save changes" : "Create assignment"}</Button>
           </DialogActions>
         </form>
       </Modal>
 
       {/* Submissions */}
-      <Modal isOpen={Boolean(sa)} onClose={() => setSelectedAssignment(null)} title={sa ? `Submissions · ${sa.title}` : "Submissions"} size="xl">
+      <Modal isOpen={Boolean(sa)} onClose={() => setSelectedAssignment(null)} title={sa ? `Submissions: ${sa.title}` : "Submissions"} size="xl">
         {sa && (
           <p className="-mt-1 mb-4 text-sm text-slate-500">
-            {sa.teacherSubject?.classSubject?.class?.name} {sa.teacherSubject?.section?.name} · due {formatDate(sa.dueDate)}
-            {sa.totalMarks ? ` · out of ${sa.totalMarks}` : ""}
+            {sa.teacherSubject?.classSubject?.class?.name} {sa.teacherSubject?.section?.name}, due {formatDate(sa.dueDate)}
+            {sa.totalMarks ? `, out of ${sa.totalMarks}` : ""}
           </p>
         )}
         {loadingSubmissions ? (
           <LoadingBlock text="Loading submissions…" />
         ) : submissions.length === 0 ? (
-          <EmptyState icon={Inbox} title="No submissions yet" description="Work handed in by students shows up here." />
+          <EmptyState compact icon={Inbox} title="No submissions yet" description="Work handed in by students shows up here as soon as they submit it." />
         ) : (
-          <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">
+          <ul className="divide-y divide-slate-200 rounded-xl border border-slate-200">
             {submissions.map((sub) => {
               const u = sub.student?.user || {};
               const name = fullName(u);
@@ -410,7 +412,7 @@ const Assignments = () => {
           </ul>
         )}
       </Modal>
-    </div>
+    </PageShell>
   );
 };
 

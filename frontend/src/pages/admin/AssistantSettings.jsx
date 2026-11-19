@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Bot, Cpu, BarChart3, PlugZap, Save, ThumbsUp, ThumbsDown, AlertTriangle } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { Alert, Badge, Button, Card, CardHeader, Checkbox, EmptyState, Field, LoadingBlock, PageHeader, SelectInput, StatCard, StatGroup, Switch, Tabs, TextInput, toast } from "../../components/ui";
+import { Alert, Badge, Button, Card, CardHeader, Checkbox, EmptyState, Field, LoadingBlock, PageHeader, PageShell, SelectInput, StatCard, StatGroup, Switch, Tabs, TextInput, toast } from "../../components/ui";
 import { assistantService } from "../../api/assistantService";
 import { formatRoleName } from "../../layouts/navigation";
 import { formatDateTime, formatNumber, formatShortDay, todayAd } from "../../utils/format";
 import { AXIS, SERIES, STATUS_COLORS } from "../../components/finance/charts/chartTheme";
 
 /**
- * Settings → AI Assistant (administrators and super administrators).
+ * Settings → AI assistant (administrators and super administrators).
  *  - Assistant: on/off, which roles may use it, default language, history and limits.
  *  - AI provider: provider and model (only providers whose API key is installed on the server),
  *    Test connection, the optional fallback, timeout and answer length.
@@ -79,16 +79,21 @@ export default function AssistantSettings() {
     }
   };
 
-  if (loadError) return <Alert tone="danger">Could not load the assistant settings.</Alert>;
+  if (loadError) {
+    return (
+      <PageShell>
+        <Alert tone="danger">Could not load the assistant settings. Reload the page to try again.</Alert>
+      </PageShell>
+    );
+  }
   if (!info || !form) return <LoadingBlock text="Loading assistant settings…" />;
 
   const dirty = JSON.stringify(form) !== JSON.stringify(info.settings);
 
   return (
-    <div className="space-y-6">
+    <PageShell>
       <PageHeader
-        icon={Bot}
-        title="AI Assistant"
+        title="AI assistant"
         description="The help assistant explains how to use this system. It never sees or changes school records."
         actions={
           tab !== "usage" && (
@@ -115,7 +120,7 @@ export default function AssistantSettings() {
       {tab === "assistant" && <AssistantTab form={form} set={set} errors={errors} />}
       {tab === "provider" && <ProviderTab form={form} set={set} setFallback={setFallback} errors={errors} providers={info.providers} />}
       {tab === "usage" && <UsageTab />}
-    </div>
+    </PageShell>
   );
 }
 
@@ -132,7 +137,7 @@ function AssistantTab({ form, set, errors }) {
             {ROLES.map((role) => (
               <Checkbox key={role} id={`role-${role}`} label={formatRoleName(role)} checked={form.roles.includes(role)} onChange={() => toggleRole(role)} />
             ))}
-            {errors.roles && <p className="text-xs text-red-600">{errors.roles}</p>}
+            {errors.roles && <p className="text-xs text-risk" role="alert">{errors.roles}</p>}
           </fieldset>
         </div>
       </Card>
@@ -267,7 +272,7 @@ function ProviderTab({ form, set, setFallback, errors, providers }) {
           <CardHeader title="Fallback" description="Used only when the main provider fails before answering (busy, unreachable, key or model problem). Never after an answer has started, never twice." />
           <div className="space-y-4">
             <Switch id="ai-fallback" checked={form.fallback.enabled} onChange={(v) => setFallback({ enabled: v })} label="Use a fallback provider" />
-            {errors.fallback && <p className="text-xs text-red-600">{errors.fallback}</p>}
+            {errors.fallback && <p className="text-xs text-risk" role="alert">{errors.fallback}</p>}
             {form.fallback.enabled && (
               <>
                 <Field label="Fallback provider" htmlFor="ai-fb-provider" error={errors["fallback.provider"]}>
@@ -397,7 +402,7 @@ function UsageTab() {
                     <th className="py-1.5 pl-3 font-medium">Last answer / last error</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-200">
                   {data.byProvider.map((p) => (
                     <tr key={p.provider}>
                       <td className="py-2">{p.label}</td>
@@ -406,7 +411,7 @@ function UsageTab() {
                       <td className="py-2 pl-3 text-xs text-slate-500">
                         {p.lastOkAt ? formatDateTime(p.lastOkAt) : "—"}
                         {p.lastErrorAt && (
-                          <span className="block text-red-600">
+                          <span className="block text-risk">
                             {formatDateTime(p.lastErrorAt)}: {ERROR_LABELS[p.lastErrorCode] || p.lastErrorCode}
                           </span>
                         )}
@@ -427,7 +432,7 @@ function UsageTab() {
                   </li>
                 ))}
               </ul>
-              <p className="mt-3 text-xs text-slate-500">{data.byLanguage.map((l) => `${l.language === "ne" ? "Nepali" : "English"}: ${formatNumber(l.requests)}`).join(" · ")}</p>
+              <p className="mt-3 text-xs text-slate-500">{data.byLanguage.map((l) => `${l.language === "ne" ? "Nepali" : "English"}: ${formatNumber(l.requests)}`).join(", ")}</p>
             </Card>
           </div>
 
@@ -438,7 +443,7 @@ function UsageTab() {
                 {data.errorsByCode.map((e) => (
                   <li key={e.code} className="flex items-center justify-between gap-2">
                     <span className="flex items-center gap-2">
-                      <AlertTriangle size={14} className="text-amber-600" aria-hidden="true" />
+                      <AlertTriangle size={14} className="text-risk" aria-hidden="true" />
                       {ERROR_LABELS[e.code] || e.code}
                     </span>
                     <span className="tabular-nums">{formatNumber(e.count)}</span>
@@ -453,17 +458,17 @@ function UsageTab() {
       <Card>
         <CardHeader title="Comments from users" description="What people wrote with a thumbs up or down. Names are not shown." />
         {data.comments.length === 0 ? (
-          <p className="text-sm text-slate-500">No comments in this period.</p>
+          <EmptyState compact title="No comments in this period" description="Comments appear here when someone gives an answer a thumbs up or down and adds a note. Try a longer period." />
         ) : (
           <ul className="divide-y divide-slate-100">
             {data.comments.map((c) => (
               <li key={c.id} className="flex gap-3 py-2.5 text-sm">
-                {c.feedback > 0 ? <ThumbsUp size={16} className="mt-0.5 shrink-0 text-emerald-600" aria-label="Helpful" /> : <ThumbsDown size={16} className="mt-0.5 shrink-0 text-red-600" aria-label="Not helpful" />}
+                {c.feedback > 0 ? <ThumbsUp size={16} className="mt-0.5 shrink-0 text-ok" aria-label="Helpful" /> : <ThumbsDown size={16} className="mt-0.5 shrink-0 text-risk" aria-label="Not helpful" />}
                 <div className="min-w-0">
                   <p className="break-words text-slate-800">{c.feedbackComment}</p>
                   <p className="text-xs text-slate-500">
-                    {formatRoleName(c.role)} · {formatDateTime(c.createdAt)}
-                    {c.module ? ` · ${c.module}` : ""}
+                    {formatRoleName(c.role)}, {formatDateTime(c.createdAt)}
+                    {c.module ? `, ${c.module}` : ""}
                   </p>
                 </div>
               </li>

@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { CalendarRange } from "lucide-react";
-import { Card, EmptyState, LoadingBlock } from "../../components/ui";
+import { Card, EmptyState, LoadingBlock, PageShell } from "../../components/ui";
 import { useAuth } from "../../context/AuthContext";
 import { useDatePrefs } from "../../hooks/useDatePrefs";
 import { formatDateTime, fullName, todayAd } from "../../utils/format";
@@ -129,7 +129,9 @@ const CalendarPrint = () => {
   const pageRule = `@media print { @page { size: A4 ${spec.landscape ? "landscape" : "portrait"}; margin: 9mm; } .calendar-sheet thead { display: table-header-group; } .calendar-sheet tr { break-inside: avoid; } }`;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4">
+    // PageShell is screen chrome only: the toolbar is print:hidden and the sheet
+    // is the last child, so the shell's spacing never reaches the printed page.
+    <PageShell>
       <PrintToolbar ready={!loading} autoPrint={params.get("print") === "1"} printLabel="Print" />
       {loading ? (
         <LoadingBlock text="Preparing the calendar…" />
@@ -274,7 +276,7 @@ const CalendarPrint = () => {
           </p>
         </article>
       )}
-    </div>
+    </PageShell>
   );
 };
 

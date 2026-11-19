@@ -3,7 +3,7 @@
  * month and weekday names, and which numerals.
  *
  * Two layers:
- *  - the school's defaults (Calendar Settings, sent with the sign-in profile);
+ *  - the school's defaults (Calendar settings, sent with the sign-in profile);
  *  - what this person chose on this browser, kept in localStorage.
  * The person's choice wins where they made one.
  *

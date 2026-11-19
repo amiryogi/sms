@@ -1,6 +1,6 @@
 ---
 id: school-settings
-title: School Settings: profile, branding, grading and report card layout
+title: School settings: profile, branding, grading and report card layout
 roles: [ADMIN, SUPER_ADMIN]
 modules: [settings, report-cards]
 routes: [/admin/school-settings]
@@ -10,7 +10,7 @@ aliases: [school settings, school profile, logo, banner, brand colour, color, gr
 verifiedAgainst: [frontend/src/pages/admin/SchoolSettings.jsx, frontend/src/components/admin/GradeScaleSettings.jsx, frontend/src/components/admin/ReportCardLayoutSettings.jsx, frontend/src/components/admin/BrandColorSettings.jsx]
 verifiedOn: 2026-11-15
 ---
-# School Settings
+# School settings
 
 ## Purpose
 The school's profile, branding, grading and report card.
@@ -19,7 +19,7 @@ The school's profile, branding, grading and report card.
 Administrators.
 
 ## Where to find it
-Left menu → **Settings** → **School Settings** (`/admin/school-settings`). Tabs:
+Left menu → **Settings** → **School settings** (`/admin/school-settings`). Tabs:
 **School profile**, **Branding**, **Grading**, **Report card**.
 
 ## Steps
@@ -27,7 +27,7 @@ Left menu → **Settings** → **School Settings** (`/admin/school-settings`). T
 1. Fill **About the school** (**School name**, **Tagline / motto**, **Principal**,
    **Established**), **Contact** (**Address**, **Mobile number**, **Landline**, **Email**,
    **Website**) and **Social media**.
-2. Click **Save Changes**.
+2. Click **Save changes**.
 
 **Branding**
 - Upload the **Logo** (square PNG or JPG, up to 2 MB) and **Banner** (wide, about 4:1, up to 5 MB),
@@ -52,4 +52,4 @@ Changes appear on the sign-in page, sidebar and report cards.
 - Expecting old report cards to change after a grading change: regenerate them.
 
 ## Related pages
-Report Cards, Calendar Settings, AI Assistant.
+Report cards, Calendar settings, AI assistant.

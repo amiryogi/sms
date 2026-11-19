@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { ClipboardList, Printer } from "lucide-react";
-import { Alert, Badge, Card, EmptyState, LoadingBlock, PageHeader, SelectInput, buttonClasses } from "../../components/ui";
+import { Alert, Badge, Card, EmptyState, LoadingBlock, PageHeader, PageShell, SelectInput, buttonClasses } from "../../components/ui";
 import { useAuth } from "../../context/AuthContext";
 import { useDatePrefs } from "../../hooks/useDatePrefs";
 import { todayAd } from "../../utils/format";
@@ -42,11 +42,10 @@ const ExamSchedule = () => {
   };
 
   return (
-    <div>
+    <PageShell>
       <PageHeader
-        title="Examination Schedule"
+        title="Exam schedule"
         description="Exam dates for the year, from the exams set up by the school."
-        icon={ClipboardList}
         actions={
           <>
             <div className="w-36">
@@ -63,19 +62,20 @@ const ExamSchedule = () => {
           </>
         }
       />
-      {error && <Alert tone="danger" className="mb-4">{error}</Alert>}
+      {error && <Alert tone="danger">{error}</Alert>}
       <Card padding="none" className="overflow-hidden">
         {loading ? (
           <LoadingBlock text="Loading exams…" />
         ) : exams.length === 0 ? (
           <EmptyState
+            compact
             icon={ClipboardList}
             title={`No exams dated in ${year}`}
             description={hasRole("ADMIN") ? "Give an exam its start and end dates on the Exams page and it appears here." : "The school has not published exam dates for this year yet."}
             action={hasRole("ADMIN") ? <Link to="/admin/exams" className={buttonClasses({ variant: "outline" })}>Open Exams</Link> : undefined}
           />
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-slate-200">
             {exams.map((exam) => (
               <li key={exam.key} className="grid gap-x-6 gap-y-2 px-5 py-4 sm:grid-cols-[15rem_1fr_auto]" data-testid="exam-row">
                 <div>
@@ -84,7 +84,7 @@ const ExamSchedule = () => {
                   <p className="text-xs text-slate-500">
                     {weekdayNameOf(exam.startDate, prefs.language)}
                     {exam.endDate !== exam.startDate ? ` to ${weekdayNameOf(exam.endDate, prefs.language)}` : ""}
-                    {` · ${digits(diffDays(exam.startDate, exam.endDate) + 1, prefs.numerals)} day${exam.startDate === exam.endDate ? "" : "s"}`}
+                    {`, ${digits(diffDays(exam.startDate, exam.endDate) + 1, prefs.numerals)} day${exam.startDate === exam.endDate ? "" : "s"}`}
                   </p>
                 </div>
                 <div className="min-w-0">
@@ -96,9 +96,9 @@ const ExamSchedule = () => {
                     <ul className="mt-1.5 space-y-0.5 text-xs text-slate-600">
                       {papers.get(exam.sourceId).map((p) => (
                         <li key={p.key}>
-                          <span className="font-medium text-slate-800">{itemDateText(p, prefs)}</span> · {p.title.replace(`${exam.title}: `, "")}
+                          <span className="font-medium text-slate-800">{itemDateText(p, prefs)}:</span> {p.title.replace(`${exam.title}: `, "")}
                           {p.detail ? ` (${p.detail})` : ""}
-                          {!p.isAllDay ? ` · ${itemTimeText(p, prefs.numerals)}` : ""}
+                          {!p.isAllDay ? `, ${itemTimeText(p, prefs.numerals)}` : ""}
                         </li>
                       ))}
                     </ul>
@@ -110,7 +110,7 @@ const ExamSchedule = () => {
           </ul>
         )}
       </Card>
-    </div>
+    </PageShell>
   );
 };
 

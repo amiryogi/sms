@@ -32,13 +32,13 @@ export const AuthProvider = ({ children }) => {
   const autoRefreshInFlightRef = useRef(false);
   const lastAutoRefreshRef = useRef(0);
 
-  // The whole UI follows the school's brand colour (School Settings).
+  // The whole UI follows the school's brand colour (School settings).
   const brandColor = user?.school?.brandColor || null;
   useEffect(() => {
     if (user) applyBrand(brandColor);
   }, [user, brandColor]);
 
-  // How dates are shown by default (BS / AD, weekly holidays): Calendar Settings.
+  // How dates are shown by default (BS / AD, weekly holidays): Calendar settings.
   const schoolCalendar = user?.school?.calendar || null;
   useEffect(() => {
     setSchoolDatePrefs(schoolCalendar);

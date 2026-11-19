@@ -1,7 +1,7 @@
 import apiClient from "./apiClient";
 
 export const feeService = {
-  // Fee Types
+  // Fee types
   getFeeTypes: async (params = {}) => {
     const response = await apiClient.get("/fees/types", { params });
     return response.data;
@@ -23,7 +23,7 @@ export const feeService = {
     return response.data;
   },
 
-  // Fee Structures
+  // Fee structures
   getFeeStructures: async (params = {}) => {
     const response = await apiClient.get("/fees/structures", { params });
     return response.data;

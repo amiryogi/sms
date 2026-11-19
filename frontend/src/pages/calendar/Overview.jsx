@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarDays, CalendarRange, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, List, Plus, Printer, Rows3, Sun } from "lucide-react";
-import { Alert, Button, Card, CardHeader, IconButton, LoadingBlock, PageHeader, Tabs, buttonClasses } from "../../components/ui";
+import { CalendarDays, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, List, Plus, Printer, Rows3, Sun } from "lucide-react";
+import { Alert, Badge, Button, Card, CardHeader, IconButton, LoadingBlock, PageHeader, PageShell, Spinner, Tabs, buttonClasses } from "../../components/ui";
 import { useAuth } from "../../context/AuthContext";
 import { useDatePrefs } from "../../hooks/useDatePrefs";
 import { calendarService } from "../../api/calendarService";
@@ -22,13 +22,13 @@ const VIEW_TABS = [
   { value: "agenda", label: "List", icon: List },
 ];
 
-const UpcomingList = ({ title, icon, items, prefs, hasRole, empty, onOpen }) => (
+const UpcomingList = ({ title, items, prefs, hasRole, empty, onOpen }) => (
   <Card>
-    <CardHeader title={title} icon={icon} />
+    <CardHeader title={title} />
     {items.length === 0 ? (
       <p className="text-sm text-slate-500">{empty}</p>
     ) : (
-      <ul className="divide-y divide-slate-100">
+      <ul className="divide-y divide-slate-200">
         {items.map((item) => (
           <ItemRow key={item.key} item={item} prefs={prefs} hasRole={hasRole} showDate onOpen={onOpen} />
         ))}
@@ -121,11 +121,10 @@ const CalendarOverview = () => {
   const printHref = `/calendar/print/month?mode=${view.mode}&year=${view.year}&month=${view.month}`;
 
   return (
-    <div>
+    <PageShell>
       <PageHeader
-        title="School Calendar"
+        title="School calendar"
         description="Holidays, exams, school events and deadlines in one place."
-        icon={CalendarRange}
         actions={
           <>
             <Link to={printHref} className={buttonClasses({ variant: "secondary" })}>
@@ -141,17 +140,18 @@ const CalendarOverview = () => {
         }
       />
 
-      {/* Today, and what is coming */}
-      <div className="mb-6 grid gap-4 lg:grid-cols-4">
-        <Card className="bg-brand-600 text-brand-fg lg:col-span-1" data-testid="today-card">
-          <p className="text-xs font-semibold tracking-wide uppercase opacity-80">Today</p>
-          <p className="mt-1 text-2xl leading-tight font-semibold">{formatBs(adToBs(today), fmt)}</p>
-          <p className="text-sm opacity-90">
-            {weekdayNameOf(today, prefs.language)} · {formatAd(today, fmt)}
+      {/* Today, and what is coming. Today is paper like the rest: the date is the
+          figure, and only "not a school day" carries a status colour. */}
+      <div className="grid gap-4 lg:grid-cols-4">
+        <Card className="lg:col-span-1" data-testid="today-card">
+          <p className="text-sm font-medium text-slate-500">Today</p>
+          <p className="mt-2 text-2xl leading-tight font-semibold tracking-tight text-slate-900 tabular-nums">{formatBs(adToBs(today), fmt)}</p>
+          <p className="mt-0.5 text-sm text-slate-500">
+            {weekdayNameOf(today, prefs.language)}, {formatAd(today, fmt)}
           </p>
           {todayInfo && (
-            <p className="mt-3 flex items-center gap-1.5 text-sm font-medium">
-              <Sun size={15} aria-hidden="true" />
+            <p className={cn("mt-3 flex items-center gap-1.5 text-sm font-medium", overview.isWorkingDay ? "text-slate-700" : "text-risk")}>
+              <Sun size={15} className={overview.isWorkingDay ? "text-slate-300" : undefined} aria-hidden="true" />
               {overview.isWorkingDay ? "School day" : overview.nonWorkingReason || "Not a school day"}
             </p>
           )}
@@ -161,8 +161,15 @@ const CalendarOverview = () => {
         ) : (
           <div className="grid gap-4 sm:grid-cols-3 lg:col-span-3">
             <UpcomingList title="Upcoming holidays" items={overview.holidays.slice(0, 3)} prefs={prefs} hasRole={hasRole} empty={`No holidays in the next ${overview.windowDays} days.`} onOpen={setDetail} />
-            <UpcomingList title="Upcoming exams" items={overview.exams.slice(0, 3)} prefs={prefs} hasRole={hasRole} empty="No exams scheduled." />
-            <UpcomingList title="Events and deadlines" items={[...overview.events, ...overview.deadlines].sort((a, b) => a.startDate.localeCompare(b.startDate)).slice(0, 3)} prefs={prefs} hasRole={hasRole} empty="Nothing coming up." onOpen={setDetail} />
+            <UpcomingList title="Upcoming exams" items={overview.exams.slice(0, 3)} prefs={prefs} hasRole={hasRole} empty={`No exams in the next ${overview.windowDays} days.`} />
+            <UpcomingList
+              title="Events and deadlines"
+              items={[...overview.events, ...overview.deadlines].sort((a, b) => a.startDate.localeCompare(b.startDate)).slice(0, 3)}
+              prefs={prefs}
+              hasRole={hasRole}
+              empty={`No events or deadlines in the next ${overview.windowDays} days.`}
+              onOpen={setDetail}
+            />
           </div>
         )}
       </div>
@@ -183,7 +190,11 @@ const CalendarOverview = () => {
             </div>
             <div className="min-w-0 flex-1 text-center sm:flex-none sm:text-left">
               <h2 className="text-lg leading-tight font-semibold text-slate-900" data-testid="calendar-title">{viewTitle(view, fmt)}</h2>
-              <p className="text-xs text-slate-500">{viewSubtitle(view, fmt)}</p>
+              <p className="flex items-center justify-center gap-1.5 text-xs text-slate-500 sm:justify-start">
+                {viewSubtitle(view, fmt)}
+                {/* Loading a month keeps the old one on screen; this says it is changing. */}
+                {loading && <Spinner size={12} />}
+              </p>
             </div>
             <div className="flex items-center gap-0.5">
               <IconButton
@@ -197,7 +208,9 @@ const CalendarOverview = () => {
             </div>
             <Button variant="secondary" size="sm" onClick={goToday}>Today</Button>
             <span className="flex-1" />
-            <div className="inline-flex rounded-xl bg-slate-100 p-1" role="group" aria-label="Calendar">
+            {/* Looks like the kit's SegmentedControl, but stays a pair of pressed
+                buttons: e2e/tests/calendar.spec.js clicks it as button "A.D.". */}
+            <div className="inline-flex gap-1 rounded-lg bg-slate-100 p-1" role="group" aria-label="Calendar">
               {["bs", "ad"].map((m) => (
                 <button
                   key={m}
@@ -205,7 +218,8 @@ const CalendarOverview = () => {
                   aria-pressed={mode === m}
                   onClick={() => changeMode(m)}
                   className={cn(
-                    "cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-2 focus-visible:outline-brand-600",
+                    "cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
+                    "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-600",
                     mode === m ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800",
                   )}
                 >
@@ -217,30 +231,41 @@ const CalendarOverview = () => {
           </div>
 
           {error && <Alert tone="danger" className="mb-3">{error}</Alert>}
-          <div className={cn("transition-opacity", loading && "opacity-60")} aria-busy={loading}>
+          <div aria-busy={loading}>
             {layout === "month" && <MonthView weeks={weeks} byDay={byDay} prefs={prefs} mode={mode} today={today} selected={selected} onSelect={select} />}
             {layout === "week" && <WeekView days={weekDays} byDay={byDay} prefs={prefs} today={today} selected={selected} onSelect={select} />}
-            {layout === "agenda" && <AgendaView days={agendaDays} byDay={byDay} prefs={prefs} today={today} hasRole={hasRole} onOpen={setDetail} emptyText="Nothing on the calendar this month." />}
+            {layout === "agenda" && (
+              <AgendaView
+                days={agendaDays}
+                byDay={byDay}
+                prefs={prefs}
+                today={today}
+                hasRole={hasRole}
+                onOpen={setDetail}
+                emptyTitle="Nothing on the calendar this month"
+                emptyText="Holidays, exams, events and deadlines appear here once they are added. Try the next month."
+              />
+            )}
           </div>
           {usedCategories.length > 0 && <Legend categories={usedCategories} className="mt-4" />}
         </Card>
 
         {/* The chosen day */}
         <Card className="h-fit" data-testid="day-panel">
-          <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">{weekdayNameOf(selected, prefs.language)}</p>
-          <p className="mt-0.5 text-xl leading-tight font-semibold text-slate-900">{selectedBs ? formatBs(selectedBs, fmt) : formatAd(selected, fmt)}</p>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm font-medium text-slate-500">{weekdayNameOf(selected, prefs.language)}</p>
+          <p className="mt-1 text-2xl leading-tight font-semibold tracking-tight text-slate-900 tabular-nums">{selectedBs ? formatBs(selectedBs, fmt) : formatAd(selected, fmt)}</p>
+          <p className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-slate-500">
             {formatAd(selected, fmt)}
-            {selected === today ? " · Today" : ""}
+            {selected === today && <Badge tone="brand">Today</Badge>}
           </p>
           {prefs.weeklyHolidayDays.includes(new Date(`${selected}T00:00:00Z`).getUTCDay()) && (
-            <p className="mt-2 text-sm font-medium text-red-600">Weekly holiday</p>
+            <p className="mt-2 text-sm font-medium text-risk">Weekly holiday</p>
           )}
-          <div className="mt-3 border-t border-slate-100 pt-1">
+          <div className="mt-3 border-t border-slate-200 pt-1">
             {selectedItems.length === 0 ? (
               <p className="py-3 text-sm text-slate-500">Nothing on this day.</p>
             ) : (
-              <ul className="divide-y divide-slate-100">
+              <ul className="divide-y divide-slate-200">
                 {selectedItems.map((item) => (
                   <ItemRow key={item.key} item={item} prefs={prefs} hasRole={hasRole} onOpen={setDetail} />
                 ))}
@@ -266,7 +291,7 @@ const CalendarOverview = () => {
           setDialog({ event });
         }}
       />
-    </div>
+    </PageShell>
   );
 };
 

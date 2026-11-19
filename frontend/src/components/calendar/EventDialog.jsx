@@ -309,7 +309,7 @@ const EventDialog = ({ open, onClose, onSaved, event = null, kind = "event", def
             </div>
           )}
           {(errors.classTargets || errors.roles || errors.audienceType) && (
-            <p className="mt-2 text-xs font-medium text-red-600" role="alert">{errors.classTargets || errors.roles || errors.audienceType}</p>
+            <p className="mt-2 text-xs font-medium text-risk" role="alert">{errors.classTargets || errors.roles || errors.audienceType}</p>
           )}
           {isHoliday && form.audienceType === "ROLE" && (
             <Alert tone="info" className="mt-3">A holiday for certain roles appears on their calendar but does not close any class.</Alert>

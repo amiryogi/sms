@@ -20,19 +20,19 @@ year so they can be collected.
 Accountants and administrators.
 
 ## Where to find it
-- **Fee Types**: accountants `/accountant/fee-types`, administrators `/admin/fee-types`.
-- **Fee Structures**: accountants `/accountant/fee-structures`, administrators
+- **Fee types**: accountants `/accountant/fee-types`, administrators `/admin/fee-types`.
+- **Fee structures**: accountants `/accountant/fee-structures`, administrators
   `/admin/fee-structures`.
-- **Student Accounts** (`/finance/accounts`) → **Generate fees**.
+- **Student accounts** (`/finance/accounts`) → **Generate fees**.
 
 ## Steps
-1. **Fee Types** → **Add fee type**: **Name** (tuition, lab, sports, transport…), **Description**,
+1. **Fee types** → **Add fee type**: **Name** (tuition, lab, sports, transport…), **Description**,
    **Active**. Inactive types can't be added to new fee structures.
-2. **Fee Structures** → **Add fee structure**: choose the **Academic year**, **Class**,
+2. **Fee structures** → **Add fee structure**: choose the **Academic year**, **Class**,
    **Fee type** and **Amount (Rs.)**. Repeat for each fee of each class.
 3. Optionally open **Installment plan** on a structure, set the **Number of installments** and
    click **Split**. Installment due dates appear on the calendar.
-4. **Student Accounts** → **Generate fees** → choose **Academic year**, **Class** (and
+4. **Student accounts** → **Generate fees** → choose **Academic year**, **Class** (and
    **Section**) → **Generate**. Each student's fees are created from the class's structures and
    installment plans. Students who already have a fee are skipped.
 
@@ -49,4 +49,4 @@ Each student's account shows **Total fees** and **Balance**, with status **Unpai
   while nothing has been paid on it).
 
 ## Related pages
-Collect Fees, Student Accounts, Reports.
+Collect fees, Student accounts, Reports.

@@ -8,14 +8,14 @@ test.use({ storageState: stateFor("admin") });
 const SINGLE_API = "**/api/v1/report-cards/student/*/exam/*";
 const BULK_API = "**/api/v1/report-cards/bulk/**";
 
-/** Open Report Cards for the seeded exam / class / section and list the students. */
+/** Open Report cards for the seeded exam / class / section and list the students. */
 const openClass = async (page) => {
   const { scope } = data();
   await page.goto("/admin/report-cards");
   await page.locator("select#examId").selectOption(String(scope.examId));
   await page.locator("select#classId").selectOption(String(scope.classId));
   await page.locator("select#sectionId").selectOption(String(scope.sectionId));
-  await page.getByRole("button", { name: "View Report Cards" }).click();
+  await page.getByRole("button", { name: "View report cards" }).click();
   await expect(page.locator("table tbody tr").first()).toBeVisible();
 };
 
@@ -30,7 +30,7 @@ const openIndividual = async (page) => {
 
 const openBulk = async (page) => {
   await openClass(page);
-  await page.getByRole("button", { name: /Print All/ }).click();
+  await page.getByRole("button", { name: /Print all/ }).click();
   const sheets = page.locator(".bulk-print-container .report-card-a4");
   await expect(sheets.first()).toBeVisible();
   await page.evaluate(() => document.fonts.ready);

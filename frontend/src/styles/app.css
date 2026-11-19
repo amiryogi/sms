@@ -268,7 +268,8 @@
    * before the redesign (it defined no --text-* tokens).
    *
    * .statement-sheet and .daybook-sheet were missing from this list until wave 3,
-   * so the A4 statement and day book printed in the new font and greys.
+   * so the A4 statement and day book printed in the new font and greys. The same
+   * held for .calendar-sheet (the printed month and year), added in wave 4.
    */
   :where(
     .report-card-a4,
@@ -278,7 +279,8 @@
     .bill-slip,
     .receipt-slip,
     .statement-sheet,
-    .daybook-sheet
+    .daybook-sheet,
+    .calendar-sheet
   ) {
     --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     --text-xs: 0.75rem;

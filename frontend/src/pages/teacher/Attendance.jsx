@@ -55,7 +55,7 @@ const Attendance = () => {
   const [searchParams] = useSearchParams();
   const today = localToday();
   const prefs = useDatePrefs();
-  // Calendar Settings: no register on weekly holidays and holidays (the server enforces it).
+  // Calendar settings: no register on weekly holidays and holidays (the server enforces it).
   const blocksOnHolidays = user?.school?.calendar?.blockAttendanceOnNonWorkingDays !== false;
   const [dayInfo, setDayInfo] = useState(null);
   const [assignments, setAssignments] = useState([]);
@@ -291,7 +291,7 @@ const Attendance = () => {
                 </>
               )}
             </p>
-            <Button icon={Save} loading={saving} disabled={dayBlocked} onClick={handleSave} data-guide="attendance.save">Save Attendance</Button>
+            <Button icon={Save} loading={saving} disabled={dayBlocked} onClick={handleSave} data-guide="attendance.save">Save attendance</Button>
           </div>
         </Card>
       )}

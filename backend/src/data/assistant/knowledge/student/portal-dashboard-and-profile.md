@@ -20,7 +20,7 @@ Students (their own) and parents (their linked children).
 
 ## Where to find it
 - **Dashboard**: students `/student/dashboard`, parents `/parent/dashboard`.
-- **My Profile** (`/student/profile`) or **Child's Profile** (`/parent/profile`).
+- **My profile** (`/student/profile`) or **Child's profile** (`/parent/profile`).
 
 ## What the dashboard shows
 Cards for **Attendance**, **Assignments** (**To do** / **Submitted**), **Fees**, **Latest result**,

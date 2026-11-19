@@ -45,7 +45,7 @@ const StudentPicker = ({ value, onChange, academicYearId, placeholder = "Find a 
         <button
           type="button"
           className={cn(
-            "flex h-11 w-full cursor-pointer items-center gap-3 rounded-xl border border-slate-300 bg-white px-3 text-left text-sm shadow-xs transition-colors hover:border-slate-400 focus-visible:border-brand-500 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:outline-none",
+            "flex h-11 w-full cursor-pointer items-center gap-3 rounded-lg border border-slate-300 bg-white px-3 text-left text-sm shadow-xs transition-colors hover:border-slate-400 focus-visible:border-brand-500 focus-visible:ring-2 focus-visible:ring-brand-500/20 focus-visible:outline-none",
             className,
           )}
           aria-label={value ? `Student: ${value.name}. Change student` : placeholder}
@@ -56,7 +56,7 @@ const StudentPicker = ({ value, onChange, academicYearId, placeholder = "Find a 
               <span className="min-w-0 flex-1 truncate">
                 <span className="font-medium text-slate-900">{value.name}</span>
                 <span className="ml-2 text-slate-500">
-                  {value.class?.name} {value.section?.name} · {value.admissionNumber}
+                  {value.class?.name} {value.section?.name}, <span className="font-mono text-xs">{value.admissionNumber}</span>
                 </span>
               </span>
             </>
@@ -108,10 +108,10 @@ const StudentPicker = ({ value, onChange, academicYearId, placeholder = "Find a 
                     <span className="block truncate font-medium text-slate-900">{r.name}</span>
                     <span className="block truncate text-xs text-slate-500">
                       {r.class?.name} {r.section?.name}
-                      {r.rollNumber ? ` · Roll ${r.rollNumber}` : ""} · {r.admissionNumber}
+                      {r.rollNumber ? `, roll ${r.rollNumber}` : ""}, <span className="font-mono">{r.admissionNumber}</span>
                     </span>
                   </span>
-                  <span className={cn("text-xs font-medium tabular-nums", r.balance > 0 ? "text-slate-900" : "text-emerald-700")}>
+                  <span className={cn("text-xs font-medium tabular-nums", r.balance > 0 ? "text-slate-900" : "text-ok")}>
                     {r.status === "none" ? "No fees" : r.balance > 0 ? formatCurrency(r.balance) : "Paid up"}
                   </span>
                 </Command.Item>

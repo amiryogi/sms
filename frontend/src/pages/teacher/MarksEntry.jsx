@@ -325,7 +325,7 @@ const MarksEntry = () => {
   return (
     <PageShell className={cn(stats.changed > 0 && "pb-24")}>
       <PageHeader
-        title="Marks Entry"
+        title="Marks entry"
         description={useTeacherFlow ? "Enter marks for the subjects you teach." : "Enter marks for any subject in a published exam."}
       />
 
@@ -569,7 +569,7 @@ const MarksEntry = () => {
                   <Keyboard size={14} aria-hidden="true" /> Enter or ↓ moves down a row, ↑ moves up.
                 </p>
                 <Button icon={Save} loading={saving} onClick={handleSave} disabled={stats.changed === 0} data-guide="marks.save">
-                  Save Marks
+                  Save marks
                 </Button>
               </div>
             </>
@@ -591,7 +591,7 @@ const MarksEntry = () => {
             </span>
             <span className="flex-1" />
             <Button variant="ghost" icon={Undo2} onClick={discard} disabled={saving}>Discard</Button>
-            <Button icon={Save} loading={saving} onClick={handleSave}>Save Marks</Button>
+            <Button icon={Save} loading={saving} onClick={handleSave}>Save marks</Button>
           </div>
         </div>
       )}

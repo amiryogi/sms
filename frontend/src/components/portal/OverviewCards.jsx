@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { CalendarCheck, Award, Wallet, NotebookPen, CalendarClock, BookOpen, ArrowRight, CheckCircle2 } from "lucide-react";
+import { CalendarCheck, Award, Wallet, NotebookPen, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Card, CardHeader, Badge, StatCard } from "../ui";
 import { formatCurrency, formatDate, formatRelative, dayParts } from "../../utils/format";
 
@@ -90,16 +90,16 @@ export const SummaryTiles = ({ overview, base, query = "" }) => {
 
 export const UpcomingExamsCard = ({ exams }) => (
   <Card>
-    <CardHeader icon={CalendarClock} title="Upcoming exams" />
+    <CardHeader title="Upcoming exams" />
     {exams.length === 0 ? (
-      <p className="text-sm text-slate-500">No exams scheduled.</p>
+      <p className="text-sm text-slate-500">No exams scheduled. Dates appear here once the school sets them.</p>
     ) : (
       <ul className="space-y-3">
         {exams.map((e) => (
           <li key={e.id} className="flex items-center gap-3">
-            <span className="flex w-12 shrink-0 flex-col items-center rounded-lg bg-brand-50 py-1 text-brand-700">
-              <span className="text-[10px] font-semibold uppercase">{dayParts(e.startDate)?.monthShort ?? "—"}</span>
-              <span className="text-lg leading-none font-bold tabular-nums">{dayParts(e.startDate)?.day ?? "?"}</span>
+            <span className="flex w-12 shrink-0 flex-col items-center rounded-lg border border-slate-200 py-1 text-slate-900">
+              <span className="text-2xs font-medium text-slate-500">{dayParts(e.startDate)?.monthShort ?? "—"}</span>
+              <span className="text-lg leading-none font-semibold tabular-nums">{dayParts(e.startDate)?.day ?? "?"}</span>
             </span>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-slate-900">{e.name}</p>
@@ -117,23 +117,22 @@ export const UpcomingExamsCard = ({ exams }) => (
 export const AssignmentsDueCard = ({ assignments, to }) => (
   <Card>
     <CardHeader
-      icon={NotebookPen}
       title="Assignments due"
       actions={
         <Link to={to} className="inline-flex items-center gap-1 text-sm font-medium text-brand-700 hover:text-brand-800">
-          All <ArrowRight size={14} aria-hidden="true" />
+          All assignments <ArrowRight size={14} aria-hidden="true" />
         </Link>
       }
     />
     {assignments.length === 0 ? (
-      <p className="text-sm text-slate-500">Nothing due right now.</p>
+      <p className="text-sm text-slate-500">Nothing due right now. New work from the teachers appears here.</p>
     ) : (
-      <ul className="divide-y divide-slate-100">
+      <ul className="divide-y divide-slate-200">
         {assignments.map((a) => (
           <li key={a.id} className="flex items-center gap-3 py-2.5">
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-slate-900">{a.title}</p>
-              <p className="text-xs text-slate-500">{a.subject} · due {formatDate(a.dueDate)}</p>
+              <p className="text-xs text-slate-500">{a.subject}, due {formatDate(a.dueDate)}</p>
             </div>
             {a.submitted ? <Badge tone="success" dot>Submitted</Badge> : <Badge tone="warning" dot>To do</Badge>}
           </li>
@@ -145,16 +144,16 @@ export const AssignmentsDueCard = ({ assignments, to }) => (
 
 export const SubjectsCard = ({ subjects }) => (
   <Card>
-    <CardHeader icon={BookOpen} title="Subjects" description={`${subjects.length} this year`} />
-    <ul className="grid gap-2 sm:grid-cols-2">
+    <CardHeader title="Subjects" description={`${subjects.length} this year`} />
+    <ul className="grid sm:grid-cols-2 sm:gap-x-6">
       {subjects.map((s) => (
-        <li key={s.id} className="rounded-xl border border-slate-100 px-3 py-2.5">
+        <li key={s.id} className="border-b border-slate-200 py-2.5">
           <p className="flex items-center gap-2 text-sm font-medium text-slate-900">
             {s.name}
-            {s.hasPractical && <span className="rounded bg-slate-100 px-1.5 text-[10px] font-medium text-slate-600">+ practical</span>}
+            {s.hasPractical && <span className="rounded-sm bg-slate-100 px-1.5 text-2xs font-medium text-slate-600">+ practical</span>}
           </p>
           <p className="text-xs text-slate-500">
-            {s.code} · {s.teacher || "Teacher not assigned"}
+            <span className="font-mono">{s.code}</span>, {s.teacher || "teacher not assigned yet"}
           </p>
         </li>
       ))}

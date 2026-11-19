@@ -46,7 +46,7 @@ const ReportCardView = ({ studentId }) => {
 
   if (exams === null) return <Card><LoadingBlock text="Loading report cards…" /></Card>;
   if (exams.length === 0) {
-    return <Card><EmptyState icon={FileText} title="No report card yet" description="It appears here once the school publishes it." /></Card>;
+    return <Card><EmptyState icon={FileText} title="No report card yet" description="The printable report card appears here once the school publishes it." /></Card>;
   }
 
   return (
@@ -57,13 +57,13 @@ const ReportCardView = ({ studentId }) => {
             {exams.map((e) => (
               <option key={e.examId || e.id} value={e.examId || e.id}>
                 {e.examName || e.name}
-                {e.academicYear ? ` · ${e.academicYear}` : ""}
+                {e.academicYear ? `, ${e.academicYear}` : ""}
               </option>
             ))}
           </SelectInput>
         </div>
         <Button icon={Printer} onClick={() => window.print()} disabled={!card} data-guide="reportCard.print">
-          Print / Save as PDF
+          Print or save as PDF
         </Button>
       </div>
       {error ? (

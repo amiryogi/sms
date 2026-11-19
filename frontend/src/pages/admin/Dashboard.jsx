@@ -15,7 +15,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { Card, CardHeader, Avatar, Badge, Skeleton, PageShell, StatCard } from "../../components/ui";
+import { Card, CardHeader, Avatar, Badge, Skeleton, PageShell, StatCard, EmptyState, buttonClasses } from "../../components/ui";
+import DashboardGreeting from "../../components/common/DashboardGreeting";
 import { studentService } from "../../api/studentService";
 import { teacherService } from "../../api/teacherService";
 import { academicService } from "../../api/academicService";
@@ -28,14 +29,10 @@ const QUICK_ACTIONS = [
   { to: "/admin/exams", label: "Exams", hint: "Create and publish", icon: ClipboardList },
   { to: "/admin/report-cards", label: "Report cards", hint: "Generate and print", icon: Award },
   { to: "/admin/teacher-assignment", label: "Teacher assignment", hint: "Who teaches what", icon: UserCog },
-  { to: "/admin/fee-payments", label: "Fee payments", hint: "Record and review", icon: Wallet },
+  // /admin/fee-payments only redirected here since the fee ledger replaced that page.
+  { to: "/finance/accounts", label: "Student accounts", hint: "Fees, payments, receipts", icon: Wallet },
   { to: "/admin/notices", label: "Notices", hint: "Post an announcement", icon: Megaphone },
 ];
-
-const greeting = () => {
-  const h = new Date().getHours();
-  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
-};
 
 const PersonRow = ({ person, role }) => {
   const name = fullName(person);
@@ -106,27 +103,23 @@ const AdminDashboard = () => {
 
   return (
     <PageShell>
-      {/* Greeting */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-sm text-slate-500">{formatDate(new Date())}</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
-            {greeting()}, {user?.firstName}
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">Here's what's happening at {user?.school?.name || "your school"}.</p>
-        </div>
-        {currentYear ? (
-          <Badge tone="brand" icon={CalendarRange} className="px-3 py-1 text-sm">
-            Academic year {currentYear.name}
-          </Badge>
-        ) : (
-          !loading && (
-            <Link to="/admin/academic-years" className="text-sm font-medium text-amber-700 hover:underline">
-              No current academic year: set one up →
-            </Link>
+      <DashboardGreeting
+        subtitle={`Here's what's happening at ${user?.school?.name || "your school"}.`}
+        aside={
+          currentYear ? (
+            <Badge icon={CalendarRange} className="px-3 py-1 text-sm">
+              Academic year {currentYear.name}
+            </Badge>
+          ) : (
+            !loading && (
+              // No current year is a state that needs action, so it carries warn.
+              <Link to="/admin/academic-years" className="text-sm font-medium text-warn hover:underline">
+                No current academic year. Set one up
+              </Link>
+            )
           )
-        )}
-      </div>
+        }
+      />
 
       {/* Stats: neutral counts, so ink — none of these is a status. */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -145,16 +138,16 @@ const AdminDashboard = () => {
               <Link
                 key={a.to}
                 to={a.to}
-                className="group flex items-center gap-3 rounded-xl border border-slate-200 p-3.5 transition-all hover:border-brand-200 hover:bg-brand-50/40 hover:shadow-card focus-visible:outline-2 focus-visible:outline-brand-600"
+                className="group flex items-center gap-3 rounded-xl border border-slate-200 p-3.5 transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
               >
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition-colors group-hover:bg-brand-100 group-hover:text-brand-700">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
                   <a.icon size={18} aria-hidden="true" />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium text-slate-900">{a.label}</span>
                   <span className="block truncate text-xs text-slate-500">{a.hint}</span>
                 </span>
-                <ChevronRight size={16} className="text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-500" aria-hidden="true" />
+                <ChevronRight size={16} className="text-slate-300 group-hover:text-slate-500" aria-hidden="true" />
               </Link>
             ))}
           </div>
@@ -199,12 +192,12 @@ const AdminDashboard = () => {
                 <PersonRow
                   key={s.id}
                   person={s}
-                  role={s.class ? <Badge>{s.class} · {s.section}</Badge> : <Badge tone="warning">Not enrolled</Badge>}
+                  role={s.class ? <Badge>{s.class} {s.section}</Badge> : <Badge tone="warning">Not enrolled</Badge>}
                 />
               ))}
             </ul>
           ) : (
-            <p className="py-6 text-center text-sm text-slate-500">No students yet.</p>
+            <EmptyState compact icon={GraduationCap} title="No students yet" description="Add a student to create their login and enrol them in a class." action={<Link to="/admin/students" className={buttonClasses({ variant: "secondary", size: "sm" })}>Add student</Link>} />
           )}
         </Card>
 
@@ -222,7 +215,7 @@ const AdminDashboard = () => {
                   key={t.id}
                   person={t}
                   role={
-                    <Badge tone="brand">
+                    <Badge>
                       {(t.roles || []).includes("EXAM_OFFICER")
                         ? "Exam officer"
                         : (t.roles || []).includes("ACCOUNTANT")
@@ -234,7 +227,7 @@ const AdminDashboard = () => {
               ))}
             </ul>
           ) : (
-            <p className="py-6 text-center text-sm text-slate-500">No staff yet.</p>
+            <EmptyState compact icon={UsersRound} title="No staff yet" description="Add teachers and staff so you can assign them to classes." action={<Link to="/admin/teachers" className={buttonClasses({ variant: "secondary", size: "sm" })}>Add staff member</Link>} />
           )}
         </Card>
       </div>

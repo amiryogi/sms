@@ -39,7 +39,8 @@ const SegmentedControl = ({
 }) => {
   const move = (delta) => {
     const i = options.findIndex((o) => o.value === value);
-    const next = options[(i + delta + options.length) % options.length];
+    // Nothing selected yet: → picks the first option, ← the last.
+    const next = i < 0 ? options[delta > 0 ? 0 : options.length - 1] : options[(i + delta + options.length) % options.length];
     if (next) onChange(next.value);
   };
 
@@ -60,17 +61,20 @@ const SegmentedControl = ({
       onKeyDown={onKeyDown}
       className={cn("inline-flex max-w-full gap-1 overflow-x-auto rounded-lg bg-slate-100 p-1", className)}
     >
-      {options.map((o) => {
+      {options.map((o, i) => {
         const selected = o.value === value;
         const Icon = o.icon;
+        // Roving tabindex: the group is one tab stop, arrows move within it.
+        // With nothing selected yet (an undecided row) the first option takes the
+        // stop, or the whole group would be unreachable by keyboard.
+        const noneSelected = !options.some((opt) => opt.value === value);
         return (
           <button
             key={o.value}
             type="button"
             role="radio"
             aria-checked={selected}
-            // Roving tabindex: the group is one tab stop, arrows move within it.
-            tabIndex={selected ? 0 : -1}
+            tabIndex={selected || (noneSelected && i === 0) ? 0 : -1}
             onClick={() => onChange(o.value)}
             className={cn(
               "inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md font-medium whitespace-nowrap transition-colors",

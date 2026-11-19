@@ -1,6 +1,6 @@
 ---
 id: teacher-my-students
-title: My Students and the teacher dashboard
+title: My students and the teacher dashboard
 roles: [TEACHER]
 modules: [students, dashboard]
 routes: [/teacher/students, /teacher/dashboard]
@@ -10,7 +10,7 @@ aliases: [my students, class list, roster, my classes, dashboard, student list, 
 verifiedAgainst: [frontend/src/pages/teacher/MyStudents.jsx, frontend/src/pages/teacher/Dashboard.jsx]
 verifiedOn: 2026-11-15
 ---
-# My Students and the teacher dashboard
+# My students and the teacher dashboard
 
 ## Purpose
 See the classes you teach and the students in them.
@@ -21,11 +21,11 @@ Teachers.
 ## Where to find it
 - **Dashboard** (`/teacher/dashboard`): your classes, subjects, teaching slots, exams open for
   marks, notices, and **Quick actions** to take the register or enter marks.
-- **My Students** (`/teacher/students`): roll number, name, admission number and class of each
+- **My students** (`/teacher/students`): roll number, name, admission number and class of each
   student in the classes you teach this year, with a link to take attendance.
 
 ## Steps
-1. Open **My Students**.
+1. Open **My students**.
 2. Filter by class or section, or search by name.
 
 ## What you should see
@@ -37,7 +37,7 @@ section you are class teacher of.
 
 ## Troubleshooting
 - **"No classes yet" / "You don't have any class assignments for the current academic year":**
-  ask the administrator to assign you on **Teacher Assignment**.
+  ask the administrator to assign you on **Teacher assignment**.
 
 ## Related pages
-Attendance (`/teacher/attendance`), Marks Entry (`/teacher/marks`).
+Attendance (`/teacher/attendance`), Marks entry (`/teacher/marks`).

@@ -19,7 +19,7 @@ export default function ChatMessage({ message, t, lang, allowedPaths, onNavigate
   if (message.role === "user") {
     return (
       <div className="flex justify-end">
-        <p className="max-w-[85%] rounded-2xl rounded-br-md bg-brand-600 px-3.5 py-2 text-sm break-words whitespace-pre-wrap text-white">{message.content}</p>
+        <p className="max-w-[85%] rounded-2xl rounded-br-md bg-brand-600 px-3.5 py-2 text-sm break-words whitespace-pre-wrap text-brand-fg">{message.content}</p>
       </div>
     );
   }
@@ -58,7 +58,7 @@ export default function ChatMessage({ message, t, lang, allowedPaths, onNavigate
 
   return (
     <div className="flex flex-col gap-1.5" data-testid="assistant-answer">
-      <div className={cn("max-w-full rounded-2xl rounded-bl-md border px-3.5 py-2.5", failed ? "border-red-200 bg-red-50" : "border-slate-200 bg-white")}>
+      <div className={cn("max-w-full rounded-2xl rounded-bl-md border px-3.5 py-2.5", failed ? "border-risk-line bg-risk-surface" : "border-slate-200 bg-white")}>
         {message.content ? (
           <AssistantMarkdown text={message.content} allowedPaths={allowedPaths} onNavigate={onNavigate} />
         ) : streaming ? (
@@ -73,13 +73,13 @@ export default function ChatMessage({ message, t, lang, allowedPaths, onNavigate
         ) : null}
         {streaming && message.content && <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse bg-slate-400 align-middle" aria-hidden="true" />}
         {failed && (
-          <p className={cn("flex items-start gap-2 text-sm text-red-700", message.content && "mt-2 border-t border-red-200 pt-2")} role="alert">
+          <p className={cn("flex items-start gap-2 text-sm text-risk", message.content && "mt-2 border-t border-risk-line pt-2")} role="alert">
             <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
             <span>{errorText(t, message.errorCode, message.errorMessage)}</span>
           </p>
         )}
         {message.status === "stopped" && <p className="mt-1 text-xs text-slate-400">{t.stopped}</p>}
-        {message.truncated && <p className="mt-1 text-xs text-amber-700">{t.truncated}</p>}
+        {message.truncated && <p className="mt-1 text-xs text-warn">{t.truncated}</p>}
       </div>
 
       {finished && message.sources?.length > 0 && (
@@ -130,7 +130,7 @@ export default function ChatMessage({ message, t, lang, allowedPaths, onNavigate
                 icon={ThumbsDown}
                 label={t.notHelpful}
                 aria-pressed={message.feedback === -1}
-                className={message.feedback === -1 ? "text-red-600" : undefined}
+                className={message.feedback === -1 ? "text-risk" : undefined}
                 onClick={() => rate(-1)}
               />
             </>

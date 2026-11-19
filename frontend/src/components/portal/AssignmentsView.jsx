@@ -19,7 +19,7 @@ const stateOf = (a) => {
 const STATE_BADGE = {
   todo: { tone: "warning", label: "To do", icon: Clock },
   overdue: { tone: "danger", label: "Past due", icon: AlertCircle },
-  submitted: { tone: "info", label: "Submitted", icon: CheckCircle2 },
+  submitted: { tone: "neutral", label: "Submitted", icon: CheckCircle2 },
   graded: { tone: "success", label: "Graded", icon: CheckCircle2 },
 };
 
@@ -50,7 +50,7 @@ const SubmitForm = ({ assignment, onDone }) => {
   };
 
   return (
-    <div className="mt-4 rounded-xl border border-slate-200 p-4">
+    <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
       <p className="mb-3 text-sm font-medium text-slate-900">Hand in your work</p>
       {late && <Alert tone="warning" className="mb-3">The due date has passed. You can still hand it in; it will be marked late.</Alert>}
       <Field label="Answer (optional)" htmlFor={`answer-${assignment.id}`}>
@@ -82,7 +82,7 @@ const AssignmentsView = ({ load: fetchList, canSubmit = false, reloadKey }) => {
         .then((list) => setAssignments(list || []))
         .catch(() => {
           setAssignments([]);
-          toast.error("Could not load assignments");
+          toast.error("Could not load assignments. Reload the page to try again.");
         }),
     // fetchList is recreated by the parent page; reloadKey says when it really changed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -114,7 +114,18 @@ const AssignmentsView = ({ load: fetchList, canSubmit = false, reloadKey }) => {
       />
       {visible.length === 0 ? (
         <Card>
-          <EmptyState icon={NotebookPen} title={filter === "open" ? "Nothing to do" : "No assignments here"} description={filter === "open" ? "You're all caught up." : undefined} />
+          <EmptyState
+            compact
+            icon={NotebookPen}
+            title={filter === "open" ? "Nothing to do" : "No assignments here"}
+            description={
+              filter === "open"
+                ? "You're all caught up. New work from the teachers appears here."
+                : filter === "done"
+                  ? "Work that has been handed in appears here, with marks and feedback once graded."
+                  : "The teachers haven't set any assignments yet."
+            }
+          />
         </Card>
       ) : (
         <Card padding="none" className="px-5">
@@ -131,9 +142,9 @@ const AssignmentsView = ({ load: fetchList, canSubmit = false, reloadKey }) => {
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-base font-semibold text-slate-900">{a.title}</span>
                       <span className="mt-0.5 block text-xs font-normal text-slate-500">
-                        {subject ? `${subject} · ` : ""}due {formatDate(a.dueDate)}
+                        {subject ? `${subject}, ` : ""}due {formatDate(a.dueDate)}
                         {state === "todo" && (days === 0 ? " (today)" : days === 1 ? " (tomorrow)" : days <= 7 ? ` (in ${days} days)` : "")}
-                        {a.totalMarks ? ` · ${a.totalMarks} marks` : ""}
+                        {a.totalMarks ? `, ${a.totalMarks} marks` : ""}
                       </span>
                     </span>
                     <Badge tone={badge.tone} icon={badge.icon} className="shrink-0">{badge.label}</Badge>
@@ -156,7 +167,7 @@ const AssignmentsView = ({ load: fetchList, canSubmit = false, reloadKey }) => {
                       </div>
                     )}
                     {sub ? (
-                      <div className="mt-4 rounded-xl bg-slate-50 p-4">
+                      <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
                         <p className="text-sm text-slate-700">
                           Handed in {formatDateTime(sub.submittedAt)}
                           {sub.status === "late" && <Badge tone="warning" className="ml-2">Late</Badge>}
@@ -164,7 +175,7 @@ const AssignmentsView = ({ load: fetchList, canSubmit = false, reloadKey }) => {
                         {sub.marksObtained !== null && sub.marksObtained !== undefined && (
                           <p className="mt-2 text-lg font-semibold text-slate-900 tabular-nums">
                             {Number(sub.marksObtained)}
-                            {a.totalMarks ? <span className="text-sm font-normal text-slate-500"> / {a.totalMarks}</span> : null}
+                            {a.totalMarks ? <span className="text-sm font-normal text-slate-500">/{a.totalMarks}</span> : null}
                           </p>
                         )}
                         {sub.feedback && (
@@ -177,7 +188,7 @@ const AssignmentsView = ({ load: fetchList, canSubmit = false, reloadKey }) => {
                     ) : canSubmit ? (
                       <SubmitForm assignment={a} onDone={load} />
                     ) : (
-                      <p className="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">Not handed in yet.</p>
+                      <p className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">Not handed in yet.</p>
                     )}
                   </AccordionContent>
                 </AccordionItem>

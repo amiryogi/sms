@@ -4,7 +4,7 @@ import { Button, TextInput } from "../ui";
 import { examService } from "../../api/examService";
 
 /**
- * Report Cards page: the exam's working days, the "70" in "Attendance 61/70".
+ * Report cards page: the exam's working days, the "70" in "Attendance 61/70".
  *
  * `attendance` is the `summary.attendance` block of GET /report-cards: the
  * saved number, the BS dates the present days are counted between, and how
@@ -71,7 +71,7 @@ const WorkingDaysEditor = ({ attendance, onSaved }) => {
           Save
         </Button>
         {justSaved && (
-          <span className="working-days-ok inline-flex items-center gap-1 pb-2 text-sm font-medium text-emerald-700">
+          <span className="working-days-ok inline-flex items-center gap-1 pb-2 text-sm font-medium text-ok">
             <Check size={15} aria-hidden="true" /> Saved
           </span>
         )}
@@ -83,11 +83,11 @@ const WorkingDaysEditor = ({ attendance, onSaved }) => {
         {saved === null && " Without working days, report cards print only the days present."}
       </p>
       {attendance.cardsOutdated > 0 && (
-        <p className="working-days-warning mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900 ring-1 ring-amber-200 ring-inset">
+        <p className="working-days-warning mt-2 rounded-lg bg-warn-surface px-3 py-2 text-xs text-warn ring-1 ring-warn-line ring-inset">
           {attendance.cardsOutdated} report card(s) were generated before this number was set or changed. Regenerate to update their attendance.
         </p>
       )}
-      {error && <p className="field-error mt-2 text-xs font-medium text-red-600">{error}</p>}
+      {error && <p role="alert" className="field-error mt-2 text-xs font-medium text-risk">{error}</p>}
     </div>
   );
 };

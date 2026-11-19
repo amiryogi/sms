@@ -6,6 +6,7 @@ import Modal from "../../components/common/Modal";
 import { Select, Button, Input, FormRow } from "../../components/common/FormElements";
 import {
   PageHeader,
+  PageShell,
   Badge,
   IconButton,
   Checkbox,
@@ -186,53 +187,51 @@ const ClassSubjects = () => {
   const columns = [
     {
       header: "Subject",
-      render: (row) => (
-        <div className="min-w-0">
-          <p className="font-medium text-slate-900">{getSubjectName(row.subjectId)}</p>
-          <p className="text-xs text-slate-500">
-            {getClassName(row.classId)} · {getYearName(row.academicYearId)}
-          </p>
-        </div>
-      ),
+      // One line per row, like the other register pages: class and year have
+      // their own columns instead of a second line.
+      render: (row) => <span className="font-medium text-slate-900">{getSubjectName(row.subjectId)}</span>,
     },
+    { header: "Class", render: (row) => <span className="whitespace-nowrap">{getClassName(row.classId)}</span> },
+    { header: "Year", render: (row) => <span className="whitespace-nowrap text-slate-500">{getYearName(row.academicYearId)}</span> },
     {
+      // Theory and practical are properties of the subject, so neutral badges.
+      // "Not configured" is a state that needs fixing, so it keeps the warn tone.
       header: "Evaluation",
       render: (row) => (
         <div className="flex flex-wrap gap-1">
-          {row.hasTheory !== false && <Badge tone="info">Theory {row.theoryMarks}</Badge>}
-          {row.hasPractical === true && <Badge tone="success">Practical {row.practicalMarks}</Badge>}
+          {row.hasTheory !== false && <Badge>Theory {row.theoryMarks}</Badge>}
+          {row.hasPractical === true && <Badge>Practical {row.practicalMarks}</Badge>}
           {row.hasTheory === false && row.hasPractical !== true && <Badge tone="warning">Not configured</Badge>}
         </div>
       ),
     },
     {
       header: "Credit hours",
+      numeric: true,
       render: (row) => (
-        <div>
-          <span className="tabular-nums">{row.creditHours}</span>
+        <span className="whitespace-nowrap">
+          {row.creditHours}
           {(row.theoryCreditHours > 0 || row.practicalCreditHours > 0) && (
-            <p className="text-xs text-slate-500 tabular-nums">
-              TH {row.theoryCreditHours || 0} · IN {row.practicalCreditHours || 0}
-            </p>
+            <span className="ml-1.5 text-xs text-slate-500">
+              (TH {row.theoryCreditHours || 0}, IN {row.practicalCreditHours || 0})
+            </span>
           )}
-        </div>
+        </span>
       ),
     },
     {
+      // Editable is the normal state, so it stays quiet; locked carries the icon.
       header: "Status",
       render: (row) =>
         row.isLocked ? (
-          <Badge tone="warning" icon={Lock}>
-            Locked
-          </Badge>
+          <Badge icon={Lock}>Locked</Badge>
         ) : (
-          <Badge tone="success" dot>
-            Editable
-          </Badge>
+          <span className="text-slate-500">Editable</span>
         ),
     },
     {
       header: <span className="sr-only">Actions</span>,
+      action: true,
       width: "96px",
       render: (row) => (
         <div className="flex justify-end gap-1">
@@ -288,10 +287,9 @@ const ClassSubjects = () => {
   );
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <PageShell>
       <PageHeader
-        icon={BookOpenCheck}
-        title="Class Subjects"
+        title="Class subjects"
         description="Which subjects each class studies this year, with full marks and credit hours. Exams copy these settings when they are created."
         actions={<Button icon={Plus} onClick={openModal}>Add subject to class</Button>}
       />
@@ -310,7 +308,7 @@ const ClassSubjects = () => {
         isOpen={modalOpen}
         onClose={closeModal}
         title={editing ? "Edit class subject" : "Add subject to class"}
-        description={editing ? `${getSubjectName(editing.subjectId)} · ${getClassName(editing.classId)}` : undefined}
+        description={editing ? `${getSubjectName(editing.subjectId)}, ${getClassName(editing.classId)}` : undefined}
         size="lg"
       >
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -386,7 +384,7 @@ const ClassSubjects = () => {
           </DialogActions>
         </form>
       </Modal>
-    </div>
+    </PageShell>
   );
 };
 

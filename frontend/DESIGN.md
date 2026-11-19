@@ -336,6 +336,10 @@ substitute `"…"` for a value, and never dim a region with `opacity-60`.
 
 - Buttons are **sentence case**, verb first, and name the outcome: "Save attendance",
   not "Save Attendance" or "Submit".
+- Page titles, sidebar items and tabs are **sentence case** too, and a page's title
+  matches its sidebar item ("Teacher assignment", "Report cards"). The help documents,
+  walkthroughs and e2e tests quote these names: rename them everywhere in one change,
+  never in the page alone.
 - An action keeps its verb through the whole flow: a button that says "Publish" produces
   a toast that says "Published".
 - Empty states say *what this is + why it is empty + how to start*, not just a fact.

@@ -1,22 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { Plus, Pencil, UsersRound, Mail, Phone, KeyRound } from "lucide-react";
+import { Plus, Pencil, UsersRound, KeyRound } from "lucide-react";
 import ResetPasswordDialog, { NewAccountDialog } from "../../components/admin/ResetPasswordDialog";
 import { useAuth } from "../../context/AuthContext";
 import DataTable from "../../components/common/DataTable";
 import Modal from "../../components/common/Modal";
 import { Input, Button, FormRow } from "../../components/common/FormElements";
 import AvatarUpload from "../../components/common/AvatarUpload";
-import { PageHeader, Badge, Avatar, IconButton, Alert, DialogActions, toast } from "../../components/ui";
+import { PageHeader, PageShell, Badge, Avatar, IconButton, Alert, DialogActions, toast } from "../../components/ui";
 import { cn } from "../../lib/cn";
 import { teacherService } from "../../api/teacherService";
 import { fullName } from "../../utils/format";
 
 // Staff roles that can be created and edited from this page
 const STAFF_ROLES = [
-  { value: "TEACHER", label: "Teacher", tone: "brand", hint: "Enters marks and attendance only for the subjects and sections assigned to them." },
-  { value: "EXAM_OFFICER", label: "Exam Officer", tone: "info", hint: "Enters marks for any subject without an assignment. No access to fees." },
-  { value: "ACCOUNTANT", label: "Accountant", tone: "success", hint: "Manages fee types, structures and payments. Read-only student directory." },
+  { value: "TEACHER", label: "Teacher", hint: "Enters marks and attendance only for the subjects and sections assigned to them." },
+  { value: "EXAM_OFFICER", label: "Exam officer", hint: "Enters marks for any subject without an assignment. No access to fees." },
+  { value: "ACCOUNTANT", label: "Accountant", hint: "Manages fee types, structures and payments. Read-only student directory." },
 ];
 
 // The staff role this person currently holds (first matching staff role).
@@ -151,19 +151,12 @@ const Teachers = () => {
     {
       header: "Staff member",
       render: (row) => (
-        <div className="flex min-w-0 items-center gap-3">
-          <Avatar src={row.avatarUrl} name={name(row)} size="sm" />
-          <div className="min-w-0">
-            <p className="truncate font-medium text-slate-900">{name(row)}</p>
-            <p className="flex items-center gap-1 truncate text-xs text-slate-500">
-              <span className="font-mono">{row.username}</span>
-              {row.email && (
-                <>
-                  <Mail size={11} aria-hidden="true" className="ml-1" /> {row.email}
-                </>
-              )}
-            </p>
-          </div>
+        // One line per person, like the other register pages: the username sits
+        // beside the name, the email has its own column.
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Avatar src={row.avatarUrl} name={name(row)} size="xs" />
+          <span className="truncate font-medium text-slate-900">{name(row)}</span>
+          {row.username && <span className="truncate font-mono text-xs text-slate-500">{row.username}</span>}
         </div>
       ),
     },
@@ -172,28 +165,27 @@ const Teachers = () => {
       render: (row) => {
         const roles = STAFF_ROLES.filter((r) => (row.roles || []).includes(r.value));
         if (!roles.length) return <span className="text-slate-400">—</span>;
+        // A role is not a status, so the badges are neutral.
         return (
           <div className="flex flex-wrap gap-1">
             {roles.map((r) => (
-              <Badge key={r.value} tone={r.tone}>{r.label}</Badge>
+              <Badge key={r.value}>{r.label}</Badge>
             ))}
           </div>
         );
       },
     },
     {
+      header: "Email",
+      render: (row) => (row.email ? <span className="block max-w-56 truncate text-slate-600">{row.email}</span> : <span className="text-slate-400">—</span>),
+    },
+    {
       header: "Phone",
-      render: (row) =>
-        row.phone ? (
-          <span className="inline-flex items-center gap-1.5 text-slate-600">
-            <Phone size={13} className="text-slate-400" aria-hidden="true" /> {row.phone}
-          </span>
-        ) : (
-          <span className="text-slate-400">—</span>
-        ),
+      render: (row) => (row.phone ? <span className="whitespace-nowrap text-slate-600">{row.phone}</span> : <span className="text-slate-400">—</span>),
     },
     {
       header: <span className="sr-only">Actions</span>,
+      action: true,
       width: "96px",
       render: (row) => (
         <div className="flex justify-end gap-1">
@@ -208,10 +200,9 @@ const Teachers = () => {
   ];
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <PageShell>
       <PageHeader
-        icon={UsersRound}
-        title="Teachers & Staff"
+        title="Teachers & staff"
         description="Teachers, exam officers and accountants, with their sign-in details."
         actions={<Button icon={Plus} onClick={() => openModal()}>Add staff member</Button>}
       />
@@ -315,9 +306,9 @@ const Teachers = () => {
                 );
               })}
             </div>
-            {serverError?.fieldErrors?.role && <p className="mt-1 text-xs font-medium text-red-600">{serverError.fieldErrors.role}</p>}
+            {serverError?.fieldErrors?.role && <p role="alert" className="mt-1 text-xs font-medium text-risk">{serverError.fieldErrors.role}</p>}
             {roleChanged && (
-              <p className="mt-2 text-xs text-amber-700">
+              <p className="mt-2 text-xs text-warn">
                 Changing role from {roleOf(currentStaffRole(editingTeacher))?.label} to {roleOf(selectedRole)?.label}.
               </p>
             )}
@@ -331,7 +322,7 @@ const Teachers = () => {
       </Modal>
       <ResetPasswordDialog account={resetFor} onClose={() => setResetFor(null)} />
       <NewAccountDialog credential={newAccount} onClose={() => setNewAccount(null)} />
-    </div>
+    </PageShell>
   );
 };
 

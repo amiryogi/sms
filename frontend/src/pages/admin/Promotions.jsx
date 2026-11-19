@@ -3,19 +3,25 @@ import { ArrowUpRight, Repeat, GraduationCap, RotateCcw, Users, CheckCircle2, Ar
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import { Select, Button } from '../../components/common/FormElements';
-import { PageHeader, Card, CardHeader, Badge, Tabs, IconButton, EmptyState, LoadingBlock, DialogActions, Alert, StatCard, StatGroup, toast, confirmDialog } from '../../components/ui';
+import { PageHeader, PageShell, Card, CardHeader, Badge, Tabs, IconButton, EmptyState, LoadingBlock, DialogActions, Alert, StatCard, StatGroup, toast, confirmDialog } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { promotionService } from '../../api/promotionService';
 import { academicService } from '../../api/academicService';
 import { formatDate, fullName } from '../../utils/format';
 
+/*
+ * The three decisions. Promote and graduate are ordinary outcomes, so their
+ * selected state is the quiet one; detain holds a student back a year, which is
+ * worth flagging, so it is warn. Afterwards a promotion or graduation reads as
+ * done (ok) and a detention as warn. `done` is the past tense shown once decided.
+ */
 const DECISIONS = [
-  { value: 'promoted', label: 'Promote', icon: ArrowUpRight, active: 'bg-emerald-600 text-white', tone: 'success' },
-  { value: 'detained', label: 'Detain', icon: Repeat, active: 'bg-amber-500 text-white', tone: 'warning' },
-  { value: 'graduated', label: 'Graduate', icon: GraduationCap, active: 'bg-sky-600 text-white', tone: 'info' },
+  { value: 'promoted', label: 'Promote', done: 'Promoted', icon: ArrowUpRight, selected: 'bg-white text-slate-900 shadow-sm', tone: 'success' },
+  { value: 'detained', label: 'Detain', done: 'Detained', icon: Repeat, selected: 'bg-warn text-white', tone: 'warning' },
+  { value: 'graduated', label: 'Graduate', done: 'Graduated', icon: GraduationCap, selected: 'bg-white text-slate-900 shadow-sm', tone: 'success' },
 ];
 const toneOf = (status) => DECISIONS.find((d) => d.value === status)?.tone || 'neutral';
-const labelOf = (status) => DECISIONS.find((d) => d.value === status)?.label || status;
+const doneOf = (status) => DECISIONS.find((d) => d.value === status)?.done || status;
 
 const Promotions = () => {
   const [classes, setClasses] = useState([]);
@@ -241,7 +247,7 @@ const Promotions = () => {
         </span>
       ),
     },
-    { header: 'Decision', render: (row) => <Badge tone={toneOf(row.status)}>{labelOf(row.status)}</Badge> },
+    { header: 'Decision', render: (row) => <Badge tone={toneOf(row.status)}>{doneOf(row.status)}</Badge> },
     {
       header: 'By',
       render: (row) => (
@@ -266,9 +272,8 @@ const Promotions = () => {
   const className = (id) => (eligibleData?.nextClasses || classes).find((c) => c.id.toString() === id)?.name;
 
   return (
-    <div className={cn('mx-auto max-w-6xl space-y-6', selectedStudents.size > 0 && view === 'promote' && 'pb-24')}>
+    <PageShell className={cn(selectedStudents.size > 0 && view === 'promote' && 'pb-24')}>
       <PageHeader
-        icon={ArrowUpRight}
         title="Promotions"
         description="Move students into next year's classes at the end of the academic year."
       />
@@ -369,16 +374,16 @@ const Promotions = () => {
                   />
                 </div>
                 {!(eligibleData.academicYears || []).some((y) => y.id !== parseInt(selectedYear)) && (
-                  <Alert tone="warning">Create next year on the Academic Years page before promoting students.</Alert>
+                  <Alert tone="warning">Create next year on the Academic years page before promoting students.</Alert>
                 )}
               </Card>
 
-              <div className="overflow-hidden rounded-card border border-slate-200/80 bg-white shadow-card">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-3.5">
+              <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-3.5">
                   <div>
                     <h2 className="text-base font-semibold text-slate-900">Students ({eligibleData.students?.length || 0})</h2>
                     <p className="text-xs text-slate-500">
-                      {eligibleData.eligibleCount} to decide · {eligibleData.alreadyPromotedCount} already processed
+                      {eligibleData.eligibleCount} to decide, {eligibleData.alreadyPromotedCount} already processed
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -392,29 +397,29 @@ const Promotions = () => {
                 {eligibleData.students?.length ? (
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-max text-sm">
-                      <thead className="bg-slate-50 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                      <thead className="bg-slate-50 text-xs font-medium text-slate-500">
                         <tr>
-                          <th className="col-roll px-4 py-2.5 text-left">Roll</th>
-                          <th className="col-name px-4 py-2.5 text-left">Student</th>
-                          <th className="px-4 py-2.5 text-left">Section</th>
-                          <th className="px-4 py-2.5 text-left">Decision</th>
+                          <th scope="col" className="col-roll border-b border-slate-200 px-4 py-2.5 text-right font-medium">Roll</th>
+                          <th scope="col" className="col-name border-b border-slate-200 px-4 py-2.5 text-left font-medium">Student</th>
+                          <th scope="col" className="border-b border-slate-200 px-4 py-2.5 text-left font-medium">Section</th>
+                          <th scope="col" className="border-b border-slate-200 px-4 py-2.5 text-left font-medium">Decision</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100">
+                      <tbody className="divide-y divide-slate-200">
                         {eligibleData.students.map((s) => {
                           const current = selectedStudents.get(s.studentId)?.status;
                           return (
                             <tr key={s.studentId} className={cn(s.alreadyPromoted && 'bg-slate-50/60 text-slate-400')}>
-                              <td className="col-roll px-4 py-3 tabular-nums">{s.rollNumber || '—'}</td>
-                              <td className="col-name px-4 py-3">
-                                <p className={cn('font-medium', s.alreadyPromoted ? 'text-slate-500' : 'text-slate-900')}>{fullName(s)}</p>
-                                <p className="font-mono text-xs text-slate-500">{s.admissionNumber}</p>
+                              <td className="col-roll px-4 py-2 text-right tabular-nums">{s.rollNumber || '—'}</td>
+                              <td className="col-name px-4 py-2">
+                                <span className={cn('font-medium', s.alreadyPromoted ? 'text-slate-500' : 'text-slate-900')}>{fullName(s)}</span>{' '}
+                                <span className="font-mono text-xs text-slate-500">{s.admissionNumber}</span>
                               </td>
-                              <td className="px-4 py-3">{s.section?.name}</td>
-                              <td className="px-4 py-2.5">
+                              <td className="px-4 py-2">{s.section?.name}</td>
+                              <td className="px-4 py-1.5">
                                 {s.alreadyPromoted ? (
                                   <Badge tone={toneOf(s.existingPromotion?.status)}>
-                                    {labelOf(s.existingPromotion?.status)} · {s.existingPromotion?.toAcademicYear?.name}
+                                    {doneOf(s.existingPromotion?.status)} for {s.existingPromotion?.toAcademicYear?.name}
                                   </Badge>
                                 ) : (
                                   <div className="inline-flex rounded-lg bg-slate-100 p-0.5" role="radiogroup" aria-label={`Decision for ${s.firstName}`}>
@@ -426,8 +431,9 @@ const Promotions = () => {
                                         aria-checked={current === d.value}
                                         onClick={() => decide(s.studentId, d.value)}
                                         className={cn(
-                                          'inline-flex cursor-pointer items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                                          current === d.value ? d.active : 'text-slate-600 hover:bg-white hover:text-slate-900',
+                                          'inline-flex min-h-8 cursor-pointer items-center gap-1 rounded-md px-2.5 text-xs font-medium transition-colors',
+                                          'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-600',
+                                          current === d.value ? d.selected : 'text-slate-600 hover:bg-white hover:text-slate-900',
                                         )}
                                       >
                                         <d.icon size={13} aria-hidden="true" /> {d.label}
@@ -443,7 +449,7 @@ const Promotions = () => {
                     </table>
                   </div>
                 ) : (
-                  <EmptyState icon={Users} title="No students in this class" />
+                  <EmptyState compact icon={Users} title="No students in this class" description="Enrol students on the Students page, or choose another class or section." />
                 )}
               </div>
             </>
@@ -460,10 +466,10 @@ const Promotions = () => {
       {/* Sticky action bar */}
       {view === 'promote' && selectedStudents.size > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur lg:left-64">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <div className="mx-auto flex max-w-[88rem] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
             <p className="text-sm text-slate-700">
               <span className="font-semibold text-slate-900">{selectedStudents.size} selected</span>
-              <span className="text-slate-500"> · {counts.promoted} promote · {counts.detained} detain · {counts.graduated} graduate</span>
+              <span className="text-slate-500">: {counts.promoted} promote, {counts.detained} detain, {counts.graduated} graduate</span>
             </p>
             <Button icon={CheckCircle2} onClick={handleBulkPromote} disabled={submitting}>Process promotions</Button>
           </div>
@@ -488,7 +494,7 @@ const Promotions = () => {
           <Button onClick={confirmBulkPromote} loading={submitting}>Process {selectedStudents.size}</Button>
         </DialogActions>
       </Modal>
-    </div>
+    </PageShell>
   );
 };
 
