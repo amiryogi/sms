@@ -1,21 +1,23 @@
 # Visual redesign: from "generic card kit" to "the school register"
 
-Brief pasted 2026-11-18. **Waves 0–3 are done on `feature/visual-redesign` (pull request #8); wave 4 is done on
-`feature/visual-redesign-wave4`. Neither is merged to `main` yet.** The rules this plan produced are
-[`frontend/DESIGN.md`](../../frontend/DESIGN.md) — read that first, then this file for what
-is left to do.
+Brief pasted 2026-11-18. **All four waves are done.** Waves 0–3 were merged to `main` on
+2026-11-18 by pull request #8; wave 4 is on `feature/visual-redesign-wave4` and waits in
+**pull request #9, based on `main`**. The rules this plan produced are
+[`frontend/DESIGN.md`](../../frontend/DESIGN.md) — read that first, then §5a here for what was
+deliberately left for a later pass. §3 is the trap to know about before touching any token.
 
 > **Resuming on another machine?** Everything you need is in this repo:
 >
 > ```bash
-> git fetch origin && git checkout feature/visual-redesign
+> git fetch origin
+> git checkout feature/visual-redesign-wave4   # or main, once PR #9 is merged
 > cd frontend && npm install          # node_modules may be incomplete; see "Machine notes"
 > npm run lint && npm test && npm run build
 > git checkout -- package-lock.json   # on Windows, npm install churns it; see "Machine notes"
 > ```
 >
-> That confirms the baseline (0 lint errors, 119 tests, a clean build; e2e 90 passed,
-> 1 skipped). Then pick up at **wave 4**.
+> That confirms the baseline: 0 lint errors, 119 vitest tests, a clean build. No dependency
+> changed in any wave, so an existing `node_modules` is already correct.
 
 ---
 
@@ -35,11 +37,15 @@ passes, `npm test` 106 frontend tests pass (55 of them new, in `palette.test.js`
 print-pin guard was mutation-tested: breaking the pin produced exactly 1 failure, restoring
 it returned to green.
 
-**Not verified, and why:** the e2e suite (90 Playwright tests) has **not** been run against
-these changes. The machine this was built on has no test database configured. **Run
-`cd e2e && PW_CHANNEL=chrome npm test` before shipping**, and watch the two report-card
-screenshot comparisons in particular — they are the thing most likely to catch a mistake
-here.
+**Waves 0–2 were written on a machine with no test database, so the e2e suite could not run
+there.** It has since run twice, and it earned its keep: the run after wave 3 caught a real
+print regression that waves 0–2 had introduced and that no unit test or browser check had
+found (§3). Current state, after wave 4: **e2e 90 passed, 1 skipped**, including both
+report-card pixel baselines. Details in §5a.
+
+The lesson, for the next person: **the Playwright baselines are the only thing that catches a
+token change reaching print.** Run them before shipping anything that touches `app.css`, and
+do not treat lint + vitest + a browser sweep as a substitute.
 
 ---
 
@@ -128,7 +134,7 @@ Two more things that run taught:
 
 ---
 
-## 4. Wave 3 — Data-dense screens (do this next)
+## 4. Wave 3 — Data-dense screens (as planned; §4a records what was done)
 
 The screens staff live in, restyled to the register treatment and adopting `PageShell`:
 

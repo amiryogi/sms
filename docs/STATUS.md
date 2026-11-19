@@ -1,6 +1,6 @@
 # Where this project is
 
-Updated 2026-11-18. Keep this current when you stop work — it is the handover
+Updated 2026-11-19. Keep this current when you stop work — it is the handover
 between machines and between sessions.
 
 New machine? Start with [SETUP-NEW-MACHINE.md](SETUP-NEW-MACHINE.md).
@@ -10,28 +10,30 @@ are done** and on `main`.
 
 ---
 
-## ▶ Pick up here: visual redesign, review and merge (2026-11-19) — branches `feature/visual-redesign` and `feature/visual-redesign-wave4`
+## ▶ Pick up here: visual redesign — all four waves done, wave 4 waiting in pull request #9 (2026-11-19)
 
 Plan and full handover: **[plans/visual-identity-redesign.md](plans/visual-identity-redesign.md)**.
 The design rules themselves: **[`frontend/DESIGN.md`](../frontend/DESIGN.md)**.
 
-**The work is not on `main` yet.** Waves 0–3 are on `feature/visual-redesign` (pull request #8);
-wave 4 is on `feature/visual-redesign-wave4`, branched from it. On another machine:
-`git fetch origin && git checkout feature/visual-redesign-wave4`, then `cd frontend && npm install`.
+**Waves 0–3 are on `main`** (pull request #8, merged 2026-11-18). **Wave 4 is on
+`feature/visual-redesign-wave4`, waiting in pull request #9, based on `main`** — merge that and
+the redesign is complete. On another machine: `git fetch origin && git checkout
+feature/visual-redesign-wave4` (or just `main` once #9 is merged). No wave changed a
+dependency, so an existing `node_modules` is already correct.
 
 A new visual identity for the app — "the school register", grounded in the paper objects this
 software replaces. The owner asked for a real identity rather than token polish, scoped **out**
 the print sheets and the public marketing site, and asked for the data-dense staff screens
 first. No dark mode.
 
-- **Done (waves 0–2), on the branch (not yet on `main`):** the direction written down; the token layer, which
+- **Done (waves 0–2), on `main`:** the direction written down; the token layer, which
   **redefines Tailwind's `slate`** as a warm ink ladder so all 65 pages retoned with zero page
   edits, plus status tokens, a type scale, a monotonic radius ladder, `--shadow-card: none` and
   a reduced-motion guard; the font moved to **IBM Plex Sans + Devanagari** (Inter has no
   Devanagari at all, so every Nepali string was falling back to a system font — a real defect,
   not a taste change); the kit and shell restyled, with `PageShell`, `SegmentedControl` and
   `Radio` added and `DataTable` given the register treatment.
-- **Done (wave 3), on the branch:** one `StatCard`/`StatGroup` replaced nine hand-rolled stat
+- **Done (wave 3), on `main`:** one `StatCard`/`StatGroup` replaced nine hand-rolled stat
   tiles; hero figures at `text-display`, stepping down by tile width; decorative status colour
   stripped (admin dashboard tiles, report-card counts); Students, Marks Entry, Attendance,
   Transactions, Accounts and Account detail restyled to the register treatment (Students rows
@@ -42,15 +44,14 @@ first. No dark mode.
   the printed NEB sheet had moved up 1px because the redesign's type scale reached it. Fixed
   by pinning Tailwind's default `--text-*` tokens inside the print selectors, which now also
   cover the A4 statement and day book (they had been printing in the new font). Plan §3.
-- **Done (wave 4), on the wave 4 branch:** every app page on `PageShell`; raw colours on the
+- **Done (wave 4), in pull request #9:** every app page on `PageShell`; raw colours on the
   tokens and decoration made neutral; compact empty states; hand-built switches became
   `SegmentedControl`s; register tables throughout; `DashboardGreeting`; a kit reference in
   `frontend/src/components/ui/README.md`; the copy pass, including a coordinated sentence-case
   rename of 38 page, sidebar and button names across the pages, help documents, walkthroughs
   and tests. The calendar printout joined the print pin. Plan §5a.
-- **Next:** review and merge pull request #8 (waves 0–3), then the wave 4 branch. Plan §5a
-  lists what is left (kit accessibility gaps, a calmer row delete button, re-taking the
-  marketing screenshots).
+- **Next:** review and merge pull request #9. Plan §5a lists what is left after that (kit
+  accessibility gaps, a calmer row delete button, re-taking the marketing screenshots).
 - **⚠ Before touching `--font-sans`, the slate ladder or any `--text-*` token, read §3 of the
   plan.** The printed report card, slips, statement and day book resolve those tokens, so a
   token change reaches printed output and both Playwright pixel baselines **without any print
